@@ -1,0 +1,454 @@
+/* Styles for CSS
+ Avoid #id entries as the actual ids will have namespaces attached
+*/
+
+/* Flipping */
+.flip-container {
+    perspective: 1000px;
+}
+
+.flippable {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 1.3s ease-in-out;
+}
+
+/* The actual flip */
+.flip-container.flipped .flippable {
+    transform: rotateY(180deg);
+}
+
+/* Front and back faces */
+.front,
+.back {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* Hide reverse side */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden; /* Safari */
+}
+
+/* Front is normally facing */
+.front {
+    transform: rotateY(0deg);
+    z-index: 2;
+}
+
+/* Back is rotated */
+.back {
+    transform: rotateY(180deg);
+    z-index: 1;
+}
+
+
+
+
+/* Card hovering events */
+.hover-card { 
+  position: relative; 
+}
+
+/* Default: button always visible when tour is running */
+.hover-card.tour-running .hover-btn {
+  visibility: visible !important;
+}
+
+/* When no tour is running, hide by default, show only on hover */
+.hover-card:not(.tour-running) .hover-btn {
+  visibility: hidden;
+}
+
+.hover-card:not(.tour-running):hover .hover-btn {
+  visibility: visible;
+}
+
+/* Table header alignment */
+table.dataframe th {
+    text-align: left;   /* headers */
+}
+table.dataframe td {
+    text-align: left;   /* data cells */
+}
+
+/* stops modal windows being behind the "fullscreen" */
+div#shiny-modal-wrapper {
+    z-index: 10000 !important; position: absolute;
+}
+
+.card.fullscreen-active .card-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 2rem;  /* adds space *inside* */
+}
+
+/* Footer should stick to bottom */
+.card.fullscreen-active .card-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding: 2rem;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.fullscreen-active {
+    height: 98% !important;
+    max-height: none !important;
+    min-height: none !important;
+}
+
+.hidden { 
+    display: none !important; 
+}
+
+.card { 
+    outline: 1px solid grey; 
+}
+
+.card.shadow { 
+    box-shadow: 0 4px 8px 0 rgba(50,50,50,.8) !important; 
+}
+
+
+/* Sortable */
+.drag-ghost { 
+    opacity: 0.5; 
+}
+
+.cards-grid { 
+    display: grid; gap: 12px; 
+} /* or flex */
+
+/* Make the handle easy to hit */
+.drag-handle {
+    display: inline-flex;        /* ensure it has a box */
+    align-items: center;
+    padding: 0 .4rem;
+    cursor: grab;                /* modern */
+    cursor: -webkit-grab;        /* Safari fallback */
+    user-select: none;
+    touch-action: none;          /* avoid touch scrolling instead of dragging */
+}
+
+.drag-handle:active,
+
+.sortable-chosen .drag-handle,
+
+.sortable-drag .drag-handle {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+}
+/* If your handle contains an icon/text, ensure the cursor stays the same over children */
+.drag-handle, .drag-handle * { 
+    cursor: inherit; 
+}
+
+/* Dragable protusion */
+/* Let the tab draw outside the card */
+/* be specific so your rule wins */
+.bslib-card, .card { 
+    position: relative; 
+    overflow: visible; 
+}
+
+/* If your cards are in a grid, give them a bit more gap so tabs don't collide */
+.cards-grid { 
+    display: grid; 
+    gap: 14px; 
+}
+
+/* The protruding tab */
+.drag-tab {
+    position: absolute !important; 
+    top: 50%;
+    left: 0;                         /* anchor on the left edge */
+    transform: translate(-50%, -50%);/* push half its width outside */
+    width: 28px;
+    height: 48px;
+    border-radius: 999px;            /* pill */
+    background: #f3f4f6;             /* neutral */
+    box-shadow: 0 2px 6px rgba(0,0,0,.18);
+    border: 1px solid rgba(0,0,0,.06);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    cursor: grab;
+    cursor: -webkit-grab;
+    outline: 1px solid grey;
+    touch-action: none; 
+    user-select: none;
+}
+
+/* “Grip” dots (pure CSS) */
+.drag-tab::before {
+    content: "";
+    width: 10px;
+    height: 20px;
+    opacity: .55;
+    background:
+        radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+        radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+}
+
+/* While dragging, show 'grabbing' and mute hover stuff if you like */
+.dragging .drag-tab,
+.drag-tab:active {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+    box-shadow: 0 4px 10px rgba(0,0,0,.22);
+}
+
+/* Optional: hide the tab on narrow screens */
+@media (max-width: 600px) {
+    .drag-tab { 
+        display: none; 
+    }
+}
+
+/* Hide the drag handle when the card is fullscreen */
+.card.fullscreen-active .drag-handle {
+    display: none !important;
+}
+
+
+/* Replace Bootstrap flex utilities with a grid */
+#cards-container {
+    display: grid !important; /* override d-flex */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0.75rem; /* similar to m-2 spacing */
+}
+
+/* Ensure no theme-level max-width caps cards */
+#cards-container > .card {
+    max-width: none;
+}
+
+shiny-data-frame .shiny-data-grid > table > thead > tr > th {
+    white-space: normal !important;
+    overflow: visible;      /* ensure multi-line shows fully */
+}
+
+shiny-data-frame .shiny-data-grid > table > thead > tr > th > div {
+    white-space: pre-line !important;  /* \n -> line break */
+    line-height: 1.2;
+}
+
+/* Applies to any DataTable or data-frame rendered by Shiny for Python */
+.dataTable td,
+.shiny-data-grid td,
+.table td {
+    max-width: 200px;         /* maximum width of each cell */
+    white-space: nowrap;      /* don’t wrap to multiple lines */
+    overflow: hidden;         /* hide overflowed text */
+    text-overflow: ellipsis;  /* add “…” */
+    vertical-align: middle;
+}
+
+/* Optional: tooltip showing the full text on hover */
+.dataTable td:hover,
+.shiny-data-grid td:hover,
+.table td:hover {
+    overflow: visible;
+    white-space: normal;
+    z-index: 10;
+    position: relative;
+    background: #fff;
+}
+
+/* overlay fullscreen style */
+.card.fullscreen-active {
+    position: fixed;
+    inset: 0;               /* top/right/bottom/left: 0 */
+    z-index: 1050;          /* above app chrome */
+    margin: 0 !important;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    transition: all 0.5s ease;
+}
+
+body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
+
+/* When dragging, stop any text selection */
+.dragging, .dragging * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Subtle pulse outline (safe, low motion) */
+@keyframes pulse-outline {
+  0%   { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+  70%  { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+  animation: pulse-outline 700ms ease-out;
+}
+
+/* Jello-ish wobble (more noticeable) */
+@keyframes jello {
+  0%   { transform: scale3d(1, 1, 1); }
+  30%  { transform: scale3d(1.07, 0.93, 1); }
+  45%  { transform: scale3d(0.95, 1.05, 1); }
+  60%  { transform: scale3d(1.03, 0.97, 1); }
+  75%  { transform: scale3d(0.99, 1.01, 1); }
+  100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+    animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+    will-change: transform; /* smoother */
+}
+
+/* Accessibility: honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .card.animate-jello { animation: none; }
+    .card.animate-highlight { animation-duration: 300ms; }
+}
+
+/* move Plotly modebar slightly down because of legend title */
+#dataClean-AllChart .modebar {
+    top: 30px !important;
+}
+
+
+/* Increase progress-bar height and vertically center text */
+.progress-bar {
+    height: 1rem !important;
+}
+
+
+/* Inline checkbox-groups → toggle-pill buttons */
+.shiny-input-checkboxgroup.shiny-input-container-inline .shiny-options-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group .checkbox {
+  margin: 0;
+}
+
+/* Keep the real checkbox square & hidden (accessibility preserved) */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+/* Pill face (UNchecked) — solid, darker primary-tint (no transparency) */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .40rem .80rem;
+  border-radius: 50rem; /* pill */
+  border: 1px solid var(--bs-primary, #0d6efd);
+  background-color: var(--bs-primary, #0d6efd);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+/* Hover: slightly stronger */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label:hover > span {
+  background-color: #0b5494; /* darker solid */
+} 
+
+/* Focus ring */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:focus + span {
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+/* CHECKED pill */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span {
+  background-color: #0b5494;
+  border-color: var(--bs-primary, #0d6efd);
+  color: #fff;
+}
+
+/* Square checkbox glyphs (not circles) */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span::before {
+  content: "☐";        /* square box (off) */
+  font-size: 1.8em;
+  line-height: 1;
+}
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span::before {
+  content: "☑";        /* square box with tick (on) */
+  color: currentColor; /* inherits white when checked */
+}
+
+/* Tighten legacy BS3 label spacing */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label { margin-bottom: 0; }
+
+
+/* role drag 'n drop */
+.roles-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+}
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(200px, 1fr));
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+}
+.roles-grid > * {
+    min-width: 0;
+}
+.role-box {
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
+    padding: 0.75rem;
+    min-height: 335px;
+    background: #d5e6f8;
+    width: 100%;
+    min-width: 0;
+}
+.role-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    min-width: 0;
+}
+.role-list {
+    min-height: 220px;
+    padding: 0.25rem;
+    border: 1px dashed #c7ced6;
+    border-radius: 8px;
+    background: white;
+    width: 100%;
+    min-width: 0;
+}
+.var-chip {
+    border: 1px solid #c7ced6;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    margin: 0.35rem 0;
+    background: #d0ddf6;
+    cursor: grab;
+    user-select: none;
+    width: 100%;
+    min-width: 0;
+}
+.ghost {
+    opacity: 0.4;
+}
+.chosen {
+    background: #dce9ff;
+}
