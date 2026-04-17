@@ -1,11 +1,3 @@
-# import sys
-# import pathlib
-# # --- Ensure 'src' is importable if you use a src/ layout ---
-# ROOT = pathlib.Path(__file__).resolve().parents[1]
-# SRC = ROOT / "src"
-# if SRC.exists() and str(SRC) not in sys.path:
-#     sys.path.insert(0, str(SRC))
-
 import pytest  # noqa: F401
 import pandas as pd
 import proxyData as pxd
@@ -15,7 +7,7 @@ def _is_strictly_increasing(seq):
     """Adjacent-pairs order check (backend-agnostic)."""
     return all(a < b for a, b in zip(seq, seq[1:]))
 
-
+@pytest.mark.unit
 def test_sample_random_preserves_order_pandas():
     import pandas as pd
     native = pd.DataFrame({"i": range(10)})
@@ -25,6 +17,7 @@ def test_sample_random_preserves_order_pandas():
     assert _is_strictly_increasing(out["i"].tolist())
 
 
+@pytest.mark.unit
 def test_sample_random_preserves_order_polars():
     import polars as pl
     native = pl.DataFrame({"i": list(range(10))})
@@ -34,7 +27,7 @@ def test_sample_random_preserves_order_polars():
     assert _is_strictly_increasing(vals)
 
 
-#@pytest.mark.skipif(pd is None, reason="pandas not installed")
+@pytest.mark.unit
 def test_sample_headtail_order_and_length_pandas():
     import pandas as pd
     native = pd.DataFrame({"i": range(10)})
@@ -45,7 +38,7 @@ def test_sample_headtail_order_and_length_pandas():
     assert len(out) == 6
 
 
-#@pytest.mark.skipif(pl is None, reason="polars not installed")
+@pytest.mark.unit
 def test_sample_headtail_order_and_length_polars():
     import polars as pl
     native = pl.DataFrame({"i": list(range(10))})
@@ -56,6 +49,7 @@ def test_sample_headtail_order_and_length_polars():
     assert len(out) == 6
 
 
+@pytest.mark.unit
 def test_sample_n_greater_than_len_returns_all_pandas():
     import pandas as pd
     native = pd.DataFrame({"i": range(5)})
@@ -65,6 +59,7 @@ def test_sample_n_greater_than_len_returns_all_pandas():
     assert _is_strictly_increasing(out["i"].tolist())
 
 
+@pytest.mark.unit
 def test_sample_n_greater_than_len_returns_all_polars():
     import polars as pl
     native = pl.DataFrame({"i": list(range(5))})
@@ -75,6 +70,7 @@ def test_sample_n_greater_than_len_returns_all_polars():
     assert _is_strictly_increasing(vals)
 
 
+@pytest.mark.unit
 def test_geopandas_geometry_preserved_on_sample():
     import geopandas as gpd
     import shapely.geometry as sgeom
@@ -93,6 +89,7 @@ def test_geopandas_geometry_preserved_on_sample():
     assert samp.crs.to_string() == "EPSG:4326"
     assert _is_strictly_increasing(samp["id"].tolist())
 
+@pytest.mark.unit
 def test_geopandas_geometry_preserved_on_full():
     import geopandas as gpd
     import shapely.geometry as sgeom
@@ -130,11 +127,10 @@ def make_sample_proxy() -> pxd.ProxyData:
         }
     )
     roles = {
-        "y": {Role.TARGET},
-        "x1": {Role.PREDICTOR},
-        "x2": {Role.PREDICTOR},
-        "id": {Role.IDENTIFIER},
-        "txt": {Role.SENSITIVE},
+        "target": ["y"],
+        "predictor": ["x1", "x2"],
+        "identifier": ["id"],
+        "sensitive" : ["txt"]
     }
     return pxd.ProxyData(df, _roles=roles)
 
@@ -143,6 +139,7 @@ def make_sample_proxy() -> pxd.ProxyData:
 # select_dtypes tests
 # -------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_select_dtypes_include_only_float():
     p = make_sample_proxy()
     p_sel = p.select_dtypes(include=["float"])
@@ -150,6 +147,7 @@ def test_select_dtypes_include_only_float():
     assert cols == ["x1", "x2"]
 
 
+@pytest.mark.unit
 def test_select_dtypes_include_int_and_object():
     p = make_sample_proxy()
     p_sel = p.select_dtypes(include=["int", "object"])
@@ -158,6 +156,7 @@ def test_select_dtypes_include_int_and_object():
     assert cols == ["y", "id", "txt"]
 
 
+@pytest.mark.unit
 def test_select_dtypes_exclude_object():
     p = make_sample_proxy()
     p_sel = p.select_dtypes(exclude=["object"])
@@ -167,6 +166,7 @@ def test_select_dtypes_exclude_object():
     assert set(cols) == {"y", "x1", "x2", "id"}
 
 
+@pytest.mark.unit
 def test_select_dtypes_include_and_exclude():
     p = make_sample_proxy()
     # keep only numeric, but exclude floats
@@ -179,7 +179,7 @@ def test_select_dtypes_include_and_exclude():
 # -------------------------------------------------------------------
 # select_drole tests
 # -------------------------------------------------------------------
-
+@pytest.mark.unit
 def test_select_drole_single_role():
     p = make_sample_proxy()
     p_sel = p.select_drole(include=Role.PREDICTOR)
@@ -188,6 +188,7 @@ def test_select_drole_single_role():
     assert set(cols) == {"x1", "x2"}
 
 
+@pytest.mark.unit
 def test_select_drole_multiple_roles():
     p = make_sample_proxy()
     # target + predictors
@@ -196,6 +197,7 @@ def test_select_drole_multiple_roles():
     assert set(cols) == {"y", "x1", "x2"}
 
 
+@pytest.mark.unit
 def test_select_drole_exclude_role():
     p = make_sample_proxy()
     # exclude identifiers
@@ -206,6 +208,7 @@ def test_select_drole_exclude_role():
     assert cols == {"y", "x1", "x2", "txt"}
 
 
+@pytest.mark.unit
 def test_select_drole_include_and_exclude():
     p = make_sample_proxy()
     # keep only predictors, but drop any that are sensitive (none in this set)
@@ -215,6 +218,7 @@ def test_select_drole_include_and_exclude():
     assert cols == {"x1", "x2"}
 
 
+@pytest.mark.unit
 def test_select_drole_columns_with_no_roles():
     # Add one column with no role metadata
     p = make_sample_proxy()
@@ -228,6 +232,7 @@ def test_select_drole_columns_with_no_roles():
     assert "extra" not in p_target._df.columns
 
 
+@pytest.mark.unit
 def test_select_drole_overlapping_include_exclude_raises():
     p = make_sample_proxy()
     with pytest.raises(ValueError):

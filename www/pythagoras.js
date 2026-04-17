@@ -6,17 +6,54 @@ console.info("[pythagoras] Script running")
 document.addEventListener("DOMContentLoaded", () => {
     console.info("[pythagoras] DOM has loaded");
 
-    /* toggle element */
-    Shiny?.addCustomMessageHandler?.("toggle_flip", function(msg) {
-        msg = msg || {};
-        const el = document.getElementById(msg.id);
-        if (!el) {
-            console.warn("[pythagoras] Flip element not found: ", msg.id)
+
+    Shiny?.addCustomMessageHandler?.("init_card", function(opts) {
+        const card = document.getElementById(opts.id);
+        if (!card) {
+            console.warn(`[pythagoras] Initialising card - card not found: "${opts.id}"`);
             return;
         }
-        el.scrollTop = 0;  // bring contents to the top before flipping
-        el.classList.toggle("flipped");
+        // Sortable roles (when applicable)
+        initRolesCard(card);
+        emitRoleMapFromCard(card);
+        // Expanding
+        const expandButton = card.querySelector(".expand-btn");
+        expandButton?.addEventListener("click", () => {
+            expandCard(card);
+        });
+        // Contracting
+        const contractButton = card.querySelector(".contract-btn");
+        contractButton?.parentElement?.classList.add("hidden");  // hide its wrapper initially
+        contractButton?.addEventListener("click", () => {
+            contractCard(card);
+        });
+        // Flipping
+        const flipButton = card.querySelector(".flip-btn");
+        flipButton?.addEventListener("click", () => {
+            flipToggle(card)
+        });
+        // Closing
+        const closeButton = card.querySelector(".close-btn");
+        closeButton?.addEventListener("click", (evt) => {
+            closeCard(card)
+        });
     });
+
+
+    function flipToggle(card) {
+        const cardbody = card.querySelector(".card-body");
+        cardbody.scrollTop = 0;  // bring contents to the top before flipping
+        cardbody.scrollLeft= 0;  // bring contents to the left before flipping
+        cardbody.classList.toggle("flipped");
+    }
+
+    function closeCard(card) {
+        const ns = card.id.replace(/-Card$/, "");
+        window.Shiny?.setInputValue?.(`${ns}-RemoveCard`, {
+            id: card.id,
+            ts: Date.now()
+        }, { priority: "event" });
+    };
 
     /* animate element e.g. shakeX or bounce */
     Shiny?.addCustomMessageHandler?.("animate", function(opts) {
@@ -56,8 +93,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* Sortable role-assignment elements */
     function emitRoleMapFromCard(card) { /* assign <ns>-role_map with current assignments */
+        const lists = card.querySelectorAll(".sortable-role");
+        if (lists.length === 0) return;
         const payload = {};
-        card.querySelectorAll(".sortable-role").forEach((el) => {
+        lists.forEach((el) => {
             const role = el.dataset.role;
             payload[role] = Array.from(el.children).map(x => x.dataset.varname);
         });
@@ -70,130 +109,95 @@ document.addEventListener("DOMContentLoaded", () => {
         emitRoleMapFromCard(card);
     }
 
-    function initSortableRoles() {
-        document.querySelectorAll(".card").forEach((card) => {
-            const lists = card.querySelectorAll(".sortable-role");
-            if (lists.length === 0) return;
-
-            console.info(`Found class "sortable-role" in ${card.id}`);
-
-            lists.forEach((el) => {
-                if (el.dataset.sortableInitialized === "true") return;
-
-                Sortable.create(el, {
-                    group: "variable-roles",
-                    animation: 150,
-                    ghostClass: "ghost",
-                    chosenClass: "chosen",
-                    onEnd: emitRoleMap
-                });
-
+    function initRolesCard(card) {
+        const lists = card.querySelectorAll(".sortable-role");
+        if (lists.length === 0) return;
+        lists.forEach((el) => {
+            if (el.dataset.sortableInitialized === "true") return;
+            if (Sortable.create(el, {
+                group: "variable-roles",
+                animation: 150,
+                ghostClass: "ghost",
+                chosenClass: "chosen",
+                onEnd: emitRoleMap
+            })) {
                 el.dataset.sortableInitialized = "true";
-            });
-        });
-    }
-
-    function emitAllRoleMaps() {
-        document.querySelectorAll(".card").forEach((card) => {
-            const lists = card.querySelectorAll(".sortable-role");
-            if (lists.length > 0) {
-                emitRoleMapFromCard(card);
             }
         });
     }
 
-    initSortableRoles();
-    if (window.Shiny?.initializedPromise) {
-        window.Shiny.initializedPromise.then(() => {
-            emitAllRoleMaps();
+    // Use the json in msg.role_map to populate the various divs that relate to the role asignment dialogue.
+    window.populateRolesHandler = function(msg) {
+        console.debug("[pythagoras] PopulateRoles running");
+        msg = msg || {};
+        const card = document.getElementById(msg.card);
+        if (!card) {
+            console.error("[pythagoras] Card element not found:", msg.card);
+            return;
+        }
+        initRolesCard(card);
+        const roleMap = msg.role_map || {};
+        // Clear all existing chips from all role buckets in this card
+        card.querySelectorAll(".sortable-role").forEach((bucket) => {
+            bucket.replaceChildren();
         });
-    } else {
-        // fallback
-        setTimeout(emitAllRoleMaps, 0);
-    }
+        // Rebuild each role bucket from the payload
+        Object.entries(roleMap).forEach(([role, columns]) => {
+            const bucket = card.querySelector(`.sortable-role[data-role="${role}"]`);
+            // console.debug(`[pythagoras] Role ${role} in card '${msg.card}'`);
+            if (!bucket) {
+                console.warn(`[pythagoras] No bucket found for role '${role}' in card '${msg.card}'`);
+                return;
+            }
+            // console.debug(`[pythagoras] Variables ${columns} in card '${msg.card}'`);
+            (columns || []).forEach((col) => {
+                const chip = document.createElement("div");
+                chip.className = "var-chip";
+                chip.dataset.varname = col;
+                chip.textContent = col;
+                bucket.appendChild(chip);
+                // console.debug(`[pythagoras] Added ${col} to role ${role} in card '${msg.card}'`);
+            });
+        });
+        emitRoleMapFromCard(card);
+    };
 
-
-    // Shiny?.addCustomMessageHandler?.("SortableRoles", function(msg) {
-    //     console.info(`[pythagoras] 1 SortableRoles running`);
-    //     msg = msg || {};
-    //     const el = document.getElementById(msg.card);
-    //     if (!el) {
-    //         console.error("[pythagoras] Sortable element not found: ", msg.card)
-    //         return;
-    //     }
-    //     console.info(`[pythagoras] 2 SortableRoles running`);
-    //     const input = msg.input
-    //     if (!input) {
-    //         console.error("[pythagoras] Input not supplied: ")
-    //         return;
-    //     }
-    //     function emitRoleMap() {
-    //         const payload = {};
-    //         el.querySelectorAll(".sortable-role").forEach((list) => {
-    //             const role = list.dataset.role;
-    //             payload[role] = Array.from(list.children).map(se => se.dataset.varname);
-    //         });
-    //         window.Shiny?.setInputValue?.(input,  payload, { priority: "event" });
-    //     }
-    //     console.info(`[pythagoras] 3 SortableRoles running`);
-    //     el.querySelectorAll(".sortable-role").forEach((el) => {
-    //         Sortable.create(el, {
-    //             group: "variable-roles",
-    //             animation: 150,
-    //             ghostClass: "ghost",
-    //             chosenClass: "chosen",
-    //             onEnd: emitRoleMap
-    //         });
-    //     });
-    //     console.info(`[pythagoras] 4 SortableRoles running`);
-    //     emitRoleMap();
-    // });
+    Shiny?.addCustomMessageHandler?.("PopulateRoles", window.populateRolesHandler)
 
     // ---- helpers so clicks and keyboard use the same behavior ----
-    const expandCard = (card, btn /* the .expand-btn that was clicked (optional) */) => {
+    const expandCard = (card) => {
         if (!card || card.classList.contains("fullscreen-active")) return;
+        card.scrollTop = 0;  // bring contents to the top before expanding
+        card.scrollLeft= 0;  // bring contents to the left before expanding
+        const cnt = card.querySelector(".roles-layout")
+        if (cnt) {
+            cnt.scrollLeft = 0;  // bring contents to the left before expanding
+        }
+        const contractBtn = card.querySelector(".contract-btn");
+        const expandWrapper = card.querySelector(".expand-btn")?.parentElement;
+        const closeWrapper  = card.querySelector(".close-btn")?.parentElement;
 
         // Hide the expand button's wrapper
-        btn?.parentElement?.classList.add("hidden");
-
+        expandWrapper?.classList.add("hidden");
         // Swap maximize → minimize (+ hide close while fullscreen)
-        const ch = btn?.parentElement?.parentElement || card;
-        ch?.querySelector(".contract-btn")?.parentElement?.classList.remove("hidden");
-        const close = ch?.querySelector(".close-btn");
-        close?.parentElement?.classList.add("hidden");
+        contractBtn?.parentElement?.classList.remove("hidden");
+        closeWrapper?.classList.add("hidden");
 
         card.classList.add("fullscreen-active");
         document.body.classList.add("fullscreen-mode");
-        btn?.setAttribute?.("aria-expanded", "true");
+        card.setAttribute?.("aria-expanded", "true");
         card.setAttribute("aria-modal", "true");
         window.Shiny?.setInputValue?.(`${card.id}_full_screen`, true, { priority: "event" });
     };
 
-    function highlightCard(card, { jello = true } = {}) {
-        if (!card) return;
-
-        // Make sure users can *see* where it went
-        // (do after you remove fullscreen class / restore DOM)
-        card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-
-        // Trigger animation
-        const cls = [];
-        cls.push("animate-highlight");
-        if (jello) cls.push("animate-jello");
-        card.classList.add(...cls);
-
-        // Clean up classes when done (with a timeout safety)
-        const cleanup = () => {
-            card.classList.remove("animate-highlight", "animate-jello");
-            card.removeEventListener("animationend", cleanup);
-        };
-        card.addEventListener("animationend", cleanup);
-        setTimeout(cleanup, 1500);
-     };
-
     const contractCard = (card) => {
         if (!card || !card.classList.contains("fullscreen-active")) return;
-
+        card.scrollTop = 0;  // bring contents to the top before contracting
+        card.scrollLeft= 0;  // bring contents to the left before contracting
+        const cnt = card.querySelector(".roles-layout")
+        if (cnt) {
+            cnt.scrollLeft = 0;  // bring contents to the left before expanding
+        }
         // Find header controls relative to this card
         const contractBtn = card.querySelector(".contract-btn");
         const expandWrapper = card.querySelector(".expand-btn")?.parentElement;
@@ -212,26 +216,25 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(() => highlightCard(card, { jello: true }));
     };
 
-    // ---- clicks use the helpers ----
-    const expandButtons = document.querySelectorAll(".expand-btn");
-    expandButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-        const card = btn.closest(".card");
-        if (!card) { console.warn("[FullScreen] No card found"); return; }
-        expandCard(card, btn);
-        });
-    });
+    function highlightCard(card, { jello = true } = {}) {
+        if (!card) return;
+        // Make sure users can *see* where it went
+        // (do after you remove fullscreen class / restore DOM)
+        card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        // Trigger animation
+        const cls = [];
+        cls.push("animate-highlight");
+        if (jello) cls.push("animate-jello");
+        card.classList.add(...cls);
+        // Clean up classes when done (with a timeout safety)
+        const cleanup = () => {
+            card.classList.remove("animate-highlight", "animate-jello");
+            card.removeEventListener("animationend", cleanup);
+        };
+        card.addEventListener("animationend", cleanup);
+        setTimeout(cleanup, 1500);
+     };
 
-    const contractButtons = document.querySelectorAll(".contract-btn");
-    contractButtons.forEach((btn) => {
-        // hide its wrapper initially (your original behavior)
-        btn?.parentElement?.classList.add("hidden");
-        btn.addEventListener("click", () => {
-        const card = btn.closest(".card");
-        if (!card) { console.warn("[FullScreen] No card found"); return; }
-        contractCard(card);
-        });
-    });
 
     // ---- ESC key: unflip if flipped; else contract if fullscreen ----
     document.addEventListener("keydown", (evt) => {
@@ -256,9 +259,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Sortable behaviour for card drag and drop
-    const container = document.getElementById("cards-container");
-    console.info("[pythagoras] Sortable-Script running (for card drag and drop)")
+    function publishCardOrder() {
+        // Sortable behaviour for card drag and drop
+        const container = document.getElementById("cards-container");
+        console.info("[pythagoras] Sortable-Script running (for card drag and drop)")
+        const ids = Array.from(container.children).map((x) => x.id).filter(Boolean);
+        window.Shiny?.setInputValue?.("CardOrder", ids, { priority: "event" })
+    };
+    
+    publishCardOrder() //ensure this is initially available
 
     const clearSelection = () => {
         try {
@@ -281,6 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remove duplicate IDs in the clone to avoid any accidental bindings/lookups
         clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
     };
+    
+    const container = document.getElementById("cards-container");
 
     Sortable.create(container, {
         animation: 150,
@@ -306,102 +317,36 @@ document.addEventListener("DOMContentLoaded", () => {
             dragClone = null;
             container.classList.remove("dragging");
             clearSelection();
-            const ids = Array.from(container.children).map((x) => x.id).filter(Boolean);
-            window.Shiny?.setInputValue?.("CardOrder", { ids, ts: Date.now() }, { priority: "event" });
+            publishCardOrder();
         }
     });
 
 
+    window.fullscreen_app = function(msg) {
+        var element = document.documentElement,
+        enterFS = element.requestFullscreen || element.msRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen,
+        exitFS = document.exitFullscreen || document.msExitFullscreen || document.mozCancelFullScreen || document.webkitExitFullscreen;
+        if (!document.fullscreenElement && !document.msFullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement) {
+            enterFS.call(element);
+        } else {
+            exitFS.call(document);
+        }
+    };
+    Shiny?.addCustomMessageHandler?.("fullscreen_app", window.fullscreen_app);
 
-    // // Sortable behaviour for Role Assignment
-    // function emitRoleMap() {
-    //     console.info(`Role Assignment running`)
-    //     const payload = {};
-    //     document.querySelectorAll(".sortable-role").forEach((list) => {
-    //         const role = list.dataset.role;
-    //         payload[role] = Array.from(list.children).map(el => el.dataset.varname);
-    //     });
-    //     window.Shiny?.setInputValue?.("RoleMapping-role_map", payload, { priority: "event" });
-    // }
+    window.quit_app = function(msg) {
+        window.close();
+    };
+    Shiny?.addCustomMessageHandler?.("quit_app", window.quit_app);
 
-    // document.querySelectorAll(".sortable-role").forEach((el) => {
-    //     console.info(`Found sortable-role ${el.id}`)
-    //     Sortable.create(el, {
-    //         group: "variable-roles",
-    //         animation: 150,
-    //         ghostClass: "ghost",
-    //         chosenClass: "chosen",
-    //         onEnd: emitRoleMap
-    //     });
-    // });
+    document.querySelectorAll(".bslib-sidebar-layout.sidebar-collapsed.sidebar-right>.collapse-toggle").forEach((btn) => btn.classList.add("hover-btn"));
 
-    // emitRoleMap();
+    Shiny.addCustomMessageHandler("UpdateCardOrder", (msg) => {
+        publishCardOrder();
+    });
+
+    Shiny.addCustomMessageHandler("set_input", (msg) => {
+        Shiny.setInputValue(msg.id, msg.value, { priority: "event" });
+    });
+
 });
-
-
-
-// // RoleMap Widget
-// (function() {
-//     const UNASSIGNED_SENTINEL = "__unassigned__";
-
-//     function initRoleMapWidget(root) {
-//         const zones = root.querySelectorAll(".role-zone");
-//         if (!zones.length) return;
-
-//         const widgetId = root.id;  // e.g. "-RoleMapWidget"
-//         const nsPrefix = widgetId.replace(/-RoleMapWidget$/, ""); // "config"
-
-//         function collectColumnRoleMap() {
-//         const mapping = {};
-
-//         zones.forEach((zone) => {
-//             const role = zone.dataset.role; // e.g. "target", "predictor", "__unassigned__"
-//             // For the RoleMap, we either:
-//             // - skip unassigned entirely, or
-//             // - map to Role.NONE.value ("none")
-//             const roleValue = (role === UNASSIGNED_SENTINEL) ? "none" : role;
-
-//             const items = zone.querySelectorAll("[data-col]");
-//             items.forEach((el) => {
-//             const col = el.dataset.col;
-//             // We enforce one role per column: singleton list
-//             mapping[col] = [roleValue];
-//             });
-//         });
-
-//         if (window.Shiny) {
-//             const inputId = nsPrefix + "-RoleMap"; // matches ns("RoleMap") on Python side
-//             window.Shiny.setInputValue(inputId, mapping, { priority: "event" });
-//         }
-//         }
-
-//         zones.forEach((zone) => {
-//         Sortable.create(zone, {
-//             group: "varRoles",  // all connected
-//             animation: 150,
-//             onAdd: collectColumnRoleMap,
-//             onUpdate: collectColumnRoleMap,
-//             onRemove: collectColumnRoleMap,
-//         });
-//         });
-
-//         // Push initial state
-//         collectColumnRoleMap();
-//     }
-
-//     // When Shiny is connected, initialise for all cards present
-//     document.addEventListener("shiny:connected", () => {
-//         document
-//         .querySelectorAll('[id$="-RoleMapWidget"]')
-//         .forEach((root) => initRoleMapWidget(root));
-//     });
-//     })();
-
-
-
-
-
-
-
-
-

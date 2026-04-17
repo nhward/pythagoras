@@ -1,4 +1,4 @@
-#### 📊 Introduction
+#### 🧭 Introduction
 
 A Missingness Heatmap is a visual tool for exploring tabular data. It highlights true missing values and also flags candidate missing-value placeholders (e.g. -99, --, N/A).
 These candidates are configured in the sidebar and are typically data-type specific.

@@ -15,7 +15,7 @@
 ##    Update_element() function for updating class and/or style
 
 from module  import Module
-from shiny   import ui, module, reactive, render
+from shiny   import ui, module, reactive, render, req
 from faicons import icon_svg as icon
 from pathlib import Path
 
@@ -23,7 +23,6 @@ from pathlib import Path
 # TODO: add a SibebarActive reactive
 # TODO: make it possible to edit the raw markdown in situ and save it.
 
-__version__ = "0.1.0"
 
 class Card(Module):
     
@@ -35,10 +34,10 @@ class Card(Module):
         self.initially_hidden = False
         self.description = None
         self.long_name = long_name or self.name
-        self.script_list.append("www/pythagoras.js")
-        self.script_list.append("www/markdown_tabsets.js")
-        self.css_list.append("www/animate.css")
-        self.css_list.append("www/pythagoras.css")
+        self.script_list.append(self.WWW / "pythagoras.js")
+        self.script_list.append(self.WWW / "markdown_tabsets.js")
+        self.css_list.append(self.WWW / "animate.css")
+        self.css_list.append(self.WWW / "pythagoras.css")
 
     def front(self):
         return None
@@ -82,7 +81,7 @@ class Card(Module):
 
 
                 # Info button
-                file = Path(f"markdown/{self.name}.md")
+                file = Path(self.ROOT / "markdown" / f"{self.name}.md")
                 if not file.exists():
                     info_button = None
                 else:
@@ -150,7 +149,7 @@ class Card(Module):
                         class_ = "btn rounded-pill hover-btn btn-sm close-btn",
                         style = "border: 0px; box-shadow: none;",
                         guide = self, priority = 10, title = "Close button", position = "bottom",
-                        text = "The close button hides the card."
+                        text = "The close button removes the card."
                     )
 
                 else:
@@ -228,13 +227,13 @@ class Card(Module):
                 )
             else:
                 sb = ui.sidebar(
-                    ui.card_header("Settings", class_ = "text-primary text-center sidebar-title"),
+                    ui.card_header("Settings", class_ = "w-100 text-end text-primary sidebar-title"),
                     self.settings(),
                     id = "Sidebar", 
-                    width = "20%",
+                    width = "30%",
                     position = "right", 
                     open = "closed",
-                    padding = [12,5,5,10], #top right bottom left
+                    padding = [12,5,5,0], #top right bottom left
                     bg = "lightgrey"
                 )
 
@@ -262,14 +261,14 @@ class Card(Module):
         # Path to your markdown file
         #import markdown
 
-        file = Path(f"markdown/{self.name}.md")
+        file = Path(self.ROOT / "markdown" / f"{self.name}.md")
         try:
             # Read the markdown content
             with file.open(encoding="utf-8") as f:
                 text = f.read()
             # Convert markdown to HTML - see the markdown extensions in use
             # return ui.HTML(markdown.markdown(text, extensions=["extra", "tables", "fenced_code", "markdown_katex"]))
-            return ui.markdown(text)  # TODO check this works okay
+            return ui.markdown(text)  # TODO check this change works okay - otherwise use commented-out line above
         except Exception:
             return None
 
@@ -385,20 +384,25 @@ class Card(Module):
                 self.debug("Copying")
                 await session.send_custom_message("copyText", str(self.code_text()))
 
-            # Flip button event
-            @self.suspendable(triggers = [input.FlipButton])
-            async def flip():
-                await session.send_custom_message("toggle_flip", {"id": self.ns("CardBody")})
+            @reactive.calc
+            def CurrentTabCardOrder(): #given in namespaces
+                req(input.CardOrder)
+                order = input.CardOrder()
+                order = [s.removesuffix("-Card") for s in order]
+                return order
 
-            # Code button event
             @self.suspendable(triggers = [input.CloseButton])
-            async def CloseCard():
+            def _remove_card():
                 self.suspend()
-                await self.hide(session)
-
+                id = self.ns('Card')
+                self.reset()
+                ui.remove_ui(selector=f"#{id}")
+                async def after_flush():
+                    await session.send_custom_message("UpdateCardOrder", None)
+                session.on_flushed(after_flush, once=True)
 
             result = self.server(input, output, session)
-  
+ 
             @reactive.effect
             def name_passthrough():
                 if not self.mutable:

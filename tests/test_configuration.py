@@ -1,15 +1,28 @@
-
 from shiny.pytest import create_app_fixture
-from cards.card.Configuration import instance
+from cards.Configuration import instance
 from shiny.run import ShinyAppProc
 from playwright.sync_api import Page
 from shiny.playwright import controller
-from utils import find_id, hover_solo_card
+from tests.utils import find_id, hover_solo_card
 import pytest
 import re
 
 card = instance()
 card_name = card.long_name
+app = create_app_fixture(app = "../cards/Configuration.py")
+
+@pytest.fixture(scope="session")
+def browser_context_args():
+    return {
+        "viewport": {"width": 1600, "height": 1000},
+    }
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args():
+    return {
+        "headless": False,
+        "slow_mo": 200,
+    }
 
 @pytest.mark.unit
 def test_get_loaded_packages_non_empty():
@@ -25,9 +38,6 @@ def test_get_loaded_packages_non_empty():
     card.server(None, lambda f: f, None)
     df = funcs["get_loaded_packages"]()
     assert not df.empty
-
-
-app = create_app_fixture(app = "../cards/Configuration.py")
 
 
 @pytest.mark.ui

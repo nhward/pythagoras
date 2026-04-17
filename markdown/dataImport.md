@@ -1,4 +1,4 @@
-#### 📊 Introduction
+#### 🧭 Introduction
 
 All analysis or modeling tasks begin with loading some raw data. The data is expected to be in a rows (observations) and columns (variables) table, or at least be able to be transformed into tabular data.
 

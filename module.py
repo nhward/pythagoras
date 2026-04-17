@@ -25,7 +25,7 @@
 ##       @capture_print decorator
 ##    Code recording:
 ##       @record_code decorator
-##       Instance-level dict repository of function code blocks 
+##       Instance-level dict repository of function code blocks
 ##       Code key-retrieval mechanism
 ##       Long HTML listing of all code blocks
 ##    Reactive.calc rate limiting
@@ -34,29 +34,24 @@
 ##    Create cards method that looks for files in "cards" and imports them and calls their instance() method
 ##    App method that creates the shiny app object
 ##    Run method that either runs the app in the browser or the card in the viewer
-from shiny.types import SilentException
-from shiny import reactive, App, ui as _ui
 import shinywidgets as _sw
 from abc import ABC, abstractmethod
 from functools import wraps
-import shiny.ui as ui
+from shiny import reactive, ui as _ui
 import logging
 import inspect
 import json
 import functools
 import io
 import asyncio
-import pathlib
 import sys
 import textwrap
 import re
 import time
 import threading
-import importlib
 from os import environ
 from collections import namedtuple
-
-__version__ = "0.1.0"
+from pathlib import Path
 
 
 
@@ -72,9 +67,11 @@ class Module(ABC):
       - Creates the shiny App
       - Allows single files to be run in a viewer window
     """
-
+    ROOT = Path(__file__).resolve().parent
+    WWW = ROOT / "www"
+    ModSession = None
     MaxInstances = 10  # arbitrary limit 
-    Instances = {}  # class level dictionary of all instances keyed by their namespaces
+    Instances = {}  # class level dictionary of all instances keyed by their namespaces (including deleted ones with empty values)
     script_list = []
     css_list = []
     _ui_patched = False  # whether patching has been performed
@@ -83,7 +80,7 @@ class Module(ABC):
     if not log.handlers:
         h = logging.StreamHandler(sys.stdout)
         h.setFormatter(logging.Formatter(
-            "%(asctime)s | %(levelname)s | %(message)s", datefmt="%H:%M:%S"
+            "%(asctime)s | %(levelname)s | monitor | %(message)s", datefmt="%H:%M:%S"
         ))
         log.addHandler(h)
         log.propagate = False
@@ -95,11 +92,11 @@ class Module(ABC):
         super().__init__(*args, **kwargs)  # play nicely with multiple inheritance
 
         # scripts
-        self.script_list.append("www/console.js")
-        self.script_list.append("www/shepherd.js")
-        self.script_list.append("www/guide.js")
-        self.script_list.append("www/sortable.min.js")
-        self.css_list.append("www/shepherd.css")
+        self.script_list.append(self.WWW / "console.js")
+        self.script_list.append(self.WWW / "shepherd.js")
+        self.script_list.append(self.WWW / "guide.js")
+        self.script_list.append(self.WWW / "sortable.min.js")
+        self.css_list.append(self.WWW / "shepherd.css")
 
         # reactives
         self._exports = {"name": reactive.Value(), "data": reactive.Value()}
@@ -131,7 +128,7 @@ class Module(ABC):
             Module._ui_patched = True
 
         # Logger
-        base = logging.getLogger(f"pythagoras.module.{self.name}")
+        base = logging.getLogger(self.name)
         if not base.handlers:
             h = logging.StreamHandler(sys.stdout)
             h.setFormatter(logging.Formatter(
@@ -149,19 +146,40 @@ class Module(ABC):
 
     def reset(self):
         self.debug(f"Cleaning up namespace {self.namespace}")
-        self.Instances.pop(self.namespace, None)
+        self.Instances[self.namespace] = None
 
-    def close(self):
-        try:
-            self.reset()
-        except Exception as e:
-            self.warning("reset during close failed: %r", e)
-
-    mysession = None
     Packet = namedtuple("Packet", "data name")
 
-    def version():
-        return __version__
+    def guidedDiv(
+        self,
+        *children,
+        id: str,
+        class_ = None,
+        guide = None,
+        title = None,
+        text: str = "",
+        position: str = "bottom",
+        priority: int = 0,
+        **kwargs,
+    ):
+        """
+        Create a div that can participate in the Shepherd guide.
+        The visible div gets the namespaced id.
+        A wrapper div gets the guide step id, so Shepherd has a stable target.
+        """
+        # Build the actual inner div first
+        actual_id = guide.ns(id) if guide is not None else id
+        widget = _ui.div(*children, id=actual_id, class_=class_, style = "overflow: hidden", **kwargs)
+        if guide is None:
+            return widget
+        # Shepherd attaches to the wrapper, not the inner element
+        guide._shepherd_steps[actual_id] = {
+            "title": title or id,
+            "text": text or "",
+            "position": position,
+            "priority": priority,
+        }
+        return widget
 
     # Logging
     # Convenience methods (don’t use deprecated .warn)
@@ -183,6 +201,7 @@ class Module(ABC):
             "pytest" in sys.modules or
             any("pytest" in arg for arg in sys.argv)
         )
+    IsSolo = running_under_tests()  # running as a single card
         
 
     #@classmethod
@@ -238,7 +257,7 @@ class Module(ABC):
             nid = guide.ns(id)
             wid = f"{nid}_wrapper"
             # Register shepherd step in this instance
-            self.debug(f"Adding {wid} to {guide.name}")
+            # self.debug(f"Adding {wid} to {guide.name}")
             guide._shepherd_steps[wid] = {
                 "title": title or label,
                 "text": text or "",
@@ -246,7 +265,7 @@ class Module(ABC):
                 "priority": priority
             }
             # Wrap in a div so Shepherd can safely attach
-            return ui.div(widget, id = wid, class_ = "html-fill-container html-fill-item")
+            return _ui.div(widget, id = wid, class_ = "html-fill-container html-fill-item")
         return wrapped
 
     _ui_patch_lock = threading.Lock()
@@ -420,7 +439,7 @@ class Module(ABC):
             code = code.replace("<", "&lt;")
             code = code.replace(">", "&gt;")
             lines.append(f'<h3># {name}</h3><pre>{code}</pre>')
-        return ui.HTML("<hr>".join(lines))
+        return _ui.HTML("<hr>".join(lines))
 
     def debounce(self, delay_secs: int = 1):
         def wrapper(f):
@@ -529,121 +548,10 @@ class Module(ABC):
         pass
 
     #@classmethod
-    def create_cards(folder = ""):
-        """Import all Python modules inside the given folder (default 'cards')
-        and create an instance of each."""
-        # Ensure the folder exists
-        cards_path = pathlib.Path(folder)
-        if not cards_path.is_dir():
-            raise FileNotFoundError(f"Folder '{folder}' not found.")
-        # If the folder isn’t already a package, make sure it is on sys.path
-        if str(cards_path.parent) not in sys.path:
-            sys.path.append(str(cards_path.parent))
-        imported_cards = {}
-        # Iterate through all .py files, skipping __init__.py
-        for py_file in cards_path.glob(pattern = "*.py"):
-            if py_file.name == "__init__.py":
-                continue
-            module_name = f"{folder}.{py_file.stem}"   # e.g. cards.DataImport
-            try:
-                module = importlib.import_module(module_name)
-                card = module.instance()
-                imported_cards[card.namespace] = card
-                card.info(msg="✅ Instantiated")
-            except Exception as e:
-                Module.log.error(msg = f"⚠️ Failed to instantiate card {module_name}: {repr(e)}")
-
-        return imported_cards
-    
-    #@classmethod
-    def app(modules):
-        if modules is None:
-            return
-        
-        # main ui object for the app
-        app_ui = ui.page_fillable(
-            ui.head_content(
-                ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
-                [ui.include_js(script, method = "inline") for script in set(Module.script_list)],  # iterate through unique js scripts
-                [ui.include_css(css, method = "inline") for css in set(Module.css_list)],  # iterate through unique CSS documents
-            ),
-            ui.busy_indicators.options(spinner_type = "bars2"),
-            ui.busy_indicators.use(),
-            ui.div(
-                [module.call_ui() for module in modules.values()],  # iterate through any number of forms - creates and runs a ui module for each
-                id = "cards-container", # Container for cards
-                class_ = "d-flex flex-wrap fillable"
-            )
-        )
-
-        # main server function for the app
-        def server(input, output, session):
-            Module.mysession = session  ## work around to get access to the (non-proxy) session
-
-            # redirect browser console to the python console
-            @reactive.effect
-            @reactive.event(input.Console_log)
-            def _():
-                message = input.Console_log()
-                level = message['level'].upper()
-                if level =="ERROR":
-                    Module.log.error(msg = f"<javascript> | {message['text']}")
-                elif level == "INFO":
-                    Module.log.info(msg = f"<javascript> | {message['text']}")
-                elif level == "WARNING":
-                    Module.log.warning(msg = f"<javascript> | {message['text']}")
-                else:
-                    Module.log.debug(msg = f"<javascript> | {message['text']}")
-            @reactive.effect()
-            def cascade():
-                try:
-                    payload = input.CardOrder()  # {'ids': [...], 'ts': 173957...}
-                    order = payload["ids"]
-                    order = [s.removesuffix("-Card") for s in order]
-                    Module.log.debug(msg = "Changed card order:")
-                    for o in order:
-                        Module.log.debug(msg = f"\t {o}")  
-                except Exception as e:
-                    if isinstance(e, SilentException):
-                        order = Module.Instances.keys()
-                        Module.log.debug(msg ="Initial card order:")
-                        for o in order:
-                            Module.log.debug(msg = f"\t {o}")  
-                    else:
-                        Module.log.error(msg = f"⚠️ Reordering exception: {repr(e)}")
-
-                source  = None
-                for cardns in order:
-                    ns = cardns.removesuffix("-Card")
-                    destination = Module.Instances[ns]
-                    if source is None:
-                        destination._imports["name"].unset() 
-                        destination._imports["data"].unset()
-                        destination.debug(msg="No data source currently attached")
-                    else:
-                        if source._exports["name"].is_set():
-                            destination._imports["name"].set(source._exports["name"].get())
-                            source.debug(msg=f"Output data '{source._exports['name'].get()}' -> card {destination.name}")
-                        else:
-                            destination._imports["name"].unset()
-                        if source._exports["data"].is_set():
-                            destination._imports["data"].set(source._exports["data"].get())
-                        else:
-                            destination._imports["data"].unset()
-                    source = destination
-
-            # Load and initialise each module file (card)
-            for card in Module.Instances.values():
-                card.call_server(input, output, session)
-                card.resume()
-
-        www_dir = pathlib.Path(__file__).parent / "www"  #because of the cards folder we need to be explicit about www's location
-        return App(ui = app_ui, server = server, static_assets = www_dir)
-
-    #@classmethod
     def run(modules):
-        import threading
+        # import threading
         import socket
+        Module.IsSolo = True
 
         def get_free_port():
             s = socket.socket()
@@ -652,24 +560,13 @@ class Module(ABC):
             s.close()
             return port
 
+        def launcher():
+            card = list(modules.values())[0]
+            print(card.name)
+            if card.name == "roleAssign":
+                return True
+            else:
+                return "viewer"
+
         if isinstance(modules, Module):
             modules = {modules.namespace : modules}          
-        app = Module.app(modules = modules)
-    
-        def _run():
-            # This will call asyncio.run() inside the new thread (no conflict).
-            app.run(
-                host = "127.0.0.1",
-                port = get_free_port(),
-                log_level = "info",
-                launch_browser = "viewer",
-                dev_mode = True,
-            )
-
-        if Module.running_in_background():
-            t = threading.Thread(target=_run, daemon=True)
-            Module.log.info(msg = "Shiny viewer (running in background thread)")
-            t.start()
-        else:
-            Module.log.info(msg = "Shiny viewer (running in foreground thread)")
-            _run()  # normal script behavior

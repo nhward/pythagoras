@@ -1,16 +1,20 @@
-from shiny import ui, render, reactive, req
-from faicons import icon_svg as icon
-from module import Module
-from card import Card
-import pandas as pd
-from typing import List, Dict
-import geopandas as gpd
-import shapely
+from pathlib import Path
+import sys
+import pandas as pd  # needed for test / solo modes
 
-# TODO: Suits pandas, polar or narwhals objects
-# TODO: employ roles when/if available
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-__version__ = "0.1.0"
+from shiny import ui, render, reactive, req  # noqa: E402
+from faicons import icon_svg as icon  # noqa: E402
+from module import Module  # noqa: E402
+from card import Card  # noqa: E402
+from typing import List, Dict  # noqa: E402
+from proxyData import ProxyData  # noqa: E402
+import geopandas as gpd  # noqa: E402
+import shapely  # noqa: E402
+
 
 def instance():
     this = Card(name = "dataTable", mutable = False)
@@ -76,13 +80,9 @@ def instance():
     
     def server(input, output, session):
 
-        @reactive.calc
-        def data_ready():
-            return this._imports["data"].is_set()
-
         @reactive.calc()
-        def GetData():
-            req(data_ready())
+        def incommingData():
+            req(this._imports["data"].is_set())
             return this._imports["data"]()
 
         @this.debounce(2)
@@ -112,7 +112,7 @@ def instance():
             - Geometries reformatted
             - Numeric data rounded
             """
-            df = GetData()
+            df = incommingData() #Returns ProxyData
             if this.isFullScreen():
                 df = df.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
             else:
@@ -193,10 +193,7 @@ def instance():
         @output
         @render.ui
         def DataTable():
-            if this._imports["data"].is_set():
-                return ui.output_data_frame(id = "DataTable2")
-            else:
-                return None
+            return ui.output_data_frame(id = "DataTable2")
 
         @output
         @render.data_frame
@@ -207,13 +204,13 @@ def instance():
         @output
         @render.download(filename=f"{this.namespace}_data.csv")
         def Export():
-            if data_ready():
-                df = GetData()
-                import io
-                buf = io.StringIO()
-                df.to_csv(buf, index=False, header = True)
-                buf.seek(0)
-                yield buf.read()
+            req(incommingData())
+            df = incommingData()  # export raw not preparedData
+            import io
+            buf = io.StringIO()
+            df.to_csv(buf, index=False, header = True)
+            buf.seek(0)
+            yield buf.read()
 
 
     this.server = server
@@ -222,7 +219,21 @@ def instance():
 
 if Module.running_under_tests():
     this = instance()
+    df = pd.DataFrame(
+        {
+            "y": [1, 0, 1, 0],
+            "x1": [10.0, 11.0, 12.0, 13.0],
+            "x2": ["A", "B", "A", "B"],
+            "id": [100, 101, 102, 103],
+            "part": ["Train", "Train", "Test", "Test"],
+        }
+    )
+    pxd = ProxyData.from_native(df)
+    this._imports["data"].set(pxd)
     app = Module.app(modules = {this.ns: this})
 elif Module.running_directly(name =__name__):
     this = instance()
+    df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
+    pxd = ProxyData.from_native(df)
+    this._imports["data"].set(pxd)
     Module.run(modules = {this.ns: this})

@@ -28,6 +28,10 @@ Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
             //console.warn(`[guide] ${step.id}: Skipping step - element not available using selector "${step.selector}"`);
             return;
         }
+        function isVisibleInLayout(el) {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+        }
         //console.info(`[guide] ${step.id}: Creating step`);
         tour.addStep({
             id: step.id,
@@ -49,6 +53,7 @@ Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
                     }
                     //console.info(`[guide] ${step.id}: Located element`);
                     const card = el.closest(".card")
+                    const sidebar = card.querySelector(".sidebar")
 
                     // === 0. FULL SCREEN HANDLING ===
                     if (card) {
@@ -112,24 +117,24 @@ Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
                                     console.info("[guide] Flip btn used for Back");
                                 }
                             }
-                        }
-                    }
-
-                    // === 3. SIDEBAR HANDLING  ===
-                    const sidebar = el.closest(".sidebar");
-                    if (sidebar && sidebar.hasAttribute("hidden")) {
-                        // console.log(`[guide] ${sidebar.id}: sidebar found`);
-                        const card = sidebar.closest(".card");
-                        if (card) {
-                            // console.log(`[guide] card found`);
-                            const toggleBtn = card.querySelector(".collapse-toggle");
-                            if (toggleBtn) {
-                                // console.log(`[guide] Toggle button found`);
-                                toggleBtn.click();
+                            if (sidebar && isVisibleInLayout(sidebar)) {
+                                const toggleBtn = card.querySelector(".collapse-toggle");
+                                if (toggleBtn) {
+                                    toggleBtn.click();
+                                }
                             }
                         }
                     }
 
+                    // === 3. SIDEBAR HANDLING  ===
+                    const inSidebar = el.closest(".sidebar")
+                    if (inSidebar && !isVisibleInLayout(sidebar)) {
+                        const toggleBtn = card.querySelector(".collapse-toggle");
+                        if (toggleBtn) {
+                            // console.log(`[guide] Toggle button found`);
+                            toggleBtn.click();
+                        }
+                    }
                     resolve();
                 });
             }
@@ -156,13 +161,13 @@ Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
                 flip.click()
             }
         }
-        const sb = card.querySelector(".sidebar")
-        if (sb && !sb.hasAttribute("hidden")) {
-            const toggle = card.querySelector(".collapse-toggle");
-            if (toggle) {
-                toggle.click();
-            }
-        }
+        // const sb = card.querySelector(".sidebar")
+        // if (sb && isVisibleInLayout(sb)) {
+        //     const toggle = card.querySelector(".collapse-toggle");
+        //     if (toggle) {
+        //         toggle.click();
+        //     }
+        // }
     };
 
     tour.on("complete", () => reset(card));

@@ -1,234 +1,182 @@
-from shiny import ui, render, reactive, req
-from module import Module
-from card import Card
-from roles import Role  #, RoleMap
-from faicons import icon_svg as icon
-import json
+from pathlib import Path
+import sys
+import pandas as pd  # needed for test / solo modes
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-__version__ = "0.1.0"
+from shiny import ui, render, reactive, req  # noqa: E402
+from module import Module  # noqa: E402
+from card import Card  # noqa: E402
+from roles import Role, RoleMap  # noqa: E402
+from faicons import icon_svg as icon  # noqa: E402
+from proxyData import ProxyData as Pxy  # noqa: E402
 
 
 def instance():
-    this = Card(name = "RoleMapping", mutable = False)
+    this = Card(name = "roleAssign", mutable = False)
     this.long_name = "Role Assignment"
     this.description = "This card enables the variables to be assigned to roles."
 
+    def settings():
+        return ui.TagList(
+            ui.input_text(
+                id = "Separator", 
+                label = "Between-identifier-variable separator", 
+                value = "|",
+                guide = this,
+                text = 'Since tab, semi-colon and comma characters are common in identifiers, this string specifies the type of separation to employ.',
+                position = "left"),
+            ui.input_slider(
+                id = "MaxObs", 
+                label = "Maximum observations to check for negatives, cardinality etc", 
+                min = 3,
+                max = 7,
+                value = 4,
+                ticks = True,
+                pre = "10^",
+                guide = this,
+                text = 'Limit to number of observations to chart to ensure responsiveness (logarithmic scale).',
+                position = "left")
+        )
 
-    COLUMNS = [
-        "age", "income", "postcode", "outcome", "weight",
-        "lat", "lon", "customer_id", "date"
-    ]
+    this.settings = settings
 
-    ROLES = [r.value for r in Role]
- 
     def front():
-        grid = ui.div(
-            {"class": "roles-grid"},
-        )
-        for role in ROLES:
-            inner = ui.div(
-                    id=f"role-{role}",
-                    class_="role-list sortable-role",
-                    **{"data-role": role},
-                )
+        grid = ui.div(class_ = "roles-grid")
+        for role in [r.value for r in Role]:
             bucket = ui.div(
-                {"class": "role-box"},
                 ui.div(role.title(), class_="role-title"),
-                inner
+                    ui.div(
+                        id = f"role-{role}",
+                        class_ = "role-list sortable-role",
+                        **{"data-role": role},
+                    ),
+                class_ = "role-box"
             )
-            if role == "predictor":
-                inner.append(
-                    *[ui.div(
-                        col,
-                        class_="var-chip",
-                        **{"data-varname": col}
-                    ) for col in COLUMNS]
-                )
             grid.append(bucket)
-        this.info("Calling Sortable Roles")
-        return ui.div(
-            {"class": "roles-layout", "style": "overflow-x: auto;"},
-            grid
+        return this.guidedDiv(
+            grid, 
+            id = "Roles", 
+            class_ = "roles-layout",
+            guide = this, 
+            title = "Role assignments",
+            text = "This drag-and-drop dialogue allows the variables to be placed in the appropriate role boxes. You can scroll to the right to access all the roles. This dialogue is best in full screen.",
+            position = "top",
+            priority = 0
         )
- 
+
     this.front = front
     
     def back():
-        return ui.output_text_verbatim(id = "Assignments")
+        return ui.output_table(id = "Assignments")
 
     this.back = back
 
     def footer():
-        return ui.input_action_button(
-            id = "Commit", 
-            label = 'Commit Assignments', 
-            icon = icon("gavel", title = "Commit the role assignments", a11y = "sem"),
-            disabled = True, 
-            width = "250px", 
-            class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
-            style = "border: 0px; box-shadow: none;",
-            guide = this, 
-            title = "Commit button",
-            text = "This button commits the role assignments. It bounces momentarily when it is ready to be clicked.",
-            position = "top"
+        return ui.TagList(
+            ui.input_action_button(
+                id = "Commit", 
+                label = 'Commit Assignments', 
+                icon = icon("gavel", title = "Commit the role assignments", a11y = "sem"),
+                disabled = True, 
+                width = "250px", 
+                class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
+                style = "border: 0px; box-shadow: none;",
+                guide = this, 
+                title = "Commit button",
+                text = "This button commits the role assignments. It bounces momentarily when it is ready to be clicked.",
+                position = "top"
+            ),
+            ui.output_ui(
+                id = "Check",
+                guide = this, 
+                title = "Card status",
+                text = "This contains a single line of colour coded information about the role validation.",
+                position = "top")
         )
 
     this.footer = footer
 
     
     def server(input, output, session):
-        
-        @output
-        @render.ui
-        def Mapping():
-            grid = ui.div(
-                {"class": "roles-grid"},
-            )
-            for role in ROLES:
-                inner = ui.div(
-                        id=f"role-{role}",
-                        class_="role-list sortable-role",
-                        **{"data-role": role},
-                    )
-                bucket = ui.div(
-                    {"class": "role-box"},
-                    ui.div(role.title(), class_="role-title"),
-                    inner
-                )
-                if role == "predictor":
-                    inner.append(
-                        *[ui.div(
-                            col,
-                            class_="var-chip",
-                            **{"data-varname": col}
-                        ) for col in COLUMNS]
-                    )
-                grid.append(bucket)
-            this.info("Calling Sortable Roles")
-            return ui.div(
-                {"class": "roles-layout", "style": "overflow-x: auto;"},
-                grid
-            )
-
-        
-
-        # @reactive.Effect
-        # async def custom():
-        #     this.info("Triggering sortable-roles")
-        #     await session.send_custom_message("SortableRoles", {"card" : session.ns("Card"), "input" : session.ns("role_map")})    
-
-        @reactive.calc
-        def data_ready():
-            return this._imports["data"].is_set()
 
         @reactive.calc()
-        def GetData():
-            req(data_ready())
+        def incommingProxyData():
+            req(this._imports["data"].is_set())
             return this._imports["data"]()
+ 
+        @reactive.calc()
+        def PreparedData():
+            pxd = incommingProxyData()
+            return pxd.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
+            
+        @this.suspendable(triggers = [PreparedData])
+        async def PopulateRoles():
+            messages = ValidateMap()
+            if len(messages) > 0: #invalid
+                pxd = PreparedData()
+                rm = pxd.role_map.to_primitive()
+                await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
 
-        @render.text
+        @output
+        @render.table
+        @this.record_code
         def Assignments():
-            # req(data_ready())
-            return json.dumps(input.role_map(), indent=2)
-        
-      
+            orm = this._exports["data"]().role_map
+            return orm.roles_to_frame()
+
         @reactive.calc
+        @this.record_code
         def ValidateMap():
-            return True #tempoarary
-        
+            pxd = PreparedData()
+            this.debug("Validating changes")
+            if input.role_map() is None:
+                return pxd.validate(separator = input.Separator())
+            else: 
+                # Convert the json to the RoleMap class
+                rm = RoleMap.from_primitive(input.role_map())
+                msgs = pxd.validate(role_map = rm, separator = input.Separator()) 
+                return msgs
 
         #### Update commit button ----
         @this.suspendable(triggers = [ValidateMap])
-        def GateKeeper():
+        async def Gatekeeper():
+            messages = ValidateMap()
+            ok = len(messages) == 0
             ui.update_action_button(
                 id = "Commit",
-                disabled = not ValidateMap()
+                disabled = not ok
             )
+            if ok:
+                await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
+
+        #### Committed  event ----
+        @reactive.calc
+        def Committed():
+            req(input.role_map())
+            pxd = PreparedData()
+            return pxd.with_roles(input.role_map()) 
+            
 
         #### Commit event ----
         @this.suspendable(triggers = [input.Commit])
         def CommitEvent():
-            pass
-            # CommittedData.set(GetData2())
-            # this._exports["data"].set(CommittedData())
+            this._exports["data"].set(Committed())
 
-        # CurrentColumns = reactive.Value(None)
-
-        # @reactive.calc()
-        # def changedBaseRoleMap():
-        #     data = GetData()
-        #     req(CurrentColumns() is None or set(CurrentColumns()) != set(data.columns))
-        #     CurrentColumns.set(data.columns)
-        #     this.debug(msg = "New-data roles:")
-        #     for r in data._roles:
-        #         this.debug(msg = f"\t {r}")  
-        #     return data._roles
-
-
-        # @output
-        # @render.ui
-        # def RoleMapWidget():
-        #     # req(changedBaseRoleMap() is not None)
-
-        #     def role_column(role_value: str, label: str, cols_in_role: list[str]):
-        #         # role_value is either a Role.value (e.g. "target") or UNASSIGNED_SENTINEL
-        #         return ui.div(
-        #             ui.h6(label, class_="text-center"),
-        #             ui.tags.ul(
-        #                 *[
-        #                     ui.tags.li(
-        #                         col,
-        #                         **{
-        #                             "data-col": col,
-        #                             "class": "var-pill list-group-item list-group-item-action py-1 px-2 m-1",
-        #                         },
-        #                     )
-        #                     for col in cols_in_role
-        #                 ],
-        #                 **{
-        #                     "data-role": role_value,
-        #                     "class": "role-zone list-unstyled border rounded p-2 min-vh-25",
-        #                 },
-        #             ),
-        #             class_="col"
-        #         )
-        #     with reactive.isolate():
-        #         rolemap = GetData()._roles
-        #         print(rolemap)
-
-        #     return ui.div(
-        #         ui.div(
-        #             "testing",
-        #             # *[
-        #                 # role_column(r.value, r.name.title(), rolemap.columns_with_role(r)) for r in rolemap
-        #             # ],
-        #             class_="row g-3",
-        #             id = this.ns("xxRoleMapWidget")  # Note: the actual Shiny input id we’ll set from JS is ns("RoleMap")
-        #         )
-        #     )
-
-
-        # @reactive.calc
-        # def role_mapXXX() -> RoleMap:
-        #     """
-        #     Reactive RoleMap derived from the drag-and-drop UI.
-        #     """
-        #     raw = input.RoleMap() or {}  # dict[str, list[str]] from JS
-        #     # filter out "none" if you want unassigned to be "no entry" in RoleMap
-        #     cleaned = {
-        #         col: [r for r in roles if r != Role.NONE.value]
-        #         for col, roles in raw.items()
-        #     }
-        #     return RoleMap.from_primitive(cleaned)
-
-        # # Optionally expose on the card for other modules to use:
-        # this.role_map = role_map
-
-        # @reactive.effect
-        # def _debug_role_map():
-        #     if role_map().column_roles:
-        #         print(f"[{this.name}] RoleMap updated: {role_map().to_primitive()}")
+        @output
+        @render.ui
+        async def Check():
+            messages = ValidateMap()
+            if len(messages) == 0:
+                if (this._exports["data"].is_set()) and (this._exports["data"]().role_map == Committed().role_map):
+                    return ui.span("Assignments applied", class_ = "text-success")
+                else:
+                    return ui.span("Assignments ready to commit", class_ = "text-primary")
+            else:
+                i = len(messages)
+                return ui.span(i,": ", messages[i-1], class_ = "text-danger")
 
     this.server = server
 
@@ -237,10 +185,21 @@ def instance():
 
 if Module.running_under_tests():
     this = instance()
+    df = pd.DataFrame(
+        {
+            "y": [1, 0, 1, 0],
+            "x1": [10.0, 11.0, 12.0, 13.0],
+            "x2": ["A", "B", "A", "B"],
+            "id": [100, 101, 102, 103],
+            "part": ["Train", "Train", "Test", "Test"],
+        }
+    )
+    pxd = Pxy.from_native(df)
+    this._imports["data"].set(pxd)
     app = Module.app(modules = {this.ns: this})
 elif Module.running_directly(name =__name__):
-    import pandas as pd
     this = instance()
-    df = pd.read_csv("data/Ass2.csv")
-    this._imports["data"].set(df)
+    df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
+    pxd = Pxy.from_native(df)
+    this._imports["data"].set(pxd)
     Module.run(modules = {this.ns: this})

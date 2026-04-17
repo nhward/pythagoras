@@ -1,8 +1,14 @@
 import pytest
 import asyncio
 from unittest.mock import AsyncMock
+
 from pathlib import Path
-from card import Card
+import sys
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from card import Card  # noqa: E402
 
 #############################
 # Fixtures
@@ -24,6 +30,7 @@ def temp_md_file(tmp_path):
 #############################
 # Constructor-related tests
 #############################
+@pytest.mark.unit
 def test_card_initialisation(card):
     assert card.name == "TestCard"
     assert card.long_name == "TestCard"   # default fallback
@@ -33,31 +40,31 @@ def test_card_initialisation(card):
     assert card.initially_hidden is False
     assert card.description is None
     # Script and CSS additions
-    assert "www/pythagoras.js" in card.script_list
-    assert "www/markdown_tabsets.js" in card.script_list
-    assert "www/animate.css" in card.css_list
-    assert "www/pythagoras.css" in card.css_list
+    assert Card.WWW / "pythagoras.js" in card.script_list
+    assert Card.WWW / "markdown_tabsets.js" in card.script_list
+    assert Card.WWW / "animate.css" in card.css_list
+    assert Card.WWW / "pythagoras.css" in card.css_list
 
-
-#############################
-# Boolean helper methods
-#############################
+@pytest.mark.unit
 def test_hasSidebar_default(card):
     # settings() returns None -> no sidebar
     assert card.settings() is None
     assert card.hasSidebar() is False
 
 
+@pytest.mark.unit
 def test_hasFooter_default(card):
     assert card.footer() is None
     assert card.hasFooter() is False
 
 
+@pytest.mark.unit
 def test_hasFlipSide_default(card):
     assert card.back() is None
     assert card.hasFlipSide() is False
 
 
+@pytest.mark.unit
 def test_override_methods_affect_flags():
     """If a subclass overrides front/back/settings/footer, flags should work."""
     class C(Card):
@@ -70,9 +77,7 @@ def test_override_methods_affect_flags():
     assert c.hasFooter() is True
 
 
-#############################
-# Markdown information tests
-#############################
+@pytest.mark.unit
 def test_information_returns_none_if_missing(card):
     """No markdown file means information() returns None."""
     # ensure file does not exist
@@ -82,15 +87,11 @@ def test_information_returns_none_if_missing(card):
     assert card.information() is None
 
 
-def test_information_reads_md(card, tmp_path, monkeypatch):
+@pytest.mark.unit
+def test_information_reads_md(card):
     # Simulate a project root with markdown/TestCard.md
-    project_root = tmp_path
-    markdown_dir = project_root / "markdown"
-    markdown_dir.mkdir()
-    md_file = markdown_dir / "TestCard.md"
+    md_file = card.ROOT / "markdown" / f"{card.name}.md"
     md_file.write_text("# Heading\nSome **markdown** text.", encoding="utf-8")
-    # Run the code with CWD set to our fake project root
-    monkeypatch.chdir(project_root)
     out = card.information()
     # Now we expect a ui.markdown object
     assert out is not None
@@ -102,11 +103,13 @@ def test_information_reads_md(card, tmp_path, monkeypatch):
     # Common assertions
     assert "<h1" in html.lower()
     assert "markdown" in html.lower()
-
+    if md_file.exists():
+        md_file.unlink()
 
 #############################
 # show() / hide() tests
 #############################
+@pytest.mark.unit
 def test_show_sends_message(card):
     session = AsyncMock()
     session.ns = lambda x: f"ns-{x}"
@@ -117,6 +120,7 @@ def test_show_sends_message(card):
     )
 
 
+@pytest.mark.unit
 def test_hide_sends_message(card):
     session = AsyncMock()
     session.ns = lambda x: f"ns-{x}"
@@ -130,6 +134,7 @@ def test_hide_sends_message(card):
 #############################
 # UI stub methods
 #############################
+@pytest.mark.unit
 def test_stub_ui_methods(card):
     assert card.front() is None
     assert card.back() is None
@@ -140,6 +145,7 @@ def test_stub_ui_methods(card):
 #############################
 # Namespace existence
 #############################
+@pytest.mark.unit
 def test_namespace_exists(card):
     """Inherited from Module — but we can check basic existence."""
     assert hasattr(card, "namespace")

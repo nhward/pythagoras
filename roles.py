@@ -2,7 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, Mapping, Set
 from enum import Enum
-
+import pandas as pd
+import json
 
 class Role(str, Enum):
     TARGET     = "target"
@@ -10,6 +11,7 @@ class Role(str, Enum):
     IDENTIFIER = "identifier"
     WEIGHTING  = "weighting"
     STRATIFIER = "stratifier"
+    TREATMENT  = "treatment"
     GEOMETRY   = "geometry"
     SEQUENCE   = "sequence"
     SENSITIVE  = "sensitive"
@@ -36,22 +38,71 @@ class Role(str, Enum):
                 return r
         raise ValueError(f"Unknown role {value!r}. Valid roles: {[r.value for r in cls]}")
 
+# ----------------------------------------------------------------------------------------
+
 @dataclass
 class RoleMap:
     """
-    Column → set of roles.
-    Example internal structure:
-        {
-            "y": {Role.TARGET},
-            "x1": {Role.PREDICTOR},
-            "id": {Role.IDENTIFIER},
-        }
+        A class to represent the assignment of roles to variables.
+        In the MOST general case a variable might be allowed more than one role - this is what the class allows.
+        We will use it assuming the a variable has only a single role ("none" being an allowed role)
     """
     column_roles: Dict[str, Set[Role]] = field(default_factory=dict)
 
     # --- basic mutation -------------------------------------------------
     def __str___(self):
-        return self.column_roles
+        return self.to_primitive()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, RoleMap):
+            return NotImplemented
+
+        return {
+            k: set(v) for k, v in self.column_roles.items() if v
+        } == {
+            k: set(v) for k, v in other.column_roles.items() if v
+        }
+
+    def variable_to_frame(self) -> pd.DataFrame:
+        """
+        Return a DataFrame with columns:
+            - Variable
+            - Role
+
+        Every variable appears once.
+        Roles are comma-separated.
+        """
+        rows = []
+        for col in sorted(self.column_roles):
+            roles = self.column_roles[col]
+            role_str = ", ".join(sorted(r.value.title() for r in roles)) if roles else ""
+            rows.append({
+                "Variable": col,
+                "Role": role_str
+            })
+        return pd.DataFrame(rows)
+
+    def roles_to_frame(self) -> pd.DataFrame:
+        """
+        Return a DataFrame with columns:
+            - Role
+            - Variable
+
+        Every role appears once.
+        Variables are comma-separated.
+        """
+        rows = []
+        for role in Role:
+            cols = [
+                col for col, roles in self.column_roles.items()
+                if role in roles
+            ]
+            var_str = ", ".join(sorted(cols)) if cols else ""
+            rows.append({
+                "Role": role.value.title(),
+                "Variable": var_str
+            })
+        return pd.DataFrame(rows)
 
     def set_roles(self, column: str, roles: Iterable[Role]) -> None:
         """Replace all roles for a column."""
@@ -99,41 +150,47 @@ class RoleMap:
         """Convenience: does this column have the given role?"""
         role = Role.from_value(role)
         return role in self.column_roles.get(column, set())
-
-    # --- convenience helpers -------------------------------------------
-
-    def ensure_singleton(self, role: Role, column: str) -> None:
-        """
-        Enforce that only one column has a singleton role (e.g. TARGET, PARTITION).
-        This will:
-          - remove that role from any other column
-          - assign it to `column`
-        """
-        role = Role.from_value(role)
-        for col in list(self.column_roles.keys()):
-            if role in self.column_roles[col] and col != column:
-                self.column_roles[col].remove(role)
-                if not self.column_roles[col]:
-                    self.column_roles.pop(col, None)
-        self.add_role(column, role)
-
+    
     # --- (de)serialisation ---------------------------------------------
-
-    def to_primitive(self) -> Dict[str, list[str]]:
-        """
-        Convert to a dict of {column: [role_value, ...]} for JSON/YAML/etc.
-        """
-        return {
-            col: sorted(r.value for r in roles)
-            for col, roles in self.column_roles.items()
-        }
 
     @classmethod
     def from_primitive(cls, data: Mapping[str, Iterable[str]]) -> "RoleMap":
         """
-        Inverse of to_primitive(): build a RoleMap from string roles.
+        Build a RoleMap from a mapping of:
+            {role_name: [column_name, ...]}
         """
         rm = cls()
-        for col, roles in data.items():
-            rm.set_roles(col, [Role.from_value(r) for r in roles])
+        for role_name, columns in data.items():
+            role = Role.from_value(role_name)
+            for col in columns:
+                rm.add_role(col, role)
         return rm
+
+
+    def to_primitive(self) -> dict[str, list[str]]:
+        """
+        Serialise RoleMap to JSON string.
+        Example internal structure:
+            {
+            "Target": {y},
+            "Predictor": {x1, x2, x3},
+            "identifier": {id},
+            }
+        """
+        result = {r.value: [] for r in Role}
+        for col, roles in self.column_roles.items():
+            for role in roles:
+                result[role.value].append(col)
+        return result
+
+
+    @classmethod
+    def from_json(cls, data: str | bytes) -> "RoleMap":
+        """
+        Deserialize JSON string into a RoleMap.
+        """
+        parsed = json.loads(data)
+        return cls.from_primitive(parsed)
+
+
+    

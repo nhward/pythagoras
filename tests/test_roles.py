@@ -1,8 +1,16 @@
-# test_role_map.py
+import pytest
+from pathlib import Path
+import sys
 
-import pytest   # noqa: F401
-from roles import RoleMap, Role
+# Ensure app root is importable when pytest is run outside the IDE
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
+from roles import RoleMap, Role  # noqa: E402
+
+
+@pytest.mark.unit
 def test_set_and_get_roles():
     rm = RoleMap()
     rm.set_roles("x1", {Role.PREDICTOR})
@@ -10,6 +18,7 @@ def test_set_and_get_roles():
     assert rm.get_roles("missing") == set()   # default
 
 
+@pytest.mark.unit
 def test_add_role():
     rm = RoleMap()
     rm.add_role("y", Role.TARGET)
@@ -19,6 +28,7 @@ def test_add_role():
     assert rm.get_roles("y") == {Role.TARGET, Role.IDENTIFIER}
 
 
+@pytest.mark.unit
 def test_remove_role():
     rm = RoleMap()
     rm.set_roles("id", {Role.IDENTIFIER, Role.PREDICTOR})
@@ -29,6 +39,7 @@ def test_remove_role():
     assert rm.get_roles("id") == {Role.IDENTIFIER}
 
 
+@pytest.mark.unit
 def test_columns_with_role():
     rm = RoleMap()
     rm.set_roles("y", {Role.TARGET})
@@ -39,30 +50,35 @@ def test_columns_with_role():
     # assert rm.columns_with_role(Role.IDENTIFIER) == {}
 
 
+@pytest.mark.unit
 def test_to_primitive():
     rm = RoleMap()
     rm.set_roles("y", {Role.TARGET})
-    rm.set_roles("x", {Role.PREDICTOR, Role.IDENTIFIER})
+    rm.set_roles("x1", {Role.PREDICTOR})
+    rm.set_roles("x2", {Role.PREDICTOR})
+    rm.set_roles("id", {Role.IDENTIFIER})
     prim = rm.to_primitive()
     # role values are sorted strings
-    assert prim["y"] == [Role.TARGET.value]
-    assert prim["x"] == sorted([Role.PREDICTOR.value, Role.IDENTIFIER.value])
+    assert prim[Role.TARGET.value] == ["y"]
+    assert prim[Role.PREDICTOR.value] == sorted(["x1","x2"])
+    assert prim[Role.IDENTIFIER.value] == ["id"]
 
 
+    # assert prim["y"] == [Role.TARGET.value]
+    # assert prim["x"] == sorted([Role.PREDICTOR.value, Role.IDENTIFIER.value])
+
+
+@pytest.mark.unit
 def test_from_primitive_roundtrip():
     original = {
-        "a": ["predictor"],
-        "b": ["target", "identifier"],
+        "target" : ["y"],
+        "predictor" : ["x1", "x2"],
+        "identifier" : ["id1", "id2"]
     }
     rm = RoleMap.from_primitive(original)
     # structure restored
-    assert rm.get_roles("a") == {Role.from_value("predictor")}
-    assert rm.get_roles("b") == {
-        Role.from_value("target"),
-        Role.from_value("identifier"),
-    }
-    # roundtrip consistency
-    assert rm.to_primitive() == {
-        "a": ["predictor"],
-        "b": sorted(["target", "identifier"]),
-    }
+    assert rm.get_roles("x1") == {Role.from_value("predictor")}
+    assert rm.get_roles("id1") == {Role.from_value("identifier")}
+    # roundtrip consistency (and test __eq__)
+    assert  rm == RoleMap.from_primitive(rm.to_primitive())
+    

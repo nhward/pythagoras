@@ -2,7 +2,15 @@ import json
 import textwrap
 import pytest 
 from shiny import ui, App, reactive
-from module import Module, __version__
+
+from pathlib import Path
+import sys
+# Ensure app root is importable when pytest is run outside the IDE
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from module import Module  # noqa: E402
 
 
 # -------------------------------------------------------------------
@@ -21,6 +29,7 @@ class DummyModule(Module):
 # Global fixture: keep Module's class-level state clean per test
 # and avoid patching real shiny.ui / shinywidgets in tests
 # -------------------------------------------------------------------
+
 @pytest.fixture(autouse=True)
 def clean_module_class(monkeypatch):
     # Reset class-level state
@@ -41,43 +50,48 @@ def clean_module_class(monkeypatch):
 # -------------------------------------------------------------------
 # Basic construction / namespace behaviour
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_module_initialises_and_registers_instance():
-    m = DummyModule(name="dataClean")
-    assert m.name == "dataClean"
-    assert m.namespace == "dataClean"  # first instance uses name
+    m = DummyModule(name = "something")
+    assert m.name == "something"
+    assert m.namespace == "something"  # first instance uses name
     assert Module.Instances[m.namespace] is m
     # script/css lists populated
-    assert "www/console.js" in Module.script_list
-    assert "www/shepherd.css" in Module.css_list
+    assert Path(f"{m.ROOT}/www/console.js") in Module.script_list
+    assert Path(f"{m.ROOT}/www/shepherd.css") in Module.css_list
 
 
+@pytest.mark.unit
 def test_namespace_gets_unique_suffix_when_reused():
-    m1 = DummyModule(name="card")
-    m2 = DummyModule(name="card")
+    m1 = DummyModule(name = "card")
+    m2 = DummyModule(name = "card")
     assert m1.namespace == "card"
     assert m2.namespace.startswith("card_")
     assert m1.namespace != m2.namespace
     assert len(Module.Instances) == 2
 
 
+@pytest.mark.unit
 def test_namespace_limit_raises_after_max_instances():
     # Use the same name many times
     for i in range(Module.MaxInstances):
-        DummyModule("dup")
+        DummyModule(name = "dup")
     # Next one should raise
     with pytest.raises(ValueError):
-        DummyModule("dup")
+        DummyModule(name = "dup")
 
 
+@pytest.mark.unit
 def test_reset_removes_instance_from_registry():
-    m = DummyModule("card")
+    m = DummyModule(name = "card")
     assert m.namespace in Module.Instances
     m.reset()
     assert m.namespace not in Module.Instances
 
 
+@pytest.fixture
 def test_close_swallows_reset_errors(monkeypatch, capsys):
-    m = DummyModule("card")
+    m = DummyModule(name = "card")
     def boom():
         raise RuntimeError("boom")
     monkeypatch.setattr(m, "reset", boom)
@@ -89,15 +103,9 @@ def test_close_swallows_reset_errors(monkeypatch, capsys):
 
 
 # -------------------------------------------------------------------
-# version() function
-# -------------------------------------------------------------------
-def test_version_function_returns_module_version():
-    assert Module.version() == __version__
-
-
-# -------------------------------------------------------------------
 # Namespace helper
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_ns_prefixes_ids_with_namespace():
     m = DummyModule("mycard")
     nid = m.ns("slider1")
@@ -108,6 +116,7 @@ def test_ns_prefixes_ids_with_namespace():
 # -------------------------------------------------------------------
 # Test tour steps payload
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_tour_steps_payload_sorts_by_priority_desc():
     m = DummyModule("card")
     m._shepherd_steps = {
@@ -118,7 +127,6 @@ def test_tour_steps_payload_sorts_by_priority_desc():
             "title": "Y", "text": "y", "position": "top", "priority": 10
         },
     }
-
     payload = m._tour_steps_payload()
     steps = json.loads(payload)
     # Highest priority first (y then x)
@@ -129,11 +137,12 @@ def test_tour_steps_payload_sorts_by_priority_desc():
 
 
 #  Problem with async 
-#  # -------------------------------------------------------------------
-# # create_run_tour: Shepherd steps + custom message
-# # -------------------------------------------------------------------
+ # -------------------------------------------------------------------
+# create_run_tour: Shepherd steps + custom message
+# -------------------------------------------------------------------
+# @pytest.mark.unit
 # def test_create_run_tour_sends_sorted_steps():
-#     m = DummyModule("card")
+#     m = GetDummyModule("card")
 #     # Fake some steps with different priorities
 #     m._shepherd_steps = {
 #         "card-x_wrapper": {
@@ -160,6 +169,7 @@ def test_tour_steps_payload_sorts_by_priority_desc():
 # -------------------------------------------------------------------
 # _make_wrapper: basic wrapping behaviour (using a fake ui func)
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_make_wrapper_registers_shepherd_step_and_wraps():
     m = DummyModule("card")
 
@@ -179,7 +189,6 @@ def test_make_wrapper_registers_shepherd_step_and_wraps():
         priority=5,
         foo="bar",
     )
-
     # Should have registered a step for namespaced wrapper id
     nid = m.ns("myid")
     wid = f"{nid}_wrapper"
@@ -197,6 +206,7 @@ def test_make_wrapper_registers_shepherd_step_and_wraps():
 # -------------------------------------------------------------------
 # capture_print decorator
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_capture_print_captures_stdout_and_return_value():
     m = DummyModule("card")
 
@@ -214,6 +224,7 @@ def test_capture_print_captures_stdout_and_return_value():
 # -------------------------------------------------------------------
 # suspendable decorator (calc) behaviour
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_suspendable_calc_respects_suspend_and_resume():
     m = DummyModule("card")
     calls = {"count": 0}
@@ -253,6 +264,7 @@ def test_suspendable_calc_respects_suspend_and_resume():
 # -------------------------------------------------------------------
 # record_code, retrieve_code, code_text
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_record_code_and_retrieve_code_store_source():
     m = DummyModule("card")
 
@@ -269,6 +281,7 @@ def test_record_code_and_retrieve_code_store_source():
         m.retrieve_code("bar")
 
 
+@pytest.mark.unit
 def test_code_text_returns_html_snippet():
     m = DummyModule("card")
 
@@ -290,6 +303,7 @@ def test_code_text_returns_html_snippet():
 # -------------------------------------------------------------------
 # debounce / throttle: basic smoke tests (no tight timing assertions)
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_debounce_wraps_callable_without_raising():
     m = DummyModule("test-module")
     calls = {"count": 0}
@@ -308,7 +322,7 @@ def test_debounce_wraps_callable_without_raising():
     assert calls["count"] == 1
 
 
-
+@pytest.mark.unit
 def test_throttle_wraps_callable_without_raising():
     m = DummyModule("card")
     seen = {"count": 0}
@@ -327,6 +341,7 @@ def test_throttle_wraps_callable_without_raising():
 # -------------------------------------------------------------------
 # create_cards: dynamic import from folder
 # -------------------------------------------------------------------
+@pytest.mark.unit
 def test_create_cards_imports_and_instantiates(tmp_path, monkeypatch):
     # Create a temp 'cards' folder with a single Python file
     cards_dir = tmp_path / "cards"
@@ -349,7 +364,6 @@ def test_create_cards_imports_and_instantiates(tmp_path, monkeypatch):
         """
     )
     (cards_dir / "mycard.py").write_text(card_code, encoding="utf-8")
-
     # Use the real create_cards (it expects folder name, not Path)
     # Ensure cwd is tmp_path so "cards" resolves
     monkeypatch.chdir(tmp_path)
@@ -366,7 +380,7 @@ def test_create_cards_imports_and_instantiates(tmp_path, monkeypatch):
 # -------------------------------------------------------------------
 # app(): building the Shiny app skeleton
 # -------------------------------------------------------------------
-
+@pytest.mark.unit
 def test_app_builds_shiny_app():
     m1 = DummyModule("card1")
     m2 = DummyModule("card2")

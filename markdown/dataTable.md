@@ -1,4 +1,4 @@
-#### 📊 Introduction
+#### 🧭 Introduction
 
 Having direct access to the data is a vital part of data analysis. The small-card version is a head/tail abbreviated table. The full screen version gives access to all the observations. It also allows observation filtering.
 

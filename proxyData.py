@@ -7,6 +7,7 @@ from roles import RoleMap, Role
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from typing import ClassVar
 
 RoleLike = Union["Role", str]
 
@@ -21,13 +22,14 @@ class ProxyData:
     """
     _df: pd.DataFrame
     _roles: RoleMap = field(default_factory=RoleMap)
+    LOW: ClassVar[int] = 8
 
     # ----------------- post-init: default roles -------------------------
 
     def __post_init__(self):
         """
         If no RoleMap is effectively provided (i.e. empty column_roles),
-        assign *all* columns the PREDICTOR role.
+        assign *all* columns to the PREDICTOR role.
 
         Rationale:
         - Default is: "everything is a predictor until we know better",
@@ -40,6 +42,7 @@ class ProxyData:
 
         # If no roles defined at all, default every column to PREDICTOR
         if not self._roles.column_roles:
+            print("Creating a default role-assignment (all predictors)")
             rm = RoleMap()
             for col in self._df.columns:
                 rm.set_roles(col, [Role.PREDICTOR])
@@ -74,7 +77,8 @@ class ProxyData:
         return self._df
 
     def to_csv(self, *args, **kwargs):
-        return self.to_native().to_csv(*args, **kwargs)
+        kwargs.setdefault("index", False)
+        return self._df.to_csv(*args, **kwargs)
 
     @property
     def is_geodata(self) -> bool:
@@ -87,6 +91,14 @@ class ProxyData:
     @property
     def shape(self):
         return self._df.shape
+    
+    @property
+    def role_map(self) -> "RoleMap":
+        return self._roles
+
+    @property
+    def data(self) -> pd.DataFrame | gpd.GeoDataFrame:
+        return self._df
 
     # ----------------- dtype helpers -----------------------------------
 
@@ -108,39 +120,12 @@ class ProxyData:
     # ----------------- drole helpers -----------------------------------
 
     @staticmethod
-    def _normalize_roles(spec: Union[RoleLike, _Iterable[RoleLike], None]) -> set["Role"]:
-        """
-        Normalise include/exclude arguments into a set[Role].
-
-        Accepts:
-          - None
-          - single Role or str
-          - iterable of Role/str
-        """
+    def _normalize_roles(spec: Union[RoleLike, _Iterable[RoleLike], None]) -> set[Role]:
         if spec is None:
             return set()
-        # Single item?
         if not isinstance(spec, _Iterable) or isinstance(spec, (str, bytes)):
             spec = [spec]
-
-        roles: set[Role] = set()
-        for item in spec:
-            if isinstance(item, Role):
-                roles.add(item)
-            else:
-                if isinstance(item, str):
-                    try:
-                        roles.add(Role(item))
-                    except ValueError:
-                        # Try case-insensitive match to Role.value
-                        matched = [r for r in Role if r.value.lower() == item.lower()]
-                        if matched:
-                            roles.add(matched[0])
-                        else:
-                            raise ValueError(f"Unknown role: {item!r}")
-                else:
-                    raise TypeError(f"Role spec must be Role or str, got {type(item)}")
-        return roles
+        return {Role.from_value(item) for item in spec}
 
     def select_drole(
         self,
@@ -220,7 +205,7 @@ class ProxyData:
 
         n = max(int(n), 1)
         total = len(df)
-        if (mode == "all") | (total <= n):
+        if (mode == "all") or (total <= n):
             sampled = df.copy()
         else:               
             if mode == "headtail":
@@ -245,10 +230,9 @@ class ProxyData:
             sampled = gpd.GeoDataFrame(sampled, geometry=geom_col, crs=crs)
 
         # Roles are column-level, so we can keep them (same RoleMap instance)
-        return ProxyData(sampled, self._roles)
+        return ProxyData(sampled, self._copy_roles())
 
     # ----------------- role-related convenience ------------------------
-
     def with_roles(self, role_map: RoleMap) -> "ProxyData":
         """Return a new ProxyData with the same data but a different RoleMap."""
         if not isinstance(role_map, RoleMap):
@@ -265,3 +249,157 @@ class ProxyData:
         for col, roles in self._roles.column_roles.items():
             roles_copy.column_roles[col] = set(roles)
         return ProxyData(df_copy, roles_copy)
+
+    def _copy_roles(self) -> RoleMap:
+        roles_copy = RoleMap()
+        for col, roles in self._roles.column_roles.items():
+            roles_copy.column_roles[col] = set(roles)
+        return roles_copy
+
+    # ----------------- role-related validation ------------------------
+
+    def validate(self, role_map: Optional[RoleMap] = None, separator = "|") -> list[str]:
+        # Private functions
+        def _is_unique(values) -> bool:
+            return pd.Series(values).is_unique
+        def _merge_cols(*vectors, sep=separator, na="") -> list[str]:
+            return [sep.join(str(x) if x is not None else na for x in items) for items in zip(*vectors)]
+
+        role_map = self._roles if role_map is None else role_map
+        data = self._df
+        errors: list[str] = []
+        
+        # Check that data columns and role_map columns match exactly (order irrelevant)
+        data_cols = set(map(str, data.columns))
+        role_cols = set(map(str, role_map.column_roles.keys()))
+        missing_in_roles = sorted(data_cols - role_cols)
+        missing_in_data = sorted(role_cols - data_cols)
+        if missing_in_roles or missing_in_data:
+            if missing_in_roles:
+                errors.append("Columns present in data but missing from role map: " + ", ".join(missing_in_roles))
+            if missing_in_data:
+                errors.append("Columns present in role map but missing from data: " + ", ".join(missing_in_data))
+        dims = data.shape
+        if dims[0] == 0:
+            errors.append("Data has no observations")
+        if dims[1] == 0:
+            errors.append("Data has no variables")
+        try:
+            # Target
+            # Singular, numeric/categorical (None missing)
+            # If non-numeric, low cardinality proportion 
+            tar_cols = sorted(role_map.columns_with_role(Role.TARGET))
+            if len(tar_cols) > 1:
+                errors.append("Target role must be singular")
+            elif len(tar_cols) == 1:
+                value = data[tar_cols[0]]
+                ok = (
+                    pd.api.types.is_numeric_dtype(value)
+                    or pd.api.types.is_categorical_dtype(value)
+                    or pd.api.types.is_object_dtype(value)
+                    or pd.api.types.is_string_dtype(value)
+                    or pd.api.types.is_bool_dtype(value)
+                )
+                if not ok:
+                    errors.append("Target role must be numeric or categorical")
+                if value.isna().values.any():
+                    errors.append("Target role has missing values")
+
+            # Predictor
+            # At least one
+            prd_cols = sorted(role_map.columns_with_role(Role.PREDICTOR))
+            if len(prd_cols) == 0:
+                errors.append("Predictor role must be assigned to a variable")
+            
+            # Identifier + Sequence 
+            # jointly unique (none missing)
+            id_cols = sorted(role_map.columns_with_role(Role.IDENTIFIER))
+            seq_cols = sorted(role_map.columns_with_role(Role.SEQUENCE))
+            key_cols = id_cols + seq_cols
+            if key_cols:
+                merged = _merge_cols(*(data[col] for col in key_cols), sep="|", na="")
+                if not _is_unique(merged):
+                    errors.append("Identifier/Sequence combination must be unique")
+
+            # Partition
+            # Singular, cardinality=2 (None missing)
+            par_cols = sorted(role_map.columns_with_role(Role.PARTITION))
+            if len(par_cols) > 1:
+                errors.append("Partition role must be singular")
+            elif len(par_cols) == 1:
+                value = data[par_cols[0]]
+                if value.nunique(dropna=False) != 2:
+                    errors.append("Partition role must have cardinality 2")
+                if value.isna().values.any():
+                    errors.append("Partition role has missing values")
+
+            # Sequence
+            # Singular (None missing)
+            seq_cols = sorted(role_map.columns_with_role(Role.SEQUENCE))
+            if len(seq_cols) > 1:
+                errors.append("Sequence role must be singular")
+            elif len(seq_cols) == 1:
+                value = data[seq_cols[0]]
+                if value.isna().values.any():
+                    errors.append("Sequence role has missing values")
+
+            # Weighting
+            # Singular, numeric, strickly non-negative (none missing)
+            wgh_cols = sorted(role_map.columns_with_role(Role.WEIGHTING))
+            if len(wgh_cols) > 1:
+                errors.append("Weighting role must be singular")
+            elif len(wgh_cols) == 1:
+                value = data[wgh_cols[0]]
+                if not pd.api.types.is_numeric_dtype(value):
+                    errors.append("Weighting role must be numeric")
+                elif (value < 0).any():
+                    errors.append("Weighting role must be non-negative")
+                if value.isna().values.any():
+                    errors.append("Weighting role has missing values")
+
+            # Treatment
+            # Singular, categorical, low cardinality (none missing)
+            trt_cols = sorted(role_map.columns_with_role(Role.TREATMENT))
+            if len(trt_cols) > 1:
+                errors.append("Treatment role must be singular")
+            elif len(trt_cols) == 1:
+                value = data[trt_cols[0]]
+                if value.nunique(dropna=False) > self.LOW:
+                    errors.append("Treatment role must have low cardinality")
+                if value.isna().values.any():
+                    errors.append("Treatment role has missing values")
+
+            # Sensitive
+            # Singular, categorical, low cardinality (none missing)
+            sen_cols = sorted(role_map.columns_with_role(Role.SENSITIVE))
+            if len(sen_cols) > 1:
+                errors.append("Sensitive role must be singular")
+            elif len(sen_cols) == 1:
+                value = data[sen_cols[0]]
+                if value.nunique(dropna=False) > self.LOW:
+                    errors.append("Sensitive role must have low cardinality")
+                if value.isna().values.any():
+                    errors.append("Sensitive role has missing values")
+
+            # Stratifier
+            # Singular, categorical, low cardinality (none missing)
+            str_cols = sorted(role_map.columns_with_role(Role.STRATIFIER))
+            if len(str_cols) > 1:
+                errors.append("Stratifier role must be singular")
+            elif len(str_cols) == 1:
+                value = data[str_cols[0]]
+                if value.nunique(dropna=False) > self.LOW:
+                    errors.append("Stratifier role must have low cardinality")
+                if value.isna().values.any():
+                    errors.append("Stratifier role has missing values")
+
+        except Exception as e:
+            errors.append(f"The role assignments and data are incompatible: {e}")
+        return errors    
+
+    def __repr__(self) -> str:
+        kind = "GeoDataFrame" if self.is_geodata else "DataFrame"
+        return f"ProxyData({kind}, shape={self._df.shape}, columns={list(self._df.columns)!r})"
+
+    def __len__(self) -> int:
+        return len(self._df)

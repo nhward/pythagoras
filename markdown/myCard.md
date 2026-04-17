@@ -1,3 +1,5 @@
+#### 🧭 Introduction
+
 A **Parallel Coordinate Chart** is a visual tool used to explore multivariate data. Unlike traditional plots that show relationships between two variables at a time, a parallel coordinate plot allows analysts to view patterns across many dimensions simultaneously.
 
 In this chart, each vertical axis represents one numeric variable. A single observation (or row) is plotted as a line that moves across all axes, connecting the corresponding value on each. As a result, patterns, trends, and clusters can be observed across high-dimensional data.

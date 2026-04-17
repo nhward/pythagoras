@@ -1,13 +1,17 @@
-from shiny import ui, render, req
-from card import Card
-from module import Module
-from faicons import icon_svg as icon
+from pathlib import Path
+import sys
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-__version__ = "0.1.0"
+from shiny import ui, render, req  # noqa: E402
+from card import Card  # noqa: E402
+from module import Module  # noqa: E402
+from faicons import icon_svg as icon  # noqa: E402
 
 def instance():
-    this = Card(name = "config", mutable = False)
+    this = Card(name = "configuration", mutable = False)
     this.long_name = "Configuration"
     this.description = "This card records the host-system configuration."
 
@@ -77,7 +81,7 @@ def instance():
             import sys
             import platform
             input.Refresh()
-            s = Module.mysession
+            s = Module.ModSession
             req(s)
             if s.clientdata.url_hostname() == "localhost":
                 local = "Yes" 
@@ -103,7 +107,7 @@ def instance():
         def Url():
             import pandas as pd
             input.Refresh()
-            s = Module.mysession
+            s = Module.ModSession
             req(s)
             data = {
                 "Host name": s.clientdata.url_hostname(),

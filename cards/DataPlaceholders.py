@@ -1,22 +1,27 @@
-from shiny import ui, reactive, req, render
-from module import Module
-from card import Card
-from shinywidgets import output_widget, render_widget
+from pathlib import Path
+import sys
+import pandas as pd  # needed for test / solo modes
+from shinywidgets import render_widget
+import shinywidgets
 from typing import Tuple, Dict, List, Any
 import plotly.graph_objects as go
 import plotly.colors as pc
 import numpy as np
-import pandas as pd
 import geopandas as gpd
-import proxyData as pxd
+from shiny import ui, reactive, req, render
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from module import Module  # noqa: E402
+from card import Card  # noqa: E402
+from proxyData import ProxyData as Pxy  # noqa: E402
 
 # Converts missing value placeholders to Na/NaN/NaT
 # Ideally this follows the correct conversion of strings to their real datatype esp. Datetime
 
 #TODO: test code generation
-#TODO: test cases
-
-__version__ = "0.1.0"
 
 def instance():
     this = Card(name = "dataPlaceholders", mutable = False)
@@ -110,7 +115,7 @@ def instance():
         return ui.navset_bar(
             ui.nav_panel(
                 "All variables",
-                output_widget(
+                shinywidgets.output_widget(  ## needed as plotly workaround
                     id = "AllChart",
                     title = "All variables' placeholders chart",
                     guide = this,
@@ -120,7 +125,7 @@ def instance():
             ),
             ui.nav_panel(
                 "Integer",
-                output_widget(
+                shinywidgets.output_widget(
                     id = "IntegerChart",
                     title = "Integer variables' placeholders chart",
                     guide = this,
@@ -130,7 +135,7 @@ def instance():
             ),
             ui.nav_panel(
                 "Decimal",
-                output_widget(
+                shinywidgets.output_widget(
                     id = "FloatChart",
                     title = "Decimal variables' placeholders chart",
                     guide = this,
@@ -140,7 +145,7 @@ def instance():
             ),
             ui.nav_panel(
                 "Character",
-                output_widget(
+                shinywidgets.output_widget(
                     id = "CharacterChart",
                     title = "Character variables' placeholders chart",
                     guide = this,
@@ -150,7 +155,7 @@ def instance():
             ),
             ui.nav_panel(
                 "Dates & Times",
-                output_widget(
+                shinywidgets.output_widget(
                     id = "DateChart",
                     title = "Date/time variables' placeholders chart",
                     guide = this,
@@ -212,12 +217,8 @@ def instance():
             return False
 
         @reactive.calc
-        def data_ready():
-            return this._imports["data"].is_set()
-
-        @reactive.calc
-        def Data():
-            req(data_ready())
+        def incommingData():
+            req(this._imports["data"].is_set())
             data = this._imports["data"]()
             # this.resume()   #TODO: review
             # await this.show(session)  #TODO: review
@@ -228,8 +229,8 @@ def instance():
 
         @reactive.calc
         @this.record_code
-        def GetDataSample():
-            d = Data()
+        def PreparedData():
+            d = incommingData()
             sample = d.sample(n = MaxObs(), mode = "random", keep_geometry = False)
             return sample
 
@@ -247,7 +248,7 @@ def instance():
         @reactive.calc
         @this.record_code
         def FixedData():
-            sample = GetDataSample()
+            sample = PreparedData()
             sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
             fixed = ResolvePlaceholders(data = sample, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive())
             codes_df, legend = PlaceholderCodes(
@@ -259,11 +260,11 @@ def instance():
             )
             Codes.set(codes_df)
             Legend.set(legend)
-            return pxd.ProxyData.from_native(fixed)
+            return Pxy.from_native(fixed)
 
         @reactive.effect
         def UpdateButtons():
-            sample = GetDataSample()
+            sample = PreparedData()
             codes_df, legend = PlaceholderCodes(
                 data = sample,
                 sentinels=Sentinels(),
@@ -417,11 +418,11 @@ def instance():
         @reactive.event(input.Replace)
         @this.record_code
         def data_passthrough():
-            full  = Data()
+            full  = incommingData()
             sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
             df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometyry = False)
-            d = pxd.ProxyData.from_native(df).with_roles(full.RoleMap)
-            this._exports["data"].set(d)
+            pxy = pxd.ProxyData.from_native(df).with_roles(full.RoleMap)
+            this._exports["data"].set(pxy)
 
 
         @reactive.calc
@@ -462,10 +463,11 @@ def instance():
             # header
             rows.append("<tr>" + "".join(f"<th>{c}</th>" for c in df.columns) + "</tr>")
             # body
+            rows.append("<tbody>")
             for _, row in df.iterrows():
                 cells = [fmt(v) for v in row]
                 rows.append("<tr>" + "".join(cells) + "</tr>")
-            html = "<table class='table table-sm table-bordered'>" + "".join(rows) + "</table>"
+            html = "<table class='table table-sm table-bordered'>" + "".join(rows) + "</tbody></table>"
             return ui.HTML(html)
 
         @this.record_code
@@ -488,7 +490,7 @@ def instance():
             req(data is not None)
             if isinstance(data, pd.DataFrame):
                 df = data
-            elif isinstance(data, pxd.ProxyData):
+            elif isinstance(data, Pxy):
                 df = data._df
             elif hasattr(data, "to_pandas"):      # polars -> pandas
                 df = data.to_pandas()
@@ -594,7 +596,7 @@ def instance():
             req(data is not None)
             if isinstance(data, pd.DataFrame):
                 df = data
-            elif isinstance(data, pxd.ProxyData):
+            elif isinstance(data, Pxy):
                 df = data._df
             elif hasattr(data, "to_pandas"):      # polars -> pandas
                 df = data.to_pandas()
@@ -660,7 +662,21 @@ def instance():
 
 if Module.running_under_tests():
     this = instance()
+    df = pd.DataFrame(
+        {
+            "y": [1, 0, 1, 0],
+            "x1": [10.0, 11.0, 12.0, 13.0],
+            "x2": ["A", "B", "A", "B"],
+            "id": [100, 101, 102, 103],
+            "part": ["Train", "Train", "Test", "Test"],
+        }
+    )
+    pxd = Pxy.from_native(df)
+    this._imports["data"].set(pxd)
     app = Module.app(modules = {this.ns: this})
 elif Module.running_directly(name =__name__):
     this = instance()
+    df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
+    pxd = Pxy.from_native(df)
+    this._imports["data"].set(pxd)
     Module.run(modules = {this.ns: this})

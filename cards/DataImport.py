@@ -8,10 +8,8 @@ import requests
 import pandas as pd
 from module import Module
 from card import Card
-from proxyData import ProxyData as pxd
+from proxyData import ProxyData as Pxy
 
-
-__version__ = "0.1.0"
 
 def instance():
     this = Card(name = "dataImport", mutable = True)
@@ -25,8 +23,7 @@ def instance():
                 label = "Between-column separator", 
                 value = ",",
                 guide = this,
-                text = 'Since tab, semi-colon and comma separation are common, this string specifies the type of separation to be employed. "Auto" will make an automated asessment.',
-                position = "left"),
+                text = 'Since tab, semi-colon and comma characters can occur in the data, this string specifies the type of separation string to employ. "Auto" will make an automated assessment.',                position = "left"),
             ui.input_numeric(
                 id = "Sheet", 
                 label = "Worksheet position", 
@@ -323,10 +320,10 @@ def instance():
 
         @reactive.calc
         @this.record_code
-        def GetData2():
+        def GetPxyData():
             if GetData() is None:
                 return None
-            return pxd.from_native(GetData(), )
+            return Pxy.from_native(GetData())
 
         ###Generic summary for the type of dataset ----
         @output
@@ -461,7 +458,7 @@ def instance():
                     classes = "table table-hover table-striped" + table_size
                 ) + attr_html
 
-            d = GetData2()
+            d = GetPxyData()
             req(d is not None)
             data = d.to_native()
             if data is None or len(data) == 0:
@@ -549,6 +546,13 @@ def instance():
             except requests.RequestException:
                 return False
 
+        def equalDF(a,b):
+            try:
+                if (a is None) | (b is None):
+                    return False
+                return a == b
+            except ValueError:
+                return False
 
         #### Check ----
         @output
@@ -571,7 +575,7 @@ def instance():
                     else:
                         try:
                             text = size_text(GetData())
-                            if GetData2().__eq__(CommittedData()):
+                            if equalDF(CommittedData(), GetPxyData()):
                                 message = ui.span("Web import successful ", text, class_ = "text-center text-success")
                             else:
                                 message = ui.span("Web import ready ", text, class_ = "text-center text-primary")
@@ -582,13 +586,13 @@ def instance():
             elif input.Navset() == "File based":
                 butt_disabled = input.FName().strip() == "" 
                 try:
-                    d = GetData2()
+                    d = GetPxyData()
                     if d is None:
                         message = ui.span("No file supplied yet", class_ = "text-center text-warning")
                         butt_disabled = True
                     else:
                         text = size_text(GetData())
-                        if d.__eq__(CommittedData()):
+                        if equalDF(CommittedData(), d):
                             message = ui.span("File import successful ", text, class_ = "text-center text-success")
                         else:
                             message = ui.span("File import ready ", text, class_ = "text-center text-primary")
@@ -603,13 +607,13 @@ def instance():
                     butt_disabled = True
                 else:
                     try:
-                        d = GetData2()
+                        d = GetPxyData()
                         if d is None:
                             message = ui.span("No dataset chosen yet", class_ = "text-center text-warning")
                             butt_disabled = True
                         else:
                             text = size_text(GetData())
-                            if d.__eq__(CommittedData()):
+                            if equalDF(CommittedData(), d):
                                 message = ui.span("Dataset import successful ", text, class_ = "text-center text-success")
                             else:
                                 message = ui.span("Dataset import ready ", text, class_ = "text-center text-primary")
@@ -624,7 +628,7 @@ def instance():
 
         #### Commit event ----
         @this.suspendable(triggers = [input.Commit])
-        def CommitEvent():
+        async def CommitEvent():
             if input.Navset() == "File based":
                 CommittedName.set(input.FName())
             elif input.Navset() == "Web based":
@@ -633,8 +637,9 @@ def instance():
                 CommittedName.set(input.DName())
             this._exports["name"].set(CommittedName())
             this.debug(f"Setting export name to value: {CommittedName()}")
-            CommittedData.set(GetData2())
+            CommittedData.set(GetPxyData())
             this._exports["data"].set(CommittedData())
+            await session.send_custom_message("UpdateCardOrder", None)
 
         @reactive.Effect
         def data_passthrough():
