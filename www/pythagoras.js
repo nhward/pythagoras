@@ -32,11 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
         flipButton?.addEventListener("click", () => {
             flipToggle(card)
         });
-        // Closing
-        const closeButton = card.querySelector(".close-btn");
-        closeButton?.addEventListener("click", (evt) => {
-            closeCard(card)
-        });
     });
 
 
@@ -46,14 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
         cardbody.scrollLeft= 0;  // bring contents to the left before flipping
         cardbody.classList.toggle("flipped");
     }
-
-    function closeCard(card) {
-        const ns = card.id.replace(/-Card$/, "");
-        window.Shiny?.setInputValue?.(`${ns}-RemoveCard`, {
-            id: card.id,
-            ts: Date.now()
-        }, { priority: "event" });
-    };
 
     /* animate element e.g. shakeX or bounce */
     Shiny?.addCustomMessageHandler?.("animate", function(opts) {

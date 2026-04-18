@@ -13,26 +13,30 @@ In this card, we assume that the data is addressed as a single file. The importa
 - CSV: A comma, semi-colon, or tab-delimited file.
 - XLS: A spreadsheet worksheet.
 - RDS: An R serialization file containing a data frame.
-- SHP: A shapefile (which brings in a set of related files).
 - GPKG: A spatial data file.
 
-ℹ️ If you have a different file extension, feel free to give it a try to see if it can be imported.
+If you have a different file extension, feel free to give it a try to see if it can be imported.
 
-The flip side (back of the card) documents:
+#### 🔄 Flip side
+
+The back of the card documents:
 
 - Dataset Info: Class and dimensions
 - Memory usage: Bytes in use
 - Variable listing: Column, Non-Null count, Null count, Data type
-- Categories: Count, unique, top, freq
+- Categories: Count, unique, top, frequency
 
-#### ⚙️ Variations
+#### ⚙️ Settings
+Use the Tour Guide button to learn about the settings of this card. 
 
-Dates and times that do not declare their time zones are assigned to UTC.
+* The between-column separator character.
+* The worksheet position (for multi-sheet spreadsheets). 
 
 #### 🎯 Goals
 
-- ✅ Primary: Facilitate data importation
-- 🛠️ Secondary: Help identify whether this is the required dataset based on its characteristics.
+1. Primary: Facilitate data importation
+1. Secondary: Help verify whether you have the required dataset.
 
-All cards downstream of this card will receive the data imported by this card.  
-Use the Tour Guide button to learn about the settings of this card.
+***
+All cards downstream of this card will receive the data imported by this card. All variables are assigned to the __Predictor__ role. Dates and date-times that do not declare their time zones are assigned to UTC.
+

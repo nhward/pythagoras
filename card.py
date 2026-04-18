@@ -391,8 +391,26 @@ class Card(Module):
                 order = [s.removesuffix("-Card") for s in order]
                 return order
 
-            @self.suspendable(triggers = [input.CloseButton])
+            @self.suspendable(triggers=[input.CloseButton])
+            def _confirm_remove_card():
+                ui.modal_show(
+                    ui.modal(
+                        ui.card_header(ui.tags.h3(self.long_name)),
+                        ui.tags.h5("Remove this card?"),
+                        ui.p("This action cannot be easily undone."),
+                        ui.div(
+                            ui.input_action_button(id = "ConfirmRemove", label = "Yes, remove", class_="btn-danger"),
+                            ui.input_action_button(id = "CancelRemove", label = "Cancel"),
+                            class_="d-flex justify-content-end gap-2"
+                        ),
+                        easy_close=True,
+                        footer=None
+                    )
+                )
+
+            @self.suspendable(triggers=[input.ConfirmRemove])
             def _remove_card():
+                ui.modal_remove()
                 self.suspend()
                 id = self.ns('Card')
                 self.reset()
@@ -400,6 +418,10 @@ class Card(Module):
                 async def after_flush():
                     await session.send_custom_message("UpdateCardOrder", None)
                 session.on_flushed(after_flush, once=True)
+
+            @self.suspendable(triggers=[input.CancelRemove])
+            def _remove_card():
+                ui.modal_remove()
 
             result = self.server(input, output, session)
  

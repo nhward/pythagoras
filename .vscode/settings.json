@@ -1,4 +1,13 @@
-// {
+{
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext"
+    ]
+} // {
 //     "editor.detectIndentation": false,
 //     "editor.trimWhitespaceOnDelete": true,
 //     "editor.stickyTabStops": true,
