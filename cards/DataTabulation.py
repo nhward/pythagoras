@@ -82,8 +82,8 @@ def instance():
 
         @reactive.calc()
         def incommingData():
-            req(this._imports["data"].is_set())
-            return this._imports["data"]()
+            req(this._imports.is_set())
+            return this._imports()
 
         @this.debounce(2)
         @reactive.calc
@@ -229,11 +229,13 @@ if Module.running_under_tests():
         }
     )
     pxd = ProxyData.from_native(df)
-    this._imports["data"].set(pxd)
+    pxd.name = "Test"
+    this._imports.set(pxd)
     app = Module.app(modules = {this.ns: this})
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
     pxd = ProxyData.from_native(df)
-    this._imports["data"].set(pxd)
+    pxd.name = "Ass2"
+    this._imports.set(pxd)
     Module.run(modules = {this.ns: this})

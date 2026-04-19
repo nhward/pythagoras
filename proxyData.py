@@ -22,6 +22,7 @@ class ProxyData:
     """
     _df: pd.DataFrame
     _roles: RoleMap = field(default_factory=RoleMap)
+    _name: str = None
     LOW: ClassVar[int] = 8
 
     # ----------------- post-init: default roles -------------------------
@@ -95,10 +96,25 @@ class ProxyData:
     @property
     def role_map(self) -> "RoleMap":
         return self._roles
+    @role_map.setter
+    def role_map(self, value):
+        self._role_map = value
+
 
     @property
     def data(self) -> pd.DataFrame | gpd.GeoDataFrame:
         return self._df
+    @data.setter
+    def data(self, value):
+        self._data = value
+
+
+    @property
+    def name(self) -> str:
+        return self._name   
+    @name.setter
+    def name(self, value):
+        self._name = value
 
     # ----------------- dtype helpers -----------------------------------
 

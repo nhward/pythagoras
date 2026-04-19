@@ -102,8 +102,8 @@ def test_test_mode_seeds_import_data(card_module):
     """
     this = card_module.this
     with reactive.isolate():
-        assert this._imports["data"].is_set()
-        pxd = this._imports["data"].get()
+        assert this._imports.is_set()
+        pxd = this._imports.get()
 
     df = pxd.to_native()
     assert list(df.columns) == ["y", "x1", "x2", "id", "part"]

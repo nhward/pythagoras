@@ -1,7 +1,6 @@
 ###########################
 ## Class: Module ##
 ###########################
-
 ## This class inherits from abc.ABC
 ## It provides:
 ##    Guide services via shepherd:
@@ -38,6 +37,9 @@ import shinywidgets as _sw
 from abc import ABC, abstractmethod
 from functools import wraps
 from shiny import reactive, ui as _ui
+from os import environ
+from collections import namedtuple
+from pathlib import Path
 import logging
 import inspect
 import json
@@ -49,9 +51,6 @@ import textwrap
 import re
 import time
 import threading
-from os import environ
-from collections import namedtuple
-from pathlib import Path
 
 
 
@@ -99,8 +98,8 @@ class Module(ABC):
         self.css_list.append(self.WWW / "shepherd.css")
 
         # reactives
-        self._exports = {"name": reactive.Value(), "data": reactive.Value()}
-        self._imports = {"name": reactive.Value(), "data": reactive.Value()}
+        self._exports = reactive.Value()
+        self._imports = reactive.Value()
 
         #namespace
         if name is None:

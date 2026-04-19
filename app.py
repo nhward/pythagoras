@@ -252,19 +252,13 @@ def app(modules):
                 if destination is None:
                     continue
                 if source is None:
-                    destination._imports["name"].unset() 
-                    destination._imports["data"].unset()
+                    destination._imports.unset()
                     destination.debug(msg="No data source currently attached")
                 else:
-                    if source._exports["name"].is_set():
-                        destination._imports["name"].set(source._exports["name"].get())
-                        source.debug(msg=f"Output data '{source._exports['name'].get()}' -> card {destination.name}")
+                    if source._exports.is_set():
+                        destination._imports.set(source._exports.get())
                     else:
-                        destination._imports["name"].unset()
-                    if source._exports["data"].is_set():
-                        destination._imports["data"].set(source._exports["data"].get())
-                    else:
-                        destination._imports["data"].unset()
+                        destination._imports.unset()
                 source = destination
         
         # Load and initialise each module file (card)

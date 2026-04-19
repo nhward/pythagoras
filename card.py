@@ -426,27 +426,18 @@ class Card(Module):
             result = self.server(input, output, session)
  
             @reactive.effect
-            def name_passthrough():
+            def passthrough():
                 if not self.mutable:
-                    if self._imports['name'].is_set():
-                        self.debug(f"import -> export: {self._imports['name'].get()}")
-                        self._exports["name"].set(self._imports["name"].get())
+                    if self._imports.is_set():
+                        self._exports.set(self._imports.get())
                     else:
-                        self._exports["name"].unset()
-
-            @reactive.effect
-            def data_passthrough():
-                if not self.mutable:
-                    if self._imports['data'].is_set():
-                        self._exports["data"].set(self._imports["data"].get())
-                    else:
-                        self._exports["data"].unset()
+                        self._exports.unset()
 
             @output
             @render.text
             def Name():
-                if self._exports["name"].is_set():
-                    return f"of \"{self._exports['name'].get()}\""
+                if self._exports.is_set():
+                    return f"of \"{self._exports.get().name}\""
                 else:
                     return ""
 

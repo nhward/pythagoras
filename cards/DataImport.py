@@ -111,7 +111,6 @@ def instance():
 
         #### Shiny variables ----
         CommittedData = reactive.Value(None)
-        CommittedName = reactive.Value(None)
 
         @reactive.calc
         def TempFilePath():
@@ -629,17 +628,16 @@ def instance():
         #### Commit event ----
         @this.suspendable(triggers = [input.Commit])
         async def CommitEvent():
+            pxd = GetPxyData()
             if input.Navset() == "File based":
-                CommittedName.set(input.FName())
+                pxd.name = input.FName()
             elif input.Navset() == "Web based":
-                CommittedName.set(input.UName())
+                pxd.name = input.UName()
             elif input.Navset() == "Dataset based":
-                CommittedName.set(input.DName())
-            this._exports["name"].set(CommittedName())
-            this.debug(f"Setting export name to value: {CommittedName()}")
-            CommittedData.set(GetPxyData())
-            this._exports["data"].set(CommittedData())
-            await session.send_custom_message("UpdateCardOrder", None)
+                pxd.name = input.DName()
+            CommittedData.set(pxd)
+            this._exports.set(CommittedData())
+            await session.send_custom_message("UpdateCardOrder", None) #Trigger a cascade
 
         @reactive.Effect
         def data_passthrough():

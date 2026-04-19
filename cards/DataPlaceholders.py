@@ -218,8 +218,8 @@ def instance():
 
         @reactive.calc
         def incommingData():
-            req(this._imports["data"].is_set())
-            data = this._imports["data"]()
+            req(this._imports.is_set())
+            data = this._imports()
             # this.resume()   #TODO: review
             # await this.show(session)  #TODO: review
             return data
@@ -417,12 +417,12 @@ def instance():
 
         @reactive.event(input.Replace)
         @this.record_code
-        def data_passthrough():
+        def passthrough():
             full  = incommingData()
             sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
             df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometyry = False)
             pxy = pxd.ProxyData.from_native(df).with_roles(full.RoleMap)
-            this._exports["data"].set(pxy)
+            this._exports.set(pxy)
 
 
         @reactive.calc
@@ -672,11 +672,13 @@ if Module.running_under_tests():
         }
     )
     pxd = Pxy.from_native(df)
-    this._imports["data"].set(pxd)
+    pxd.name = "Test"
+    this._imports.set(pxd)
     app = Module.app(modules = {this.ns: this})
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
     pxd = Pxy.from_native(df)
-    this._imports["data"].set(pxd)
+    pxd.name = "Ass2"
+    this._imports.set(pxd)
     Module.run(modules = {this.ns: this})

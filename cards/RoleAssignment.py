@@ -104,8 +104,8 @@ def instance():
 
         @reactive.calc()
         def incommingProxyData():
-            req(this._imports["data"].is_set())
-            return this._imports["data"]()
+            req(this._imports.is_set())
+            return this._imports()
  
         @reactive.calc()
         def PreparedData():
@@ -124,7 +124,7 @@ def instance():
         @render.table
         @this.record_code
         def Assignments():
-            orm = this._exports["data"]().role_map
+            orm = this._exports().role_map
             return orm.roles_to_frame()
 
         @reactive.calc
@@ -163,14 +163,14 @@ def instance():
         #### Commit event ----
         @this.suspendable(triggers = [input.Commit])
         def CommitEvent():
-            this._exports["data"].set(Committed())
+            this._exports.set(Committed())
 
         @output
         @render.ui
         async def Check():
             messages = ValidateMap()
             if len(messages) == 0:
-                if (this._exports["data"].is_set()) and (this._exports["data"]().role_map == Committed().role_map):
+                if (this._exports.is_set()) and (this._exports().role_map == Committed().role_map):
                     return ui.span("Assignments applied", class_ = "text-success")
                 else:
                     return ui.span("Assignments ready to commit", class_ = "text-primary")
@@ -195,11 +195,13 @@ if Module.running_under_tests():
         }
     )
     pxd = Pxy.from_native(df)
-    this._imports["data"].set(pxd)
+    pxd.name = "Test"
+    this._imports.set(pxd)
     app = Module.app(modules = {this.ns: this})
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
     pxd = Pxy.from_native(df)
-    this._imports["data"].set(pxd)
+    pxd.name = "Ass2"
+    this._imports.set(pxd)
     Module.run(modules = {this.ns: this})
