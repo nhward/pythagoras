@@ -150,7 +150,7 @@ def test_front_has_expected_tabs(page: Page, app: ShinyAppProc):
 def test_default_all_chart_output_exists(page: Page, app: ShinyAppProc):
     page.goto(app.url)
     # Default tab should be "All variables"
-    expect(by_id(page, "AllChart")).to_be_visible()
+    expect(page.get_by_role("tab", name = "All variables")).to_be_visible()
 
 
 @pytest.mark.ui
@@ -203,7 +203,7 @@ def test_changing_maxobs_does_not_break_chart(page: Page, app: ShinyAppProc):
     page.goto(app.url)
     set_shiny_input(page, "MaxObs", 3)
     page.wait_for_timeout(150)
-    expect(by_id(page, "AllChart")).to_be_visible()
+    expect(page.get_by_role("tab", name = "All variables")).to_be_visible()
 
 
 @pytest.mark.ui

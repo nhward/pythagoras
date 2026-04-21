@@ -103,19 +103,25 @@ def instance():
     def server(input, output, session):
 
         @reactive.calc()
-        def incommingProxyData():
+        def incomingProxyData():
             req(this._imports.is_set())
             return this._imports()
  
         @reactive.calc()
         def PreparedData():
-            pxd = incommingProxyData()
+            pxd = incomingProxyData()
             return pxd.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
             
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
-            messages = ValidateMap()
-            if len(messages) > 0: #invalid
+            try:
+                input.role_map()
+                messages = ValidateMap() # using input.role_map
+                if len(messages) > 0: #invalid
+                    pxd = PreparedData()
+                    rm = pxd.role_map.to_primitive()
+                    await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
+            except (Exception):
                 pxd = PreparedData()
                 rm = pxd.role_map.to_primitive()
                 await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})

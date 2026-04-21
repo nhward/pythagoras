@@ -1,13 +1,12 @@
 # proxy_data.py
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Union, ClassVar
 from collections.abc import Iterable as _Iterable
 from roles import RoleMap, Role
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-from typing import ClassVar
 
 RoleLike = Union["Role", str]
 
@@ -246,7 +245,7 @@ class ProxyData:
             sampled = gpd.GeoDataFrame(sampled, geometry=geom_col, crs=crs)
 
         # Roles are column-level, so we can keep them (same RoleMap instance)
-        return ProxyData(sampled, self._copy_roles())
+        return ProxyData(sampled, self._copy_roles(), self.name)
 
     # ----------------- role-related convenience ------------------------
     def with_roles(self, role_map: RoleMap) -> "ProxyData":
@@ -264,7 +263,7 @@ class ProxyData:
         roles_copy = RoleMap()
         for col, roles in self._roles.column_roles.items():
             roles_copy.column_roles[col] = set(roles)
-        return ProxyData(df_copy, roles_copy)
+        return ProxyData(df_copy, roles_copy, self.name)
 
     def _copy_roles(self) -> RoleMap:
         roles_copy = RoleMap()
@@ -281,7 +280,8 @@ class ProxyData:
         def _merge_cols(*vectors, sep=separator, na="") -> list[str]:
             return [sep.join(str(x) if x is not None else na for x in items) for items in zip(*vectors)]
 
-        role_map = self._roles if role_map is None else role_map
+        if role_map is None:
+            role_map = self._roles  
         data = self._df
         errors: list[str] = []
         

@@ -1,10 +1,12 @@
+import shutil
 import json
 import textwrap
 import pytest 
 from shiny import ui, App, reactive
-
+import app
 from pathlib import Path
 import sys
+
 # Ensure app root is importable when pytest is run outside the IDE
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -86,7 +88,12 @@ def test_reset_removes_instance_from_registry():
     m = DummyModule(name = "card")
     assert m.namespace in Module.Instances
     m.reset()
-    assert m.namespace not in Module.Instances
+    keys = []
+    for key, instance in Module.Instances.items(): 
+        if instance is None:
+            continue
+        keys.append(key)
+    assert m.namespace not in keys
 
 
 @pytest.fixture
@@ -342,11 +349,10 @@ def test_throttle_wraps_callable_without_raising():
 # create_cards: dynamic import from folder
 # -------------------------------------------------------------------
 @pytest.mark.unit
-def test_create_cards_imports_and_instantiates(tmp_path, monkeypatch):
-    # Create a temp 'cards' folder with a single Python file
-    cards_dir = tmp_path / "cards"
-    cards_dir.mkdir()
-    # Minimal card file defining instance() that returns a DummyModule
+def test_create_cards_imports_and_instantiates():
+    cards_dir = Path("cards2")
+    cards_dir.mkdir(exist_ok=True)
+    card_path = cards_dir / "temp.py"
     card_code = textwrap.dedent(
         """
         from module import Module
@@ -354,7 +360,7 @@ def test_create_cards_imports_and_instantiates(tmp_path, monkeypatch):
 
         class MyCard(Module):
             def call_ui(self):
-                return ui.div("card ui")
+                return ui.div("card_ui")
 
             def call_server(self, input, output, session):
                 pass
@@ -363,19 +369,14 @@ def test_create_cards_imports_and_instantiates(tmp_path, monkeypatch):
             return MyCard("mycard")
         """
     )
-    (cards_dir / "mycard.py").write_text(card_code, encoding="utf-8")
-    # Use the real create_cards (it expects folder name, not Path)
-    # Ensure cwd is tmp_path so "cards" resolves
-    monkeypatch.chdir(tmp_path)
-    imported = Module.create_cards(folder="cards")
-    # Should have exactly one imported card
+    card_path.write_text(card_code, encoding="utf-8")
+    imported = app.create_cards(folder=cards_dir)
     assert len(imported) == 1
-    (ns, card) = next(iter(imported.items()))
+    ns, card = next(iter(imported.items()))
     assert isinstance(card, Module)
     assert card.name == "mycard"
-    # Module.Instances should also contain it
     assert card.namespace in Module.Instances
-
+    shutil.rmtree(cards_dir)
 
 # -------------------------------------------------------------------
 # app(): building the Shiny app skeleton

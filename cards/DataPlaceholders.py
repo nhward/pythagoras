@@ -217,7 +217,7 @@ def instance():
             return False
 
         @reactive.calc
-        def incommingData():
+        def incomingData():
             req(this._imports.is_set())
             data = this._imports()
             # this.resume()   #TODO: review
@@ -230,7 +230,7 @@ def instance():
         @reactive.calc
         @this.record_code
         def PreparedData():
-            d = incommingData()
+            d = incomingData()
             sample = d.sample(n = MaxObs(), mode = "random", keep_geometry = False)
             return sample
 
@@ -418,10 +418,11 @@ def instance():
         @reactive.event(input.Replace)
         @this.record_code
         def passthrough():
-            full  = incommingData()
+            full  = incomingData()
             sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
             df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometyry = False)
             pxy = pxd.ProxyData.from_native(df).with_roles(full.RoleMap)
+            pxy.name = full.name
             this._exports.set(pxy)
 
 

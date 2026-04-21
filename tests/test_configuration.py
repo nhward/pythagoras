@@ -138,7 +138,8 @@ def test_close_button_hides_card(page, app):
     hover_solo_card(page)
     close_btn = page.get_by_role("button", name="Close this card")
     close_btn.click()
-    # Card should now have CSS class 'hidden'
-    card = page.locator('[id$="Card"]')
-    card.wait_for(state="hidden")
-    assert card.is_hidden()  # "hidden" in card.get_attribute("class")
+    dialog = page.get_by_role("dialog")
+    dialog.wait_for(state="visible")
+    yes = dialog.get_by_role("button", name = "Yes, remove")
+    yes.click()
+    assert(page.locator('#cards-container > [id$="Card"]').count() == 0)
