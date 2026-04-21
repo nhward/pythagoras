@@ -1,8 +1,12 @@
 *.pyc
 *.pyo
+.pytest_cache/
 __pycache__/
 markdown/markdown/*.md
-*.html
+markdown/*.html
 .venv/
 venv/
 env/
+.Rhistory
+.coverage
+.env
