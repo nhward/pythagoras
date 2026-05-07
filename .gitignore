@@ -8,5 +8,6 @@ markdown/*.html
 venv/
 env/
 .Rhistory
+.continue
 .coverage
 .env

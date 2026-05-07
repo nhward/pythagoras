@@ -154,7 +154,7 @@ Drag-and-drop ordering is handled via:
 
 Cards (available and planned)
 
-📊 Data Loading
+📊 Data Prep
 
 * [Data importation](./markdown/dataImport.md) 
 * [Data tabulation](./markdown/dataTable.md)
