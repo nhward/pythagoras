@@ -505,3 +505,10 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
     margin: 0 auto;
     gap: 0.5rem;
 }
+
+/* shinyfile button to primary */ 
+span.btn.btn-default.btn-file:has(.shiny-input-file) {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}

@@ -11,7 +11,7 @@ from module import Module  # noqa: E402
 from faicons import icon_svg as icon  # noqa: E402
 
 def instance():
-    this = Card(name = "configuration", mutable = False)
+    this = Card(name = "configuration", mutable = False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Configuration"
     this.description = "This card records the host-system configuration."
 
@@ -162,7 +162,7 @@ def instance():
 app = None
 if Module.running_under_tests():
     this = instance()
-    app = Module.app(modules = {this.ns: this})
+    app = this.Application()
 elif Module.running_directly(name =__name__):
     this = instance()
-    Module.run(modules = {this.ns: this})
+    this.run()

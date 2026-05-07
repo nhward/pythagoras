@@ -284,10 +284,12 @@ class ProxyData:
             role_map = self._roles  
         data = self._df
         errors: list[str] = []
-        
+
         # Check that data columns and role_map columns match exactly (order irrelevant)
         data_cols = set(map(str, data.columns))
         role_cols = set(map(str, role_map.column_roles.keys()))
+        if len(role_cols) == 0:
+            return [""]  # return with a blind message that does not display but triggers a failed validation
         missing_in_roles = sorted(data_cols - role_cols)
         missing_in_data = sorted(role_cols - data_cols)
         if missing_in_roles or missing_in_data:

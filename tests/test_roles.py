@@ -14,18 +14,18 @@ from roles import RoleMap, Role  # noqa: E402
 def test_set_and_get_roles():
     rm = RoleMap()
     rm.set_roles("x1", {Role.PREDICTOR})
-    assert rm.get_roles("x1") == {Role.PREDICTOR}
-    assert rm.get_roles("missing") == set()   # default
+    assert rm.roles_for("x1") == {Role.PREDICTOR}
+    assert rm.roles_for("missing") == set()   # default
 
 
 @pytest.mark.unit
 def test_add_role():
     rm = RoleMap()
     rm.add_role("y", Role.TARGET)
-    assert rm.get_roles("y") == {Role.TARGET}
+    assert rm.roles_for("y") == {Role.TARGET}
     # adding another role to same column
     rm.add_role("y", Role.IDENTIFIER)
-    assert rm.get_roles("y") == {Role.TARGET, Role.IDENTIFIER}
+    assert rm.roles_for("y") == {Role.TARGET, Role.IDENTIFIER}
 
 
 @pytest.mark.unit
@@ -33,10 +33,10 @@ def test_remove_role():
     rm = RoleMap()
     rm.set_roles("id", {Role.IDENTIFIER, Role.PREDICTOR})
     rm.remove_role("id", Role.PREDICTOR)
-    assert rm.get_roles("id") == {Role.IDENTIFIER}
+    assert rm.roles_for("id") == {Role.IDENTIFIER}
     # removing role that isn’t present should not throw
     rm.remove_role("id", Role.TARGET)
-    assert rm.get_roles("id") == {Role.IDENTIFIER}
+    assert rm.roles_for("id") == {Role.IDENTIFIER}
 
 
 @pytest.mark.unit
@@ -77,8 +77,8 @@ def test_from_primitive_roundtrip():
     }
     rm = RoleMap.from_primitive(original)
     # structure restored
-    assert rm.get_roles("x1") == {Role.from_value("predictor")}
-    assert rm.get_roles("id1") == {Role.from_value("identifier")}
+    assert rm.roles_for("x1") == {Role.from_value("predictor")}
+    assert rm.roles_for("id1") == {Role.from_value("identifier")}
     # roundtrip consistency (and test __eq__)
     assert  rm == RoleMap.from_primitive(rm.to_primitive())
     

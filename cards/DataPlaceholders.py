@@ -24,11 +24,22 @@ from proxyData import ProxyData as Pxy  # noqa: E402
 #TODO: test code generation
 
 def instance():
-    this = Card(name = "dataPlaceholders", mutable = False)
+    """
+    Creates an instance of dataPlaceholders class.
+    """
+    this = Card(name = "dataPlaceholders", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Missing value placeholders"
     this.description = "This card detects any potential missing-value placeholders and allows their replacement with NA."
 
-    def settings():
+    #############################
+    # Define the user-interface #
+    #############################
+
+    def settings() -> ui.TagList:
+        """
+        These settings related ui elements appear in the sidebar of the card. 
+        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
+        """
         return ui.TagList(
             ui.input_selectize(
                 id = "NA_Strings", 
@@ -109,9 +120,13 @@ def instance():
                 position = "left"),
         )
 
-    this.settings = settings
+    this.settings = settings ## The above "setting" function must be assigned to the instance 
 
-    def front():
+    def front() -> ui.TagList:
+        """
+        These ui elements appear in the front of the card. 
+        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
+        """
         return ui.navset_bar(
             ui.nav_panel(
                 "All variables",
@@ -169,9 +184,13 @@ def instance():
             fillable = True
         )
     
-    this.front = front
+    this.front = front   ## The above "front" function must be assigned to the instance
 
-    def back():
+    def back() -> ui.TagList:
+        """
+        These ui elements appear in the back of the card. 
+        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
+        """
         return ui.TagList(
             ui.card_header("Placeholder Summary", class_ = "text-primary text-center"),
             ui.output_ui(
@@ -182,9 +201,13 @@ def instance():
             )
         )
     
-    this.back = back
+    this.back = back  ## The above "back" function must be assigned to the instance
 
-    def footer():
+    def footer() -> ui.TagList:
+        """
+        These ui elements appear in the footer of the card (but only on the front). 
+        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
+        """
         return ui.input_checkbox_group(
             id = "Replace",
             label = None,
@@ -194,48 +217,44 @@ def instance():
             text = "Buttons for replacing placeholders by converting them to missing values. There is a button for each type of placeholder found. The changes can be reversed.",
         )
 
-    this.footer = footer
+    this.footer = footer  ## The above "footer" function must be assigned to the instance
+
+
+    ########################
+    # Define the behaviour #
+    ########################
 
     def server(input, output, session):
-    
-        #@this.debounce(2)
-        @reactive.calc
-        def MaxObs():
-            return 10**input.MaxObs()
-
-        # isFront
-        @reactive.calc
-        def isFront():
-            return input.FlipButton() % 2 == 0
-
-
-        # isFullScreen
-        @reactive.calc()
-        def isFullScreen():
-            if isinstance(input.Card_full_screen(), bool):
-                return input.Card_full_screen()
-            return False
-
-        @reactive.calc
-        def incomingData():
-            req(this._imports.is_set())
-            data = this._imports()
-            # this.resume()   #TODO: review
-            # await this.show(session)  #TODO: review
-            return data
 
         Codes = reactive.value(None)
         Legend = reactive.value(None)
 
         @reactive.calc
+        #@this.suspendable(calc = True)
+        def incomingProxyData():
+            this._imports.get()
+            req(this._imports.is_set())
+            this.log.debug("Importing...")
+            return this._imports.get()
+
+        @this.throttle(2)
+        @reactive.calc
+        #@this.suspendable(calc = True)
+        def MaxObs():
+            return 10**input.MaxObs()
+
+
+        @reactive.calc
+        #@this.suspendable(calc = True)
         @this.record_code
         def PreparedData():
-            d = incomingData()
+            d = incomingProxyData()
             sample = d.sample(n = MaxObs(), mode = "random", keep_geometry = False)
             return sample
 
 
         @reactive.calc
+        #@this.suspendable(calc = True)
         @this.record_code
         def Sentinels():
             return {
@@ -245,9 +264,11 @@ def instance():
                 "datetime": input.NA_DateTime(),
             }
 
+
         @reactive.calc
+        #@this.suspendable(calc = True)
         @this.record_code
-        def FixedData():
+        def CorrectedData():
             sample = PreparedData()
             sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
             fixed = ResolvePlaceholders(data = sample, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive())
@@ -262,7 +283,8 @@ def instance():
             Legend.set(legend)
             return Pxy.from_native(fixed)
 
-        @reactive.effect
+
+        @this.suspendable()
         def UpdateButtons():
             sample = PreparedData()
             codes_df, legend = PlaceholderCodes(
@@ -281,6 +303,7 @@ def instance():
                 previous = input.Replace() or []
             selected = [c for c in previous if c in choices]
             ui.update_checkbox_group(id="Replace", choices=choices, selected=selected)
+
 
         def empty_plotly(message="No data to display", subtext=None):
             txt = f"<b>{message}</b>" + (f"<br><span style='font-size:0.9em;color:#6c757d'>{subtext}</span>" if subtext else "")
@@ -315,40 +338,89 @@ def instance():
             return df.columns
 
         @this.record_code
-        def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.FigureWidget:
+        def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.Figure:
             x = codes_df.index.astype(str).tolist()
-            y = list(codes_df.columns)
+            y = codes_df.columns.astype(str).tolist()
             z = codes_df.to_numpy(dtype=float).T  # vars x obs
             non_nan = z[~np.isnan(z)]
             if not non_nan.size:
                 return empty_plotly("No data to display")
-            present_codes = sorted(set(non_nan.astype(int)))
-            fig = go.Figure()
+            present_codes = sorted(np.unique(non_nan.astype(int)))
             palette = pc.qualitative.Set3
-            for code in present_codes:
-                label = legend.get(code, f"Code {code}")
-                color = palette[code % len(palette)]
-                hits = (z == code)
-                z_mask = [[1.0 if v else None for v in row] for row in hits]
-                fig.add_trace(go.Heatmap(
-                    z=z_mask, zmin=0, zmax=1,
-                    x=x, y=y,
-                    colorscale=[[0, color], [1, color]],
-                    text=np.where(hits, label, None).tolist() if fs and code > 1 else None,
-                    hoverinfo="text" if fs else "none",
-                    hovertemplate=("Variable: %{y}<br>Observation: %{x}<br>"
-                                "Placeholder: %{text}<extra></extra>") if fs and code > 1 else None,
-                    hoverongaps=False,
-                    name=label,
-                    legendgroup=f"placeholder({code})",
-                    showlegend=fs,
-                    showscale=False
-                ))
+            zmin = min(present_codes)
+            zmax = max(present_codes)
+            # --- discrete colorscale ---
+            if zmin == zmax:
+                color = palette[zmin % len(palette)]
+                colorscale = [[0, color], [1, color]]
+            else:
+                colorscale = []
+                for code in present_codes:
+                    pos = (code - zmin) / (zmax - zmin)
+                    color = palette[code % len(palette)]
+                    colorscale.append([pos, color])
+                    colorscale.append([pos, color])
+            fig = go.Figure()
+            # ---------------------------
+            # 1. Base heatmap (no hover)
+            # ---------------------------
+            fig.add_trace(go.Heatmap(
+                z=z,
+                x=x,
+                y=y,
+                zmin=zmin,
+                zmax=zmax,
+                colorscale=colorscale,
+                showscale=False,
+                hoverinfo="skip",   # 👈 disables all hover here
+                hoverongaps=False,
+            ))
+            # ---------------------------
+            # 2. Hover layer (codes > 1 only)
+            # ---------------------------
+            if fs:
+                mask = (~np.isnan(z)) & (~np.isin(z, [0, 1]))
+                if mask.any():
+                    z_hover = np.full(z.shape, None, dtype=object)
+                    z_hover[mask] = z[mask]
+                    text = np.empty(z.shape, dtype=object)
+                    text[:] = ""
+                    codes = z[mask].astype(int)
+                    text[mask] = [legend.get(c, f"Code {c}") for c in codes]
+                    fig.add_trace(go.Heatmap(
+                        z=z_hover,
+                        x=x,
+                        y=y,
+                        showscale=False,
+                        colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
+                        hovertemplate=(
+                            "Variable: %{y}<br>"
+                            "Observation: %{x}<br>"
+                            "Placeholder: %{text}<extra></extra>"
+                        ),
+                        text=text,
+                        hoverongaps=False,
+                        showlegend=False,
+                    ))
+                for code in present_codes:
+                    fig.add_trace(go.Scatter(
+                        x=[None],
+                        y=[None],
+                        mode="markers",
+                        marker=dict(
+                            size=10,
+                            color=palette[code % len(palette)],
+                            symbol="square",
+                        ),
+                        name=legend.get(code, f"Code {code}"),
+                        showlegend=True,
+                        hoverinfo="skip",
+                    ))
             fig.update_layout(
                 xaxis=dict(title="Observation", type="category"),
                 yaxis=dict(title="Variables", type="category", autorange="reversed"),
                 plot_bgcolor="#e5ecf6",
-                margin=dict(l=2, r=10 if fs else 2, t=2, b=2),
+                margin=dict(l=2, r=35 if fs else 2, t=2, b=2),
                 showlegend=fs,
                 legend=dict(x=1.003, xanchor="left", y=0.0, yanchor="bottom", itemsizing="constant"),
                 modebar=dict(orientation="v"),
@@ -360,82 +432,98 @@ def instance():
                 "responsive": True,
             })
             return fw
-    
+
+
         @output
         @render_widget
         @this.record_code
         def AllChart():
-            FixedData()
+            req(CorrectedData())
             codes_df = Codes.get()
             legend = Legend.get()
-            return _placeholder_chart(codes_df, legend, fs=isFullScreen())
+            chart = _placeholder_chart(codes_df, legend, fs=this.isFullScreen())
+            return chart
+
 
         @output
         @render_widget
         @this.record_code
         def IntegerChart():
-            data = FixedData()
-            codes_df = Codes.get()
-            legend = Legend.get()
+            data = CorrectedData()
             cols = _select_cols(data, "int")
-            return empty_plotly("No integer data to display") if cols.__len__ == 0 else \
-                _placeholder_chart(codes_df[cols], legend, fs=isFullScreen())
+            if cols.__len__ == 0:
+                return empty_plotly("No integer data to display")
+            else:
+                codes_df = Codes.get()
+                legend = Legend.get()
+                return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
+
 
         @output
         @render_widget
         @this.record_code
         def FloatChart():
-            data = FixedData()
-            codes_df = Codes.get()
-            legend = Legend.get()
+            data = CorrectedData()
             cols = _select_cols(data, "float")
-            return empty_plotly("No decimal data to display") if cols.__len__ == 0 else \
-                _placeholder_chart(codes_df[cols], legend, fs=isFullScreen())
+            if cols.__len__ == 0:
+                return empty_plotly("No decimal data to display")
+            else:
+                codes_df = Codes.get()
+                legend = Legend.get()
+                return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
+
 
         @output
         @render_widget
         @this.record_code
         def CharacterChart():
-            data = FixedData()
-            codes_df = Codes.get()
-            legend = Legend.get()
+            data = CorrectedData()
             cols = _select_cols(data, "str")
-            return empty_plotly("No character data to display") if cols.__len__ == 0 else \
-                _placeholder_chart(codes_df[cols], legend, fs=isFullScreen())
+            if cols.__len__ == 0:
+                return empty_plotly("No character data to display")
+            else:
+                codes_df = Codes.get()
+                legend = Legend.get()
+                return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
+
 
         @output
         @render_widget
         @this.record_code
         def DateChart():
-            data = FixedData()
-            codes_df = Codes.get()
-            legend = Legend.get()
+            data = CorrectedData()
             cols = _select_cols(data, "datetime")
-            return empty_plotly("No datetime data to display") if cols.__len__ == 0 else \
-                _placeholder_chart(codes_df[cols], legend, fs=isFullScreen())
-
-
-        @reactive.event(input.Replace)
-        @this.record_code
-        def passthrough():
-            full  = incomingData()
-            sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
-            df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometyry = False)
-            pxy = pxd.ProxyData.from_native(df).with_roles(full.RoleMap)
-            pxy.name = full.name
-            this._exports.set(pxy)
+            if cols.__len__ == 0:
+                return empty_plotly("No datetime data to display")
+            else:
+                codes_df = Codes.get()
+                legend = Legend.get()
+                return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
         @reactive.calc
+        #@this.suspendable(calc = True)
+        @this.record_code
+        def TransformedData():
+            full  = incomingProxyData()
+            sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
+            df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometry = False)
+            pxy = Pxy(_df=df, _roles=full.role_map, _name=full.name)
+            pxy.name = full.name
+            return pxy
+
+        @this.suspendable(triggers = [TransformedData])
+        def export():
+            this._exports.set(TransformedData())
+
+
+        @reactive.calc
+        #@this.suspendable(calc = True)
         @this.record_code
         def build_summary_df():
-            codes_df, legend = PlaceholderCodes(
-                data = FixedData(),
-                sentinels=Sentinels(),
-                drop_geometry=True,
-                extrema=input.NA_Extrema(),
-                case_sensitive=input.NA_CaseSensitive(),
-            )
+            CorrectedData()
+            codes_df = Codes.get()
+            legend = Legend.get()
             # counts per variable for all codes at once
             counts = (
                 codes_df
@@ -452,10 +540,11 @@ def instance():
             counts = counts.rename(columns=lambda c: label_map.get(int(c), f"Code {int(c)}"))
             return counts.rename_axis("Variable").reset_index()
 
+
         @output
         @render.ui
         def Summary():
-            df = build_summary_df()   # your table of counts                
+            df = build_summary_df()   # your table of counts
             def fmt(val):
                 if isinstance(val, (int, float)) and val != 0:
                     return f'<td style="font-weight:700;">{val}</td>'
@@ -471,118 +560,113 @@ def instance():
             html = "<table class='table table-sm table-bordered'>" + "".join(rows) + "</tbody></table>"
             return ui.HTML(html)
 
-        @this.record_code
-        def PlaceholderCodes(data, sentinels: Dict[str, List[Any]], float_eps: float = 1e-9, drop_geometry: bool = True,
-            extrema = True, case_sensitive = False) -> Tuple[pd.DataFrame, Dict[str, Dict[int, str]]]:
-            """
-            Build a pandas DataFrame of integer codes for heatmap chart:
-            - 0            => missing (NaN/NaT/None/"")
-            - 1..k         => dtype-specific sentinel values (in order)
-            - k+1          => everything else
-
-            data : Something convertable to a Pandas dataframe 
-            sentinels: "int", "float", "str", "datetime" e.g. {"int":[-999,-99,-9], "float":[-9999.0,-999.0], "str":["", "NA","N/A"], "datetime":["0000-00-00","0001-01-01","1900-01-01","0"]}
-            float_eps: when two floats are equal
-            drop_geometry: whether to reduce to tabular columns only
-            extrema: whether to only identify extreme placeholders
-            case_sensitive: how to match character placeholders 
-            Returns: (codes_df, legend)
-            """
+        
+        def PlaceholderCodes(data, sentinels: Dict[str, List[Any]], float_eps: float = 1e-9, drop_geometry: bool = True, 
+        extrema: bool = True, case_sensitive: bool = False) -> Tuple[pd.DataFrame, Dict[int, str]]:
             req(data is not None)
             if isinstance(data, pd.DataFrame):
                 df = data
             elif isinstance(data, Pxy):
-                df = data._df
-            elif hasattr(data, "to_pandas"):      # polars -> pandas
-                df = data.to_pandas()
+                df = data.to_native()
             else:
                 raise ValueError(f"Unknown dataset type supplied: {type(data)}")
-                
             if isinstance(df, gpd.GeoDataFrame) and drop_geometry:
-                # drop all geometry-typed columns
-                geom_cols = [c for c in df.columns if getattr(df[c].dtype, "name", None) == "geometry"]
-                df = df.drop(columns=geom_cols).copy()
+                geom_cols = [
+                    c for c in df.columns
+                    if getattr(df[c].dtype, "name", None) == "geometry"
+                ]
+                df = df.drop(columns=geom_cols)
             else:
-                df = pd.DataFrame(df).copy()
-
-            # Create a new DataFrame of same shape, all int8 with 1 (initially signifying not-missing)
-            codes = pd.DataFrame(
-                {col: pd.Series([1] * len(df), dtype="Int8") for col in df.columns},
-                index=df.index
-            )
-            # change the codes entries where data is missing
-            for col in df.columns:
-                v = df[col]
-                missing = v.isna()
-                codes.loc[missing, col] = 0
-
+                df = pd.DataFrame(df)
+            # Fast dense int8 array: 1 = not missing, 0 = missing
+            codes_arr = np.where(df.isna().to_numpy(), 0, 1).astype(np.int8, copy=False)
+            col_pos = {col: i for i, col in enumerate(df.columns)}
             legend = {0: "Missing", 1: "Not Missing"}
             k = 2
-
-            # Precompute the target columns per type once
             type_to_cols = {
-                "int":      df.select_dtypes(include=["integer"]).columns,           # nullable Int* dtypes
-                "float":    df.select_dtypes(include=["floating"]).columns,          # float/Float64
-                "str":      df.select_dtypes(include=["string", "object"]).columns,
+                "int": df.select_dtypes(include=["integer"]).columns,
+                "float": df.select_dtypes(include=["floating"]).columns,
+                "str": df.select_dtypes(include=["string", "object"]).columns,
                 "datetime": df.select_dtypes(include=["datetime64[ns]", "datetimetz"]).columns,
             }
-
+            # Precompute numeric extrema once
+            int_extrema = {}
+            float_extrema = {}
+            if extrema:
+                for col in type_to_cols["int"]:
+                    s = df[col]
+                    int_extrema[col] = (s.min(skipna=True), s.max(skipna=True))
+                for col in type_to_cols["float"]:
+                    s = df[col]
+                    float_extrema[col] = (s.min(skipna=True), s.max(skipna=True))
+            # Precompute string versions once
+            str_cache = {}
+            if len(type_to_cols["str"]):
+                for col in type_to_cols["str"]:
+                    s = df[col].astype("string").fillna("")
+                    if not case_sensitive:
+                        s = s.str.casefold()
+                    str_cache[col] = s
             for dtype_key, sent_list in (sentinels or {}).items():
                 cols = type_to_cols.get(dtype_key)
-                if not cols is not None or len(cols) == 0:
+                if cols is None or len(cols) == 0:
                     continue
-                for sent in (sent_list or []):
-                    for col in cols:
-                        s = df[col]
-                        # Build a mask with dtype-appropriate comparison
-                        if dtype_key == "datetime":
-                            # parse sentinel into datetime; invalid parses become NaT and won't match
-                            dt = pd.to_datetime(sent, errors="coerce")
-                            mask = (s == dt)
-                        elif dtype_key == "float":
-                            # safe float compare; avoid string/None crashing float()
-                            try:
-                                f = float(sent)
-                                if not extrema or (min(s) == f or max(s) == f):
-                                    mask = abs(s.astype("float64") - f) < float_eps
-                                else:
-                                    mask = pd.Series(False, index=s.index)
-                            except Exception:
-                                mask = pd.Series(False, index=s.index)
-                        elif dtype_key == "int":
-                            try:
-                                i = int(sent)
-                                if not extrema or (min(s) == i or max(s) == i):
-                                    mask = (s == i) # works for pandas nullable Int* dtypes
-                                else:
-                                    mask = pd.Series(False, index=s.index)
-                            except Exception:
-                                mask = pd.Series(False, index=s.index)
-                        elif dtype_key == "str":
-                            if case_sensitive:
-                                mask = (
-                                    s.astype("string")
-                                    .fillna("")
-                                    .str
-                                    .eq(sent))
-                            else:
-                                mask = (
-                                    s.astype("string")
-                                    .fillna("")
-                                    .str.casefold()
-                                    .eq(sent.casefold())
-                                )
-                        else:
-                            mask = pd.Series(False, index=s.index)
-                        # assign this sentinel's code
-                        if mask.any():
-                            codes.loc[mask, col] = k
+                for sent in sent_list or []:
+                    if dtype_key == "datetime":
+                        dt = pd.to_datetime(sent, errors="coerce")
+                        if pd.isna(dt):
+                            legend[k] = f"{dtype_key}: {sent}"
+                            k += 1
+                            continue
+                        for col in cols:
+                            mask = (df[col] == dt).to_numpy()
+                            if mask.any():
+                                codes_arr[mask, col_pos[col]] = k
+                    elif dtype_key == "float":
+                        try:
+                            f = float(sent)
+                        except Exception:
+                            legend[k] = f"{dtype_key}: {sent}"
+                            k += 1
+                            continue
+                        for col in cols:
+                            if extrema:
+                                mn, mx = float_extrema[col]
+                                if not (np.isclose(mn, f, atol=float_eps) or np.isclose(mx, f, atol=float_eps)):
+                                    continue
+                            values = df[col].to_numpy(dtype="float64", na_value=np.nan)
+                            mask = np.abs(values - f) < float_eps
+                            if mask.any():
+                                codes_arr[mask, col_pos[col]] = k
+                    elif dtype_key == "int":
+                        try:
+                            i = int(sent)
+                        except Exception:
+                            legend[k] = f"{dtype_key}: {sent}"
+                            k += 1
+                            continue
+                        for col in cols:
+                            if extrema:
+                                mn, mx = int_extrema[col]
+                                if not (mn == i or mx == i):
+                                    continue
+                            mask = (df[col] == i).to_numpy(dtype=bool, na_value=False)
+                            if mask.any():
+                                codes_arr[mask, col_pos[col]] = k
+                    elif dtype_key == "str":
+                        target = sent if case_sensitive else str(sent).casefold()
+                        for col in cols:
+                            mask = str_cache[col].eq(target).to_numpy(dtype=bool, na_value=False)
+                            if mask.any():
+                                codes_arr[mask, col_pos[col]] = k
                     legend[k] = f"{dtype_key}: {sent}"
                     k += 1
-            return (codes, legend)
+            codes = pd.DataFrame(codes_arr, index=df.index, columns=df.columns)
+            return codes, legend
+
 
         @this.record_code
-        def ResolvePlaceholders(data, sentinels: str = None, float_eps: float = 1e-9, extrema = True, case_sensitive = False):
+        def ResolvePlaceholders(data, sentinels: str = None, float_eps: float = 1e-9, extrema: bool = True, case_sensitive: bool = False, drop_geometry: bool = True): #TODO: get drop_geometry to do something
             """
             Builds a Pandas data frame with the specified sentinels converted to the relevant missing value indictor.
             
@@ -603,7 +687,6 @@ def instance():
                 df = data.to_pandas()
             else:
                 raise ValueError(f"Unknown dataset type supplied: {type(data)}")
-
             if sentinels is None or len(sentinels) == 0:
                 return df
             df = pd.DataFrame(df).copy()
@@ -672,14 +755,12 @@ if Module.running_under_tests():
             "part": ["Train", "Train", "Test", "Test"],
         }
     )
-    pxd = Pxy.from_native(df)
-    pxd.name = "Test"
+    pxd = Pxy(_df = df, _name = "Test")
     this._imports.set(pxd)
-    app = Module.app(modules = {this.ns: this})
+    app = this.Application()
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
-    pxd = Pxy.from_native(df)
-    pxd.name = "Ass2"
+    pxd = Pxy(_df = df, _name = "Ass2")
     this._imports.set(pxd)
-    Module.run(modules = {this.ns: this})
+    this.run()

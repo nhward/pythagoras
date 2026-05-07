@@ -1,6 +1,6 @@
 import pytest
-import asyncio
-from unittest.mock import AsyncMock
+# import asyncio
+# from unittest.mock import AsyncMock
 
 from pathlib import Path
 import sys
@@ -40,10 +40,10 @@ def test_card_initialisation(card):
     assert card.initially_hidden is False
     assert card.description is None
     # Script and CSS additions
-    assert Card.WWW / "pythagoras.js" in card.script_list
-    assert Card.WWW / "markdown_tabsets.js" in card.script_list
-    assert Card.WWW / "animate.css" in card.css_list
-    assert Card.WWW / "pythagoras.css" in card.css_list
+    assert Card.ROOT / "www" / "pythagoras.js" in card.script_list
+    assert Card.ROOT / "www" / "markdown_tabsets.js" in card.script_list
+    assert Card.ROOT / "www" / "animate.css" in card.css_list
+    assert Card.ROOT / "www" / "pythagoras.css" in card.css_list
 
 @pytest.mark.unit
 def test_hasSidebar_default(card):
@@ -105,31 +105,6 @@ def test_information_reads_md(card):
     assert "markdown" in html.lower()
     if md_file.exists():
         md_file.unlink()
-
-#############################
-# show() / hide() tests
-#############################
-@pytest.mark.unit
-def test_show_sends_message(card):
-    session = AsyncMock()
-    session.ns = lambda x: f"ns-{x}"
-    asyncio.run(card.show(session))
-    session.send_custom_message.assert_called_once_with(
-        "toggle_visibility",
-        {"id": "ns-Card", "visible": True}
-    )
-
-
-@pytest.mark.unit
-def test_hide_sends_message(card):
-    session = AsyncMock()
-    session.ns = lambda x: f"ns-{x}"
-    asyncio.run(card.hide(session))
-    session.send_custom_message.assert_called_once_with(
-        "toggle_visibility",
-        {"id": "ns-Card", "visible": False}
-    )
-
 
 #############################
 # UI stub methods

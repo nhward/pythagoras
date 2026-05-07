@@ -6,6 +6,7 @@ from shiny import ui, App, reactive
 import app
 from pathlib import Path
 import sys
+from app import application
 
 # Ensure app root is importable when pytest is run outside the IDE
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,8 +38,8 @@ def clean_module_class(monkeypatch):
     # Reset class-level state
     Module.Instances.clear()
     Module._ui_patched = False
-    Module.script_list = []
-    Module.css_list = []
+    # Module.script_list = []
+    # Module.css_list = []
     # Avoid touching real shiny.ui / shinywidgets in tests
     monkeypatch.setattr(Module, "_patch_module", lambda self, module: None)
     yield
@@ -57,10 +58,10 @@ def test_module_initialises_and_registers_instance():
     m = DummyModule(name = "something")
     assert m.name == "something"
     assert m.namespace == "something"  # first instance uses name
-    assert Module.Instances[m.namespace] is m
+    assert m.Instances[m.namespace] is m
     # script/css lists populated
-    assert Path(f"{m.ROOT}/www/console.js") in Module.script_list
-    assert Path(f"{m.ROOT}/www/shepherd.css") in Module.css_list
+    assert (m.ROOT / "www" / "console.js") in m.script_list
+    assert Path(m.ROOT / "www" / "shepherd.css") in  m.css_list
 
 
 @pytest.mark.unit
@@ -236,7 +237,7 @@ def test_suspendable_calc_respects_suspend_and_resume():
     m = DummyModule("card")
     calls = {"count": 0}
 
-    @m.suspendable(suspended=True, default=-1)
+    @m.suspendable(suspended=True, default=-1, calc = True)
     def f() -> int:
         calls["count"] += 1
         return 99
@@ -311,11 +312,11 @@ def test_code_text_returns_html_snippet():
 # debounce / throttle: basic smoke tests (no tight timing assertions)
 # -------------------------------------------------------------------
 @pytest.mark.unit
-def test_debounce_wraps_callable_without_raising():
+def test_throttle_wraps_callable_without_raising():
     m = DummyModule("test-module")
     calls = {"count": 0}
 
-    @m.debounce(delay_secs=0.01)
+    @m.throttle(delay_secs=0.01)
     def compute():
         calls["count"] += 1
         return 42
@@ -327,22 +328,6 @@ def test_debounce_wraps_callable_without_raising():
         result = compute()
     assert result == 42
     assert calls["count"] == 1
-
-
-@pytest.mark.unit
-def test_throttle_wraps_callable_without_raising():
-    m = DummyModule("card")
-    seen = {"count": 0}
-
-    @m.throttle(delay_secs=0.01)
-    def f():
-        seen["count"] += 1
-        return 321
-
-    with reactive.isolate():
-        out = f()
-    assert callable(f)
-    assert out in (321, None)
 
 
 # -------------------------------------------------------------------
@@ -389,9 +374,9 @@ def test_app_builds_shiny_app():
         m1.namespace: m1,
         m2.namespace: m2,
     }
-    app = Module.app(modules)
-    assert isinstance(app, App)
+    appl = application(modules)
+    assert isinstance(appl, App)
     # ui should contain both cards
-    html = str(app.ui)
+    html = str(appl.ui)
     assert "Module: card1" in html
     assert "Module: card2" in html

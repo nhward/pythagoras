@@ -12,10 +12,10 @@ from proxyData import ProxyData as Pxy
 
 
 def instance():
-    this = Card(name = "dataImport", mutable = True)
+    this = Card(name = "dataImport", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Data import"
     this.description = "This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
-    
+    this.requires_import = False
     def settings():
         return ui.TagList(
             ui.input_text(
@@ -112,7 +112,8 @@ def instance():
         #### Shiny variables ----
         CommittedData = reactive.Value(None)
 
-        @reactive.calc
+        #@reactive.calc
+        @this.suspendable(calc = True)
         def TempFilePath():
             files = input.ServerFile()
             if not files:
@@ -226,7 +227,8 @@ def instance():
             html += "</ul>"
             return html
 
-        @reactive.calc
+        #@reactive.calc
+        @this.suspendable(calc = True)
         @this.record_code
         def GetData():
 
@@ -317,7 +319,8 @@ def instance():
                 d =  source["load"](name)
             return d
 
-        @reactive.calc
+        #@reactive.calc
+        @this.suspendable(calc = True)
         @this.record_code
         def GetPxyData():
             if GetData() is None:
@@ -522,8 +525,9 @@ def instance():
             ui.update_text(id = "DName", value = stem)
         
         
-        #@this.debounce(2)
-        @reactive.calc
+        @this.throttle(2)
+        #@reactive.calc
+        @this.suspendable(calc = True)
         def Url():
             return input.Url()
 
@@ -637,14 +641,10 @@ def instance():
                 pxd.name = input.DName()
             CommittedData.set(pxd)
             this._exports.set(CommittedData())
-            await session.send_custom_message("UpdateCardOrder", None) #Trigger a cascade
-
-        @reactive.Effect
-        def data_passthrough():
-            pass
 
 
-        @reactive.calc
+        #@reactive.calc
+        @this.suspendable(calc = True)
         def getDatasetChoices():
             choices = {}
             for pkg, source in DATA_SOURCES.items():
@@ -674,7 +674,7 @@ def instance():
 
 if Module.running_under_tests():
     this = instance()
-    app = Module.app(modules = {this.ns: this})
+    app = this.Application()
 elif Module.running_directly(name =__name__):
     this = instance()
-    Module.run(modules = {this.ns: this})
+    this.run()
