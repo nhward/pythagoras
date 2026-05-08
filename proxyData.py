@@ -411,8 +411,8 @@ class ProxyData:
                 if value.isna().values.any():
                     errors.append("Stratifier role has missing values")
 
-        except Exception as e:
-            errors.append(f"The role assignments and data are incompatible: {e}")
+        except Exception:
+            errors.append("The role assignments and data are incompatible")
         return errors    
 
     def __repr__(self) -> str:

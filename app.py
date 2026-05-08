@@ -48,7 +48,8 @@ def create_cards(folder: Path | str):
     for py_file in cards_path.glob(pattern = "*.py"):
         if py_file.name == "__init__.py":
             continue
-        module_name = f"{folder}.{py_file.stem}"   # e.g. cards.DataImport
+        package_name = cards_path
+        module_name = f"{package_name}.{py_file.stem}"
         try:
             module = importlib.import_module(module_name)
             if not hasattr(module, "instance"):
@@ -56,11 +57,11 @@ def create_cards(folder: Path | str):
             card = module.instance()
             imported_cards[card.namespace] = card
             card.log.info(msg="✅ Instantiated")
-        except Exception as e:
-            logging.exception(f"⚠️ Failed to instantiate card {module_name}", e)
+        except Exception:
+            logging.exception(f"⚠️ Failed to instantiate card {module_name}")
     return imported_cards
 
-def application(cards: list[Card]):
+def application(cards: dict[str, Card]):
     if cards is None:
         return
     
@@ -142,6 +143,7 @@ def application(cards: list[Card]):
             """
             Return {display_name: file_path} for all card files in cards_dir.
             Assumes each card file defines instance().
+            This is NOT currently filesystem-reactive
             """
             cards = {}
             cards_dir = Module.ROOT / "cards"
@@ -259,7 +261,7 @@ def application(cards: list[Card]):
             log.debug(msg = "Card flow cascade invoked")
             source  = None
             for cardns in order:
-                destination = Module.Instances[cardns]
+                destination = Module.Instances.get(cardns)
                 if destination is None:
                     continue
                 if source is None:
@@ -305,7 +307,7 @@ def _run():
 
 
 if __name__ == "__main__":
-    """"
+    """
     This avoids IDE thread conflicts when calling as a python file by
     choosing between foreground and background threads.
     """

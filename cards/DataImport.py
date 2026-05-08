@@ -112,7 +112,6 @@ def instance():
         #### Shiny variables ----
         CommittedData = reactive.Value(None)
 
-        #@reactive.calc
         @this.suspendable(calc = True)
         def TempFilePath():
             files = input.ServerFile()
@@ -126,9 +125,6 @@ def instance():
             return file            
 
         
-        # reactive debounce candidate
-        
-
         def _load_sm(name):
             """
             Robust loader for statsmodels datasets.
@@ -227,7 +223,6 @@ def instance():
             html += "</ul>"
             return html
 
-        #@reactive.calc
         @this.suspendable(calc = True)
         @this.record_code
         def GetData():
@@ -319,7 +314,6 @@ def instance():
                 d =  source["load"](name)
             return d
 
-        #@reactive.calc
         @this.suspendable(calc = True)
         @this.record_code
         def GetPxyData():
@@ -526,7 +520,6 @@ def instance():
         
         
         @this.throttle(2)
-        #@reactive.calc
         @this.suspendable(calc = True)
         def Url():
             return input.Url()
@@ -643,7 +636,6 @@ def instance():
             this._exports.set(CommittedData())
 
 
-        #@reactive.calc
         @this.suspendable(calc = True)
         def getDatasetChoices():
             choices = {}

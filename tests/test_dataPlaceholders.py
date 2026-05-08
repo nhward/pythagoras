@@ -81,17 +81,16 @@ def set_shiny_input(page: Page, local_id: str, value):
 
 
 # ---------- unit tests --------------------------------------------------
-
 @pytest.mark.unit
 def test_instance_metadata(card_module):
     this = card_module.this
     assert this.name == "dataPlaceholders"
     assert this.long_name == "Missing value placeholders"
     assert "placeholder" in this.description.lower()
-    assert callable(this.settings)
-    assert callable(this.front)
-    assert callable(this.back)
-    assert callable(this.footer)
+    assert this.settings is not None
+    assert this.front is not None
+    assert this.back is not None
+    assert this.footer is not None
     assert callable(this.server)
 
 
@@ -112,13 +111,13 @@ def test_test_mode_seeds_import_data(card_module):
 
 @pytest.mark.unit
 def test_front_returns_ui_object(card_module):
-    tag = card_module.this.front()
+    tag = card_module.this.front
     assert tag is not None
 
 
 @pytest.mark.unit
 def test_back_ui_contains_summary_output(card_module):
-    tag = card_module.this.back()
+    tag = card_module.this.back
     html = str(tag)
     assert "Placeholder Summary" in html
     assert "Summary" in html

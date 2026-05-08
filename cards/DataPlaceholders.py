@@ -229,23 +229,19 @@ def instance():
         Codes = reactive.value(None)
         Legend = reactive.value(None)
 
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         def incomingProxyData():
             this._imports.get()
             req(this._imports.is_set())
-            this.log.debug("Importing...")
             return this._imports.get()
 
         @this.throttle(2)
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         def MaxObs():
             return 10**input.MaxObs()
 
 
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         @this.record_code
         def PreparedData():
             d = incomingProxyData()
@@ -253,8 +249,7 @@ def instance():
             return sample
 
 
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         @this.record_code
         def Sentinels():
             return {
@@ -265,8 +260,7 @@ def instance():
             }
 
 
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         @this.record_code
         def CorrectedData():
             sample = PreparedData()
@@ -501,8 +495,7 @@ def instance():
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         @this.record_code
         def TransformedData():
             full  = incomingProxyData()
@@ -517,8 +510,7 @@ def instance():
             this._exports.set(TransformedData())
 
 
-        @reactive.calc
-        #@this.suspendable(calc = True)
+        @this.suspendable(calc = True)
         @this.record_code
         def build_summary_df():
             CorrectedData()
