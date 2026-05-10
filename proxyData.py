@@ -1,14 +1,13 @@
 # proxy_data.py
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Literal, Optional, Union, ClassVar
+from typing import Literal, Optional
 from collections.abc import Iterable as _Iterable
 from roles import RoleMap, Role
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 
-RoleLike = Union["Role", str]
 
 @dataclass
 class ProxyData:
@@ -22,7 +21,6 @@ class ProxyData:
     _df: pd.DataFrame
     _roles: RoleMap = field(default_factory=RoleMap)
     _name: str = None
-    LOW: ClassVar[int] = 8
 
     # ----------------- post-init: default roles -------------------------
 
@@ -42,7 +40,7 @@ class ProxyData:
 
         # If no roles defined at all, default every column to PREDICTOR
         if not self._roles.column_roles:
-            print("Creating a default role-assignment (all predictors)")
+            #print("Creating a default role-assignment (all predictors)")
             rm = RoleMap()
             for col in self._df.columns:
                 rm.set_roles(col, [Role.PREDICTOR])
@@ -97,16 +95,16 @@ class ProxyData:
         return self._roles
     @role_map.setter
     def role_map(self, value):
-        self._role_map = value
-
+        if not isinstance(value, RoleMap):
+            value = RoleMap.from_primitive(value)
+        self._roles = value
 
     @property
     def data(self) -> pd.DataFrame | gpd.GeoDataFrame:
         return self._df
     @data.setter
     def data(self, value):
-        self._data = value
-
+        self._df = value
 
     @property
     def name(self) -> str:
@@ -135,7 +133,7 @@ class ProxyData:
     # ----------------- drole helpers -----------------------------------
 
     @staticmethod
-    def _normalize_roles(spec: Union[RoleLike, _Iterable[RoleLike], None]) -> set[Role]:
+    def _normalize_roles(spec: "Role" | str | None) -> set[Role]:
         if spec is None:
             return set()
         if not isinstance(spec, _Iterable) or isinstance(spec, (str, bytes)):
@@ -144,8 +142,8 @@ class ProxyData:
 
     def select_drole(
         self,
-        include: Union[RoleLike, _Iterable[RoleLike], None] = None,
-        exclude: Union[RoleLike, _Iterable[RoleLike], None] = None,
+        include: "Role" | str | None = None,
+        exclude: "Role" | str | None = None,
     ) -> "ProxyData":
         """
         Return a new ProxyData with columns selected by *roles* rather than dtypes.
@@ -248,11 +246,12 @@ class ProxyData:
         return ProxyData(sampled, self._copy_roles(), self.name)
 
     # ----------------- role-related convenience ------------------------
+
     def with_roles(self, role_map: RoleMap) -> "ProxyData":
         """Return a new ProxyData with the same data but a different RoleMap."""
         if not isinstance(role_map, RoleMap):
             role_map = RoleMap.from_primitive(role_map)
-        return ProxyData(self._df, role_map)
+        return ProxyData(self._df, role_map, self.name)
 
     def clone(self) -> "ProxyData":
         """
@@ -273,7 +272,7 @@ class ProxyData:
 
     # ----------------- role-related validation ------------------------
 
-    def validate(self, role_map: Optional[RoleMap] = None, separator = "|") -> list[str]:
+    def validate(self, role_map: Optional[RoleMap] = None, separator = "|", low_cardinality:int = 8) -> list[str]:
         # Private functions
         def _is_unique(values) -> bool:
             return pd.Series(values).is_unique
@@ -382,7 +381,7 @@ class ProxyData:
                 errors.append("Treatment role must be singular")
             elif len(trt_cols) == 1:
                 value = data[trt_cols[0]]
-                if value.nunique(dropna=False) > self.LOW:
+                if value.nunique(dropna=False) > low_cardinality:
                     errors.append("Treatment role must have low cardinality")
                 if value.isna().values.any():
                     errors.append("Treatment role has missing values")
@@ -394,7 +393,7 @@ class ProxyData:
                 errors.append("Sensitive role must be singular")
             elif len(sen_cols) == 1:
                 value = data[sen_cols[0]]
-                if value.nunique(dropna=False) > self.LOW:
+                if value.nunique(dropna=False) > low_cardinality:
                     errors.append("Sensitive role must have low cardinality")
                 if value.isna().values.any():
                     errors.append("Sensitive role has missing values")
@@ -406,7 +405,7 @@ class ProxyData:
                 errors.append("Stratifier role must be singular")
             elif len(str_cols) == 1:
                 value = data[str_cols[0]]
-                if value.nunique(dropna=False) > self.LOW:
+                if value.nunique(dropna=False) > low_cardinality:
                     errors.append("Stratifier role must have low cardinality")
                 if value.isna().values.any():
                     errors.append("Stratifier role has missing values")
@@ -421,3 +420,35 @@ class ProxyData:
 
     def __len__(self) -> int:
         return len(self._df)
+    
+    def equals(self, other: object, *, check_name: bool = True, check_roles: bool = True, check_crs: bool = True, check_geometry_column: bool = True) -> bool:
+        """
+        Compare two ProxyData instances for equality.
+        By default this checks:
+        - same ProxyData type
+        - same data values, index, columns, and dtypes via DataFrame.equals()
+        - same role map
+        - same name
+        - same GeoDataFrame CRS and active geometry column, where relevant
+        """
+        if not isinstance(other, ProxyData):
+            return False
+        if check_name and self.name != other.name:
+            return False
+        if self.is_geodata != other.is_geodata:
+            return False
+        if check_crs and self.is_geodata:
+            if self._df.crs != other._df.crs:
+                return False
+        if check_geometry_column and self.is_geodata:
+            if self._df.geometry.name != other._df.geometry.name:
+                return False
+        if not self._df.equals(other._df):
+            return False
+        if check_roles:
+            if self._roles.column_roles != other._roles.column_roles:
+                return False
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        return self.equals(other)        

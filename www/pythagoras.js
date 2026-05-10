@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn(`[pythagoras] Initialising card - card not found: "${opts.id}"`);
             return;
         }
+        console.debug(`Initialising card "${opts.id}"`);
         // Sortable roles (when applicable)
         initRolesCard(card);
         emitRoleMapFromCard(card);

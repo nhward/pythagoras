@@ -1,5 +1,5 @@
 ###########################
-## application                   ##
+## application           ##
 ###########################
 
 ## This the app for a shiny application call Pythagoras
@@ -31,8 +31,10 @@ log.propagate = False
 log.setLevel(logging.DEBUG)
 
 def create_cards(folder: Path | str):
-    """Import all Python modules inside the given folder (default 'cards')
-    and create an instance of each."""
+    """
+    Import all Python modules inside the given folder (default 'cards')
+    and create an instance of each.
+    """
     # Ensure the folder exists
     if isinstance(folder, str): 
         cards_path = Path(folder)
@@ -48,7 +50,7 @@ def create_cards(folder: Path | str):
     for py_file in cards_path.glob(pattern = "*.py"):
         if py_file.name == "__init__.py":
             continue
-        package_name = cards_path
+        package_name = cards_path.name
         module_name = f"{package_name}.{py_file.stem}"
         try:
             module = importlib.import_module(module_name)
@@ -58,10 +60,43 @@ def create_cards(folder: Path | str):
             imported_cards[card.namespace] = card
             card.log.info(msg="✅ Instantiated")
         except Exception:
-            logging.exception(f"⚠️ Failed to instantiate card {module_name}")
+            log.exception(f"⚠️ Failed to instantiate card {module_name}")
     return imported_cards
 
+
+def card_control(cards: dict[str, Card]):
+    if True: #TODO: Make this a system setting
+        return ui.nav_panel(
+            "Data Prep",
+            ui.div(
+                [module.call_ui() for module in cards.values()],  # iterate through any number of cards - creates and runs a ui module for each
+                id = "cards-container", # Container for cards
+                class_ = "cards-grid"
+            ),
+            value = "Data_prep"
+        )
+    else:
+        return ui.accordion(
+            ui.accordion_panel(
+                "Data prep",
+                ui.div(
+                    [module.call_ui() for module in cards.values()],  # iterate through any number of forms - creates and runs a ui module for each
+                    id = "cards-container", # Container for cards
+                    class_ = "cards-grid"
+                ),
+                id = "Data_prep",
+            ),
+            id = "Accordion",
+            open = "Data_prep"
+        )
+
+
 def application(cards: dict[str, Card]):
+    """
+    Create a shiny app.
+    This involves creating UI (app_ui) and SERVER (server) functions and
+    passing these to shiny.app.
+    """
     if cards is None:
         return
     
@@ -75,15 +110,7 @@ def application(cards: dict[str, Card]):
         ui.busy_indicators.options(spinner_type = "bars2"),
         ui.busy_indicators.use(),
         ui.page_navbar(
-            ui.nav_panel(
-                "Data Prep",
-                ui.div(
-                    [module.call_ui() for module in cards.values()],  # iterate through any number of forms - creates and runs a ui module for each
-                    id = "cards-container", # Container for cards
-                    class_ = "cards-grid"
-                ),
-                value = "Data_prep"
-            ),
+            card_control(cards),
             ui.nav_spacer(),
             ui.nav_control(
                 ui.tooltip(
@@ -155,9 +182,10 @@ def application(cards: dict[str, Card]):
         
         def card_picker_modal(cards: dict[str, Path]):
             """
-            Build the modal UI.
+            Build the modal UI to pick a new card from the available cards.
             """
             return ui.modal(
+                #TODO: make the choices more descriptive - currently just the dict key is used
                 ui.input_select(
                     id = "CardPicker_selected",
                     label = "Choose a card to insert",
@@ -182,6 +210,9 @@ def application(cards: dict[str, Card]):
         @reactive.effect
         @reactive.event(input.AddCard)
         async def AddCard():
+            """
+            Respond to the "new" button click by showing the model-dialogue of available cards.
+            """
             ui.modal_show(
                 card_picker_modal(available_cards())
             )
@@ -201,10 +232,12 @@ def application(cards: dict[str, Card]):
         @reactive.effect
         @reactive.event(input.CardPicker_ok)
         def _confirm_picker():
+            """
+            React to the choice of a new card to add to the current section.
+            """
+            #TODO: make this code section aware
             choice = input.CardPicker_selected()
-            if not choice:
-                return
-            if choice not in available_cards():
+            if not choice or choice not in available_cards():
                 return
             file = available_cards()[choice]
             fresh_instance = load_fresh_card_instance(file)
@@ -221,6 +254,11 @@ def application(cards: dict[str, Card]):
         @reactive.effect
         @reactive.event(input.FullScreen)
         async def FullScreen():
+            """
+            This makes the browser go full screen.
+            Because full-screen is browser specific this may be unreliable.
+            The implememtation is in pythagoras.js
+            """
             log.info("Full-screen app requested")
             await session.send_custom_message("fullscreen_app", None)
         
@@ -228,6 +266,11 @@ def application(cards: dict[str, Card]):
         @reactive.effect
         @reactive.event(input.Quit)
         async def Quit():
+            """
+            This shuts the browser session down - just like a conventional application.
+            Because closing tabs is browser specific this may be unreliable.
+            The implememtation is in pythagoras.js
+            """
             log.info("Quit app requested")
             await session.send_custom_message("quit_app", None)
             await session.close()  # in case the window close is ignored
@@ -237,6 +280,9 @@ def application(cards: dict[str, Card]):
         @reactive.effect
         @reactive.event(input.Console_log)
         def Redirect():
+            """
+            Java-script console messages are redirected to the python log.
+            """
             message = input.Console_log()
             level = message['level'].upper()
             if level =="ERROR":
@@ -249,13 +295,12 @@ def application(cards: dict[str, Card]):
                 log.debug(msg = f"<javascript> | {message['text']}")
 
         @reactive.calc
-        def CurrentTabCardOrder(): #given in namespaces
-            req(input.CardOrder())
-            order = input.CardOrder()
+        def CurrentTabCardOrder() -> list[str]: #given in namespaces
+            order = req(input.CardOrder())
             order = [s.removesuffix("-Card") for s in order]
             return order
 
-        @reactive.effect()
+        @reactive.effect
         def cascade():
             order = req(CurrentTabCardOrder())
             log.debug(msg = "Card flow cascade invoked")
@@ -274,14 +319,19 @@ def application(cards: dict[str, Card]):
                         destination._imports.unset()
                 source = destination
 
-        # Load and initialise each module file (card)
-        for card in Module.Instances.values():
+        # Initialize each module/card's server logic
+        for card in list(Module.Instances.values()):
             if card is None:
                 continue
             card.call_server(input, output, session)
             card.resume()
 
+
         async def after_flush():
+            """
+            Ensure that input.CardOrder() is created and populated with the actual card sequence.
+            Do this when the reactivity has settled - to avoid race conditions.
+            """
             await session.send_custom_message("UpdateCardOrder", None)
         session.on_flushed(after_flush, once=True)
 
@@ -289,7 +339,7 @@ def application(cards: dict[str, Card]):
 
 
 # Load the cards in the "cards" folder
-cards = create_cards(folder = "cards")
+cards = create_cards(folder = ROOT / "cards")
 
 # TODO: Manage the order of the cards
 

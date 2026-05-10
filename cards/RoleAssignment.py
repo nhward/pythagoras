@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shiny import ui, render, reactive, req  # noqa: E402
+from shiny import ui, render, req  # noqa: E402
 from module import Module  # noqa: E402
 from card import Card  # noqa: E402
 from roles import Role, RoleMap  # noqa: E402
@@ -15,7 +15,7 @@ from proxyData import ProxyData as Pxy  # noqa: E402
 
 
 def instance():
-    this = Card(name = "roleAssign", mutable = False)
+    this = Card(name = "roleAssign", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Role Assignment"
     this.description = "This card enables the variables to be assigned to roles."
 
@@ -27,6 +27,16 @@ def instance():
                 value = "|",
                 guide = this,
                 text = 'Since tab, semi-colon and comma characters are common in identifiers, this string specifies the type of separation to employ.',
+                position = "left"),
+            ui.input_slider(
+                id = "CardinalityThreshold", 
+                label = "Maximum cardinality of of \"Low Cardinality\" roles", 
+                min = 3,
+                max = 50,
+                value = 4,
+                ticks = True,
+                guide = this,
+                text = 'Limit the cardinality of certain roles to be less than this - specificially: Sensitive, Stratifier and Treatment roles. This setting is used in role validation.',
                 position = "left"),
             ui.input_slider(
                 id = "MaxObs", 
@@ -102,68 +112,62 @@ def instance():
     
     def server(input, output, session):
 
-        @reactive.calc()
+        @this.suspendable(calc = True)
         def incomingProxyData():
+            this._imports.get()
             req(this._imports.is_set())
-            return this._imports()
+            return this._imports.get()
  
-        @reactive.calc()
+        @this.suspendable(calc = True)
         def PreparedData():
             pxd = incomingProxyData()
             return pxd.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
             
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
-            try:
-                input.role_map()
-                messages = ValidateMap() # using input.role_map
-                if len(messages) > 0: #invalid
+            this._imports.get()
+            if not this._imports.is_set():
+                rm = RoleMap().to_primitive()
+                await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
+            else:
+                try:
+                    input.role_map()
+                    messages = ValidateMap() # using input.role_map
+                    if len(messages) > 0: # not valid
+                        pxd = PreparedData()
+                        rm = pxd.role_map.to_primitive()
+                        await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
+                except (Exception):
                     pxd = PreparedData()
                     rm = pxd.role_map.to_primitive()
                     await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
-            except (Exception):
-                pxd = PreparedData()
-                rm = pxd.role_map.to_primitive()
-                await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
 
         @output
         @render.table
         @this.record_code
         def Assignments():
-            orm = this._exports().role_map
+            orm = this._exports.get().role_map
             return orm.roles_to_frame()
 
-        @reactive.calc
+        @this.suspendable(calc = True)
         @this.record_code
         def ValidateMap():
+            this._imports.get()
+            req(this._imports.is_set())
+            req(input.role_map())
+            this.log.debug("Validating changes")
+            # Convert the json to the RoleMap class
+            rm = RoleMap.from_primitive(input.role_map())
             pxd = PreparedData()
-            this.debug("Validating changes")
-            if input.role_map() is None:
-                return pxd.validate(separator = input.Separator())
-            else: 
-                # Convert the json to the RoleMap class
-                rm = RoleMap.from_primitive(input.role_map())
-                msgs = pxd.validate(role_map = rm, separator = input.Separator()) 
-                return msgs
+            msgs = pxd.validate(role_map = rm, separator = input.Separator(), low_cardinality = input.CardinalityThreshold()) 
+            return msgs
 
-        #### Update commit button ----
-        @this.suspendable(triggers = [ValidateMap])
-        async def Gatekeeper():
-            messages = ValidateMap()
-            ok = len(messages) == 0
-            ui.update_action_button(
-                id = "Commit",
-                disabled = not ok
-            )
-            if ok:
-                await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
 
         #### Committed  event ----
-        @reactive.calc
+        @this.suspendable(calc = True)
         def Committed():
             req(input.role_map())
-            pxd = PreparedData()
-            return pxd.with_roles(input.role_map()) 
+            return Pxy(_df = incomingProxyData().to_native(), _roles = input.role_map(), _name = incomingProxyData().name) 
             
 
         #### Commit event ----
@@ -171,14 +175,24 @@ def instance():
         def CommitEvent():
             this._exports.set(Committed())
 
+        @this.suspendable()
+        def allowAutoCommit():
+            if not this._exports.is_set() and this._imports.is_set():
+                this._exports.set(this._imports.get())
+            elif this._imports.is_set() and this._imports.get().role_map == this._exports().role_map:
+                this._exports.set(this._imports.get())
+
         @output
         @render.ui
         async def Check():
             messages = ValidateMap()
-            if len(messages) == 0:
-                if (this._exports.is_set()) and (this._exports().role_map == Committed().role_map):
+            ok = len(messages) == 0
+            ui.update_action_button(id = "Commit", disabled = not ok)
+            if ok:
+                if (this._exports.is_set()) and (this._exports.get() == Committed()):
                     return ui.span("Assignments applied", class_ = "text-success")
                 else:
+                    await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
                     return ui.span("Assignments ready to commit", class_ = "text-primary")
             else:
                 i = len(messages)
@@ -200,14 +214,12 @@ if Module.running_under_tests():
             "part": ["Train", "Train", "Test", "Test"],
         }
     )
-    pxd = Pxy.from_native(df)
-    pxd.name = "Test"
+    pxd = Pxy(_df = df, _name = "Test")
     this._imports.set(pxd)
-    app = Module.app(modules = {this.ns: this})
+    app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
-    pxd = Pxy.from_native(df)
-    pxd.name = "Ass2"
+    pxd = Pxy(_df = df, _name = "Ass2")
     this._imports.set(pxd)
-    Module.run(modules = {this.ns: this})
+    this.run()

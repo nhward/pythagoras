@@ -1,61 +1,102 @@
 ###########################
 ## Class: Card           ##
 ###########################
-
-## This is a class for a bslib card-based design
-## This class inherits from Module, Meta and Guide
+##
+## Card is the base class for Pythagoras bslib-style analysis cards.
+## It inherits from Module.
+##
 ## It provides:
-##    Front side card
-##    Optional back side card
-##    Optional Right-sided sidebar for settings
-##    Header with buttons 
-##        Implementation of front-to-back flipping
-##        Implementation of Info modal dialogue based on markdown
-##    Between card/module communication
-##    Update_element() function for updating class and/or style
+##    A front-side card body
+##    Optional back-side card body for flip views
+##    Optional right-hand settings sidebar
+##    Optional footer
+##    Standard card header controls:
+##        Flip front/back
+##        Show information modal from markdown/{card_name}.md
+##        Start Shepherd guide
+##        Show recorded code modal
+##        Expand/contract card
+##        Confirm and remove card
+##    Namespaced UI via shiny.module.ui/server
+##    Basic import -> export passthrough for non-mutable cards
+##    Reactive helpers:
+##        isFullScreen
+##        isFront
+##        hasSidebar
+##        hasFlipSide
+##        hasFooter
+##
+## Implementations are expected to:
+##    Set self.front, and optionally self.back, self.settings, self.footer
+##    Implement server(input, output, session)
 
 from module  import Module
-from shiny   import ui, module, reactive, render, req
+from shiny   import ui, module, reactive, render
 from faicons import icon_svg as icon
 from pathlib import Path
 
 
 # TODO: add a SibebarActive reactive
-# TODO: make it possible to edit the raw markdown in situ and save it.
-
 
 class Card(Module):
     
-    def __init__(self, name, logger = None, long_name = None, allow_full_screen = True, max_height = "450px", mutable = False, *args, **kwargs): # will be inherited by child classes
-        super().__init__(name=name, logger=logger, *args, **kwargs)
+    def __init__(self, name, long_name = None, allow_full_screen = True, max_height = "450px", mutable = False, *args, **kwargs): # will be inherited by child classes
+        super().__init__(name=name, *args, **kwargs)
         self.allow_full_screen = allow_full_screen
         self.max_height = max_height
         self.mutable = mutable
         self.initially_hidden = False
         self.description = None
         self.long_name = long_name or self.name
-        self.script_list.append(self.WWW / "pythagoras.js")
-        self.script_list.append(self.WWW / "markdown_tabsets.js")
-        self.css_list.append(self.WWW / "animate.css")
-        self.css_list.append(self.WWW / "pythagoras.css")
+        self._front = None
+        self._back = None
+        self._settings = None
+        self._footer = None
 
+    def fetch(self, value):
+        if value is None:
+            return None
+        if callable(value):
+            return value()
+        else:
+            return value
+
+    @property
     def front(self):
-        return None
+        return self.fetch(self._front) 
+    @front.setter
+    def front(self, value):
+        self._front = value
+
+    @property
     def back(self):
-        return None
-    def settings(self):
-        return None
+        return self.fetch(self._back) 
+    @back.setter
+    def back(self, value):
+        self._back = value
+
+    @property
     def footer(self):
-        return None
+        return self.fetch(self._footer) 
+    @footer.setter
+    def footer(self, value):
+        self._footer = value
 
-    def hasSidebar(self):
-        return self.settings() is not None
+    @property
+    def settings(self):
+        return self.fetch(self._settings) 
+    @settings.setter
+    def settings(self, value):
+        self._settings = value
 
-    def hasFlipSide(self):
-        return self.back() is not None
+    def hasSidebar(self) -> bool:
+        return self._settings is not None
 
-    def hasFooter(self):
-        return self.footer() is not None
+    def hasFlipSide(self) -> bool:
+        return self._back is not None
+
+    def hasFooter(self) -> bool:
+        return self._footer is not None
 
     def call_ui(self):
 
@@ -76,7 +117,7 @@ class Card(Module):
                         aria_label = "Flip this card",
                         guide = self,
                         title = "Flip button", priority = 13, position = "bottom",
-                        text = "This button flips the card over. t is available when the card is in use. The reverse side generally shows evidence for the the cards visualisations and tables. Clicking the button again will return the card to the front again. The [esc] key can also be used."
+                        text = "This button flips the card over. It is available when the card is in use. The reverse side generally shows evidence for the cards visualisations and tables. Clicking the button again will return the card to the front again. The [esc] key can also be used."
                     )
 
 
@@ -93,7 +134,7 @@ class Card(Module):
                         style = "border: 0px; box-shadow: none;",
                         aria_label = "Information about this card",
                         guide = self, title = "Info button", priority = 12, position = "bottom",
-                        text = "The info buttom displays a discussion of the card's significance and use."
+                        text = "The info button displays a discussion of the card's significance and use."
                         )
 
 
@@ -106,7 +147,7 @@ class Card(Module):
                     style = "border: 0px; box-shadow: none;",
                     aria_label = "Take a guided tour of this card",
                     guide = self, title = "Guide button", priority = 11, position = "bottom",
-                    text = "The guide button starts a tour of the cards features. The tour can be controlled by the keyboard through the arrow and [esc] keys. The tour will take you through any tabs in the card and through any sidebar settings."
+                    text = "The guide button starts a tour of the card's features. The tour can be controlled by the keyboard through the arrow and [esc] keys. The tour will take you through any tabs in the card and through any sidebar settings."
                 )
 
                 # Code button
@@ -121,17 +162,17 @@ class Card(Module):
                     text = "The code button lists the python code employed to generate the tables and charts <em>that you have viewed</em>. This code can be copied and used in a python notebook."
                 )
 
-                expand_button = ui.input_action_button(
-                    id = "ExpandButton",  
-                    label= None, 
-                    icon = icon("maximize", title = "Expand this card", a11y = "sem"),
-                    class_ = "btn rounded-pill hover-btn btn-sm expand-btn",
-                    style = "border: 0px; box-shadow: none; display: block;",
-                    guide = self, priority = 10, title = "Expand button", position = "bottom",
-                    text = "The expand button enlarges the card to full-screen."
-                )
 
                 if self.allow_full_screen:
+                    expand_button = ui.input_action_button(
+                        id = "ExpandButton",  
+                        label= None, 
+                        icon = icon("maximize", title = "Expand this card", a11y = "sem"),
+                        class_ = "btn rounded-pill hover-btn btn-sm expand-btn",
+                        style = "border: 0px; box-shadow: none; display: block;",
+                        guide = self, priority = 10, title = "Expand button", position = "bottom",
+                        text = "The expand button enlarges the card to full-screen."
+                    )
                     contract_button = ui.input_action_button(
                         id = "ContractButton",  
                         label = None, 
@@ -142,25 +183,27 @@ class Card(Module):
                         text = "The contract button restores the card to its normal size. The [esc] key can also be used."
                     )
 
-                    close_button = ui.input_action_button(
-                        id = "CloseButton",  
-                        label = None, 
-                        icon = icon("xmark", title = "Close this card", a11y = "sem"),
-                        class_ = "btn rounded-pill hover-btn btn-sm close-btn",
-                        style = "border: 0px; box-shadow: none;",
-                        guide = self, priority = 10, title = "Close button", position = "bottom",
-                        text = "The close button removes the card."
-                    )
-
                 else:
+                    expand_button = None
                     contract_button = None
-                    close_button = None
-                
+
+                close_button = ui.input_action_button(
+                    id = "CloseButton",  
+                    label = None, 
+                    icon = icon("xmark", title = "Close this card", a11y = "sem"),
+                    class_ = "btn rounded-pill hover-btn btn-sm close-btn",
+                    style = "border: 0px; box-shadow: none;",
+                    guide = self, priority = 10, title = "Close button", position = "bottom",
+                    text = "The close button removes the card."
+                )
+
                 return ui.card_header(
                     ui.div(
-                        class_ = "drag-tab drag-handle hover-btn shadow ", 
-                        title = "Drag",     
-                        attrs = str({"role": "button", "aria-label": "Drag card", "tabindex": "0"})
+                        class_="drag-tab drag-handle hover-btn shadow",
+                        title="Drag",
+                        role="button",
+                        aria_label="Drag card",
+                        tabindex="0"
                     ),
                     ui.div(
                         ui.tags.img(src="favicon.ico", style="height:2em; margin-right:0.5em;"), #attrs = str({"title": "Tetractys", "a11y": "sem"})),  #Tetractys
@@ -186,12 +229,12 @@ class Card(Module):
                 return ui.card_body(
                     ui.div(
                         ui.div(
-                            self.front(),
+                            self.front,
                             id = self.ns("Front"), # The decorator misses divs
                             class_ = "front html-fill-container html-fill-item"
                         ),
                         ui.div(
-                            self.back(),
+                            self.back,
                             id = self.ns("Back"), # The decorator misses divs
                             class_ = "back html-fill-container html-fill-item"
                         ),
@@ -205,9 +248,9 @@ class Card(Module):
                     padding = 10
                 )
 
-            def _footer():
+            def myfooter():
                 if self.hasFooter():
-                    return ui.card_footer(self.footer(), class_ = "text-center bg-info bg-opacity-25")
+                    return ui.card_footer(self.footer, class_ = "text-center bg-info bg-opacity-25")
                 return None
                 
 
@@ -215,7 +258,7 @@ class Card(Module):
                 return ui.card(
                     header(),
                     front_back(),
-                    _footer(),
+                    myfooter(),
                     id = "Card",
                     fill   = True,
                     class_ = "shadow hover-card p-0 m-2 hidden" if self.initially_hidden else "shadow hover-card p-0 m-2",
@@ -228,7 +271,7 @@ class Card(Module):
             else:
                 sb = ui.sidebar(
                     ui.card_header("Settings", class_ = "w-100 text-end text-primary sidebar-title"),
-                    self.settings(),
+                    self.settings,
                     id = "Sidebar", 
                     width = "30%",
                     position = "right", 
@@ -242,7 +285,7 @@ class Card(Module):
                         sb,
                         header(),
                         front_back(),
-                        _footer(),
+                        myfooter(),
                         padding = [0,25,0,0],
                         gap = 0
                     ),    
@@ -255,6 +298,10 @@ class Card(Module):
                 )
         return ui_cardfunc(id = self.namespace)
 
+
+    # # This needs to be replaced with a concrete implementation
+    # def server(self, input, output, session):
+    #     return None
 
     # Read markdown from a file 
     def information(self):
@@ -272,12 +319,6 @@ class Card(Module):
         except Exception:
             return None
 
-    async def show(self, session):
-        await session.send_custom_message("toggle_visibility", {"id": session.ns("Card"), "visible": True})
-
-    async def hide(self, session):
-        await session.send_custom_message("toggle_visibility", {"id": session.ns("Card"), "visible": False})
-
 
     def call_server(self, input, output, session):
 
@@ -286,7 +327,7 @@ class Card(Module):
 
 
             # isFullScreen
-            @reactive.calc
+            @self.suspendable(calc = True)
             def isFullScreen():
                 if isinstance(input.Card_full_screen(), bool):
                     return input.Card_full_screen()
@@ -294,8 +335,10 @@ class Card(Module):
             self.isFullScreen = reactive.calc(isFullScreen)
 
             # isFront
-            @reactive.calc
+            @self.suspendable(calc = True)
             def isFront():
+                if self.back is None:
+                    return True
                 return input.FlipButton() % 2 == 0
             self.isFront = reactive.calc(isFront)
 
@@ -307,19 +350,12 @@ class Card(Module):
                     ui.modal(
                         # the following head_contents() 'seems' to be necessary to add here as modal documents do not reliably inherit from the main document
                         ui.head_content(
-                            ui.tags.script(path = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js", method = "inline"), # enables equations
-                            ui.tags.script(path = "www/markdown_tabsets.js", method = "inline")   # enables tabsets
+                            ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
+                            ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets
                         ),
                         ui.card(
                             ui.card_header(
                                 self.long_name,
-                                # ui.input_action_button(
-                                #     id = "Edit", 
-                                #     label = None,
-                                #     icon = icon("pen-to-square", title = "Edit the document", a11y = "sem"),
-                                #     class_ = "btn rounded-pill btn-sm",
-                                #     style = "border: 0px; box-shadow: none;"
-                                # ),
                                 class_="d-flex justify-content-between fs-6 bg-info bg-opacity-25",
                                 style = "display:inline-block; margin-right:8px;"
                             ),
@@ -379,18 +415,6 @@ class Card(Module):
                 )
 
 
-            @self.suspendable(triggers = [input.Copy])
-            async def CopyClick():
-                self.debug("Copying")
-                await session.send_custom_message("copyText", str(self.code_text()))
-
-            @reactive.calc
-            def CurrentTabCardOrder(): #given in namespaces
-                req(input.CardOrder)
-                order = input.CardOrder()
-                order = [s.removesuffix("-Card") for s in order]
-                return order
-
             @self.suspendable(triggers=[input.CloseButton])
             def _confirm_remove_card():
                 ui.modal_show(
@@ -420,11 +444,10 @@ class Card(Module):
                 session.on_flushed(after_flush, once=True)
 
             @self.suspendable(triggers=[input.CancelRemove])
-            def _remove_card():
+            def _cancel():
                 ui.modal_remove()
 
-            result = self.server(input, output, session)
- 
+
             @reactive.effect
             def passthrough():
                 if not self.mutable:
@@ -436,10 +459,18 @@ class Card(Module):
             @output
             @render.text
             def Name():
-                if self._exports.is_set():
+                if self._imports.is_set():
+                    return f"of \"{self._imports.get().name}\""
+                elif self._exports.is_set():
                     return f"of \"{self._exports.get().name}\""
                 else:
                     return ""
 
-            return result
+
+            async def after_flush(card = self):
+                await session.send_custom_message("init_card", {"id": self.ns("Card")})
+            session.on_flushed(after_flush, once=True)
+
+            return self.server(input, output, session)
+
         return server_func(self.namespace)

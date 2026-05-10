@@ -11,3 +11,4 @@ env/
 .continue
 .coverage
 .env
+.DS_Store

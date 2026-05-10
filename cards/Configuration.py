@@ -58,7 +58,7 @@ def instance():
             import sys
 
             loaded = {}
-            for name, module in sys.modules.items():
+            for name, module in list(sys.modules.items()):
                 version = None
                 if module:
                     try:
@@ -162,7 +162,7 @@ def instance():
 app = None
 if Module.running_under_tests():
     this = instance()
-    app = this.Application()
+    app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
     this.run()

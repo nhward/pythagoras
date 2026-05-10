@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shiny import ui, render, reactive, req  # noqa: E402
+from shiny import ui, render, req  # noqa: E402
 from faicons import icon_svg as icon  # noqa: E402
 from module import Module  # noqa: E402
 from card import Card  # noqa: E402
@@ -17,7 +17,7 @@ import shapely  # noqa: E402
 
 
 def instance():
-    this = Card(name = "dataTable", mutable = False)
+    this = Card(name = "dataTable", mutable = False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Data tabulation"
     this.description = "This card enables the data to be listed and searched."
     
@@ -80,13 +80,14 @@ def instance():
     
     def server(input, output, session):
 
-        @reactive.calc()
-        def incommingData():
+        @this.suspendable(calc = True)
+        def incomingProxyData():
+            this._imports.get()
             req(this._imports.is_set())
-            return this._imports()
+            return this._imports.get()
 
-        @this.debounce(2)
-        @reactive.calc
+        @this.throttle(2)
+        @this.suspendable(calc = True)
         def Decimals():
             return input.Decimals()
 
@@ -102,7 +103,7 @@ def instance():
                 return "datetime"
             return "str"
 
-        @reactive.calc
+        @this.suspendable(calc = True)
         @this.record_code
         def PreparedData():
             """
@@ -112,7 +113,7 @@ def instance():
             - Geometries reformatted
             - Numeric data rounded
             """
-            df = incommingData() #Returns ProxyData
+            df = incomingProxyData() #Returns ProxyData
             if this.isFullScreen():
                 df = df.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
             else:
@@ -193,6 +194,7 @@ def instance():
         @output
         @render.ui
         def DataTable():
+            req(len(PreparedData()) > 0)
             return ui.output_data_frame(id = "DataTable2")
 
         @output
@@ -204,8 +206,8 @@ def instance():
         @output
         @render.download(filename=f"{this.namespace}_data.csv")
         def Export():
-            req(incommingData())
-            df = incommingData()  # export raw not preparedData
+            req(incomingProxyData())
+            df = incomingProxyData()  # export raw not preparedData
             import io
             buf = io.StringIO()
             df.to_csv(buf, index=False, header = True)
@@ -228,14 +230,12 @@ if Module.running_under_tests():
             "part": ["Train", "Train", "Test", "Test"],
         }
     )
-    pxd = ProxyData.from_native(df)
-    pxd.name = "Test"
+    pxd = ProxyData(_df = df, _name = "Test")
     this._imports.set(pxd)
-    app = Module.app(modules = {this.ns: this})
+    app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
-    pxd = ProxyData.from_native(df)
-    pxd.name = "Ass2"
+    pxd = ProxyData(_df = df, _name = "Ass2")
     this._imports.set(pxd)
-    Module.run(modules = {this.ns: this})
+    this.run()

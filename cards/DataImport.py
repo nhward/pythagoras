@@ -503,7 +503,7 @@ def instance():
 
 
         @this.suspendable(triggers = [input.ServerFile])
-        def FName():
+        def ServerFile():
             req(input.ServerFile())
             files = input.ServerFile()
             file0 = files[0]
@@ -513,7 +513,7 @@ def instance():
 
 
         @this.suspendable(triggers = [input.Dataset])
-        def DName():
+        def Dataset():
             req(input.Dataset())
             _, stem = input.Dataset().split("::", 1)
             ui.update_text(id = "DName", value = stem)
@@ -526,7 +526,7 @@ def instance():
 
 
         @this.suspendable(triggers = [Url])
-        def UName():
+        def Url2():
             req(Url())
             path = urlparse(Url()).path  # Extract the path part of the URL
             filename = os.path.basename(path)  # Get the filename
@@ -540,14 +540,6 @@ def instance():
                 response = requests.head(url, allow_redirects=True, timeout=5)
                 return response.status_code == 200
             except requests.RequestException:
-                return False
-
-        def equalDF(a,b):
-            try:
-                if (a is None) | (b is None):
-                    return False
-                return a == b
-            except ValueError:
                 return False
 
         #### Check ----
@@ -570,8 +562,10 @@ def instance():
                         butt_disabled <- True
                     else:
                         try:
+                            d = GetPxyData()
+                            d.name = Url()
                             text = size_text(GetData())
-                            if equalDF(CommittedData(), GetPxyData()):
+                            if CommittedData() == d:
                                 message = ui.span("Web import successful ", text, class_ = "text-center text-success")
                             else:
                                 message = ui.span("Web import ready ", text, class_ = "text-center text-primary")
@@ -587,8 +581,9 @@ def instance():
                         message = ui.span("No file supplied yet", class_ = "text-center text-warning")
                         butt_disabled = True
                     else:
+                        d.name = input.FName()
                         text = size_text(GetData())
-                        if equalDF(CommittedData(), d):
+                        if CommittedData() == d:
                             message = ui.span("File import successful ", text, class_ = "text-center text-success")
                         else:
                             message = ui.span("File import ready ", text, class_ = "text-center text-primary")
@@ -608,8 +603,9 @@ def instance():
                             message = ui.span("No dataset chosen yet", class_ = "text-center text-warning")
                             butt_disabled = True
                         else:
+                            d.name = input.DName()
                             text = size_text(GetData())
-                            if equalDF(CommittedData(), d):
+                            if CommittedData() == d:
                                 message = ui.span("Dataset import successful ", text, class_ = "text-center text-success")
                             else:
                                 message = ui.span("Dataset import ready ", text, class_ = "text-center text-primary")
@@ -632,7 +628,7 @@ def instance():
                 pxd.name = input.UName()
             elif input.Navset() == "Dataset based":
                 pxd.name = input.DName()
-            CommittedData.set(pxd)
+            CommittedData.set(pxd.clone())
             this._exports.set(CommittedData())
 
 
@@ -666,7 +662,7 @@ def instance():
 
 if Module.running_under_tests():
     this = instance()
-    app = this.Application()
+    app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
     this.run()

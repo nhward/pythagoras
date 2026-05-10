@@ -48,19 +48,19 @@ def test_card_initialisation(card):
 def test_hasSidebar_default(card):
     # settings() returns None -> no sidebar
     assert card.settings is None
-    assert card.hasSidebar is False
+    assert card.hasSidebar() is False
 
 
 @pytest.mark.unit
 def test_hasFooter_default(card):
     assert card.footer is None
-    assert card.hasFooter is False
+    assert card.hasFooter() is False
 
 
 @pytest.mark.unit
 def test_hasFlipSide_default(card):
     assert card.back is None
-    assert card.hasFlipSide is False
+    assert card.hasFlipSide() is False
 
 
 @pytest.mark.unit
@@ -69,9 +69,9 @@ def test_assigned_ui_factories_affect_flags():
     c.back = lambda: "back-ui"
     c.settings = lambda: "settings-ui"
     c.footer = lambda: "footer-ui"
-    assert c.hasFlipSide is True
-    assert c.hasSidebar is True
-    assert c.hasFooter is True
+    assert c.hasFlipSide() is True
+    assert c.hasSidebar() is True
+    assert c.hasFooter() is True
     assert c.back == "back-ui"
     assert c.settings == "settings-ui"
     assert c.footer == "footer-ui"
@@ -86,9 +86,9 @@ def test_clearing_ui_factories_resets_flags():
     c.back = None
     c.settings = None
     c.footer = None
-    assert c.hasFlipSide is False
-    assert c.hasSidebar is False
-    assert c.hasFooter is False
+    assert c.hasFlipSide() is False
+    assert c.hasSidebar() is False
+    assert c.hasFooter() is False
 
 
 @pytest.mark.unit

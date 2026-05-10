@@ -21,8 +21,6 @@ from proxyData import ProxyData as Pxy  # noqa: E402
 # Converts missing value placeholders to Na/NaN/NaT
 # Ideally this follows the correct conversion of strings to their real datatype esp. Datetime
 
-#TODO: test code generation
-
 def instance():
     """
     Creates an instance of dataPlaceholders class.
@@ -226,9 +224,6 @@ def instance():
 
     def server(input, output, session):
 
-        Codes = reactive.value(None)
-        Legend = reactive.value(None)
-
         @this.suspendable(calc = True)
         def incomingProxyData():
             this._imports.get()
@@ -260,38 +255,13 @@ def instance():
             }
 
 
-        @this.suspendable(calc = True)
-        @this.record_code
-        def CorrectedData():
-            sample = PreparedData()
-            sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
-            fixed = ResolvePlaceholders(data = sample, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive())
-            codes_df, legend = PlaceholderCodes(
-                data = fixed,
-                sentinels=Sentinels(),
-                drop_geometry=True,
-                extrema=input.NA_Extrema(),
-                case_sensitive=input.NA_CaseSensitive(),
-            )
-            Codes.set(codes_df)
-            Legend.set(legend)
-            return Pxy.from_native(fixed)
-
-
         @this.suspendable()
         def UpdateButtons():
-            sample = PreparedData()
-            codes_df, legend = PlaceholderCodes(
-                data = sample,
-                sentinels=Sentinels(),
-                drop_geometry=True,
-                extrema=input.NA_Extrema(),
-                case_sensitive=input.NA_CaseSensitive(),
-            )
-            flat = pd.Series(codes_df.to_numpy().ravel())
+            rawstate = RawCodes()
+            flat = pd.Series(rawstate["codes"].to_numpy().ravel())
             used_codes = pd.to_numeric(flat, errors="coerce").dropna().astype(int).unique().tolist()
             used_codes = sorted(k for k in used_codes if k not in (0, 1))
-            reduced_labels = [str(legend.get(k, f"Code {k}")) for k in used_codes]
+            reduced_labels = [str(rawstate["legend"].get(k, f"Code {k}")) for k in used_codes]
             choices = [f"Replace {lab}" for lab in reduced_labels]
             with reactive.isolate():
                 previous = input.Replace() or []
@@ -300,6 +270,7 @@ def instance():
 
 
         def empty_plotly(message="No data to display", subtext=None):
+            this.log.debug("Empty chart drawn")
             txt = f"<b>{message}</b>" + (f"<br><span style='font-size:0.9em;color:#6c757d'>{subtext}</span>" if subtext else "")
             fig = go.Figure()
             fig.add_annotation(
@@ -331,19 +302,118 @@ def instance():
                 return df.select_dtypes(include=["datetime64[ns]", "datetimetz"]).columns
             return df.columns
 
+        # @this.record_code
+        # def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.Figure:
+        #     x = np.arange(codes_df.shape[0])   ##x = codes_df.index.astype(str).tolist()
+        #     y = codes_df.columns.astype(str).tolist()
+        #     z = codes_df.to_numpy(dtype=np.int16, copy=False).T
+        #     non_nan = z[~np.isnan(z)]
+        #     if not non_nan.size:
+        #         return empty_plotly("No data to display")
+        #     present_codes = sorted(np.unique(non_nan.astype(int)))
+        #     palette = pc.qualitative.Set3
+        #     zmin = min(present_codes)
+        #     zmax = max(present_codes)
+        #     this.log.debug("Chart drawn")
+        #     # --- discrete colorscale ---
+        #     if zmin == zmax:
+        #         color = palette[zmin % len(palette)]
+        #         colorscale = [[0, color], [1, color]]
+        #     else:
+        #         colorscale = []
+        #         for code in present_codes:
+        #             pos = (code - zmin) / (zmax - zmin)
+        #             color = palette[code % len(palette)]
+        #             colorscale.append([pos, color])
+        #             colorscale.append([pos, color])
+        #     fig = go.Figure()
+        #     # ---------------------------
+        #     # 1. Base heatmap (no hover)
+        #     # ---------------------------
+        #     fig.add_trace(go.Heatmap(
+        #         z=z,
+        #         x=x,
+        #         y=y,
+        #         zmin=zmin,
+        #         zmax=zmax,
+        #         colorscale=colorscale,
+        #         showscale=False,
+        #         hoverinfo="skip",   # 👈 disables all hover here
+        #         hoverongaps=False,
+        #     ))
+        #     # ---------------------------
+        #     # 2. Hover layer (codes > 1 only)
+        #     # ---------------------------
+        #     if fs:
+        #         mask = (~np.isnan(z)) & (~np.isin(z, [0, 1]))
+        #         if mask.any():
+        #             z_hover = np.full(z.shape, None, dtype=object)
+        #             z_hover[mask] = z[mask]
+        #             text = np.empty(z.shape, dtype=object)
+        #             text[:] = ""
+        #             codes = z[mask].astype(int)
+        #             text[mask] = [legend.get(c, f"Code {c}") for c in codes]
+        #             fig.add_trace(go.Heatmap(
+        #                 z=z_hover,
+        #                 x=x,
+        #                 y=y,
+        #                 showscale=False,
+        #                 colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
+        #                 hovertemplate=(
+        #                     "Variable: %{y}<br>"
+        #                     "Observation: %{x}<br>"
+        #                     "Placeholder: %{text}<extra></extra>"
+        #                 ),
+        #                 text=text,
+        #                 hoverongaps=False,
+        #                 showlegend=False,
+        #             ))
+        #         for code in present_codes:
+        #             fig.add_trace(go.Scatter(
+        #                 x=[None],
+        #                 y=[None],
+        #                 mode="markers",
+        #                 marker=dict(
+        #                     size=10,
+        #                     color=palette[code % len(palette)],
+        #                     symbol="square",
+        #                 ),
+        #                 name=legend.get(code, f"Code {code}"),
+        #                 showlegend=True,
+        #                 hoverinfo="skip",
+        #             ))
+        #     fig.update_layout(
+        #         xaxis=dict(title="Observation", type="category"),
+        #         yaxis=dict(title="Variables", type="category", autorange="reversed"),
+        #         plot_bgcolor="#e5ecf6",
+        #         margin=dict(l=2, r=35 if fs else 2, t=2, b=2),
+        #         showlegend=fs,
+        #         legend=dict(x=1.003, xanchor="left", y=0.0, yanchor="bottom", itemsizing="constant"),
+        #         modebar=dict(orientation="v"),
+        #     )
+        #     fw = go.FigureWidget(fig)
+        #     fw._config = (getattr(fw, "_config", {}) | {
+        #         "displayModeBar": bool(fs),
+        #         "displaylogo": False,
+        #         "responsive": True,
+        #     })
+        #     return fw
+
+
         @this.record_code
         def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.Figure:
-            x = codes_df.index.astype(str).tolist()
-            y = codes_df.columns.astype(str).tolist()
-            z = codes_df.to_numpy(dtype=float).T  # vars x obs
-            non_nan = z[~np.isnan(z)]
-            if not non_nan.size:
+            if codes_df.empty:
                 return empty_plotly("No data to display")
-            present_codes = sorted(np.unique(non_nan.astype(int)))
+            y = codes_df.columns.astype(str).tolist()
+            # Keep codes compact. No NaNs should exist: 0 = missing, 1 = not missing.
+            z = codes_df.to_numpy(dtype=np.int16, copy=False).T
+            present_codes = np.unique(z).astype(int).tolist()
+            if len(present_codes) == 0:
+                return empty_plotly("No data to display")
+            this.log.debug(f"Chart drawn: z shape={z.shape}, cells={z.size:,}")
             palette = pc.qualitative.Set3
             zmin = min(present_codes)
             zmax = max(present_codes)
-            # --- discrete colorscale ---
             if zmin == zmax:
                 color = palette[zmin % len(palette)]
                 colorscale = [[0, color], [1, color]]
@@ -355,47 +425,56 @@ def instance():
                     colorscale.append([pos, color])
                     colorscale.append([pos, color])
             fig = go.Figure()
-            # ---------------------------
-            # 1. Base heatmap (no hover)
-            # ---------------------------
             fig.add_trace(go.Heatmap(
                 z=z,
-                x=x,
-                y=y,
                 zmin=zmin,
                 zmax=zmax,
+                y=y,
                 colorscale=colorscale,
                 showscale=False,
-                hoverinfo="skip",   # 👈 disables all hover here
+                hoverinfo="skip",
                 hoverongaps=False,
+                zsmooth=False,
             ))
-            # ---------------------------
-            # 2. Hover layer (codes > 1 only)
-            # ---------------------------
             if fs:
-                mask = (~np.isnan(z)) & (~np.isin(z, [0, 1]))
+                mask = z > 1
+
                 if mask.any():
-                    z_hover = np.full(z.shape, None, dtype=object)
-                    z_hover[mask] = z[mask]
-                    text = np.empty(z.shape, dtype=object)
-                    text[:] = ""
-                    codes = z[mask].astype(int)
-                    text[mask] = [legend.get(c, f"Code {c}") for c in codes]
-                    fig.add_trace(go.Heatmap(
-                        z=z_hover,
-                        x=x,
-                        y=y,
-                        showscale=False,
-                        colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
-                        hovertemplate=(
-                            "Variable: %{y}<br>"
-                            "Observation: %{x}<br>"
-                            "Placeholder: %{text}<extra></extra>"
+                    yy, xx = np.where(mask)
+                    codes = z[yy, xx].astype(int)
+
+                    hover_text = [
+                        (
+                            f"<b>{legend.get(c, f'Code {c}')}</b><br>"
+                            f"Variable: {y[row]}<br>"
+                            f"Observation: {col}"
+                        )
+                        for row, col, c in zip(yy, xx, codes)
+                    ]
+
+                    hover_colors = [palette[c % len(palette)] for c in codes]
+
+                    fig.add_trace(go.Scatter(
+                        x=xx,
+                        y=[y[i] for i in yy],
+                        mode="markers",
+                        marker=dict(
+                            size=10,
+                            opacity=0,
+                            color=hover_colors,
                         ),
-                        text=text,
-                        hoverongaps=False,
+                        text=hover_text,
+                        hovertemplate="%{text}<extra></extra>",
+                        hoverlabel=dict(
+                            bgcolor=hover_colors,
+                            bordercolor=hover_colors,
+                            font=dict(color="black"),
+                        ),
                         showlegend=False,
+                        hoverinfo="text",
                     ))
+
+                # Legend-only traces
                 for code in present_codes:
                     fig.add_trace(go.Scatter(
                         x=[None],
@@ -411,30 +490,34 @@ def instance():
                         hoverinfo="skip",
                     ))
             fig.update_layout(
-                xaxis=dict(title="Observation", type="category"),
+                xaxis=dict(title="Observation"),
                 yaxis=dict(title="Variables", type="category", autorange="reversed"),
                 plot_bgcolor="#e5ecf6",
                 margin=dict(l=2, r=35 if fs else 2, t=2, b=2),
                 showlegend=fs,
-                legend=dict(x=1.003, xanchor="left", y=0.0, yanchor="bottom", itemsizing="constant"),
+                legend=dict(
+                    x=1.003,
+                    xanchor="left",
+                    y=0.0,
+                    yanchor="bottom",
+                    itemsizing="constant",
+                ),
                 modebar=dict(orientation="v"),
             )
-            fw = go.FigureWidget(fig)
-            fw._config = (getattr(fw, "_config", {}) | {
+            fig._config = {
                 "displayModeBar": bool(fs),
                 "displaylogo": False,
                 "responsive": True,
-            })
-            return fw
-
+            }
+            return fig
 
         @output
         @render_widget
         @this.record_code
         def AllChart():
-            req(CorrectedData())
-            codes_df = Codes.get()
-            legend = Legend.get()
+            state = CorrectedState()
+            codes_df = state["codes"]
+            legend = state["legend"]
             chart = _placeholder_chart(codes_df, legend, fs=this.isFullScreen())
             return chart
 
@@ -443,13 +526,14 @@ def instance():
         @render_widget
         @this.record_code
         def IntegerChart():
-            data = CorrectedData()
-            cols = _select_cols(data, "int")
-            if cols.__len__ == 0:
+            state = CorrectedState()
+            codes_df = state["codes"]
+            legend = state["legend"]
+            fixed = state["fixed"]
+            cols = _select_cols(fixed, "int")
+            if len(cols) == 0:
                 return empty_plotly("No integer data to display")
             else:
-                codes_df = Codes.get()
-                legend = Legend.get()
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
@@ -457,13 +541,14 @@ def instance():
         @render_widget
         @this.record_code
         def FloatChart():
-            data = CorrectedData()
-            cols = _select_cols(data, "float")
-            if cols.__len__ == 0:
+            state = CorrectedState()
+            codes_df = state["codes"]
+            legend = state["legend"]
+            fixed = state["fixed"]
+            cols = _select_cols(fixed.to_native(), "int")
+            if len(cols) == 0:
                 return empty_plotly("No decimal data to display")
             else:
-                codes_df = Codes.get()
-                legend = Legend.get()
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
@@ -471,13 +556,14 @@ def instance():
         @render_widget
         @this.record_code
         def CharacterChart():
-            data = CorrectedData()
-            cols = _select_cols(data, "str")
-            if cols.__len__ == 0:
+            state = CorrectedState()
+            codes_df = state["codes"]
+            legend = state["legend"]
+            fixed = state["fixed"]
+            cols = _select_cols(fixed.to_native(), "str")
+            if len(cols) == 0:
                 return empty_plotly("No character data to display")
             else:
-                codes_df = Codes.get()
-                legend = Legend.get()
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
@@ -485,13 +571,14 @@ def instance():
         @render_widget
         @this.record_code
         def DateChart():
-            data = CorrectedData()
-            cols = _select_cols(data, "datetime")
-            if cols.__len__ == 0:
+            state = CorrectedState()
+            codes_df = state["codes"]
+            legend = state["legend"]
+            fixed = state["fixed"]
+            cols = _select_cols(fixed.to_native(), "datetime")
+            if len(cols) == 0:
                 return empty_plotly("No datetime data to display")
             else:
-                codes_df = Codes.get()
-                legend = Legend.get()
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
@@ -513,9 +600,9 @@ def instance():
         @this.suspendable(calc = True)
         @this.record_code
         def build_summary_df():
-            CorrectedData()
-            codes_df = Codes.get()
-            legend = Legend.get()
+            state = CorrectedState()
+            codes_df = state["codes"]
+            legend = state["legend"]
             # counts per variable for all codes at once
             counts = (
                 codes_df
@@ -700,7 +787,7 @@ def instance():
                             f = float(placeholder)
                             if not extrema or (min(s) == f or max(s) == f):
                                 mask = abs(s.astype("float64") - f) < float_eps
-                                this.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
+                                this.log.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
                                 df.loc[mask,col] = pd.NA
                         except Exception:
                             pass
@@ -727,10 +814,48 @@ def instance():
                                 .str.casefold()
                                 .eq(str(placeholder).casefold())
                             )
-                        this.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
+                        this.log.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
                         df.loc[mask,col] = pd.NA
             return df
 
+        @this.suspendable(calc=True)
+        def RawCodes():
+            sample = PreparedData()
+            codes_df, legend = PlaceholderCodes(
+                data=sample,
+                sentinels=Sentinels(),
+                drop_geometry=True,
+                extrema=input.NA_Extrema(),
+                case_sensitive=input.NA_CaseSensitive()
+            )
+            return {
+                "codes": codes_df,
+                "legend": legend,
+            }
+      
+        
+        @this.suspendable(calc=True)
+        def CorrectedState():
+            sample = PreparedData()
+            sentinels = [s.removeprefix("Replace ") for s in input.Replace()]
+            fixed = ResolvePlaceholders(
+                data=sample,
+                sentinels=sentinels,
+                extrema=input.NA_Extrema(),
+                case_sensitive=input.NA_CaseSensitive(),
+            )
+            codes_df, legend = PlaceholderCodes(
+                data=fixed,
+                sentinels=Sentinels(),
+                drop_geometry=True,
+                extrema=input.NA_Extrema(),
+                case_sensitive=input.NA_CaseSensitive(),
+            )
+            return {
+                "fixed": Pxy.from_native(fixed),
+                "codes": codes_df,
+                "legend": legend,
+            }
 
     this.server = server
 
@@ -749,7 +874,7 @@ if Module.running_under_tests():
     )
     pxd = Pxy(_df = df, _name = "Test")
     this._imports.set(pxd)
-    app = this.Application()
+    app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
