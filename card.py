@@ -40,10 +40,9 @@ from pathlib import Path
 
 class Card(Module):
     
-    def __init__(self, name, long_name = None, allow_full_screen = True, max_height = "450px", mutable = False, *args, **kwargs): # will be inherited by child classes
+    def __init__(self, name, long_name = None, allow_full_screen = True, mutable = False, *args, **kwargs): # will be inherited by child classes
         super().__init__(name=name, *args, **kwargs)
         self.allow_full_screen = allow_full_screen
-        self.max_height = max_height
         self.mutable = mutable
         self.initially_hidden = False
         self.description = None
@@ -52,6 +51,8 @@ class Card(Module):
         self._back = None
         self._settings = None
         self._footer = None
+
+    max_height = Module.config.get("settings", {}).get("max_card_height")
 
     def fetch(self, value):
         if value is None:
@@ -439,9 +440,9 @@ class Card(Module):
                 id = self.ns('Card')
                 self.reset()
                 ui.remove_ui(selector=f"#{id}")
-                async def after_flush():
-                    await session.send_custom_message("UpdateCardOrder", None)
-                session.on_flushed(after_flush, once=True)
+#TODO:                # async def after_flush():
+                #     await session.send_custom_message("UpdateCardOrder", None)
+                # session.on_flushed(after_flush, once=True)
 
             @self.suspendable(triggers=[input.CancelRemove])
             def _cancel():

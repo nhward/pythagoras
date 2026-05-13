@@ -1,0 +1,43 @@
+{
+
+  "$schema": "pythagoras.schema.json",
+
+  "version": 1,
+
+  "settings": {
+    "section_style": "accordion",
+    "reuse_cards": true,
+    "max_card_height": 400,
+    "max_dupl_cards": 10
+  },
+
+  "layout": [
+    {
+      "section": "Data prep",
+      "cards": [
+        {
+          "module": "DataImport"
+        },
+        {
+          "module": "DataTabulation"
+        },
+        {
+          "module": "RoleAssignment"
+        }
+      ]
+    },
+
+    {
+      "section": "Missing values",
+      "cards": [
+        {
+          "module": "DataPlaceholders"
+        },
+        {
+          "module": "DataTabulation"
+        }
+
+      ]
+    }
+  ]
+}

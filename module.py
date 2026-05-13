@@ -51,6 +51,7 @@ import html
 import logging
 import inspect
 import json
+from jsonschema import validate, ValidationError
 import io
 import asyncio
 import sys
@@ -74,7 +75,6 @@ class Module(ABC):
     """
     ROOT = Path(__file__).resolve().parent
     ModSession = None
-    MaxInstances = 10  # arbitrary limit 
     Instances = {}  # class level dictionary of all instances keyed by their namespaces (including deleted ones with empty values)
     script_list = [
         ROOT / "www" / "console.js",
@@ -99,6 +99,20 @@ class Module(ABC):
         log.addHandler(h)
         log.propagate = False
         log.setLevel(min_log_level)
+
+        # Load schema
+        with open(ROOT / "config/pythagoras.schema.json") as f:
+            schema = json.load(f)
+        # Load config
+        with open(ROOT / "config/pythagoras.json") as f:
+            config = json.load(f)
+        try:
+            validate(instance=config, schema=schema)
+        except ValidationError as e:
+            log.exception("Invalid configuration")
+            raise ValueError(f"Invalid configuration: {e.message}")
+
+    MaxInstances = config.get("settings", {}).get("max_dupl_cards")
 
 
     # Initialiser
@@ -149,10 +163,11 @@ class Module(ABC):
 
     def reset(self):
         self.log.debug(f"Cleaning up namespace {self.namespace}")
-        if True: #TODO: make this a system setting
-            self.Instances[self.namespace] = None
-        else:
+        reuse_cards = self.config.get("settings", {}).get("reuse_cards")
+        if reuse_cards:
             self.Instances.pop(self.namespace)
+        else:
+            self.Instances[self.namespace] = None
 
     Packet = namedtuple("Packet", "data name")
 

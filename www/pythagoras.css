@@ -418,6 +418,7 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
     grid-template-columns: repeat(11, minmax(200px, 1fr));
     gap: 1rem;
     width: 100%;
+    overflow-x: auto;
     min-width: 0;
 }
 .roles-grid > * {
@@ -501,7 +502,7 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 /* cards grid */
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+
     margin: 0 auto;
     gap: 0.5rem;
 }
@@ -511,4 +512,9 @@ span.btn.btn-default.btn-file:has(.shiny-input-file) {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary);
     color: white;
+}
+
+/* Tighten the navbar  */
+body.bslib-gap-spacing {
+    gap: 0.25rem;
 }

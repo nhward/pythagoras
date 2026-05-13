@@ -9,7 +9,6 @@
 ##    Invoking the shiny app either in Positron or in Python via the last lines 
 
 
-from card import Card
 from shiny import ui, reactive, App, req
 import threading
 import sys
@@ -30,76 +29,81 @@ if not log.handlers:
 log.propagate = False
 log.setLevel(logging.DEBUG)
 
-def create_cards(folder: Path | str):
-    """
-    Import all Python modules inside the given folder (default 'cards')
-    and create an instance of each.
-    """
-    # Ensure the folder exists
-    if isinstance(folder, str): 
-        cards_path = Path(folder)
-    else:
-        cards_path = folder
-    if not cards_path.is_dir():
-        raise FileNotFoundError(f"Folder '{folder}' not found.")
-    # If the folder isn’t already a package, make sure it is on sys.path
-    if str(cards_path.parent) not in sys.path:
-        sys.path.append(str(cards_path.parent))
-    imported_cards = {}
-    # Iterate through all .py files, skipping __init__.py
-    for py_file in cards_path.glob(pattern = "*.py"):
-        if py_file.name == "__init__.py":
-            continue
-        package_name = cards_path.name
-        module_name = f"{package_name}.{py_file.stem}"
-        try:
-            module = importlib.import_module(module_name)
-            if not hasattr(module, "instance"):
-                raise AttributeError(f"{module_name} does not define instance()")
-            card = module.instance()
-            imported_cards[card.namespace] = card
-            card.log.info(msg="✅ Instantiated")
-        except Exception:
-            log.exception(f"⚠️ Failed to instantiate card {module_name}")
-    return imported_cards
+
+sections_populated = []
+
+config = Module.config
 
 
-def card_control(cards: dict[str, Card]):
-    if True: #TODO: Make this a system setting
-        return ui.nav_panel(
-            "Data Prep",
-            ui.div(
-                [module.call_ui() for module in cards.values()],  # iterate through any number of cards - creates and runs a ui module for each
-                id = "cards-container", # Container for cards
-                class_ = "cards-grid"
-            ),
-            value = "Data_prep"
-        )
-    else:
-        return ui.accordion(
-            ui.accordion_panel(
-                "Data prep",
+def sections() -> list[str]:
+    """
+    return a list of section names
+    """
+    return [section["section"] for section in config["layout"]
+]
+
+
+def paths(section_name:str) -> dict[Path]:
+    """
+    args:
+        section_name: 
+    returns a list of paths corresponding to the cards of the given section
+    """
+    cards = next(
+        (
+            section["cards"]
+            for section in config["layout"]
+            if section["section"] == section_name
+        ),
+        []
+    )
+    return {card['namespace'] : card['module'] for card in cards}
+
+
+def create_sections():
+    group_style = config.get("settings", {}).get("section_style")
+    panels = []
+    if group_style == "tab":
+        for name in sections():
+            _name = name.strip().replace(" ", "_")
+            log.debug(f"Creating tab panel section {name!r}")
+            panel = ui.nav_panel(
+                name, 
                 ui.div(
-                    [module.call_ui() for module in cards.values()],  # iterate through any number of forms - creates and runs a ui module for each
-                    id = "cards-container", # Container for cards
+                    id = f"{_name}-cards-container", # Container for cards
                     class_ = "cards-grid"
                 ),
-                id = "Data_prep",
+                value = name
+            )
+            panels.append(panel)
+    else:
+        panels = ui.nav_panel(
+            "",
+            ui.accordion(
+                *[
+                    ui.accordion_panel(
+                        name,
+                        ui.div(
+                            id=f"{name.strip().replace(' ', '_')}-cards-container",
+                            class_="cards-grid",
+                        ),
+                        value=name
+                    )
+                    for name in sections()
+                ],
+                multiple=False,
+                id="Accordion",
             ),
-            id = "Accordion",
-            open = "Data_prep"
         )
+    return panels
 
 
-def application(cards: dict[str, Card]):
+def application():
     """
     Create a shiny app.
     This involves creating UI (app_ui) and SERVER (server) functions and
     passing these to shiny.app.
     """
-    if cards is None:
-        return
-    
     # main ui object for the app
     app_ui = ui.page_fillable(
         ui.head_content(
@@ -110,45 +114,33 @@ def application(cards: dict[str, Card]):
         ui.busy_indicators.options(spinner_type = "bars2"),
         ui.busy_indicators.use(),
         ui.page_navbar(
-            card_control(cards),
+            create_sections(),  # << This is the important call here
             ui.nav_spacer(),
             ui.nav_control(
-                ui.tooltip(
-                    ui.input_action_button(
-                        id = "AddCard",  
-                        label= None, 
-                        icon = icon("plus", title = "Add a card", a11y = "sem"),
-                        class_ = "btn rounded-pill btn-sm fa-xl",
-                        style = "border: 0px; box-shadow: none; display: block;"
-                    ),
-                    "Add a card",
-                    placement = "bottom"
+                ui.input_action_button(
+                    id = "AddCard",  
+                    label= None, 
+                    icon = icon("plus", title = "Add a card", a11y = "sem"),
+                    class_ = "btn rounded-pill btn-sm fa-xl",
+                    style = "border: 0px; box-shadow: none; display: block;"
                 )
             ),
             ui.nav_control(
-                ui.tooltip(
-                    ui.input_action_button(
-                        id = "FullScreen",  
-                        label= None, 
-                        icon = icon("expand", title = "Toggle full screen", a11y = "sem"),
-                        class_ = "btn rounded-pill btn-sm fa-xl",
-                        style = "border: 0px; box-shadow: none; display: block;"
-                    ),
-                    "Toggle full screen",
-                    placement = "bottom"
+                ui.input_action_button(
+                    id = "FullScreen",  
+                    label= None, 
+                    icon = icon("expand", title = "Toggle full screen", a11y = "sem"),
+                    class_ = "btn rounded-pill btn-sm fa-xl",
+                    style = "border: 0px; box-shadow: none; display: block;"
                 )
             ),
             ui.nav_control(
-                ui.tooltip(
-                    ui.input_action_button(
-                        id = "Quit",  
-                        label = None, 
-                        icon = icon("stop", title = "Quit session", a11y = "sem"),
-                        class_ = "btn rounded-pill btn-sm fa-xl",
-                        style = "border: 0px; box-shadow: none; display: block;"
-                    ),
-                    "Quit session",
-                    placement = "bottom"
+                ui.input_action_button(
+                    id = "Quit",  
+                    label = None, 
+                    icon = icon("stop", title = "Quit session", a11y = "sem"),
+                    class_ = "btn rounded-pill btn-sm fa-xl",
+                    style = "border: 0px; box-shadow: none; display: block;"
                 )
             ),
 
@@ -165,12 +157,13 @@ def application(cards: dict[str, Card]):
     def server(input, output, session):
         Module.ModSession = session
 
+
         @reactive.calc
         def available_cards():
             """
             Return {display_name: file_path} for all card files in cards_dir.
             Assumes each card file defines instance().
-            This is NOT currently filesystem-reactive
+            This is not filesystem-reactive but instead uses invalidation to pick up file changes (eventually)
             """
             cards = {}
             cards_dir = Module.ROOT / "cards"
@@ -178,6 +171,8 @@ def application(cards: dict[str, Card]):
                 if path.name == "__init__.py":
                     continue
                 cards[path.stem] = path
+            # re-evaluate every hour
+            reactive.invalidate_later(3600)
             return cards
         
         def card_picker_modal(cards: dict[str, Path]):
@@ -209,7 +204,7 @@ def application(cards: dict[str, Card]):
 
         @reactive.effect
         @reactive.event(input.AddCard)
-        async def AddCard():
+        async def showPicker():
             """
             Respond to the "new" button click by showing the model-dialogue of available cards.
             """
@@ -217,17 +212,72 @@ def application(cards: dict[str, Card]):
                 card_picker_modal(available_cards())
             )
 
-        def load_fresh_card_instance(card_path: Path):
-            module_name = f"cards.{card_path.stem}"
-            module = importlib.import_module(module_name)
-            if not hasattr(module, "instance"):
-                raise AttributeError(f"{card_path.name} does not define instance()")
-            return module.instance()
 
         @reactive.effect
         @reactive.event(input.CardPicker_cancel)
         async def _cancel_picker():
             ui.modal_remove()
+
+
+        @reactive.calc
+        def currentSection():
+            """
+            Uses the group_style to determine how to assess the current group name.
+            The name is tested in case it is not a valid group name (i.e. a nav_bar button)
+            """
+            section_style = config.get("settings", {}).get("section_style")
+            if section_style == "tab":
+                current = input.Navbar()
+            else:
+                current = input.Accordion()
+                req(current)
+                req(len(current) == 1)
+                current = current[0]
+            valid =  [section.get("section") for section in config.get("layout", [])]
+            #Check that the current tab-item is not a button etc
+            req(current in valid)
+            log.debug(f"Section switched to {current!r} using style {section_style}")
+            return current
+
+        def create_card(name: str):
+            module_name = f"cards.{name}"
+            try:
+                module = importlib.import_module(module_name)
+                if not hasattr(module, "instance"):
+                    raise AttributeError(f"{module_name} does not define instance()")
+                module = module.instance()
+                module.log.info(msg="✅ Instantiated")
+                return module
+            except Exception:
+                log.exception(f"⚠️ Failed to instantiate card {module_name}")
+                return None
+
+
+        @reactive.effect
+        @reactive.event(currentSection)
+        def create_section_cards():
+            current = currentSection()
+            if current not in sections_populated:
+                model_group = next((group for group in config.get("layout", []) if group.get("section") == current), None)
+                req(model_group is not None)
+                for card in model_group["cards"]:
+                    instance = create_card(card["module"])
+                    ui.insert_ui(ui = instance.call_ui(), selector = f"#{current.strip().replace(' ', '_')}-cards-container", where = "beforeEnd")
+                    instance.call_server(input, output, session)
+                    instance.resume()
+                    card_id = instance.ns("Card")
+                    async def after_flush(card_id=card_id):
+                        await session.send_custom_message("init_card", {"id": card_id})
+                    session.on_flushed(after_flush, once=True)
+                async def after_flush2(current=current):
+                    _name = current.strip().replace(" ", "_")
+                    container = f"{_name}-cards-container"
+                    imp_id = f"{_name}_CardOrder"
+                    await session.send_custom_message("MakeSortable", {"id": container, "input_id": imp_id})
+                session.on_flushed(after_flush2, once=True)
+                sections_populated.append(current)
+
+
 
         @reactive.effect
         @reactive.event(input.CardPicker_ok)
@@ -235,21 +285,24 @@ def application(cards: dict[str, Card]):
             """
             React to the choice of a new card to add to the current section.
             """
-            #TODO: make this code section aware
-            choice = input.CardPicker_selected()
-            if not choice or choice not in available_cards():
-                return
-            file = available_cards()[choice]
-            fresh_instance = load_fresh_card_instance(file)
             ui.modal_remove()
-            ui.insert_ui(ui = fresh_instance.call_ui(), selector = "#cards-container", where = "beforeEnd")
-            fresh_instance.call_server(input, output, session)
-            fresh_instance.resume()
-            async def after_flush():
-                await session.send_custom_message("init_card", {"id": fresh_instance.ns("Card")})
-                await session.send_custom_message("UpdateCardOrder", None)
+            name = input.CardPicker_selected()
+            if not name or name not in available_cards():
+                return
+            current = currentSection()
+            _name = current.strip().replace(" ", "_")
+            instance = create_card(name)
+            ui.insert_ui(ui = instance.call_ui(), selector = f"#{_name}-cards-container", where = "beforeEnd")
+            instance.call_server(input, output, session)
+            instance.resume()
+            card_id = instance.ns("Card")
+            container = f"{_name}-cards-container"
+            imp_id = f"{_name}_CardOrder"
+            async def after_flush(card_id=card_id):
+                await session.send_custom_message("init_card", {"id": card_id})
+                await session.send_custom_message("UpdateCardOrder", {"id": container, "input_id": imp_id})
             session.on_flushed(after_flush, once=True)
-
+        
 
         @reactive.effect
         @reactive.event(input.FullScreen)
@@ -296,7 +349,8 @@ def application(cards: dict[str, Card]):
 
         @reactive.calc
         def CurrentTabCardOrder() -> list[str]: #given in namespaces
-            order = req(input.CardOrder())
+            section = req(currentSection())
+            order = req(input[f"{section.strip().replace(' ', '_')}_CardOrder"]())
             order = [s.removesuffix("-Card") for s in order]
             return order
 
@@ -327,23 +381,15 @@ def application(cards: dict[str, Card]):
             card.resume()
 
 
-        async def after_flush():
-            """
-            Ensure that input.CardOrder() is created and populated with the actual card sequence.
-            Do this when the reactivity has settled - to avoid race conditions.
-            """
-            await session.send_custom_message("UpdateCardOrder", None)
-        session.on_flushed(after_flush, once=True)
-
     return App(ui = app_ui, server = server, static_assets = ROOT / "www")
 
 
-# Load the cards in the "cards" folder
-cards = create_cards(folder = ROOT / "cards")
+# # Load the cards in the "cards" folder
+# cards = create_cards(folder = ROOT / "cards")
 
 # TODO: Manage the order of the cards
 
-app = application(cards = cards)  # This MUST be called "app" for shiny-mode of IDE integration
+app = application()  # This MUST be called "app" for shiny-mode of IDE integration
 
 
 def _run():

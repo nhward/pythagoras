@@ -1,16 +1,16 @@
 "use strict";
 
-console.info("[pythagoras] Script running")
+// alert("Script running")
 
 // Run once DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-    console.info("[pythagoras] DOM has loaded");
+    console.info("DOM has loaded");
 
 
     Shiny?.addCustomMessageHandler?.("init_card", function(opts) {
         const card = document.getElementById(opts.id);
         if (!card) {
-            console.warn(`[pythagoras] Initialising card - card not found: "${opts.id}"`);
+            console.warn(`Initialising card - card not found: "${opts.id}"`);
             return;
         }
         console.debug(`Initialising card "${opts.id}"`);
@@ -45,11 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* animate element e.g. shakeX or bounce */
     Shiny?.addCustomMessageHandler?.("animate", function(opts) {
-        console.log("[pythagoras] animate running");
+        console.log("animate running");
         opts = opts || {};
         const el = document.getElementById(opts.id);
         if (!el) {
-            console.warn("[pythagoras] animate element not found: ", opts.id);
+            console.warn("animate element not found: ", opts.id);
             return;
         }
         const animClass = `animate__${opts.animation}`;
@@ -69,10 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Hide or show a card (or any element)
     Shiny?.addCustomMessageHandler?.("toggle_visibility", function(opts) {
-        console.log(`[pythagoras] toggle_visibility running for ${opts.id}`);
+        console.log(`toggle_visibility running for ${opts.id}`);
         const el = document.getElementById(opts.id);
         if (!el) {
-            console.warn(`[pythagoras] toggle_visibility has not found id "${opts.id}"`);
+            console.warn(`toggle_visibility has not found id "${opts.id}"`);
             return;
         }
         if (opts.visible) el.classList.remove("hidden");
@@ -116,11 +116,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Use the json in msg.role_map to populate the various divs that relate to the role asignment dialogue.
     window.populateRolesHandler = function(msg) {
-        console.debug("[pythagoras] PopulateRoles running");
+        console.debug("PopulateRoles running");
         msg = msg || {};
         const card = document.getElementById(msg.card);
         if (!card) {
-            console.error("[pythagoras] Card element not found:", msg.card);
+            console.error("Card element not found:", msg.card);
             return;
         }
         initRolesCard(card);
@@ -132,19 +132,19 @@ document.addEventListener("DOMContentLoaded", () => {
         // Rebuild each role bucket from the payload
         Object.entries(roleMap).forEach(([role, columns]) => {
             const bucket = card.querySelector(`.sortable-role[data-role="${role}"]`);
-            // console.debug(`[pythagoras] Role ${role} in card '${msg.card}'`);
+            // console.debug(`Role ${role} in card '${msg.card}'`);
             if (!bucket) {
-                console.warn(`[pythagoras] No bucket found for role '${role}' in card '${msg.card}'`);
+                console.warn(`No bucket found for role '${role}' in card '${msg.card}'`);
                 return;
             }
-            // console.debug(`[pythagoras] Variables ${columns} in card '${msg.card}'`);
+            // console.debug(`Variables ${columns} in card '${msg.card}'`);
             (columns || []).forEach((col) => {
                 const chip = document.createElement("div");
                 chip.className = "var-chip";
                 chip.dataset.varname = col;
                 chip.textContent = col;
                 bucket.appendChild(chip);
-                // console.debug(`[pythagoras] Added ${col} to role ${role} in card '${msg.card}'`);
+                // console.debug(`Added ${col} to role ${role} in card '${msg.card}'`);
             });
         });
         emitRoleMapFromCard(card);
@@ -247,69 +247,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    function publishCardOrder() {
-        // Sortable behaviour for card drag and drop
-        const container = document.getElementById("cards-container");
-        console.info("[pythagoras] Sortable-Script running (for card drag and drop)")
-        const ids = Array.from(container.children).map((x) => x.id).filter(Boolean);
-        window.Shiny?.setInputValue?.("CardOrder", ids, { priority: "event" })
-    };
-    
-    publishCardOrder() //ensure this is initially available
-
-    const clearSelection = () => {
-        try {
-        const sel = window.getSelection && window.getSelection();
-        if (sel && sel.removeAllRanges) sel.removeAllRanges();
-        else if (sel && sel.empty) sel.empty();
-        else if (document.selection) document.selection.empty();
-        } catch {}
-    };
-
-    // We’ll keep a reference to the ghost clone so we can nuke IDs / mark as non-bindable
-    let dragClone = null;
-
-    const markCloneNonBindable = (clone) => {
-        if (!clone) return;
-        dragClone = clone;
-        // Flag the whole subtree as non-bindable
-        clone.setAttribute("data-shiny-ignore", "true");  // Shiny ignores elements with this attr
-        clone.classList.add("sortable-ghost-nobind");
-        // Remove duplicate IDs in the clone to avoid any accidental bindings/lookups
-        clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
-    };
-    
-    const container = document.getElementById("cards-container");
-
-    Sortable.create(container, {
-        animation: 150,
-        handle: ".drag-handle",
-        ghostClass: "drag-ghost",
-        forceFallback: true,
-        fallbackOnBody: true,
-        // make drag clone safe immediately
-        onClone: (evt) => {
-            // evt.clone is the element appended to <body>
-            markCloneNonBindable(evt.clone);
-        },
-        onStart: () => {
-            container.classList.add("dragging");
-        },
-        onEnd: () => {
-            // Remove any leftover ghost flags/clone
-            if (dragClone && dragClone.parentNode) {
-                // defensive: ensure the clone can never be bound
-                dragClone.setAttribute("data-shiny-ignore", "true");
-                dragClone.remove();   // get it out of the DOM
-            }
-            dragClone = null;
-            container.classList.remove("dragging");
-            clearSelection();
-            publishCardOrder();
-        }
-    });
-
-
     window.fullscreen_app = function(msg) {
         var element = document.documentElement,
         enterFS = element.requestFullscreen || element.msRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen,
@@ -329,12 +266,84 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelectorAll(".bslib-sidebar-layout.sidebar-collapsed.sidebar-right>.collapse-toggle").forEach((btn) => btn.classList.add("hover-btn"));
 
-    Shiny.addCustomMessageHandler("UpdateCardOrder", (msg) => {
-        publishCardOrder();
-    });
-
     Shiny.addCustomMessageHandler("set_input", (msg) => {
         Shiny.setInputValue(msg.id, msg.value, { priority: "event" });
     });
 
+    Shiny.addCustomMessageHandler("UpdateCardOrder", (msg) => {
+        publishCardOrder(msg.id, msg.input_id);
+    });
+
+
+    function publishCardOrder(id, input_id) {
+        // Sortable behaviour for card drag and drop
+        const container = document.getElementById(id);
+        if (! container) {
+            console.warn(`Sortable container not found: "${id}"`)
+            return
+        }
+        const ids = Array.from(container.children).map((x) => x.id).filter(Boolean);
+        window.Shiny?.setInputValue?.(input_id, ids, { priority: "event" })
+    };
+
+    Shiny.addCustomMessageHandler("MakeSortable", (msg) => {
+        const container = document.getElementById(msg.id);
+        if (! container) {
+            console.warn(`Sortable container not found: "${msg.id}"`)
+            return
+        }
+        console.info(`Sortable container found: "${msg.id}"`)
+        Sortable.create(container, {
+            animation: 150,
+            handle: ".drag-handle",
+            ghostClass: "drag-ghost",
+            forceFallback: true,
+            fallbackOnBody: true,
+            // make drag clone safe immediately
+            onClone: (evt) => {
+                // evt.clone is the element appended to <body>
+                markCloneNonBindable(evt.clone);
+            },
+            onStart: () => {
+                container.classList.add("dragging");
+            },
+            onEnd: () => {
+                // Remove any leftover ghost flags/clone
+                if (dragClone && dragClone.parentNode) {
+                    // defensive: ensure the clone can never be bound
+                    dragClone.setAttribute("data-shiny-ignore", "true");
+                    dragClone.remove();   // get it out of the DOM
+                }
+                dragClone = null;
+                container.classList.remove("dragging");
+                clearSelection();
+                publishCardOrder(msg.id, msg.input_id);
+            }
+        });
+        publishCardOrder(msg.id, msg.input_id);
+    });
+
+
+    const clearSelection = () => {
+        try {
+        const sel = window.getSelection && window.getSelection();
+        if (sel && sel.removeAllRanges) sel.removeAllRanges();
+        else if (sel && sel.empty) sel.empty();
+        else if (document.selection) document.selection.empty();
+        } catch {}
+    };
+
+    // We’ll keep a reference to the ghost clone so we can nuke IDs / mark as non-bindable
+    let dragClone = null;
+    const markCloneNonBindable = (clone) => {
+        if (!clone) return;
+        dragClone = clone;
+        // Flag the whole subtree as non-bindable
+        clone.setAttribute("data-shiny-ignore", "true");  // Shiny ignores elements with this attr
+        clone.classList.add("sortable-ghost-nobind");
+        // Remove duplicate IDs in the clone to avoid any accidental bindings/lookups
+        clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+    };
+
 });
+

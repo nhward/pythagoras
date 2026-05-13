@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "$id": "https://raw.githubusercontent.com/nhward60/pythagoras/main/config/pythagoras.schema.json",
+
+  "title": "Pythagoras Configuration",
+
+  "type": "object",
+
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+
+    "settings": {
+      "type": "object",
+      "properties": {
+        "section_style": {
+          "type": "string",
+          "enum": ["tab", "accordion"]
+        },
+
+        "reuse_cards": {
+          "type": "boolean"
+        },
+
+        "max_card_height": {
+          "type": "integer"
+        },
+
+        "max_dupl_cards": {
+          "type": "integer"
+        }
+      },
+
+      "required": [
+        "section_style",
+        "reuse_cards",
+        "max_card_height",
+        "max_dupl_cards"
+      ]
+    }
+  }
+}
