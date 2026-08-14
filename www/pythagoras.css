@@ -393,6 +393,28 @@ shiny-data-frame
     background: #dce9ff;
 }
 
+/* Selectize styling */
+.selectize-control.multi .selectize-input > .item {
+    background-color: #dce6f2;
+    color: #1f3b5c;
+    border-radius: 999px;
+    padding: 2px 10px;
+    margin: 2px;
+    border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+    background-color: #dce6f2;
+    color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
 /* shinyfile button to primary */ 
 span.btn.btn-default.btn-file:has(.shiny-input-file) {
     background-color: var(--bs-primary);
@@ -466,3 +488,18 @@ span.btn.btn-default.btn-file:has(.shiny-input-file) {
 
 /* Tighten legacy BS3 label spacing */
 .shiny-input-checkboxgroup .shiny-options-group .checkbox label { margin-bottom: 0; }
+
+/* Sidebar styling */
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+    padding: 0px 0px 0px 0px !important;
+}
+
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+    padding-top: 20px;
+    padding-left: 12px;
+}
+
+.bslib-card .card-header {
+    padding-right: 40px !important;
+}
