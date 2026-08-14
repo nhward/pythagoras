@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
 from card import Card
 from cyclic_pandas import as_cyclic, is_cyclic_like
 from geometry_pandas import as_geometry, is_geometry_like
-from list_pandas import as_list, is_list_like
+from list_pandas import as_list, is_list, is_list_like
 from module import Module
 from proxyData import ProxyData as pxd
 from text_pandas import as_text, is_text_like
@@ -462,9 +462,14 @@ def instance():
             lines = [f"rows: {len(df)}", f"columns: {len(df.columns)}"]
             for col in df.columns:
                 s = df[col]
-                lines.append(
-                    f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique={s.nunique(dropna=True)}"
-                )
+                if is_list(s):
+                    lines.append(
+                        f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique=NA"
+                    )
+                else:
+                    lines.append(
+                        f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique={s.nunique(dropna=True)}"
+                    )
             return lines
 
         @output
