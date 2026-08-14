@@ -235,7 +235,7 @@ class Card(Module):
                             class_ = "front html-fill-container html-fill-item"
                         ),
                         ui.div(
-                            self.back,
+                            self.back(),
                             id = self.ns("Back"), # The decorator misses divs
                             class_ = "back html-fill-container html-fill-item"
                         ),
