@@ -1,22 +1,30 @@
-from pathlib import Path
 import sys
-import pandas as pd  # needed for test / solo modes
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shiny import ui, render, req  # noqa: E402
-from faicons import icon_svg as icon  # noqa: E402
-from module import Module  # noqa: E402
-from card import Card  # noqa: E402
-from typing import List, Dict  # noqa: E402
-from proxyData import ProxyData  # noqa: E402
-import geopandas as gpd  # noqa: E402
-import shapely  # noqa: E402
+import geopandas as gpd
+import pandas as pd  # needed for test / solo modes
+import pyarrow  # noqa: F401
+import shapely
+from faicons import icon_svg as icon
+from shiny import render, req, ui
+
+from card import Card
+from cyclic_pandas import is_cyclic
+from geometry_pandas import is_geometry
+from list_pandas import is_list
+from module import Module
+from proxyData import ProxyData
+from text_pandas import is_text
 
 
 def instance():
+    """
+    Creates an instance of Card configured as "dataTable".
+    """
     this = Card(name = "dataTable", mutable = False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Data tabulation"
     this.description = "This card enables the data to be listed and searched."
@@ -82,7 +90,6 @@ def instance():
 
         @this.suspendable(calc = True)
         def incomingProxyData():
-            this._imports.get()
             req(this._imports.is_set())
             return this._imports.get()
 
@@ -90,18 +97,38 @@ def instance():
         @this.suspendable(calc = True)
         def Decimals():
             return input.Decimals()
+        
+        @this.throttle(2)
+        @this.suspendable(calc = True)
+        def MaxObs():
+            return 10**input.MaxObs()
+
 
         @this.record_code
         def _dtype_label_from_dtype(dtype) -> str:
-            if pd.api.types.is_integer_dtype(dtype): 
+            if is_cyclic(dtype):
+                return "cyc"
+            if is_text(dtype):
+                return "txt"
+            if is_geometry(dtype):
+                return "geo"
+            if is_list(dtype):
+                return "bkt"
+            if isinstance(dtype, pd.StringDtype):
+                return "cde"
+            if isinstance(dtype, pd.CategoricalDtype):
+                return "ord" if dtype.ordered else "nom"
+            if pd.api.types.is_integer_dtype(dtype):
                 return "int"
-            if pd.api.types.is_float_dtype(dtype):   
-                return "float"
-            if pd.api.types.is_bool_dtype(dtype):    
-                return "bool"
-            if pd.api.types.is_datetime64_any_dtype(dtype): 
-                return "datetime"
-            return "str"
+            if pd.api.types.is_float_dtype(dtype):
+                return "dec"
+            if pd.api.types.is_bool_dtype(dtype):
+                return "log"
+            if pd.api.types.is_datetime64_any_dtype(dtype):
+                return "dte"
+            if pd.api.types.is_object_dtype(dtype):
+                return "obj"
+            return str(dtype)
 
         @this.suspendable(calc = True)
         @this.record_code
@@ -115,9 +142,9 @@ def instance():
             """
             df = incomingProxyData() #Returns ProxyData
             if this.isFullScreen():
-                df = df.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
+                df = df.sample(n = MaxObs(), mode = "random", keep_geometry = True)
             else:
-                df = df.sample(n = 8, mode = "headtail", keep_geometry = True)
+                df = df.sample(n = 10, mode = "headtail", keep_geometry = True)
             # materialize to native (richest form)
             df = df.to_native() if hasattr(df, "to_native") else df
             if hasattr(df, "to_pandas"):     # e.g., Polars
@@ -137,14 +164,14 @@ def instance():
                     try:
                         minx, miny, maxx, maxy = g.bounds
                         return f"{t} bound by {minx:.4f},{miny:.4f} to {maxx:.4f},{maxy:.4f}"
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         return str(g)
                 return ser.apply(_short)
             # geometry → string (WKT or compact summary)
             is_geo = isinstance(df, gpd.GeoDataFrame)
-            geom_cols: List[str] = []
+            geom_cols: list[str] = []
             active_name = None
-            crs_map: Dict[str, str] = {}
+            crs_map: dict[str, str] = {}
             if is_geo:
                 geom_cols = [c for c in df.columns if getattr(df[c].dtype, "name", None) == "geometry"]
                 active_name = df.geometry.name if getattr(df, "geometry", None) is not None else (geom_cols[0] if geom_cols else None)
@@ -161,12 +188,12 @@ def instance():
             # header second line (dtype / geometry info)
             if add_type_header:
                 # dtype map (use original df, not stringified copy)
-                dtype_map = (df.dtypes if not hasattr(df, "dtypes") else df.dtypes)
+                dtype_map = df.dtypes
                 if isinstance(dtype_map, pd.Series):
                     dtype_map = dtype_map.to_dict()
                 else:
                     dtype_map = pd.Series(dtype_map).to_dict()  # normalize
-                new_cols: List[str] = []
+                new_cols: list[str] = []
                 for c in df.columns:
                     if is_geo and c in geom_cols:
                         parts = ["geometry"]
@@ -186,7 +213,7 @@ def instance():
                     num_cols = df.select_dtypes(include=["float"]).columns
                     if len(num_cols) > 0:
                         df.loc[:, num_cols] = df.loc[:, num_cols].round(int(Decimals()))
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     # be forgiving if any backend oddities slip through
                     pass
             return df
@@ -194,12 +221,13 @@ def instance():
         @output
         @render.ui
         def DataTable():
-            req(len(PreparedData()) > 0)
+            req(PreparedData() is not None)
             return ui.output_data_frame(id = "DataTable2")
 
         @output
         @render.data_frame
         def DataTable2():
+            req(PreparedData() is not None)
             full = this.isFullScreen()
             return render.DataTable(PreparedData(), summary=full, filters=full, width="100%", height="98%")
 

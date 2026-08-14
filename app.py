@@ -2,21 +2,24 @@
 ## application           ##
 ###########################
 
-## This the app for a shiny application call Pythagoras
+## This the app for a shiny application called Pythagoras
 ## It provides:
-##    Creating the card instances
-##    Managing the cascade of results along the cards 
+##    Creating sections for cards (i.e. a grouping structure)
+##    Dynamically creating the card instances for a current section
+##    Managing the cascade of results along the cards of a section 
 ##    Invoking the shiny app either in Positron or in Python via the last lines 
 
 
-from shiny import ui, reactive, App, req
-import threading
-import sys
-import logging
 import importlib
+import logging
+import sys
+import threading
 from pathlib import Path
-from module import Module
+
 from faicons import icon_svg as icon
+from shiny import App, reactive, req, ui
+
+from module import Module
 
 ROOT = Path(__file__).resolve().parent
 log = logging.getLogger("pythagoras")
@@ -29,11 +32,10 @@ if not log.handlers:
 log.propagate = False
 log.setLevel(logging.DEBUG)
 
-
-sections_populated = []
-
 config = Module.config
 
+def section_id(name: str) -> str:
+    return name.strip().replace(" ", "_")
 
 def sections() -> list[str]:
     """
@@ -43,60 +45,44 @@ def sections() -> list[str]:
 ]
 
 
-def paths(section_name:str) -> dict[Path]:
-    """
-    args:
-        section_name: 
-    returns a list of paths corresponding to the cards of the given section
-    """
-    cards = next(
-        (
-            section["cards"]
-            for section in config["layout"]
-            if section["section"] == section_name
-        ),
-        []
-    )
-    return {card['namespace'] : card['module'] for card in cards}
-
-
 def create_sections():
     group_style = config.get("settings", {}).get("section_style")
     panels = []
     if group_style == "tab":
         for name in sections():
-            _name = name.strip().replace(" ", "_")
-            log.debug(f"Creating tab panel section {name!r}")
-            panel = ui.nav_panel(
-                name, 
-                ui.div(
-                    id = f"{_name}-cards-container", # Container for cards
-                    class_ = "cards-grid"
-                ),
-                value = name
+            _name = section_id(name)
+            panels.append(
+                ui.nav_panel(
+                    name,
+                    ui.div(
+                        id=f"{_name}-cards-container",
+                        class_="cards-grid"
+                    ),
+                    value=name
+                )
             )
-            panels.append(panel)
-    else:
-        panels = ui.nav_panel(
-            "",
-            ui.accordion(
-                *[
-                    ui.accordion_panel(
-                        name,
-                        ui.div(
-                            id=f"{name.strip().replace(' ', '_')}-cards-container",
-                            class_="cards-grid",
-                        ),
-                        value=name
-                    )
-                    for name in sections()
-                ],
-                multiple=False,
-                id="Accordion",
-            ),
+    elif group_style == "accordion":
+        panels.append(
+            ui.nav_panel(
+                "",
+                ui.accordion(
+                    *[
+                        ui.accordion_panel(
+                            name,
+                            ui.div(
+                                id=f"{section_id(name)}-cards-container",
+                                class_="cards-grid",
+                            ),
+                            value=name
+                        )
+                        for name in sections()
+                    ],
+                    multiple=False,
+                    id="Accordion",
+                ),
+            )
         )
     return panels
-
 
 def application():
     """
@@ -114,7 +100,7 @@ def application():
         ui.busy_indicators.options(spinner_type = "bars2"),
         ui.busy_indicators.use(),
         ui.page_navbar(
-            create_sections(),  # << This is the important call here
+            *create_sections(),  # << This is the important call here
             ui.nav_spacer(),
             ui.nav_control(
                 ui.input_action_button(
@@ -156,7 +142,7 @@ def application():
     # main server function for the app
     def server(input, output, session):
         Module.ModSession = session
-
+        sections_populated = []
 
         @reactive.calc
         def available_cards():
@@ -185,7 +171,7 @@ def application():
                     id = "CardPicker_selected",
                     label = "Choose a card to insert",
                     choices = list(cards.keys()),
-                    selected = list(cards.keys())[0] if cards else None,
+                    selected = next(iter(cards.keys())) if cards else None,
                 ),
                 title="Add card",
                 footer=ui.div(
@@ -254,15 +240,19 @@ def application():
 
 
         @reactive.effect
-        @reactive.event(currentSection)
         def create_section_cards():
             current = currentSection()
-            if current not in sections_populated:
+            if current in sections_populated:
+                #TODO: suspend others, resume current
+                pass 
+            else:
                 model_group = next((group for group in config.get("layout", []) if group.get("section") == current), None)
                 req(model_group is not None)
                 for card in model_group["cards"]:
                     instance = create_card(card["module"])
-                    ui.insert_ui(ui = instance.call_ui(), selector = f"#{current.strip().replace(' ', '_')}-cards-container", where = "beforeEnd")
+                    if instance is None:
+                        continue
+                    ui.insert_ui(ui = instance.call_ui(), selector = f"#{section_id(current)}-cards-container", where = "beforeEnd")
                     instance.call_server(input, output, session)
                     instance.resume()
                     card_id = instance.ns("Card")
@@ -270,7 +260,7 @@ def application():
                         await session.send_custom_message("init_card", {"id": card_id})
                     session.on_flushed(after_flush, once=True)
                 async def after_flush2(current=current):
-                    _name = current.strip().replace(" ", "_")
+                    _name = section_id(current)
                     container = f"{_name}-cards-container"
                     imp_id = f"{_name}_CardOrder"
                     await session.send_custom_message("MakeSortable", {"id": container, "input_id": imp_id})
@@ -290,7 +280,7 @@ def application():
             if not name or name not in available_cards():
                 return
             current = currentSection()
-            _name = current.strip().replace(" ", "_")
+            _name = section_id(current)
             instance = create_card(name)
             ui.insert_ui(ui = instance.call_ui(), selector = f"#{_name}-cards-container", where = "beforeEnd")
             instance.call_server(input, output, session)
@@ -298,9 +288,9 @@ def application():
             card_id = instance.ns("Card")
             container = f"{_name}-cards-container"
             imp_id = f"{_name}_CardOrder"
-            async def after_flush(card_id=card_id):
+            async def after_flush(card_id=card_id, container = container, container_id = imp_id):
                 await session.send_custom_message("init_card", {"id": card_id})
-                await session.send_custom_message("UpdateCardOrder", {"id": container, "input_id": imp_id})
+                await session.send_custom_message("UpdateCardOrder", {"id": container, "input_id": container_id})
             session.on_flushed(after_flush, once=True)
         
 
@@ -348,15 +338,15 @@ def application():
                 log.debug(msg = f"<javascript> | {message['text']}")
 
         @reactive.calc
-        def CurrentTabCardOrder() -> list[str]: #given in namespaces
+        def CurrentSectionCardOrder() -> list[str]: #given in namespaces
             section = req(currentSection())
-            order = req(input[f"{section.strip().replace(' ', '_')}_CardOrder"]())
+            order = req(input[f"{section_id(section)}_CardOrder"]())
             order = [s.removesuffix("-Card") for s in order]
             return order
 
         @reactive.effect
         def cascade():
-            order = req(CurrentTabCardOrder())
+            order = req(CurrentSectionCardOrder())
             log.debug(msg = "Card flow cascade invoked")
             source  = None
             for cardns in order:
@@ -373,26 +363,12 @@ def application():
                         destination._imports.unset()
                 source = destination
 
-        # Initialize each module/card's server logic
-        for card in list(Module.Instances.values()):
-            if card is None:
-                continue
-            card.call_server(input, output, session)
-            card.resume()
-
-
     return App(ui = app_ui, server = server, static_assets = ROOT / "www")
 
 
-# # Load the cards in the "cards" folder
-# cards = create_cards(folder = ROOT / "cards")
-
-# TODO: Manage the order of the cards
-
 app = application()  # This MUST be called "app" for shiny-mode of IDE integration
 
-
-def _run():
+def main():
     app.run(
         host = "127.0.0.1",
         port = 3277,
@@ -408,11 +384,11 @@ if __name__ == "__main__":
     choosing between foreground and background threads.
     """
     if "ipykernel" in sys.modules:
-        t = threading.Thread(target=_run, daemon=True)
+        t = threading.Thread(target=main, daemon=True)
         log.info("Shiny (running in background thread)")
         t.start()
     else:
         log.info("Shiny (running in foreground thread)")
-        _run()  # normal script behavior
+        main()  # normal script behavior
 else:
-    app
+    app  # noqa: B018

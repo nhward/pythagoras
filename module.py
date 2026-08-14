@@ -3,6 +3,8 @@
 ###########################
 ## This class inherits from abc.ABC
 ## It provides:
+##    Configuration
+##        Reading config/pythagoras.json which describes configuration setting and layout
 ##    Guide services via shepherd:
 ##       _patch_module() function which patches the shiny.ui.input_* & shiny.ui.output_*
 ##       _make_wrapper() function used by patch_module
@@ -38,27 +40,30 @@
 ##    Create cards method that looks for files in "cards" and imports them and calls their instance() method
 ##      application(): method that creates the shiny app object
 ##      Run(): method that either runs the single-card app in the viewer
-import shinywidgets as _sw
-from abc import ABC, abstractmethod
-import functools
-from shiny import reactive, ui as _ui, App, ui
-from os import environ
-from collections import namedtuple
-from pathlib import Path
-from faicons import icon_svg as icon
-from contextlib import redirect_stdout
-import html
-import logging
-import inspect
-import json
-from jsonschema import validate, ValidationError
-import io
 import asyncio
+import functools
+import html
+import inspect
+import io
+import json
+import logging
+import re
 import sys
 import textwrap
-import re
-import time
 import threading
+import time
+from abc import ABC, abstractmethod
+from collections import namedtuple
+from contextlib import redirect_stdout
+from os import environ
+from pathlib import Path
+from typing import ClassVar
+
+import shinywidgets as _sw
+from faicons import icon_svg as icon
+from jsonschema import ValidationError, validate
+from shiny import App, reactive, ui
+from shiny import ui as _ui
 
 
 class Module(ABC):
@@ -75,15 +80,16 @@ class Module(ABC):
     """
     ROOT = Path(__file__).resolve().parent
     ModSession = None
-    Instances = {}  # class level dictionary of all instances keyed by their namespaces (including deleted ones with empty values)
-    script_list = [
+    Instances: ClassVar[dict] = {}  # class level dictionary of all instances keyed by their namespaces (possibly including deleted ones with empty values)
+    script_list: ClassVar[list] = [
         ROOT / "www" / "console.js",
+        ROOT / "www" / "jquery-ui.min.js",
         ROOT / "www" / "shepherd.js",
         ROOT / "www" / "guide.js",
         ROOT / "www" / "sortable.min.js",
         ROOT / "www" / "pythagoras.js"
     ]
-    css_list = [
+    css_list: ClassVar[list] = [
         ROOT / "www" / "pythagoras.css",
         ROOT / "www" / "shepherd.css",
         ROOT / "www" / "animate.css"
@@ -111,7 +117,6 @@ class Module(ABC):
         except ValidationError as e:
             log.exception("Invalid configuration")
             raise ValueError(f"Invalid configuration: {e.message}")
-
     MaxInstances = config.get("settings", {}).get("max_dupl_cards")
 
 
@@ -452,7 +457,7 @@ class Module(ABC):
                 """
                 try:
                     cached()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     ...
                 finally:
                     when.set(time.monotonic() + delay_secs)
@@ -500,7 +505,7 @@ class Module(ABC):
             def primer():
                 try:
                     cached()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     ...
                 finally:
                     last_signaled.set(time.monotonic())
@@ -630,6 +635,7 @@ class Module(ABC):
 
 
             self.call_server(input, output, session)
+            
             self.resume()
             async def after_flush(card = self):
                 await session.send_custom_message("init_card", {"id": card.ns("Card")})

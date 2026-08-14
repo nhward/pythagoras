@@ -12,6 +12,10 @@
 //     "editor.trimWhitespaceOnDelete": true,
 //     "editor.stickyTabStops": true,
     "python.testing.pytestEnabled": true,
-    "python.testing.unittestEnabled": false
+    "python.testing.unittestEnabled": false,
+    "search.useIgnoreFiles": false,
+    "python.testing.pytestArgs": [
+        "tests"
+    ]
 //     "python.testing.pytestArgs": ["."]
 }

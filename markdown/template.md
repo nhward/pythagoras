@@ -28,4 +28,4 @@ If the range is −99 … 1200:
  1. Secondary: Make it easy to fix the data. For each detected placeholder, the card provides a button to replace those values with an unambiguous missing value (NA/NaN/NaT). The chart and table refresh to verify the efficacy of the operation. 
 
 ***
-All cards downstream of this card will receive any changes enacted by this card. At most, these changes will produce additional missing values. 
+All cards downstream of this card will receive any changes enacted by this card.

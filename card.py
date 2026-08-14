@@ -30,18 +30,19 @@
 ##    Set self.front, and optionally self.back, self.settings, self.footer
 ##    Implement server(input, output, session)
 
-from module  import Module
-from shiny   import ui, module, reactive, render
-from faicons import icon_svg as icon
 from pathlib import Path
 
+from faicons import icon_svg as icon
+from shiny import module, reactive, render, ui
+
+from module import Module
 
 # TODO: add a SibebarActive reactive
 
 class Card(Module):
     
     def __init__(self, name, long_name = None, allow_full_screen = True, mutable = False, *args, **kwargs): # will be inherited by child classes
-        super().__init__(name=name, *args, **kwargs)
+        super().__init__(*args, name=name, **kwargs)
         self.allow_full_screen = allow_full_screen
         self.mutable = mutable
         self.initially_hidden = False
@@ -235,7 +236,7 @@ class Card(Module):
                             class_ = "front html-fill-container html-fill-item"
                         ),
                         ui.div(
-                            self.back(),
+                            self.back,
                             id = self.ns("Back"), # The decorator misses divs
                             class_ = "back html-fill-container html-fill-item"
                         ),
@@ -317,7 +318,7 @@ class Card(Module):
             # Convert markdown to HTML - see the markdown extensions in use
             # return ui.HTML(markdown.markdown(text, extensions=["extra", "tables", "fenced_code", "markdown_katex"]))
             return ui.markdown(text)  # TODO check this change works okay - otherwise use commented-out line above
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
 
@@ -440,7 +441,7 @@ class Card(Module):
                 id = self.ns('Card')
                 self.reset()
                 ui.remove_ui(selector=f"#{id}")
-#TODO:                # async def after_flush():
+#TODO:          # async def after_flush():
                 #     await session.send_custom_message("UpdateCardOrder", None)
                 # session.on_flushed(after_flush, once=True)
 
@@ -466,11 +467,7 @@ class Card(Module):
                     return f"of \"{self._exports.get().name}\""
                 else:
                     return ""
-
-
-            async def after_flush(card = self):
-                await session.send_custom_message("init_card", {"id": self.ns("Card")})
-            session.on_flushed(after_flush, once=True)
+            
 
             return self.server(input, output, session)
 

@@ -10,12 +10,19 @@ readme = "README.md"
 requires-python = ">=3.9.6"
 authors = [{ name = "Nick Ward" }]
 dependencies = [
-  "shiny>=1.0.0",
-  "shinywidgets>=0.3.1",
+  "faicons>=0.2",
+  "geopandas>=1.0",
+  "jsonschema>=4.0",
+  "numpy>=1.24",
   "pandas>=2.0",
   "plotly>=5.18",
-  "numpy>=1.24",
-  # add: geopandas, narwhals, polars, etc. if used
+  "pyarrow>=14",
+  "requests>=2.0",
+  "session-info>=1.0",
+  "shapely>=2.0",
+  "shiny>=1.0",
+  "shinywidgets>=0.3.1",
+  "xarray",
 ]
 
 [project.scripts]

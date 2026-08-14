@@ -1,40 +1,156 @@
-from shiny import ui, render, reactive, req
-from faicons import icon_svg as icon
+import os  # noqa: I001
 from urllib.parse import urlparse
+
 import geopandas as gpd
-import xarray as xr
-import os
-import requests
 import pandas as pd
-from module import Module
+import requests
+import xarray as xr
+import seaborn  # noqa: F401
+import sklearn  # noqa: F401
+import vega_datasets  # noqa: F401
+import statsmodels  # noqa: F401
+from ucimlrepo import fetch_ucirepo, list_available_datasets
+
+from faicons import icon_svg as icon
+from shiny import reactive, render, req, ui
+from shiny.types import SilentException
+
 from card import Card
+from module import Module
 from proxyData import ProxyData as Pxy
+
+import io
+from contextlib import redirect_stdout
+
+def capture_output(function, *args, **kwargs) -> str:
+    buffer = io.StringIO()
+
+    with redirect_stdout(buffer):
+        function(*args, **kwargs)
+
+    return buffer.getvalue()
+
+# TODO: cleanup exception handling
+# TODO: Need alt URL deafult
+# TODO: allow URL load to unzip zip files (unlikely to resolve multiple files except shp,shx,prj)
+# TODO: use the ucmi repo to access tabular data via an extra tab
 
 
 def instance():
+    """
+    Creates an instance of Card configured as "dataImport".
+    """
     this = Card(name = "dataImport", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Data import"
     this.description = "This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
     this.requires_import = False
-    def settings():
-        return ui.TagList(
-            ui.input_text(
-                id = "Separator", 
-                label = "Between-column separator", 
-                value = ",",
-                guide = this,
-                text = 'Since tab, semi-colon and comma characters can occur in the data, this string specifies the type of separation string to employ. "Auto" will make an automated assessment.',                position = "left"),
-            ui.input_numeric(
-                id = "Sheet", 
-                label = "Worksheet position", 
-                value = 1, 
-                min = 1, 
-                guide = this,
-                text = 'When importing from a multi-worksheet spreadsheet, this number represents the particular worksheet to import.',
-                position = "left")
-        )
 
-    this.settings = settings
+    def _load_sm(name):
+        """
+        Robust loader for statsmodels datasets.
+        Strategy:
+        1) Try sm.datasets.get_rdataset(name, cache=True).data   # Rdatasets (R datasets)
+        2) Try to find a module in sm.datasets.__all__ matching `name`
+            and call its load_pandas() or load() to get the DataFrame.
+        Returns a pandas.DataFrame on success or raises ValueError.
+        """
+        import importlib
+
+        import statsmodels.api as sm
+        last_exc = None
+        # 1) Rdatasets route: sm.datasets.get_rdataset(...).data
+        try:
+            rd = sm.datasets.get_rdataset(name, cache=True)
+            if hasattr(rd, "data"):
+                return rd.data
+            # if it didn't have .data for some reason, try to return rd itself
+            return rd
+        except Exception as e:
+            last_exc = e
+        # 2) Try built-in statsmodels dataset modules (e.g., sm.datasets.co2)
+        try:
+            dataset_modules = getattr(sm.datasets, "__all__", []) or []
+            # search for matching module name (case-insensitive)
+            for mod_name in dataset_modules:
+                if mod_name.lower() == name.lower():
+                    mod = importlib.import_module(f"statsmodels.datasets.{mod_name}")
+                    # common loader patterns
+                    if hasattr(mod, "load_pandas"):
+                        loaded = mod.load_pandas()
+                        return getattr(loaded, "data", loaded)
+                    if hasattr(mod, "load"):
+                        loaded = mod.load()
+                        return getattr(loaded, "data", loaded)
+                    # some modules may expose a top-level variable `data` or similar
+                    if hasattr(mod, "data"):
+                        return mod.data
+            # as a last attempt, check for attribute directly on sm.datasets
+            mod_obj = getattr(sm.datasets, name, None)
+            if mod_obj:
+                if hasattr(mod_obj, "load_pandas"):
+                    loaded = mod_obj.load_pandas()
+                    return getattr(loaded, "data", loaded)
+                if hasattr(mod_obj, "load"):
+                    loaded = mod_obj.load()
+                    return getattr(loaded, "data", loaded)
+        except Exception as e:
+            last_exc = e
+        # Give a helpful message including the last exception
+        raise ValueError(
+            f"Statsmodels: could not load dataset '{name}'. "
+            f"Tried get_rdataset() and internal sm.datasets modules. Last error: {last_exc}"
+            )
+
+
+    DATA_SOURCES = {
+        "seaborn": {
+            "fetch": lambda: __import__("seaborn").get_dataset_names(),
+            "load":  lambda name: __import__("seaborn").load_dataset(name)
+        },
+        "xarray": {
+            # "fetch": lambda: sorted(getattr(__import__("xarray").tutorial, "DATASETS", {}).keys()),
+            "fetch": lambda: ['air_temperature', 'rasm'],
+            "load":  lambda name: __import__("xarray").tutorial.load_dataset(name)
+        },
+        "sklearn": {
+            "fetch": lambda: ["iris", "digits", "wine", "breast_cancer"],
+            "load":  lambda name: getattr(__import__("sklearn").datasets, f"load_{name}")(as_frame=True).frame
+        },
+        "vega_datasets": {
+            "fetch": lambda: __import__("vega_datasets").data.list_datasets(),
+            "load":  lambda name: (
+                __import__("vega_datasets").data(name)()
+                if callable(__import__("vega_datasets").data(name))
+                else __import__("vega_datasets").data(name)
+            )
+        },
+        "statsmodels": {
+            "fetch": lambda: [
+                m.split(".")[-1]
+                for m in __import__("statsmodels.api").datasets.__all__
+            ],
+            # "load":  lambda name: __import__("statsmodels.api").datasets.get_rdataset(name, cache=True).data
+            "load":  _load_sm
+        },
+    }
+
+
+    def DatasetChoices():
+        choices = {}
+        for pkg, source in DATA_SOURCES.items():
+            result = source["fetch"]()
+            inner = {f"{pkg}::{ds}": ds for ds in result}  # inner dict: {value: label}
+            choices[f"_______Package {pkg}_______"] = inner
+        return choices
+
+    def UciChoices():
+        text = capture_output(list_available_datasets)
+        names = []
+        for line in text.splitlines():
+            parts = line.rsplit(maxsplit=1)
+            if len(parts) == 2 and parts[1].isdigit():
+                names.append(parts[0].strip())
+        return names
 
     def front():
         return ui.navset_bar(
@@ -50,18 +166,28 @@ def instance():
             ui.nav_panel(
                 "Dataset based",
                 ui.tags.br(),
-                ui.input_selectize(id = "Dataset", label = "Package dataset", multiple = False, width = "80%", choices = {}, guide = this, text = ""),
+                ui.input_selectize(id = "Dataset", label = "Package dataset", multiple = False, width = "80%", choices = DatasetChoices(), 
+                guide = this, text = "The available package datasets are organised by package."),
                 ui.input_text(id = "DName", label = "Short name", guide = this, position = "bottom",
-                    text = "This is how you choose to name the dataset. Keep this name short. By default it is initially populated with the package's dataset name. Each of the importation styles has this field.")
+                    text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the chosen dataset name. Each of the importation styles has this field.')
             ),
             ui.nav_panel(
                 "Web based",
                 ui.tags.br(),
-                ui.input_text(id = "Url", label = "Url", width = "100%", value  = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/110m_cultural/ne_110m_admin_0_countries.shp", placeholder = "http://, https://, ftp://, ftps://, or file://", 
+                ui.input_text(id = "Url", label = "Url", width = "100%", value  = "https://archive.ics.uci.edu/static/public/109/wine.zip", placeholder = "http://, https://, ftp://, ftps://, or file://", 
                     guide = this, position = "bottom",
                     text = 'This text box is for the entry of a valid URL of a data file. Allowed protocols include http://, https://, ftp://, ftps://, and file://\n The field will shake if the URL is invalid.'),
                 ui.input_text(id = "UName", label = "Short name", guide = this, position = "bottom",
-                    text = 'This is how you choose to name the dataset. Keep this name short. By default it is initially populated with the base URL. Each of the importation styles has this field.')
+                    text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the base URL. Each of the importation styles has this field.')
+            ),
+            ui.nav_panel(
+                "UC Irvine",
+                ui.tags.br(),
+                ui.input_selectize(id = "UciDataset", label = "UCI dataset", multiple = False, width = "80%", choices = UciChoices(), 
+                    guide = this, position = "bottom",
+                    text = 'The available UCI datasets ...'),  #TODO complete text
+                ui.input_text(id = "IName", label = "Short name", guide = this, position = "bottom",
+                    text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the dataset ID. Each of the importation styles has this field.')
             ),
             title = None,
             id = "Navset", 
@@ -107,6 +233,26 @@ def instance():
 
     this.footer = footer
 
+    def settings():
+        return ui.TagList(
+            ui.input_text(
+                id = "Separator", 
+                label = "Between-column separator", 
+                value = ",",
+                guide = this,
+                text = 'Since tab, semi-colon and comma characters can occur in the data, this string specifies the type of separation string to employ. "Auto" will make an automated assessment.',                position = "left"),
+            ui.input_numeric(
+                id = "Sheet", 
+                label = "Worksheet position", 
+                value = 1, 
+                min = 1, 
+                guide = this,
+                text = 'When importing from a multi-worksheet spreadsheet, this number represents the particular worksheet to import.',
+                position = "left")
+        )
+
+    this.settings = settings
+
     def server(input, output, session):
 
         #### Shiny variables ----
@@ -125,93 +271,6 @@ def instance():
             return file            
 
         
-        def _load_sm(name):
-            """
-            Robust loader for statsmodels datasets.
-            Strategy:
-            1) Try sm.datasets.get_rdataset(name, cache=True).data   # Rdatasets (R datasets)
-            2) Try to find a module in sm.datasets.__all__ matching `name`
-                and call its load_pandas() or load() to get the DataFrame.
-            Returns a pandas.DataFrame on success or raises ValueError.
-            """
-            import importlib
-            import statsmodels.api as sm
-            last_exc = None
-            # 1) Rdatasets route: sm.datasets.get_rdataset(...).data
-            try:
-                rd = sm.datasets.get_rdataset(name, cache=True)
-                if hasattr(rd, "data"):
-                    return rd.data
-                # if it didn't have .data for some reason, try to return rd itself
-                return rd
-            except Exception as e:
-                last_exc = e
-            # 2) Try built-in statsmodels dataset modules (e.g., sm.datasets.co2)
-            try:
-                dataset_modules = getattr(sm.datasets, "__all__", []) or []
-                # search for matching module name (case-insensitive)
-                for mod_name in dataset_modules:
-                    if mod_name.lower() == name.lower():
-                        mod = importlib.import_module(f"statsmodels.datasets.{mod_name}")
-                        # common loader patterns
-                        if hasattr(mod, "load_pandas"):
-                            loaded = mod.load_pandas()
-                            return getattr(loaded, "data", loaded)
-                        if hasattr(mod, "load"):
-                            loaded = mod.load()
-                            return getattr(loaded, "data", loaded)
-                        # some modules may expose a top-level variable `data` or similar
-                        if hasattr(mod, "data"):
-                            return getattr(mod, "data")
-                # as a last attempt, check for attribute directly on sm.datasets
-                mod_obj = getattr(sm.datasets, name, None)
-                if mod_obj:
-                    if hasattr(mod_obj, "load_pandas"):
-                        loaded = mod_obj.load_pandas()
-                        return getattr(loaded, "data", loaded)
-                    if hasattr(mod_obj, "load"):
-                        loaded = mod_obj.load()
-                        return getattr(loaded, "data", loaded)
-            except Exception as e:
-                last_exc = e
-            # Give a helpful message including the last exception
-            raise ValueError(
-                f"Statsmodels: could not load dataset '{name}'. "
-                f"Tried get_rdataset() and internal sm.datasets modules. Last error: {last_exc}"
-            )
-
-
-        DATA_SOURCES = {
-            "seaborn": {
-                "fetch": lambda: __import__("seaborn").get_dataset_names(),
-                "load":  lambda name: __import__("seaborn").load_dataset(name)
-            },
-            "xarray": {
-                # "fetch": lambda: sorted(getattr(__import__("xarray").tutorial, "DATASETS", {}).keys()),
-                "fetch": lambda: ['air_temperature', 'rasm'],
-                "load":  lambda name: __import__("xarray").tutorial.load_dataset(name)
-            },
-            "sklearn": {
-                "fetch": lambda: ["iris", "digits", "wine", "breast_cancer"],
-                "load":  lambda name: getattr(__import__("sklearn").datasets, f"load_{name}")(as_frame=True).frame
-            },
-            "vega_datasets": {
-                "fetch": lambda: __import__("vega_datasets").data.list_datasets(),
-                "load":  lambda name: (
-                    (__import__("vega_datasets").data(name)()
-                    if callable(__import__("vega_datasets").data(name))
-                    else __import__("vega_datasets").data(name))
-                )
-            },
-            "statsmodels": {
-                "fetch": lambda: [
-                    m.split(".")[-1]
-                    for m in __import__("statsmodels.api").datasets.__all__
-                ],
-                # "load":  lambda name: __import__("statsmodels.api").datasets.get_rdataset(name, cache=True).data
-                "load":  _load_sm
-            },
-        }
 
         def dict_to_html(d):
             html = "<ul style='margin:0;padding-left:1em;'>"
@@ -250,8 +309,8 @@ def instance():
                     if "geometry" in df.columns:
                         try:
                             return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            this.log.warning(e, exc_info=1)
                     return df
                 elif ext in [".xls", ".xlsx"]:
                     df = pd.read_excel(
@@ -262,8 +321,8 @@ def instance():
                     if "geometry" in df.columns:
                         try:
                             return gpd.GeoDataFrame(df, geometry = gpd.GeoSeries.from_wkt(df["geometry"]))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            this.log.warning(e, exc_info=1)
                     return df
                 elif ext in [".parquet"]:
                     df = pd.read_parquet(
@@ -273,8 +332,8 @@ def instance():
                     if "geometry" in df.columns:
                         try:
                             return gpd.GeoDataFrame(df, geometry = gpd.GeoSeries.from_wkt(df["geometry"]))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            this.log.warning(e, exc_info=1)
                     return df
                 elif ext in [".feather"]:
                     return pd.read_feather(path, **kwargs)
@@ -291,8 +350,8 @@ def instance():
                     d = xr.open_dataset(path, **kwargs)
                     try:
                         return d.to_dataframe()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        this.log.warning(e, exc_info=1)
                     return d
                 raise ValueError(f"Unsupported file extension: {ext}")
             
@@ -305,13 +364,16 @@ def instance():
                     return None
                 d =  read_file(path = Url(), sep = input.Separator(), sheet = input.Sheet())
             elif input.Navset() == "Dataset based":
-                if input.Dataset() is None:
-                    return None
+                req(input.Dataset())
                 package, name = input.Dataset().split("::", 1)
                 source = DATA_SOURCES.get(package)
                 if not source:
                     raise ValueError(f"No dataset source available for '{package}'")
                 d =  source["load"](name)
+            elif input.Navset() == "UC Irvine":
+                req(input.UciDataset())
+                uci = fetch_ucirepo(name = input.UciDataset())
+                d = uci.data.original
             return d
 
         @this.suspendable(calc = True)
@@ -381,7 +443,7 @@ def instance():
                     classes = "table table-hover table-striped" + table_size
                 )
                 # Category summary
-                cat_cols = df.select_dtypes(include=['object', 'category'])
+                cat_cols = df.select_dtypes(include=['object', 'str', 'category'])
                 if cat_cols.empty:
                     cat_html = ""
                 else:
@@ -512,13 +574,18 @@ def instance():
             ui.update_text(id = "FName", value = stem)
 
 
-        @this.suspendable(triggers = [input.Dataset])
-        def Dataset():
+        @this.suspendable()
+        def DatasetName():
             req(input.Dataset())
             _, stem = input.Dataset().split("::", 1)
             ui.update_text(id = "DName", value = stem)
-        
-        
+
+        @this.suspendable()
+        def UciDatasetName():
+            req(input.UciDataset())
+            ui.update_text(id = "IName", value = input.UciDataset())
+
+                
         @this.throttle(2)
         @this.suspendable(calc = True)
         def Url():
@@ -535,7 +602,7 @@ def instance():
 
 
         def url_exists(url: str) -> bool:
-            this.debug(f"Checking url: {url}")
+            this.log.debug(f"Checking url: {url}")
             try:
                 response = requests.head(url, allow_redirects=True, timeout=5)
                 return response.status_code == 200
@@ -559,7 +626,7 @@ def instance():
                     elif not ok:
                         message = ui.span("The URL is not valid", class_ = "text-center text-danger")
                         await session.send_custom_message("animate", {"id" : session.ns("Url"), "animation" : "shakeX", "delay" : 500})
-                        butt_disabled <- True
+                        butt_disabled = True
                     else:
                         try:
                             d = GetPxyData()
@@ -570,6 +637,8 @@ def instance():
                             else:
                                 message = ui.span("Web import ready ", text, class_ = "text-center text-primary")
                                 await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
+                        except SilentException:
+                            message = ""
                         except Exception as e:
                             message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
                             butt_disabled = True
@@ -610,8 +679,37 @@ def instance():
                             else:
                                 message = ui.span("Dataset import ready ", text, class_ = "text-center text-primary")
                                 await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
+                    except SilentException:
+                        message = ""
+                        butt_disabled = True
 
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
+                        message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
+                        butt_disabled = True
+            elif input.Navset() == "UC Irvine":
+                butt_disabled = input.IName().strip() == "" 
+                if input.UciDataset() is None:
+                    message = ui.span("No dataset selected", class_ = "text-center text-warning")
+                    butt_disabled = True
+                else:
+                    try:
+                        d = GetPxyData() #TODO
+                        if d is None:
+                            message = ui.span("No dataset chosen yet", class_ = "text-center text-warning")
+                            butt_disabled = True
+                        else:
+                            d.name = input.IName()
+                            text = size_text(GetData())
+                            if CommittedData() == d:
+                                message = ui.span("Dataset import successful ", text, class_ = "text-center text-success")
+                            else:
+                                message = ui.span("Dataset import ready ", text, class_ = "text-center text-primary")
+                                await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
+                    except SilentException:
+                        message = ""
+                        butt_disabled = True
+
+                    except Exception as e:  # noqa: BLE001
                         message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
                         butt_disabled = True
             ui.update_action_button(id = "Commit", label = "Commit Import", disabled = butt_disabled)
@@ -630,30 +728,6 @@ def instance():
                 pxd.name = input.DName()
             CommittedData.set(pxd.clone())
             this._exports.set(CommittedData())
-
-
-        @this.suspendable(calc = True)
-        def getDatasetChoices():
-            choices = {}
-            for pkg, source in DATA_SOURCES.items():
-                try:
-                    result = source["fetch"]()
-                    # inner dict: {value: label}
-                    inner = {f"{pkg}::{ds}": ds for ds in result}
-                    choices[f"_______Package {pkg}_______"] = inner
-                except Exception as e:
-                    this.warning(f"Failed to fetch datasets from {pkg}: {e}")
-                    choices[pkg] = {}
-            return choices
-
-
-        #### Update dataset picker choices ----
-        @this.suspendable(triggers = [getDatasetChoices])
-        def ChoiceUpdate():
-            ui.update_selectize(
-                id = "Dataset",
-                choices = getDatasetChoices()
-            )
 
 
     this.server = server

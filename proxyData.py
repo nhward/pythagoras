@@ -1,12 +1,21 @@
 # proxy_data.py
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Literal, Optional
+
+import sys
 from collections.abc import Iterable as _Iterable
-from roles import RoleMap, Role
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from roles import Role, RoleMap
 
 
 @dataclass
@@ -49,7 +58,7 @@ class ProxyData:
     # ----------------- construction & inspection ------------------------
 
     @classmethod
-    def from_native(cls, df) -> "ProxyData":
+    def from_native(cls, df) -> ProxyData:
         """
         Build a ProxyData from a 'native' object.
 
@@ -58,9 +67,7 @@ class ProxyData:
           - GeoPandas GeoDataFrame
           - Any object with `.to_pandas()`
         """
-        if gpd is not None and isinstance(df, gpd.GeoDataFrame):
-            native = df.copy()
-        elif isinstance(df, pd.DataFrame):
+        if gpd is not None and isinstance(df, gpd.GeoDataFrame) or isinstance(df, pd.DataFrame):
             native = df.copy()
         elif hasattr(df, "to_pandas"):
             native = df.to_pandas().copy()
@@ -91,7 +98,7 @@ class ProxyData:
         return self._df.shape
     
     @property
-    def role_map(self) -> "RoleMap":
+    def role_map(self) -> RoleMap:
         return self._roles
     @role_map.setter
     def role_map(self, value):
@@ -115,7 +122,7 @@ class ProxyData:
 
     # ----------------- dtype helpers -----------------------------------
 
-    def select_dtypes(self, include=None, exclude=None) -> "ProxyData":
+    def select_dtypes(self, include=None, exclude=None) -> ProxyData:
         """
         Pandas-style dtype selection, returning a new ProxyData
         (roles are preserved, since this is column-wise).
@@ -133,7 +140,7 @@ class ProxyData:
     # ----------------- drole helpers -----------------------------------
 
     @staticmethod
-    def _normalize_roles(spec: "Role" | str | None) -> set[Role]:
+    def _normalize_roles(spec: Role | str | None) -> set[Role]:
         if spec is None:
             return set()
         if not isinstance(spec, _Iterable) or isinstance(spec, (str, bytes)):
@@ -142,9 +149,9 @@ class ProxyData:
 
     def select_drole(
         self,
-        include: "Role" | str | None = None,
-        exclude: "Role" | str | None = None,
-    ) -> "ProxyData":
+        include: Role | str | None = None,
+        exclude: Role | str | None = None,
+    ) -> ProxyData:
         """
         Return a new ProxyData with columns selected by *roles* rather than dtypes.
 
@@ -202,8 +209,8 @@ class ProxyData:
         n: int = 4,
         mode: Literal["headtail", "random", "all"] = "headtail",
         keep_geometry: bool = True,
-        seed: Optional[int] = 2025,
-    ) -> "ProxyData":
+        seed: int | None = 2025,
+    ) -> ProxyData:
         """
         Return a small sample, preserving row order.
         - mode="headtail": concat(head, tail) with in-order rows.
@@ -247,13 +254,13 @@ class ProxyData:
 
     # ----------------- role-related convenience ------------------------
 
-    def with_roles(self, role_map: RoleMap) -> "ProxyData":
+    def with_roles(self, role_map: RoleMap) -> ProxyData:
         """Return a new ProxyData with the same data but a different RoleMap."""
         if not isinstance(role_map, RoleMap):
             role_map = RoleMap.from_primitive(role_map)
         return ProxyData(self._df, role_map, self.name)
 
-    def clone(self) -> "ProxyData":
+    def clone(self) -> ProxyData:
         """
         Deep-ish copy: copy the DataFrame, shallow copy of the roles structure.
         (Fine because RoleMap contains sets of enums / immutable values.)
@@ -272,7 +279,7 @@ class ProxyData:
 
     # ----------------- role-related validation ------------------------
 
-    def validate(self, role_map: Optional[RoleMap] = None, separator = "|", low_cardinality:int = 8) -> list[str]:
+    def validate(self, role_map: RoleMap | None = None, separator = "|", low_cardinality:int = 8) -> list[str]:
         # Private functions
         def _is_unique(values) -> bool:
             return pd.Series(values).is_unique
@@ -410,7 +417,7 @@ class ProxyData:
                 if value.isna().values.any():
                     errors.append("Stratifier role has missing values")
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             errors.append("The role assignments and data are incompatible")
         return errors    
 
@@ -437,17 +444,14 @@ class ProxyData:
             return False
         if self.is_geodata != other.is_geodata:
             return False
-        if check_crs and self.is_geodata:
-            if self._df.crs != other._df.crs:
-                return False
-        if check_geometry_column and self.is_geodata:
-            if self._df.geometry.name != other._df.geometry.name:
-                return False
+        if check_crs and self.is_geodata and self._df.crs != other._df.crs:
+            return False
+        if check_geometry_column and self.is_geodata and self._df.geometry.name != other._df.geometry.name:
+            return False
         if not self._df.equals(other._df):
             return False
-        if check_roles:
-            if self._roles.column_roles != other._roles.column_roles:
-                return False
+        if check_roles and self._roles.column_roles != other._roles.column_roles:  # noqa: SIM103
+            return False
         return True
 
     def __eq__(self, other: object) -> bool:

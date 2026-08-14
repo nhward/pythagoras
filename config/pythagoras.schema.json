@@ -25,7 +25,7 @@
         },
 
         "max_card_height": {
-          "type": "integer"
+          "type": "string"
         },
 
         "max_dupl_cards": {

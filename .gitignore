@@ -2,6 +2,7 @@
 *.pyo
 .pytest_cache/
 __pycache__/
+*.py[cod]
 markdown/markdown/*.md
 markdown/*.html
 .venv/

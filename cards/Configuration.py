@@ -1,16 +1,28 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shiny import ui, render, req  # noqa: E402
-from card import Card  # noqa: E402
-from module import Module  # noqa: E402
-from faicons import icon_svg as icon  # noqa: E402
+import importlib.metadata
+import os
+import platform
+import sys
+
+import pandas as pd
+import session_info
+from faicons import icon_svg as icon
+from shiny import render, req, ui
+
+from card import Card
+from module import Module
+
 
 def instance():
+    """
+    Creates an instance of Card configured as "configuration".
+    """
     this = Card(name = "configuration", mutable = False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Configuration"
     this.description = "This card records the host-system configuration."
@@ -53,17 +65,13 @@ def instance():
 
         @this.record_code
         def get_loaded_packages():
-            import pandas as pd
-            import importlib.metadata
-            import sys
-
             loaded = {}
             for name, module in list(sys.modules.items()):
                 version = None
                 if module:
                     try:
                         version = importlib.metadata.version(name)
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass  # ignore modules without metadata
                 if isinstance(version, str):
                     loaded[name] = version
@@ -76,16 +84,10 @@ def instance():
         @render.table
         @this.record_code
         def Summary():
-            import pandas as pd
-            import importlib.metadata
-            import sys
-            import platform
             input.Refresh()
             s = Module.ModSession
             req(s)
-            if s.clientdata.url_hostname() == "localhost":
-                local = "Yes" 
-            elif s.clientdata.url_hostname() == "127.0.0.1":
+            if s.clientdata.url_hostname() == "localhost" or s.clientdata.url_hostname() == "127.0.0.1":
                 local = "Yes" 
             else:
                 local = "No" 
@@ -105,7 +107,6 @@ def instance():
         @render.table
         #Do not record code as this is all shiny specific
         def Url():
-            import pandas as pd
             input.Refresh()
             s = Module.ModSession
             req(s)
@@ -125,8 +126,6 @@ def instance():
         @render.table
         @this.record_code
         def Folders():
-            import pandas as pd
-            import os
             input.Refresh()
             dirs = ["." , "./www", "./markdown", "./cards"]
             rows = []
@@ -150,7 +149,6 @@ def instance():
         @this.capture_print
         @this.record_code
         def Session():
-            import session_info
             input.Refresh()
             session_info.show(cpu = True, dependencies = this.isFullScreen(), std_lib = this.isFullScreen(), private = this.isFullScreen(), html = False)  # writes to stdout
 

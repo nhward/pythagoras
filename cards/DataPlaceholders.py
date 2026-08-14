@@ -1,29 +1,31 @@
-from pathlib import Path
+from __future__ import annotations
+
 import sys
-import pandas as pd  # needed for test / solo modes
-from shinywidgets import render_widget
-import shinywidgets
-from typing import Tuple, Dict, List, Any
-import plotly.graph_objects as go
-import plotly.colors as pc
-import numpy as np
+from pathlib import Path
+
 import geopandas as gpd
-from shiny import ui, reactive, req, render
+import numpy as np
+import pandas as pd  # needed for test / solo modes
+import plotly.colors as pc
+import plotly.graph_objects as go
+import shinywidgets
+from shiny import reactive, render, req, ui
+from shinywidgets import render_widget
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from module import Module  # noqa: E402
-from card import Card  # noqa: E402
-from proxyData import ProxyData as Pxy  # noqa: E402
+from card import Card
+from module import Module
+from proxyData import ProxyData as Pxy
 
 # Converts missing value placeholders to Na/NaN/NaT
 # Ideally this follows the correct conversion of strings to their real datatype esp. Datetime
 
 def instance():
     """
-    Creates an instance of dataPlaceholders class.
+    Creates an instance of Card configured as dataPlaceholders.
     """
     this = Card(name = "dataPlaceholders", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Missing value placeholders"
@@ -276,14 +278,14 @@ def instance():
             fig.add_annotation(
                 text=txt, x=0.5, y=0.5, xref="paper", yref="paper",
                 showarrow=False, align="center",
-                font=dict(size=18, color="#6c757d")
+                font={"size": 18, "color": "#6c757d"}
             )
             fig.update_layout(
-                xaxis=dict(visible=False), 
-                yaxis=dict(visible=False),
+                xaxis={"visible": False}, 
+                yaxis={"visible": False},
                 plot_bgcolor="#f8f9fa", # make same as card
                 paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=0, r=0, t=0, b=0),
+                margin={"l": 0, "r": 0, "t": 0, "b": 0},
                 hovermode=False, 
                 showlegend=False
             )
@@ -301,103 +303,6 @@ def instance():
             if bucket == "datetime":
                 return df.select_dtypes(include=["datetime64[ns]", "datetimetz"]).columns
             return df.columns
-
-        # @this.record_code
-        # def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.Figure:
-        #     x = np.arange(codes_df.shape[0])   ##x = codes_df.index.astype(str).tolist()
-        #     y = codes_df.columns.astype(str).tolist()
-        #     z = codes_df.to_numpy(dtype=np.int16, copy=False).T
-        #     non_nan = z[~np.isnan(z)]
-        #     if not non_nan.size:
-        #         return empty_plotly("No data to display")
-        #     present_codes = sorted(np.unique(non_nan.astype(int)))
-        #     palette = pc.qualitative.Set3
-        #     zmin = min(present_codes)
-        #     zmax = max(present_codes)
-        #     this.log.debug("Chart drawn")
-        #     # --- discrete colorscale ---
-        #     if zmin == zmax:
-        #         color = palette[zmin % len(palette)]
-        #         colorscale = [[0, color], [1, color]]
-        #     else:
-        #         colorscale = []
-        #         for code in present_codes:
-        #             pos = (code - zmin) / (zmax - zmin)
-        #             color = palette[code % len(palette)]
-        #             colorscale.append([pos, color])
-        #             colorscale.append([pos, color])
-        #     fig = go.Figure()
-        #     # ---------------------------
-        #     # 1. Base heatmap (no hover)
-        #     # ---------------------------
-        #     fig.add_trace(go.Heatmap(
-        #         z=z,
-        #         x=x,
-        #         y=y,
-        #         zmin=zmin,
-        #         zmax=zmax,
-        #         colorscale=colorscale,
-        #         showscale=False,
-        #         hoverinfo="skip",   # 👈 disables all hover here
-        #         hoverongaps=False,
-        #     ))
-        #     # ---------------------------
-        #     # 2. Hover layer (codes > 1 only)
-        #     # ---------------------------
-        #     if fs:
-        #         mask = (~np.isnan(z)) & (~np.isin(z, [0, 1]))
-        #         if mask.any():
-        #             z_hover = np.full(z.shape, None, dtype=object)
-        #             z_hover[mask] = z[mask]
-        #             text = np.empty(z.shape, dtype=object)
-        #             text[:] = ""
-        #             codes = z[mask].astype(int)
-        #             text[mask] = [legend.get(c, f"Code {c}") for c in codes]
-        #             fig.add_trace(go.Heatmap(
-        #                 z=z_hover,
-        #                 x=x,
-        #                 y=y,
-        #                 showscale=False,
-        #                 colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
-        #                 hovertemplate=(
-        #                     "Variable: %{y}<br>"
-        #                     "Observation: %{x}<br>"
-        #                     "Placeholder: %{text}<extra></extra>"
-        #                 ),
-        #                 text=text,
-        #                 hoverongaps=False,
-        #                 showlegend=False,
-        #             ))
-        #         for code in present_codes:
-        #             fig.add_trace(go.Scatter(
-        #                 x=[None],
-        #                 y=[None],
-        #                 mode="markers",
-        #                 marker=dict(
-        #                     size=10,
-        #                     color=palette[code % len(palette)],
-        #                     symbol="square",
-        #                 ),
-        #                 name=legend.get(code, f"Code {code}"),
-        #                 showlegend=True,
-        #                 hoverinfo="skip",
-        #             ))
-        #     fig.update_layout(
-        #         xaxis=dict(title="Observation", type="category"),
-        #         yaxis=dict(title="Variables", type="category", autorange="reversed"),
-        #         plot_bgcolor="#e5ecf6",
-        #         margin=dict(l=2, r=35 if fs else 2, t=2, b=2),
-        #         showlegend=fs,
-        #         legend=dict(x=1.003, xanchor="left", y=0.0, yanchor="bottom", itemsizing="constant"),
-        #         modebar=dict(orientation="v"),
-        #     )
-        #     fw = go.FigureWidget(fig)
-        #     fw._config = (getattr(fw, "_config", {}) | {
-        #         "displayModeBar": bool(fs),
-        #         "displaylogo": False,
-        #         "responsive": True,
-        #     })
-        #     return fw
 
 
         @this.record_code
@@ -458,18 +363,18 @@ def instance():
                         x=xx,
                         y=[y[i] for i in yy],
                         mode="markers",
-                        marker=dict(
-                            size=10,
-                            opacity=0,
-                            color=hover_colors,
-                        ),
+                        marker={
+                            "size": 10,
+                            "opacity": 0,
+                            "color": hover_colors,
+                        },
                         text=hover_text,
                         hovertemplate="%{text}<extra></extra>",
-                        hoverlabel=dict(
-                            bgcolor=hover_colors,
-                            bordercolor=hover_colors,
-                            font=dict(color="black"),
-                        ),
+                        hoverlabel={
+                            "bgcolor": hover_colors,
+                            "bordercolor": hover_colors,
+                            "font": {"color": "black"},
+                        },
                         showlegend=False,
                         hoverinfo="text",
                     ))
@@ -480,36 +385,38 @@ def instance():
                         x=[None],
                         y=[None],
                         mode="markers",
-                        marker=dict(
-                            size=10,
-                            color=palette[code % len(palette)],
-                            symbol="square",
-                        ),
+                        marker={
+                            "size": 10,
+                            "color": palette[code % len(palette)],
+                            "symbol": "square",
+                        },
                         name=legend.get(code, f"Code {code}"),
                         showlegend=True,
                         hoverinfo="skip",
                     ))
             fig.update_layout(
-                xaxis=dict(title="Observation"),
-                yaxis=dict(title="Variables", type="category", autorange="reversed"),
+                xaxis={"title": "Observation"},
+                yaxis={"title": "Variables", "type": "category", "autorange": "reversed"},
                 plot_bgcolor="#e5ecf6",
-                margin=dict(l=2, r=35 if fs else 2, t=2, b=2),
+                margin={"l": 2, "r": 2, "t": 2, "b": 2},
                 showlegend=fs,
-                legend=dict(
-                    x=1.003,
-                    xanchor="left",
-                    y=0.0,
-                    yanchor="bottom",
-                    itemsizing="constant",
-                ),
-                modebar=dict(orientation="v"),
+                legend={
+                    "x": 1.0,
+                    "xanchor": "left",
+                    "y": 0.0,
+                    "yanchor": "bottom",
+                    "itemsizing": "constant",
+                    "font": {"size": 16}
+                },
+                modebar={"orientation": "v"}
             )
-            fig._config = {
+            fw = go.FigureWidget(fig)
+            fw._config = (getattr(fw, "_config", {}) | {
                 "displayModeBar": bool(fs),
                 "displaylogo": False,
-                "responsive": True,
-            }
-            return fig
+                "responsive": True
+            })
+            return fw
 
         @output
         @render_widget
@@ -640,15 +547,15 @@ def instance():
             return ui.HTML(html)
 
         
-        def PlaceholderCodes(data, sentinels: Dict[str, List[Any]], float_eps: float = 1e-9, drop_geometry: bool = True, 
-        extrema: bool = True, case_sensitive: bool = False) -> Tuple[pd.DataFrame, Dict[int, str]]:
+        def PlaceholderCodes(data, sentinels: dict[str, list[any]], float_eps: float = 1e-9, drop_geometry: bool = True, 
+        extrema: bool = True, case_sensitive: bool = False) -> tuple[pd.DataFrame, dict[int, str]]:
             req(data is not None)
             if isinstance(data, pd.DataFrame):
                 df = data
             elif isinstance(data, Pxy):
                 df = data.to_native()
             else:
-                raise ValueError(f"Unknown dataset type supplied: {type(data)}")
+                raise TypeError(f"Unknown dataset type supplied: {type(data)}")
             if isinstance(df, gpd.GeoDataFrame) and drop_geometry:
                 geom_cols = [
                     c for c in df.columns
@@ -704,7 +611,7 @@ def instance():
                     elif dtype_key == "float":
                         try:
                             f = float(sent)
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             legend[k] = f"{dtype_key}: {sent}"
                             k += 1
                             continue
@@ -720,7 +627,7 @@ def instance():
                     elif dtype_key == "int":
                         try:
                             i = int(sent)
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             legend[k] = f"{dtype_key}: {sent}"
                             k += 1
                             continue
@@ -745,7 +652,7 @@ def instance():
 
 
         @this.record_code
-        def ResolvePlaceholders(data, sentinels: str = None, float_eps: float = 1e-9, extrema: bool = True, case_sensitive: bool = False, drop_geometry: bool = True): #TODO: get drop_geometry to do something
+        def ResolvePlaceholders(data, sentinels: str | None, float_eps: float = 1e-9, extrema: bool = True, case_sensitive: bool = False, drop_geometry: bool = True): #TODO: get drop_geometry to do something
             """
             Builds a Pandas data frame with the specified sentinels converted to the relevant missing value indictor.
             
@@ -789,7 +696,7 @@ def instance():
                                 mask = abs(s.astype("float64") - f) < float_eps
                                 this.log.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
                                 df.loc[mask,col] = pd.NA
-                        except Exception:
+                        except Exception:  # noqa: BLE001, S110
                             pass
                     elif vtype == "int":
                         try:
@@ -797,7 +704,7 @@ def instance():
                             if not extrema or (min(s) == i or max(s) == i):
                                 mask = (s == i) # works for pandas nullable Int* dtypes
                                 df.loc[mask,col] = pd.NA
-                        except Exception:
+                        except Exception:  # noqa: BLE001, S110
                             pass
                     elif vtype == "str":
                         if case_sensitive:
@@ -877,6 +784,7 @@ if Module.running_under_tests():
     app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
+    
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
     pxd = Pxy(_df = df, _name = "Ass2")
     this._imports.set(pxd)

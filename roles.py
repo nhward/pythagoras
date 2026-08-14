@@ -1,9 +1,12 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, Mapping, Set
-from enum import Enum
-import pandas as pd
+
 import json
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
+from enum import Enum
+
+import pandas as pd
+
 
 class Role(str, Enum):
     TARGET     = "target"
@@ -19,7 +22,7 @@ class Role(str, Enum):
     NONE       = "none"
 
     @classmethod
-    def from_value(cls, value: str) -> "Role":
+    def from_value(cls, value: str) -> Role:
         """
         Robust conversion from an arbitrary string to a Role.
 
@@ -30,7 +33,7 @@ class Role(str, Enum):
         if isinstance(value, Role):
             return value
         if not isinstance(value, str):
-            raise ValueError(f"Cannot convert {value!r} to Role")
+            raise TypeError(f"Cannot convert {value!r} to Role")
 
         normalized = value.strip().lower()
         for r in cls:
@@ -47,7 +50,7 @@ class RoleMap:
         In the MOST general case a variable might be allowed more than one role - this is what the class allows.
         We will use it assuming the a variable has only a single role ("none" being an allowed role)
     """
-    column_roles: Dict[str, Set[Role]] = field(default_factory=dict)
+    column_roles: dict[str, set[Role]] = field(default_factory=dict)
 
     # --- basic mutation -------------------------------------------------
     def __str___(self):
@@ -104,6 +107,12 @@ class RoleMap:
             })
         return pd.DataFrame(rows)
 
+    def rename_column(self, from_: str, to_: str):
+        if from_ == to_: 
+            return
+        Xroles = self.column_roles.pop(from_)
+        self.column_roles[to_] = Xroles
+
     def set_roles(self, column: str, roles: Iterable[Role]) -> None:
         """Replace all roles for a column."""
         self.column_roles[column] = {Role.from_value(r) for r in roles}
@@ -137,11 +146,11 @@ class RoleMap:
 
     # --- queries --------------------------------------------------------
 
-    def roles_for(self, column: str) -> Set[Role]:
+    def roles_for(self, column: str) -> set[Role]:
         """Return the set of roles (possibly empty) for a column."""
         return set(self.column_roles.get(column, set()))
 
-    def columns_with_role(self, role: Role) -> Set[str]:
+    def columns_with_role(self, role: Role) -> set[str]:
         """Return all columns that have a given role."""
         role = Role.from_value(role)
         return {col for col, roles in self.column_roles.items() if role in roles}
@@ -154,7 +163,7 @@ class RoleMap:
     # --- (de)serialisation ---------------------------------------------
 
     @classmethod
-    def from_primitive(cls, data: Mapping[str, Iterable[str]]) -> "RoleMap":
+    def from_primitive(cls, data: Mapping[str, Iterable[str]]) -> RoleMap:
         """
         Build a RoleMap from a mapping of:
             {role_name: [column_name, ...]}
@@ -185,12 +194,13 @@ class RoleMap:
 
 
     @classmethod
-    def from_json(cls, data: str | bytes) -> "RoleMap":
+    def from_json(cls, data: str | bytes) -> RoleMap:
         """
         Deserialize JSON string into a RoleMap.
         """
         parsed = json.loads(data)
         return cls.from_primitive(parsed)
+
 
 
     

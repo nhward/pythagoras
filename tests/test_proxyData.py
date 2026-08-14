@@ -1,7 +1,9 @@
-import pytest  # noqa: F401
 import pandas as pd
+import pytest
+
 import proxyData as pxd
 from roles import Role
+
 
 def _is_strictly_increasing(seq):
     """Adjacent-pairs order check (backend-agnostic)."""

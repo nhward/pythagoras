@@ -1,13 +1,14 @@
-import pytest
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import pytest
 
 # Ensure app root is importable when pytest is run outside the IDE
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from roles import RoleMap, Role  # noqa: E402
+from roles import Role, RoleMap
 
 
 @pytest.mark.unit

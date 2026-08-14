@@ -1,8 +1,23 @@
-/* Styles for CSS
- Avoid #id entries as the actual ids will have namespaces attached
-*/
+/* ---------- Shared values ---------- */
 
-/* Flipping */
+:root {
+    --py-table-row-hover: #f0f1cc;
+    --py-table-cell-hover: #d4d4b8;
+}
+
+/* Tighten the navbar  */
+body.bslib-gap-spacing {
+    gap: 0.25rem;
+}
+
+/* ---------- Visibility ---------- */
+
+.hidden {
+    display: none !important;
+}
+
+/* ---------- Flippable content ---------- */
+
 .flip-container {
     perspective: 1000px;
 }
@@ -15,325 +30,375 @@
     transition: transform 1.3s ease-in-out;
 }
 
-/* The actual flip */
 .flip-container.flipped .flippable {
     transform: rotateY(180deg);
 }
 
-/* Front and back faces */
 .front,
 .back {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
-
-    /* Hide reverse side */
     backface-visibility: hidden;
-    -webkit-backface-visibility: hidden; /* Safari */
+    -webkit-backface-visibility: hidden;
 }
 
-/* Front is normally facing */
 .front {
-    transform: rotateY(0deg);
     z-index: 2;
+    transform: rotateY(0);
 }
 
-/* Back is rotated */
 .back {
-    transform: rotateY(180deg);
     z-index: 1;
+    transform: rotateY(180deg);
 }
 
+/* ---------- Cards and fullscreen ---------- */
 
-
-
-/* Card hovering events */
-.hover-card { 
-  position: relative; 
+.bslib-card,
+.card {
+    position: relative;
+    overflow: visible;
 }
 
-/* Default: button always visible when tour is running */
-.hover-card.tour-running .hover-btn {
-  visibility: visible !important;
+.card {
+    outline: 1px solid grey;
 }
 
-/* When no tour is running, hide by default, show only on hover */
-.hover-card:not(.tour-running) .hover-btn {
-  visibility: hidden;
+.card.shadow {
+    box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
 }
 
-.hover-card:not(.tour-running):hover .hover-btn {
-  visibility: visible;
-}
-
-/* Table header alignment */
-table.dataframe th {
-    text-align: left;   /* headers */
-}
-table.dataframe td {
-    text-align: left;   /* data cells */
-}
-
-/* stops modal windows being behind the "fullscreen" */
-div#shiny-modal-wrapper {
-    z-index: 10000 !important; position: absolute;
+.card.fullscreen-active {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    width: 100vw;
+    height: 100vh !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border-radius: 0;
+    transition: all 0.5s ease;
 }
 
 .card.fullscreen-active .card-body {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding: 2rem;  /* adds space *inside* */
+    padding: 2rem;
 }
 
-/* Footer should stick to bottom */
 .card.fullscreen-active .card-footer {
     flex-shrink: 0;
     margin-top: 0;
-    padding: 2rem;
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+    padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
     border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.fullscreen-active {
-    height: 98% !important;
-    max-height: none !important;
-    min-height: none !important;
-}
-
-.hidden { 
-    display: none !important; 
-}
-
-.card { 
-    outline: 1px solid grey; 
-}
-
-.card.shadow { 
-    box-shadow: 0 4px 8px 0 rgba(50,50,50,.8) !important; 
-}
-
-
-/* Sortable */
-.drag-ghost { 
-    opacity: 0.5; 
-}
-
-/* .cards-grid { 
-    display: grid; gap: 12px; 
-} or flex */
-
-/* Make the handle easy to hit */
-.drag-handle {
-    display: inline-flex;        /* ensure it has a box */
-    align-items: center;
-    padding: 0 .4rem;
-    cursor: grab;                /* modern */
-    cursor: -webkit-grab;        /* Safari fallback */
-    user-select: none;
-    touch-action: none;          /* avoid touch scrolling instead of dragging */
-}
-
-.drag-handle:active,
-
-.sortable-chosen .drag-handle,
-
-.sortable-drag .drag-handle {
-    cursor: grabbing;
-    cursor: -webkit-grabbing;
-}
-/* If your handle contains an icon/text, ensure the cursor stays the same over children */
-.drag-handle, .drag-handle * { 
-    cursor: inherit; 
-}
-
-/* Dragable protusion */
-/* Let the tab draw outside the card */
-/* be specific so your rule wins */
-.bslib-card, .card { 
-    position: relative; 
-    overflow: visible; 
-}
-
-/* If your cards are in a grid, give them a bit more gap so tabs don't collide */
-/* .cards-grid { 
-    display: grid; 
-    gap: 14px; 
-} */
-
-/* The protruding tab */
-.drag-tab {
-    position: absolute !important; 
-    top: 50%;
-    left: 0;                         /* anchor on the left edge */
-    transform: translate(-50%, -50%);/* push half its width outside */
-    width: 28px;
-    height: 48px;
-    border-radius: 999px;            /* pill */
-    background: #f3f4f6;             /* neutral */
-    box-shadow: 0 2px 6px rgba(0,0,0,.18);
-    border: 1px solid rgba(0,0,0,.06);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    cursor: grab;
-    cursor: -webkit-grab;
-    outline: 1px solid grey;
-    touch-action: none; 
-    user-select: none;
-}
-
-/* “Grip” dots (pure CSS) */
-.drag-tab::before {
-    content: "";
-    width: 10px;
-    height: 20px;
-    opacity: .55;
-    background:
-        radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
-        radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
-}
-
-/* While dragging, show 'grabbing' and mute hover stuff if you like */
-.dragging .drag-tab,
-.drag-tab:active {
-    cursor: grabbing;
-    cursor: -webkit-grabbing;
-    box-shadow: 0 4px 10px rgba(0,0,0,.22);
-}
-
-/* Optional: hide the tab on narrow screens */
-@media (max-width: 600px) {
-    .drag-tab { 
-        display: none; 
-    }
-}
-
-/* Hide the drag handle when the card is fullscreen */
 .card.fullscreen-active .drag-handle {
     display: none !important;
 }
 
-/* Header wrapping, if wanted */
-shiny-data-frame .shiny-data-grid.shiny-data-grid-table > table > thead > tr > th {
-    white-space: normal !important;
-    overflow: visible !important;
+/* Keep modal dialogs above fullscreen cards. */
+#shiny-modal-wrapper {
+    position: absolute;
+    z-index: 10000 !important;
 }
 
-shiny-data-frame .shiny-data-grid.shiny-data-grid-table > table > thead > tr > th > div {
-    white-space: pre-line !important;
-    line-height: 1.2;
-}
+/* ---------- Hover controls ---------- */
 
-/* Zebra striping: apply to CELLS, not rows */
-.table tbody tr:nth-of-type(odd) > * {
-/* shiny-data-frame .shiny-data-grid.shiny-data-grid-table > table > tbody > tr:nth-of-type(odd) > * { */
-    background-color: #dce4ed !important;
-}
-
-.table tbody tr:nth-of-type(even) > *,
-shiny-data-frame .shiny-data-grid.shiny-data-grid-table > table > tbody > tr:nth-of-type(even) > * {
-    background-color: #ffffff !important;
-}
-
-/* Cell hover: reveal full text, but do not fight row hover too much */
-.table tbody tr:hover > td:hover,
-table.dataframe.table.shiny-table tbody tr:hover > td:hover,
-table.datagrid.table.shiny-datagrid-table tbody tr:hover > td:hover,
-shiny-data-frame .shiny-data-grid.shiny-data-grid-table > table > tbody > tr:hover > td:hover {
-    overflow: visible;
-    white-space: normal;
+.hover-card {
     position: relative;
-    z-index: 10;
-    background-color: #d4d4b8 !important;
 }
 
-/* Row hover: again, apply to CELLS */
-/* Hover overrides striping */
-.table tbody tr:hover > * ,
-.dataTable tbody tr:hover,
-table.dataframe.table.shiny-table tbody tr:hover > td,
-sshiny-data-frame .shiny-data-grid.shiny-data-grid-table > table > tbody > tr:hover > td {
-    background-color: #f0f1cc !important;
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+    visibility: visible !important;
 }
 
-/* Compact styling */
-table.dataframe.table.shiny-table th,
-table.dataframe.table.shiny-table td {
+.hover-card:not(.tour-running) .hover-btn {
+    visibility: hidden;
+}
+
+/* ---------- Sortable cards ---------- */
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+    margin: 0 auto;
+    gap: 0.5rem;
+}
+
+.drag-ghost {
+    opacity: 0.5;
+}
+
+.drag-handle {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.4rem;
+    cursor: grab;
+    cursor: -webkit-grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+}
+
+.drag-handle * {
+    cursor: inherit;
+}
+
+.drag-tab {
+    position: absolute !important;
+    top: 50%;
+    left: 0;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 48px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    outline: 1px solid grey;
+    background: #f3f4f6;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    cursor: grab;
+    cursor: -webkit-grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.drag-tab::before {
+    width: 10px;
+    height: 20px;
+    background:
+        radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+        radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+    opacity: 0.55;
+    content: "";
+}
+
+.dragging .drag-tab,
+.drag-tab:active {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+}
+
+@media (max-width: 600px) {
+    .drag-tab {
+        display: none;
+    }
+}
+
+/* ---------- Tables, DataTables, and DataGrids ---------- */
+
+/*
+ * Shared table selector:
+ *   - .table covers ordinary Bootstrap tables.
+ *   - table.dataframe covers pandas/Shiny table output.
+ *   - shiny-data-frame .shiny-data-grid > table covers both render.DataTable and render.DataGrid.
+ */
+
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
     max-width: 180px;
-    white-space: nowrap;
+    padding: 0.2rem 0.4rem;
     overflow: hidden;
+    line-height: 1.2;
+    text-align: left;
     text-overflow: ellipsis;
     vertical-align: middle;
-    padding: 0.2rem 0.4rem;
+    white-space: nowrap;
+}
+
+/* Wrap headings and preserve explicit newlines in column names. */
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+    overflow: visible !important;
+    white-space: normal !important;
+}
+
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
     line-height: 1.2;
+    white-space: pre-line !important;
+}
+
+/* Ordinary tables and Shiny DataTable/DataGrid tables */
+:is(
+    shiny-data-frame .shiny-data-grid table
+) {
+    border-top: 1px solid var(--bs-table-border-color) !important;
+    border-bottom: 1px solid var(--bs-table-border-color) !important;
+    border-collapse: collapse;
+}
+
+/* Separator between header and body */
+:is(
+    shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+    border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+/* Keep even rows neutral across all table implementations. */
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+    background-color: var(--bs-body-bg, #fff) !important;
+}
+
+/* Row hover overrides striping. */
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+    background-color: var(--py-table-row-hover) !important;
+}
+
+/* Reveal a truncated cell when it is hovered. */
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+    position: relative;
+    z-index: 10;
+    overflow: visible;
+    background-color: var(--py-table-cell-hover) !important;
+    white-space: normal;
+}
+
+/* Border at top of table */
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+    border-top: 1px solid #000 !important;
+}
+
+/* Border at bottom of header area, including any filter row */
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+    border-bottom: 1px solid #000 !important;
+}
+
+/* Border at bottom of table */
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+    border-bottom: 1px solid #000 !important;
 }
 
 
-/* overlay fullscreen style */
-.card.fullscreen-active {
-    position: fixed;
-    inset: 0;               /* top/right/bottom/left: 0 */
-    z-index: 1050;          /* above app chrome */
-    margin: 0 !important;
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-    transition: all 0.5s ease;
+/* Keeping div's controls on a single row */
+.across-row{
+    display:flex;
+    align-items:end;
+    gap:.5rem
+}
+.across-row .shiny-input-container{
+    flex:1
+}
+.across-row .btn{
+    flex:none;
+    margin-bottom:0
 }
 
-body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
-
-/* When dragging, stop any text selection */
-.dragging, .dragging * {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  user-select: none;
+/* Role drag 'n drop */
+.roles-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(11, minmax(200px, 1fr));
+    gap: 1rem;
+    width: 100%;
+    overflow-x: auto;
+    min-width: 0;
+}
+.roles-grid > * {
+    min-width: 0;
+}
+.role-box {
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
+    padding: 0.75rem;
+    min-height: 315px;
+    background: #d5e6f8;
+    width: 100%;
+    min-width: 0;
+}
+.role-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    min-width: 0;
+}
+.role-list {
+    min-height: 220px;
+    padding: 0.25rem;
+    border: 1px dashed #c7ced6;
+    border-radius: 8px;
+    background: white;
+    width: 100%;
+    min-width: 0;
+    overflow-y: auto;
+}
+.var-chip {
+    border: 1px solid #c7ced6;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    margin: 0.35rem 0;
+    background: #d0ddf6;
+    cursor: grab;
+    user-select: none;
+    width: 100%;
+    min-width: 0;
+}
+.ghost {
+    opacity: 0.4;
+}
+.chosen {
+    background: #dce9ff;
 }
 
-/* Subtle pulse outline (safe, low motion) */
-@keyframes pulse-outline {
-  0%   { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
-  70%  { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
-  100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+/* shinyfile button to primary */ 
+span.btn.btn-default.btn-file:has(.shiny-input-file) {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
 }
-.card.animate-highlight {
-  animation: pulse-outline 700ms ease-out;
-}
-
-/* Jello-ish wobble (more noticeable) */
-@keyframes jello {
-  0%   { transform: scale3d(1, 1, 1); }
-  30%  { transform: scale3d(1.07, 0.93, 1); }
-  45%  { transform: scale3d(0.95, 1.05, 1); }
-  60%  { transform: scale3d(1.03, 0.97, 1); }
-  75%  { transform: scale3d(0.99, 1.01, 1); }
-  100% { transform: scale3d(1, 1, 1); }
-}
-.card.animate-jello {
-    animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
-    will-change: transform; /* smoother */
-}
-
-/* Accessibility: honor reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .card.animate-jello { animation: none; }
-    .card.animate-highlight { animation-duration: 300ms; }
-}
-
-/* move Plotly modebar slightly down because of legend title */
-#dataClean-AllChart .modebar {
-    top: 30px !important;
-}
-
-
-/* Increase progress-bar height and vertically center text */
-.progress-bar {
-    height: 1rem !important;
-}
-
 
 /* Inline checkbox-groups → toggle-pill buttons */
 .shiny-input-checkboxgroup.shiny-input-container-inline .shiny-options-group {
@@ -401,120 +466,3 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 
 /* Tighten legacy BS3 label spacing */
 .shiny-input-checkboxgroup .shiny-options-group .checkbox label { margin-bottom: 0; }
-
-
-/* role drag 'n drop */
-.roles-layout {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 1rem;
-    align-items: start;
-    width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-}
-.roles-grid {
-    display: grid;
-    grid-template-columns: repeat(11, minmax(200px, 1fr));
-    gap: 1rem;
-    width: 100%;
-    overflow-x: auto;
-    min-width: 0;
-}
-.roles-grid > * {
-    min-width: 0;
-}
-.role-box {
-    border: 1px solid #d0d7de;
-    border-radius: 10px;
-    padding: 0.75rem;
-    min-height: 315px;
-    background: #d5e6f8;
-    width: 100%;
-    min-width: 0;
-}
-.role-title {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    width: 100%;
-    min-width: 0;
-}
-.role-list {
-    min-height: 220px;
-    padding: 0.25rem;
-    border: 1px dashed #c7ced6;
-    border-radius: 8px;
-    background: white;
-    width: 100%;
-    min-width: 0;
-    overflow-y: auto;
-}
-.var-chip {
-    border: 1px solid #c7ced6;
-    border-radius: 999px;
-    padding: 0.35rem 0.7rem;
-    margin: 0.35rem 0;
-    background: #d0ddf6;
-    cursor: grab;
-    user-select: none;
-    width: 100%;
-    min-width: 0;
-}
-.ghost {
-    opacity: 0.4;
-}
-.chosen {
-    background: #dce9ff;
-}
-
-/* Selectize styling */
-.selectize-control.multi .selectize-input > .item {
-    background-color: #dce6f2;
-    color: #1f3b5c;
-    border-radius: 999px;
-    padding: 2px 10px;
-    margin: 2px;
-    border: 1px solid #83a0cd;
-}
-.selectize-dropdown .option {
-    border-radius: 6px;
-    padding: 6px 10px;
-}
-.selectize-dropdown .option.active {
-    background-color: #dce6f2;
-}
-
-/* Sidebar styling */
-.bslib-sidebar-layout.sidebar-collapsed>.main,
-.bslib-sidebar-layout.sidebar-right>.main {
-    padding: 0px 0px 0px 0px !important;
-}
-
-.bslib-sidebar-layout.sidebar-right>.sidebar {
-    padding-top: 20px;
-    padding-left: 12px;
-}
-
-.bslib-card .card-header {
-    padding-right: 40px !important;
-}
-
-/* cards grid */
-.cards-grid {
-    display: grid;
-
-    margin: 0 auto;
-    gap: 0.5rem;
-}
-
-/* shinyfile button to primary */ 
-span.btn.btn-default.btn-file:has(.shiny-input-file) {
-    background-color: var(--bs-primary);
-    border-color: var(--bs-primary);
-    color: white;
-}
-
-/* Tighten the navbar  */
-body.bslib-gap-spacing {
-    gap: 0.25rem;
-}

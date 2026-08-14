@@ -1,20 +1,24 @@
-from pathlib import Path
 import sys
-import pandas as pd  # needed for test / solo modes
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shiny import ui, render, req  # noqa: E402
-from module import Module  # noqa: E402
-from card import Card  # noqa: E402
-from roles import Role, RoleMap  # noqa: E402
-from faicons import icon_svg as icon  # noqa: E402
-from proxyData import ProxyData as Pxy  # noqa: E402
+import pandas as pd  # needed for test / solo modes
+from faicons import icon_svg as icon
+from shiny import render, req, ui
+
+from card import Card
+from module import Module
+from proxyData import ProxyData as Pxy
+from roles import Role, RoleMap
 
 
 def instance():
+    """
+    Creates an instance of Card configured as "roleAssign".
+    """
     this = Card(name = "roleAssign", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Role Assignment"
     this.description = "This card enables the variables to be assigned to roles."
@@ -118,10 +122,15 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
  
+        @this.throttle(2)
+        @this.suspendable(calc = True)
+        def MaxObs():
+            return 10**input.MaxObs()
+
         @this.suspendable(calc = True)
         def PreparedData():
             pxd = incomingProxyData()
-            return pxd.sample(n = 10**input.MaxObs(), mode = "random", keep_geometry = True)
+            return pxd.sample(n = MaxObs(), mode = "random", keep_geometry = True)
             
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
@@ -137,7 +146,7 @@ def instance():
                         pxd = PreparedData()
                         rm = pxd.role_map.to_primitive()
                         await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
-                except (Exception):
+                except (Exception):  # noqa: BLE001
                     pxd = PreparedData()
                     rm = pxd.role_map.to_primitive()
                     await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
@@ -177,9 +186,9 @@ def instance():
 
         @this.suspendable()
         def allowAutoCommit():
-            if not this._exports.is_set() and this._imports.is_set():
+            if not this._exports.is_set() and this._imports.is_set():  # noqa: SIM114
                 this._exports.set(this._imports.get())
-            elif this._imports.is_set() and this._imports.get().role_map == this._exports().role_map:
+            elif this._imports.is_set() and this._imports.get().role_map == this._exports.get().role_map:
                 this._exports.set(this._imports.get())
 
         @output

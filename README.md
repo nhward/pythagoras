@@ -159,6 +159,7 @@ Cards (available and planned)
 * [Data importation](./markdown/dataImport.md) 
 * [Data tabulation](./markdown/dataTable.md)
 * [Placeholder replacement](./markdown/dataPlaceholders.md)
+* [Variable modification](./markdown/varModify.md)
 * [Role assignment](./markdown/roleAssign.md)
 
 

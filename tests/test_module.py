@@ -1,19 +1,16 @@
-import shutil
 import json
-import textwrap
-import pytest 
-from shiny import ui, App, reactive
-import app
-from pathlib import Path
 import sys
-from app import application
+from pathlib import Path
+
+import pytest
+from shiny import reactive, ui
 
 # Ensure app root is importable when pytest is run outside the IDE
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from module import Module  # noqa: E402
+from module import Module
 
 
 # -------------------------------------------------------------------
@@ -106,7 +103,7 @@ def test_close_swallows_reset_errors(monkeypatch, capsys):
     # Should not raise
     m.close()
     # Optional: we know warning() is used, but we don't assert on its text here
-    out, err = capsys.readouterr()
+    _out, _err = capsys.readouterr()
     # Just check test runs to completion
 
 
@@ -328,55 +325,3 @@ def test_throttle_wraps_callable_without_raising():
         result = compute()
     assert result == 42
     assert calls["count"] == 1
-
-
-# -------------------------------------------------------------------
-# create_cards: dynamic import from folder
-# -------------------------------------------------------------------
-@pytest.mark.unit
-def test_create_cards_imports_and_instantiates():
-    cards_dir = Path("cards2")
-    cards_dir.mkdir(exist_ok=True)
-    card_path = cards_dir / "temp.py"
-    card_code = textwrap.dedent(
-        """
-        from module import Module
-        from shiny import ui
-
-        class MyCard(Module):
-            def call_ui(self):
-                return ui.div("card_ui")
-
-            def call_server(self, input, output, session):
-                pass
-
-        def instance():
-            return MyCard("mycard")
-        """
-    )
-    card_path.write_text(card_code, encoding="utf-8")
-    imported = app.create_cards(folder=cards_dir)
-    assert len(imported) == 1
-    ns, card = next(iter(imported.items()))
-    assert isinstance(card, Module)
-    assert card.name == "mycard"
-    assert card.namespace in Module.Instances
-    shutil.rmtree(cards_dir)
-
-# -------------------------------------------------------------------
-# app(): building the Shiny app skeleton
-# -------------------------------------------------------------------
-@pytest.mark.unit
-def test_app_builds_shiny_app():
-    m1 = DummyModule("card1")
-    m2 = DummyModule("card2")
-    modules = {
-        m1.namespace: m1,
-        m2.namespace: m2,
-    }
-    appl = application(modules)
-    assert isinstance(appl, App)
-    # ui should contain both cards
-    html = str(appl.ui)
-    assert "Module: card1" in html
-    assert "Module: card2" in html

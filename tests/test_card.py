@@ -1,14 +1,15 @@
-import pytest
-# import asyncio
-# from unittest.mock import AsyncMock
-
-from pathlib import Path
+#import asyncio  # noqa: F401
 import sys
+from pathlib import Path
+
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from card import Card  # noqa: E402
+from card import Card
+
 
 #############################
 # Fixtures
