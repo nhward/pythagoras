@@ -20,7 +20,7 @@
         {"module": "RoleAssignment"},
         {"module": "DataPlaceholders"},
         {"module": "VarModify"},
-        {"module": "DataTabulation"}
+        {"module": "VarDissimilar"}
       ]
     },
 

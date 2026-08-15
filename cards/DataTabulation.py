@@ -30,7 +30,13 @@ def instance():
     this.description = "This card enables the data to be listed and searched."
     
     def front():
-        return ui.output_ui(id = "DataTable") # Using dynamic data tables to avoid "sortable" problem of multiple tables
+        return ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
+            id = "DataTable",
+            title = "A quick view", 
+            guide = this,
+            text = 'A top and bottom sample of the data.',
+            position = "left"
+        ) 
     
     this.front = front
 

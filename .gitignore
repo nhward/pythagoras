@@ -3,7 +3,7 @@
 .pytest_cache/
 __pycache__/
 *.py[cod]
-markdown/markdown/*.md
+markdown/old/*.*
 markdown/*.html
 .venv/
 venv/
