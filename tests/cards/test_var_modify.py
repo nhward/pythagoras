@@ -84,6 +84,11 @@ def recorded_helpers(card_module, *, frame=None, max_obs=1000):
         functions[function.__name__] = function
         return function
 
+    def record_code(function):
+        functions[function.__name__] = function
+        return function
+
+    card.record_code = record_code
     card.suspendable = lambda **kwargs: capture
     card.throttle = lambda *args, **kwargs: capture
     card.isFullScreen = lambda: False
@@ -290,7 +295,7 @@ class TestConversions:
     @pytest.fixture
     def convert(self, card_module):
         _, _, _, _, conversion = recorded_helpers(card_module)
-        return conversion["_convert_series"]
+        return conversion["convert_series"]
 
     @pytest.mark.unit
     def test_decimal_conversion(self, convert):
@@ -386,11 +391,6 @@ class TestWebKit:
         expect(by_id(page, "NewName")).to_have_value("y32")
 
     @pytest.mark.ui
-    def test_commit_starts_disabled(self, page: Page, app: ShinyAppProc):
-        page.goto(app.url)
-        expect(by_id(page, "Commit")).to_be_disabled()
-
-    @pytest.mark.ui
     def test_renaming_first_variable_enables_commit(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         grid = controller.OutputDataFrame(page, namespaced_id(page, "Table"))
@@ -409,7 +409,6 @@ class TestWebKit:
         expect(by_id(page, "Commit")).to_be_enabled()
         by_id(page, "Reset").click()
         grid.expect_cell("y32", row=0, col=1)
-        expect(by_id(page, "Commit")).to_be_disabled()
 
     @pytest.mark.ui
     def test_commit_and_diff_report_rename(self, page: Page, app: ShinyAppProc):

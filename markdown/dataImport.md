@@ -2,13 +2,16 @@
 
 All analysis or modeling tasks begin with loading some raw data. The data is expected to be in a rows (observations) and columns (variables) table, or at least be able to be transformed into tabular data.
 
-Data can be imported through any of three importation styles:
+Data can be imported through any of three importation styles. Each is implemented on a tab dialogue.
 
   1. User's local file system
   1. Dataset located within certain python packages
   1. URL resource
+  1. [UC Irvine](https://archive.ics.uci.edu/datasets) 
+  
+The UC Irwine webpage enable datasets to be searched and filtered as a prelude to their selection here.
 
-In this card, we assume that the data is addressed as a single file. The importation of files and URLs supports a variety of file types. These include, but are not limited to, the following file extensions:
+The importation of files and URLs supports a variety of file types. These include, but are not limited to, the following file extensions:
 
 - CSV: A comma, semi-colon, or tab-delimited file.
 - XLS: A spreadsheet worksheet.

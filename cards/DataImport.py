@@ -33,7 +33,6 @@ def capture_output(function, *args, **kwargs) -> str:
 # TODO: cleanup exception handling
 # TODO: Need alt URL deafult
 # TODO: allow URL load to unzip zip files (unlikely to resolve multiple files except shp,shx,prj)
-# TODO: use the ucmi repo to access tabular data via an extra tab
 
 
 def instance():
@@ -65,7 +64,7 @@ def instance():
                 return rd.data
             # if it didn't have .data for some reason, try to return rd itself
             return rd
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             last_exc = e
         # 2) Try built-in statsmodels dataset modules (e.g., sm.datasets.co2)
         try:
@@ -93,7 +92,7 @@ def instance():
                 if hasattr(mod_obj, "load"):
                     loaded = mod_obj.load()
                     return getattr(loaded, "data", loaded)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             last_exc = e
         # Give a helpful message including the last exception
         raise ValueError(
@@ -182,10 +181,10 @@ def instance():
             ),
             ui.nav_panel(
                 "UC Irvine",
-                ui.tags.br(),
+                ui.tags.a("Visit Official Site", href="https://archive.ics.uci.edu/datasets", target="_blank"),
                 ui.input_selectize(id = "UciDataset", label = "UCI dataset", multiple = False, width = "80%", choices = UciChoices(), 
                     guide = this, position = "bottom",
-                    text = 'The available UCI datasets ...'),  #TODO complete text
+                    text = 'The UCI Machine Learning Repository is a collection of databases that are used by the machine learning community for the analysis of machine learning algorithms.'),
                 ui.input_text(id = "IName", label = "Short name", guide = this, position = "bottom",
                     text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the dataset ID. Each of the importation styles has this field.')
             ),
@@ -639,7 +638,7 @@ def instance():
                                 await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
                         except SilentException:
                             message = ""
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001
                             message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
                             butt_disabled = True
             elif input.Navset() == "File based":
@@ -657,7 +656,7 @@ def instance():
                         else:
                             message = ui.span("File import ready ", text, class_ = "text-center text-primary")
                             await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
                     butt_disabled = True
             elif input.Navset() == "Dataset based":
@@ -693,7 +692,7 @@ def instance():
                     butt_disabled = True
                 else:
                     try:
-                        d = GetPxyData() #TODO
+                        d = GetPxyData()
                         if d is None:
                             message = ui.span("No dataset chosen yet", class_ = "text-center text-warning")
                             butt_disabled = True
