@@ -1,0 +1,73 @@
+---
+format:
+  html:
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+---
+
+#### 🧭 Introduction
+
+This card focuses on differentiating between **Random** and **Patterned** causes of missingness. The following possible assesments are calculated based upon a decision tree trying to predict missingness:
+
+- Random - Non-Random hypothesis can be rejected
+- Uncertain - The hypothesis test is ambiguous
+- Patterned - Non-Random hypothesis cannot be rejected
+- Insufficient data - Statistical test is meaningless
+
+The front face is a set of tabs that each show a decision-tree chart that predicts missingness.
+
+<!-- See <a href="/markdown/MissingValues.html" target="_blank" rel="noopener noreferrer">here</a> for a background article on missing values. -->
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="MissingValues.html" title="Missing Values" loading="lazy"></iframe>
+</details>
+
+<style>
+.deep-dive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.deep-dive iframe {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 80vh;
+    margin-top: 1rem;
+    border: 0;
+}
+</style>
+
+#### 🔄 Flip side
+
+The back of the card reveals a table of predictors: those with missing values. Each row gives an assessment decision and the basis of that decision. The rows can be sorted into ascending p-value clicking the p-value header. 
+
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+#### 🎯 Goal
+
+1. _Primary:_ To identify predictors that have __patterned__ missingness. Their missing values should be imputed rather than removing the observations (partial deletion). Deleting observations with patterned missingness will produce non-random omissions that are a potential cause of data bias. 
+1. _Secondary:_ To detect relationships that suggest an explanation and possibly a manual imputation for certain missing values. For example: _In a housing dataset, the category level of "house boat" might explain why the rateable-value variable is missing (manually set these to zero)._
+
+The actions implied by the different missingness causes are:
+
+-   __Explainable:__ Design manual-imputation strategies for some variables. For example:  
+_Blood-test results can be missing because no diagnostic justification for the test has yet arisen. Were such tests undertaken unnecessarily they would usually yield results in the normal range (rather than in the extreme range). A possible manual imputation might involve substituting a typically "Normal" result for each missing test. Substituting a mean result would be a __poor__ choice._
+
+-   __Patterned:__ Design statistical-imputation strategies. For example:  
+_The absence of clinical notes is often caused by periods of high workload and emergencies. This is not random and the missing notes might best be estimated by what the subsequent notes._
+
+-   __Random:__ Design partial-deletion or statistical-imputation strategies. For example:  
+_Instrument failures prevent the recording of routine blood pressure readings. These missed readings can be safely ignored as they appear to occur randomly._
+
+***
+
+All cards downstream of this card will receive any changes enacted by this card.

@@ -160,7 +160,7 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata(self, card_module):
         card = card_module.this
-        assert card.name == "dataImport"
+        assert card.name == "DataImport"
         assert card.long_name == "Data import"
         assert "ingestion of data" in card.description
         assert card.mutable

@@ -80,35 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
         el._animationCleanupTimer = setTimeout(cleanup, delay + duration + 100);
     });
 
-    // /* animate element e.g. shakeX or bounce */
-    // Shiny?.addCustomMessageHandler?.("animate", function(opts) {
-    //     console.log("animation running");
-    //     opts = opts || {};
-    //     const el = document.getElementById(opts.id);
-    //     if (!el) {
-    //         console.warn("animate element not found: ", opts.id);
-    //         return;
-    //     }
-    //     const animClass = `animate__${opts.animation}`;
-    //     const delay = opts.delay ?? 0;
-    //     const duration = opts.duration ?? 1000;
-    //     el.classList.remove("animate__animated", animClass);
-    //     void el.offsetWidth;  //reflow
-    //     el.style.setProperty("--animate-delay", `${delay}ms`);
-    //     el.style.setProperty("--animate-duration", `${duration}ms`);
-    //     el.classList.add("animate__animated", animClass);
-    //     // optional: remove the animation class after animation ends (so you can re-trigger easily)
-    //     function cleanup() {
-    //         // cleanup any inline overrides we applied
-    //         el.style.removeProperty("--animate-delay");
-    //         el.style.removeProperty("--animate-duration");
-    //         el.classList.remove("animate__animated", animClass);
-    //     } 
-    //     el.addEventListener("animationend", cleanup, { once: true });
-    //     el._animationCleanupTimer = setTimeout(cleanup, delay + duration + 100);
-    // });
-
-
+    
     // Hide or show a card (or any element)
     Shiny?.addCustomMessageHandler?.("toggle_visibility", function(opts) {
         console.log(`toggle_visibility running for ${opts.id}`);

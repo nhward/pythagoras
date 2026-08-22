@@ -39,7 +39,7 @@ def instance():
     """
     Creates an instance of Card configured as "dataImport".
     """
-    this = Card(name = "dataImport", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
+    this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Data import"
     this.description = "This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
     this.requires_import = False

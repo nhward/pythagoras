@@ -25,7 +25,7 @@ def instance():
     """
     Creates an instance of Card configured as "dataTable".
     """
-    this = Card(name = "dataTable", mutable = False) # "mutable" means it can change the pxd - probably with a commit button
+    this = Card(file=__file__, mutable=False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Data tabulation"
     this.description = "This card enables the data to be listed and searched."
     
@@ -139,20 +139,24 @@ def instance():
         @this.suspendable(calc = True)
         @this.record_code
         def PreparedData():
-            """
-            Returns a Pandas DataFrame ready for Shiny DataTable:
-            - Convert to native
-            - Head/tail preview
-            - Geometries reformatted
-            - Numeric data rounded
-            """
             df = incomingProxyData() #Returns ProxyData
             if this.isFullScreen():
                 df = df.sample(n = MaxObs(), mode = "random", keep_geometry = True)
             else:
                 df = df.sample(n = 10, mode = "headtail", keep_geometry = True)
-            # materialize to native (richest form)
-            df = df.to_native() if hasattr(df, "to_native") else df
+            return df
+
+        @this.suspendable(calc = True)
+        @this.record_code
+        def CleanDf():
+            """
+            Returns a Pandas DataFrame ready for Shiny DataTable:
+            - Convert to native
+            - Geometries reformatted
+            - Numeric data rounded
+            """
+            px = PreparedData() #Returns ProxyData
+            df = px.to_native() if hasattr(px, "to_native") else px
             if hasattr(df, "to_pandas"):     # e.g., Polars
                 df = df.to_pandas()
             long_geom = not input.Bounded()
@@ -235,7 +239,7 @@ def instance():
         def DataTable2():
             req(PreparedData() is not None)
             full = this.isFullScreen()
-            return render.DataTable(PreparedData(), summary=full, filters=full, width="100%", height="98%")
+            return render.DataTable(CleanDf(), summary=full, filters=full, width="100%", height="98%")
 
         @output
         @render.download(filename=f"{this.namespace}_data.csv")

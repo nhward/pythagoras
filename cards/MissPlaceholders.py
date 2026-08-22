@@ -25,9 +25,9 @@ from proxyData import ProxyData as Pxy
 
 def instance():
     """
-    Creates an instance of Card configured as dataPlaceholders.
+    Creates an instance of Card configured as MissPlaceholders.
     """
-    this = Card(name = "dataPlaceholders", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
+    this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Missing value placeholders"
     this.description = "This card detects any potential missing-value placeholders and allows their replacement with NA."
 
@@ -59,7 +59,7 @@ def instance():
                 label = "Use a case-sensitive search", 
                 value = False,
                 guide = this,
-                text = 'Whether "N/A" different to "N/a", "n/a", "n/A".',
+                text = 'Whether "N/A" is different to "N/a", "n/a", "n/A".',
                 position = "left"),
             ui.input_selectize(
                 id = "NA_Integers", 
@@ -92,7 +92,15 @@ def instance():
                 label = "Only replace extreme numeric values (at minimum or maximum)", 
                 value = True,
                 guide = this,
-                text = 'Only replace numbers <em>provided</em> they correspond with the lowest or highest recorded values.',
+                text = """
+                Only replace numbers <em>provided</em> they correspond with the lowest or highest recorded values. When set ON, a numeric placeholder (e.g. -99) 
+                is only flagged if it sits at the edge of the observed distribution for that variable (i.e., equals the current minimum or maximum).
+                When OFF, any occurrence of the placeholder is matched regardless of position.
+                <br>Example: If a column’s observed range is −1000 … 1200<br>
+                -99 is inside the range → not flagged when `Replace extrema only` is ON.
+                <br>Example: If the range is −99 … 1200:<br>
+                -99 equals the minimum → is flagged when `Replace extrema only` is ON.  
+                """,
                 position = "left"),
             ui.input_selectize(
                 id = "NA_DateTime", 
@@ -203,19 +211,22 @@ def instance():
     
     this.back = back  ## The above "back" function must be assigned to the instance
 
-    def footer() -> ui.TagList:
+    def footer():
         """
         These ui elements appear in the footer of the card (but only on the front). 
         The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
         """
-        return ui.input_checkbox_group(
-            id = "Replace",
-            label = None,
-            choices=[],
-            inline=True,
-            guide = this, title = "Replace buttons", position = "top",
-            text = "Buttons for replacing placeholders by converting them to missing values. There is a button for each type of placeholder found. The changes can be reversed.",
-        )
+        return ui.div(
+            ui.input_checkbox_group(
+                id = "Replace",
+                label = None,
+                choices=[],
+                inline=True,
+                guide = this, title = "Replace buttons", position = "top",
+                text = "Buttons for replacing placeholders by converting them to missing values. There is a button for each type of placeholder found. The changes can be reversed."
+            ),
+            class_ = "vertically-scrollable-footer")
+
 
     this.footer = footer  ## The above "footer" function must be assigned to the instance
 
@@ -241,8 +252,7 @@ def instance():
         @this.suspendable(calc = True)
         @this.record_code
         def PreparedData():
-            d = incomingProxyData()
-            sample = d.sample(n = MaxObs(), mode = "random", keep_geometry = False)
+            sample = incomingProxyData().sample(n = MaxObs(), mode = "random", keep_geometry = False)
             return sample
 
 

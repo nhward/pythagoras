@@ -12,7 +12,7 @@
 ##    Optional footer
 ##    Standard card header controls:
 ##        Flip front/back
-##        Show information modal from markdown/{card_name}.md
+##        Show information modal from markdown/{card_name}.html
 ##        Start Shepherd guide
 ##        Show recorded code modal
 ##        Expand/contract card
@@ -41,19 +41,24 @@ from module import Module
 
 class Card(Module):
     
-    def __init__(self, name, long_name = None, allow_full_screen = True, mutable = False, *args, **kwargs): # will be inherited by child classes
-        super().__init__(*args, name=name, **kwargs)
+    def __init__(self, file, long_name = None, allow_full_screen = True, mutable = False, *args, **kwargs): # will be inherited by child classes
+        if file is None:
+            raise ValueError("Filename is required — stopping.")
+        name = Path(file).resolve().stem
+        super().__init__(name, *args, **kwargs)
+        self.file = file
         self.allow_full_screen = allow_full_screen
         self.mutable = mutable
         self.initially_hidden = False
         self.description = None
-        self.long_name = long_name or self.name
+        self.long_name = long_name
         self._front = None
         self._back = None
         self._settings = None
         self._footer = None
 
     max_height = Module.config.get("settings", {}).get("max_card_height")
+    SHADOW_PREFIX = "shadow__"
 
     def fetch(self, value):
         if value is None:
@@ -124,8 +129,9 @@ class Card(Module):
 
 
                 # Info button
-                file = Path(self.ROOT / "markdown" / f"{self.name}.md")
-                if not file.exists():
+                card_file = Path(self.file).resolve()
+                html_file = card_file.parents[1] / "markdown" / card_file.with_suffix(".html").name
+                if not html_file.exists():
                     info_button = None
                 else:
                     info_button = ui.input_action_button(
@@ -301,26 +307,18 @@ class Card(Module):
         return ui_cardfunc(id = self.namespace)
 
 
-    # # This needs to be replaced with a concrete implementation
-    # def server(self, input, output, session):
-    #     return None
-
     # Read markdown from a file 
     def information(self):
-        # Path to your markdown file
-        #import markdown
-
-        file = Path(self.ROOT / "markdown" / f"{self.name}.md")
-        try:
-            # Read the markdown content
-            with file.open(encoding="utf-8") as f:
-                text = f.read()
-            # Convert markdown to HTML - see the markdown extensions in use
-            # return ui.HTML(markdown.markdown(text, extensions=["extra", "tables", "fenced_code", "markdown_katex"]))
-            return ui.markdown(text)  # TODO check this change works okay - otherwise use commented-out line above
-        except Exception:  # noqa: BLE001
-            return None
-
+        card_file = Path(self.file).resolve()
+        html_file = card_file.parents[1] / "markdown" / card_file.with_suffix(".html").name
+        if html_file.exists():
+            try:
+                text = html_file.read_text(encoding="utf-8")
+                return text
+            except Exception:  # noqa: BLE001
+                return f"<br>Error reading {html_file} file"
+        else:
+            return f"<br>File {html_file} not found"
 
     def call_server(self, input, output, session):
 
@@ -350,11 +348,11 @@ class Card(Module):
             def show_info():
                 ui.modal_show(
                     ui.modal(
-                        # the following head_contents() 'seems' to be necessary to add here as modal documents do not reliably inherit from the main document
-                        ui.head_content(
-                            ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
-                            ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets
-                        ),
+                        # # the following head_contents() 'seems' to be necessary to add here as modal documents do not reliably inherit from the main document
+                        # ui.head_content(
+                        #     ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
+                        #     ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets
+                        # ),
                         ui.card(
                             ui.card_header(
                                 self.long_name,
@@ -363,7 +361,7 @@ class Card(Module):
                             ),
                             ui.card_body(
                                 self.description,
-                                self.information()
+                                ui.HTML(self.information())
                             )
                         ),
                         fade = True,
@@ -441,9 +439,6 @@ class Card(Module):
                 id = self.ns('Card')
                 self.reset()
                 ui.remove_ui(selector=f"#{id}")
-#TODO:          # async def after_flush():
-                #     await session.send_custom_message("UpdateCardOrder", None)
-                # session.on_flushed(after_flush, once=True)
 
             @self.suspendable(triggers=[input.CancelRemove])
             def _cancel():

@@ -24,6 +24,8 @@ dependencies = [
   "shinywidgets>=0.3.1",
   "xarray",
   "scipy>=1.10",
+  "mlxtend>=0.23",
+  "scikit-learn>=1.4",
 ]
 
 [project.scripts]

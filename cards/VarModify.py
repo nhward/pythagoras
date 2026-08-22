@@ -35,7 +35,7 @@ def instance():
     - expand delimiter-separated basket-like data into lists.
     """
 
-    this = Card(name="varModify", mutable=True)
+    this = Card(file=__file__, mutable=True)
     this.long_name = "Modification"
     this.description = "This card allows the basic modification of variables such as name, data-type, and cyclic-order ."
 

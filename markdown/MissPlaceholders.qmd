@@ -1,0 +1,56 @@
+---
+format:
+  html:
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+---
+
+#### 🧭 Introduction
+
+A Missingness Heat-map is a visual tool for exploring tabular data. It highlights missing values and also flags __candidate__ missing-value placeholders (e.g. -99, --, N/A).
+These candidates are configured in the sidebar and are typically data-type specific.
+	
+ > Placeholders = values used to stand in for “no data” when a value is required e.g. integers: -99, -999; floats: -99.0; strings: --, N/A; date-times: 0001-01-01.
+
+The any buttons in the footer allow any named placeholders to be converted to missing values throughout the dataset.
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="MissingValues.html" title="Missing Values" loading="lazy"></iframe>
+</details>
+
+<style>
+.deep-dive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.deep-dive iframe {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 80vh;
+    margin-top: 1rem;
+    border: 0;
+}
+</style>
+
+#### 🔄 Flip side
+
+The back of the card tabulates the count of each placeholder per variable.
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+#### 🎯 Goals
+
+ 1. _Primary:_ Help you verify whether candidate placeholders truly represent missingness (a domain-aware judgment).
+ 1. _Secondary:_ Make it easy to fix the data. For each detected placeholder, the card provides a button to replace those values with an unambiguous missing value. The chart and table refresh to verify the efficacy of the operation. 
+
+***
+All cards downstream of this card will receive any changes enacted by this card. At most, these changes will produce additional missing values. 

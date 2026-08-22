@@ -503,3 +503,131 @@ span.btn.btn-default.btn-file:has(.shiny-input-file) {
 .bslib-card .card-header {
     padding-right: 40px !important;
 }
+
+body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
+
+/* When dragging, stop any text selection */
+.dragging, .dragging * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Subtle pulse outline (safe, low motion) */
+@keyframes pulse-outline {
+  0%   { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+  70%  { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+  animation: pulse-outline 700ms ease-out;
+}
+
+/* Jello-ish wobble (more noticeable) */
+@keyframes jello {
+  0%   { transform: scale3d(1, 1, 1); }
+  30%  { transform: scale3d(1.07, 0.93, 1); }
+  45%  { transform: scale3d(0.95, 1.05, 1); }
+  60%  { transform: scale3d(1.03, 0.97, 1); }
+  75%  { transform: scale3d(0.99, 1.01, 1); }
+  100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+    animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+    will-change: transform; /* smoother */
+}
+
+/* Accessibility: honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .card.animate-jello { animation: none; }
+    .card.animate-highlight { animation-duration: 300ms; }
+}
+
+/* Increase progress-bar height and vertically center text */
+.progress-bar {
+    height: 1rem !important;
+}
+
+
+/* Inline checkbox-groups → toggle-pill buttons */
+.shiny-input-checkboxgroup.shiny-input-container-inline .shiny-options-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group .checkbox {
+  margin: 0;
+}
+
+/* Keep the real checkbox square & hidden (accessibility preserved) */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+/* Pill face (UNchecked) — solid, darker primary-tint (no transparency) */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem .5rem;
+  font-size: .875rem;
+  line-height: 1.5;
+  border: 1px solid var(--bs-primary, #0d6efd);
+  border-radius: 50rem; /* pill */
+  background-color: var(--bs-primary, #0d6efd);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+/* Hover: slightly stronger */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label:hover > span {
+  background-color: #0b5494; /* darker solid */
+} 
+
+/* Focus ring */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:focus + span {
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+/* CHECKED pill */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span {
+  background-color: #0b5494;
+  border-color: var(--bs-primary, #0d6efd);
+  color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span::before {
+  content: "☑";        /* square box with tick (on) */
+  color: currentColor; /* inherits white when checked */
+}
+
+/* Tighten legacy BootStrap3 label spacing */
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label { margin-bottom: 0; }
+
+.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:focus-visible + span {
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13, 110, 253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span::before {
+  content: "☐";
+  display: inline-block;
+  flex: 0 0 1em;
+  width: 1em;
+  font-size: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.vertically-scrollable-footer {
+  max-height: 70px;
+  overflow-y: auto;
+}
+

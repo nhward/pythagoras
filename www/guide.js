@@ -1,8 +1,5 @@
 console.log("[guide] script running")
 
-
-// TODO: The full screen button is not shown in the tour.
-
 Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
     console.log("[guide] create_run_tour running");
 

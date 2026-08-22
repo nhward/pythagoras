@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 
 from proxyData import ProxyData
 
-app = create_app_fixture(app="../../cards/DataPlaceholders.py", scope="function")
+app = create_app_fixture(app="../../cards/MissPlaceholders.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -32,7 +32,7 @@ def browser_context_args():
 
 @pytest.fixture
 def card_module():
-    return importlib.import_module("cards.DataPlaceholders")
+    return importlib.import_module("cards.MissPlaceholders")
 
 
 class FakeInputs:
@@ -155,7 +155,7 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata_and_regions(self, card_module):
         card = card_module.this
-        assert card.name == "dataPlaceholders"
+        assert card.name == "MissPlaceholders"
         assert card.long_name == "Missing value placeholders"
         assert "replacement with NA" in card.description
         assert card.mutable

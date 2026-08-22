@@ -1,3 +1,11 @@
+---
+format:
+  html:
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+---
 #### 🧭 Introduction
 
 Variables can have the wrong data type due their form of storage. For example, CSV files do not distinguish between Text and Nominal, or between Text and Date. Sometimes, missing value place-holders (e.g. "missing") can turn a column of numbers into a column of numbers-and-text. In this situation the data-type drops to the lowest common denominator which is "Text". 
@@ -95,8 +103,8 @@ This setting defines how the data types choices are filtered based on the nature
 
 #### 🎯 Goals
 
- 1. Primary: To fix mis-typed variables such as numbers that are recorded as text e.g. "20.1","12.7","45.3".
- 1. Secondary: Make it easy to change variable names and modify the order of __Ordinal__ and __Cyclic__ variables. 
+ 1. _Primary:_ To fix mis-typed variables such as numbers that are recorded as text e.g. "20.1","12.7","45.3".
+ 1. _Secondary:_ Make it easy to change variable names and modify the order of __Ordinal__ and __Cyclic__ variables. 
 
 ***
 All cards downstream of this card will receive any changes enacted by this card.

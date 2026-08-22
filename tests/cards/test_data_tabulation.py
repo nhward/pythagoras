@@ -97,7 +97,7 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata(self, card_module):
         card = card_module.this
-        assert card.name == "dataTable"
+        assert card.name == "DataTabulation"
         assert card.long_name == "Data tabulation"
         assert "listed and searched" in card.description
         assert not card.mutable
@@ -180,7 +180,7 @@ class TestDtypeLabels:
         assert label(as_list([["bread", "milk"]]).dtype) == "bkt"
 
 
-class TestPreparedData:
+class TestCleanDf:
     @pytest.mark.unit
     def test_headtail_preview_and_type_headers(self, card_module):
         frame = pd.DataFrame({
@@ -190,7 +190,7 @@ class TestPreparedData:
         })
         _, functions = recorded_helpers(card_module, data=frame, decimals=2)
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert result.shape == (10, 3)
         assert result.index.tolist() == [0, 1, 2, 3, 4, 7, 8, 9, 10, 11]
         assert result.columns.tolist() == [
@@ -203,7 +203,7 @@ class TestPreparedData:
         frame = pd.DataFrame({"value": [1.23456]})
         _, functions = recorded_helpers(card_module, data=frame, decimals=None)
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert result.iloc[0, 0] == pytest.approx(1.23456)
 
     @pytest.mark.unit
@@ -215,7 +215,7 @@ class TestPreparedData:
         )
         _, functions = recorded_helpers(card_module, data=frame, bounded=True)
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert "geometry\ngeometry active EPSG:4326" in result.columns
         assert result.iloc[0]["geometry\ngeometry active EPSG:4326"] == (
             "Point(174.7633, -36.8485)"
@@ -230,7 +230,7 @@ class TestPreparedData:
         )
         _, functions = recorded_helpers(card_module, data=frame, bounded=True)
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert result.iloc[0, 0] == "LineString bound by 1.0000,2.0000 to 3.0000,5.0000"
 
     @pytest.mark.unit
@@ -240,7 +240,7 @@ class TestPreparedData:
         )
         _, functions = recorded_helpers(card_module, data=frame, bounded=False)
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert result.iloc[0, 0] == "POINT (1 2)"
 
     @pytest.mark.unit
@@ -248,7 +248,7 @@ class TestPreparedData:
         frame = pd.DataFrame({"value": range(1500)})
         _, functions = recorded_helpers(card_module, data=frame, fullscreen=True)
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert len(result) == 1000
         assert result.index.is_monotonic_increasing
 
@@ -308,4 +308,4 @@ class TestWebKitUI:
         expect(export).to_be_visible()
         with page.expect_download() as download_info:
             export.click()
-        assert download_info.value.suggested_filename == "dataTable_data.csv"
+        assert download_info.value.suggested_filename == "DataTabulation_data.csv"

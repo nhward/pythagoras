@@ -1,0 +1,1191 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import shinywidgets
+from faicons import icon_svg as icon
+from plotly.colors import sample_colorscale
+from shiny import render, req, ui
+from shinywidgets import render_widget
+from sklearn.dummy import DummyClassifier
+from sklearn.metrics import balanced_accuracy_score
+from sklearn.model_selection import StratifiedKFold
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
+from card import Card
+from module import Module
+from proxyData import ProxyData
+from roles import Role
+
+OBS_COUNT = "Obs-count"
+
+@dataclass
+class TreeAnalysis:
+    """The fitted tree and the quantities used to assess it."""
+    model: DecisionTreeClassifier | DecisionTreeRegressor | None
+    feature_names: list[str]
+    target: str
+    task: str
+    truth: np.ndarray
+    prediction: np.ndarray
+    branches: int
+
+
+def _benjamini_hochberg(p_values: pd.Series) -> pd.Series:
+    """Adjust finite p-values using the Benjamini-Hochberg FDR procedure."""
+    values = pd.to_numeric(p_values, errors="coerce").to_numpy(dtype=float)
+    adjusted = np.full(values.shape, np.nan, dtype=float)
+    valid = np.isfinite(values)
+    finite = values[valid]
+    if finite.size == 0:
+        return pd.Series(adjusted, index=p_values.index, dtype=float)
+    order = np.argsort(finite)
+    ranked = finite[order]
+    count = len(ranked)
+    corrected = ranked * count / np.arange(1, count + 1)
+    corrected = np.minimum.accumulate(corrected[::-1])[::-1]
+    restored = np.empty(count, dtype=float)
+    restored[order] = np.clip(corrected, 0, 1)
+    adjusted[valid] = restored
+    return pd.Series(adjusted, index=p_values.index, dtype=float)
+
+
+def _missing_variables(frame: pd.DataFrame) -> list[str]:
+    """Return columns containing at least one missing value."""
+    return [column for column in frame.columns if frame[column].isna().any()]
+
+
+def _is_geometry(series: pd.Series) -> bool:
+    return getattr(series.dtype, "name", None) == "geometry"
+
+
+def _eligible_predictors(
+    frame: pd.DataFrame,
+    *,
+    target: str | None = None,
+    excluded: set[str] | None = None,
+) -> list[str]:
+    """Select useful tree predictors, following the original R card."""
+    excluded = set() if excluded is None else set(excluded)
+    if target is not None:
+        excluded.add(target)
+    columns = []
+    for column in frame.columns:
+        if column in excluded or str(column).startswith(Card.SHADOW_PREFIX):
+            continue
+        series = frame[column]
+        if _is_geometry(series):
+            continue
+        if pd.api.types.is_object_dtype(series.dtype):
+            try:
+                if series.dropna().map(lambda value: isinstance(value, (list, dict, set))).any():
+                    continue
+            except (TypeError, ValueError):
+                continue
+        if (
+            pd.api.types.is_string_dtype(series.dtype)
+            or isinstance(series.dtype, pd.CategoricalDtype)
+            or pd.api.types.is_object_dtype(series.dtype)
+        ):
+            try:
+                cardinality = series.nunique(dropna=True)
+            except TypeError:
+                continue
+            if len(frame) and cardinality >= 0.5 * len(frame):
+                continue
+        columns.append(column)
+    return columns
+
+
+def _fit_design_matrix(
+    frame: pd.DataFrame,
+    columns: list[str],
+) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+    """Learn mixed-type encodings and finite-value imputations from a frame."""
+    converted: dict[str, pd.Series] = {}
+    specifications: list[dict[str, object]] = []
+    for column in columns:
+        series = frame[column]
+        name = str(column)
+        if pd.api.types.is_datetime64_any_dtype(series.dtype):
+            values = series.astype("int64", copy=False).astype("float64")
+            values[series.isna()] = np.nan
+            kind = "datetime"
+        elif pd.api.types.is_numeric_dtype(series.dtype) and not pd.api.types.is_bool_dtype(series.dtype):
+            values = pd.to_numeric(series, errors="coerce").astype("float64")
+            kind = "numeric"
+        elif pd.api.types.is_bool_dtype(series.dtype):
+            values = series.astype("float64")
+            kind = "boolean"
+        elif isinstance(series.dtype, pd.CategoricalDtype) and series.cat.ordered:
+            categories = list(series.cat.categories)
+            codes = pd.Series(
+                pd.Categorical(series, categories=categories, ordered=True).codes,
+                index=series.index,
+                dtype=float,
+            ).replace(-1, np.nan)
+            values = codes
+            kind = "ordered"
+        else:
+            values = series.astype("string").fillna("<missing>")
+            categories = sorted(pd.unique(values).tolist())
+            specifications.append({
+                "column": column,
+                "name": name,
+                "kind": "categorical",
+                "categories": categories,
+            })
+            for category in categories:
+                converted[f"{name} = {category}"] = values.eq(category).astype(float)
+            continue
+        values = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
+        if values.isna().any():
+            finite = values.dropna()
+            fill = float(finite.median()) if not finite.empty else 0.0
+        else:
+            fill = 0.0
+        converted[name] = values.fillna(fill).astype(float)
+        specification = {
+            "column": column,
+            "name": name,
+            "kind": kind,
+            "fill": fill,
+        }
+        if kind == "ordered":
+            specification["categories"] = categories
+        specifications.append(specification)
+    matrix = pd.DataFrame(converted, index=frame.index, dtype=float)
+    return matrix, specifications
+
+
+def _transform_design_matrix(
+    frame: pd.DataFrame,
+    specifications: list[dict[str, object]],
+) -> pd.DataFrame:
+    """Apply training-fold encodings and imputations to held-out observations."""
+    converted: dict[str, pd.Series] = {}
+    for specification in specifications:
+        column = specification["column"]
+        name = str(specification["name"])
+        kind = specification["kind"]
+        series = frame[column]
+        if kind == "categorical":
+            values = series.astype("string").fillna("<missing>")
+            for category in specification["categories"]:
+                converted[f"{name} = {category}"] = values.eq(category).astype(float)
+            continue
+        if kind == "datetime":
+            values = series.astype("int64", copy=False).astype("float64")
+            values[series.isna()] = np.nan
+        elif kind == "ordered":
+            values = pd.Series(
+                pd.Categorical(
+                    series,
+                    categories=specification["categories"],
+                    ordered=True,
+                ).codes,
+                index=series.index,
+                dtype=float,
+            ).replace(-1, np.nan)
+        else:
+            values = pd.to_numeric(series, errors="coerce").astype(float)
+        values = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
+        converted[name] = values.fillna(float(specification["fill"])).astype(float)
+    return pd.DataFrame(converted, index=frame.index, dtype=float)
+
+
+def _design_matrix(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Convert mixed Pandas columns using encodings learned from the frame."""
+    matrix, _ = _fit_design_matrix(frame, columns)
+    return matrix
+
+
+def _prepare_tree_data(
+    frame: pd.DataFrame,
+    *,
+    target: str,
+    add_sequence: bool,
+    sample_weight: pd.Series | np.ndarray | None,
+    excluded: set[str] | None,
+) -> tuple[pd.DataFrame, np.ndarray, str, np.ndarray | None, pd.DataFrame, list[str]]:
+    """Construct the common feature, target and weight arrays used by trees."""
+    if target != OBS_COUNT and target not in frame.columns:
+        raise KeyError(f"Unknown missingness target: {target!r}")
+    missing_columns = _missing_variables(frame)
+    if target == OBS_COUNT:
+        truth = frame.loc[:, missing_columns].isna().sum(axis=1).to_numpy(dtype=float)
+        task = "regression"
+        target_column = None
+    else:
+        truth = frame[target].isna().to_numpy(dtype=bool)
+        task = "classification"
+        target_column = target
+    predictors = _eligible_predictors(
+        frame,
+        target=target_column,
+        excluded=excluded,
+    )
+    working = frame.copy()
+    if add_sequence:
+        sequence_name = "rownum"
+        while sequence_name in working.columns:
+            sequence_name = f"_{sequence_name}"
+        working[sequence_name] = np.arange(1, len(working) + 1, dtype=float)
+        predictors.append(sequence_name)
+    matrix = _design_matrix(working, predictors)
+    weights = None
+    if sample_weight is not None:
+        weights = pd.to_numeric(pd.Series(sample_weight, index=frame.index), errors="coerce")
+        weights = weights.replace([np.inf, -np.inf], np.nan)
+        fill = float(weights.dropna().median()) if weights.notna().any() else 1.0
+        weights = weights.fillna(fill).clip(lower=0).to_numpy(dtype=float)
+        if not weights.any():
+            weights = None
+    return matrix, truth, task, weights, working, predictors
+
+
+def _fit_missingness_tree(
+    frame: pd.DataFrame,
+    *,
+    target: str = OBS_COUNT,
+    max_depth: int = 3,
+    min_samples_leaf: float = 0.02,
+    add_sequence: bool = True,
+    sample_weight: pd.Series | np.ndarray | None = None,
+    excluded: set[str] | None = None,
+    random_state: int = 2025,
+) -> TreeAnalysis:
+    """Fit the full-data tree used for the descriptive tree chart."""
+    matrix, truth, task, weights, _, _ = _prepare_tree_data(
+        frame,
+        target=target,
+        add_sequence=add_sequence,
+        sample_weight=sample_weight,
+        excluded=excluded,
+    )
+    if len(frame) == 0 or matrix.shape[1] == 0:
+        prediction = (
+            np.full(len(frame), truth.mean() if len(truth) else 0.0)
+            if task == "regression"
+            else np.full(len(frame), bool(truth.mean() >= 0.5) if len(truth) else False)
+        )
+        return TreeAnalysis(None, [], target, task, truth, prediction, 0)
+    model_class = DecisionTreeRegressor if task == "regression" else DecisionTreeClassifier
+    model = model_class(max_depth = max_depth, min_samples_leaf = float(min_samples_leaf), random_state=random_state)
+    model.fit(matrix, truth, sample_weight=weights)
+    prediction = model.predict(matrix)
+    branches = int(np.count_nonzero(model.tree_.children_left != model.tree_.children_right))
+    return TreeAnalysis(
+        model=model,
+        feature_names=[str(column) for column in matrix.columns],
+        target=target,
+        task=task,
+        truth=truth,
+        prediction=np.asarray(prediction),
+        branches=branches,
+    )
+
+
+def _fold_balanced_accuracies(
+    working: pd.DataFrame,
+    predictors: list[str],
+    truth: np.ndarray,
+    splits: list[tuple[np.ndarray, np.ndarray]],
+    *,
+    max_depth: int,
+    min_samples_leaf: float,
+    weights: np.ndarray | None,
+    random_state: int,
+    include_null: bool,
+) -> tuple[np.ndarray, np.ndarray | None]:
+    """Fit and score fresh models in each held-out fold."""
+    tree_scores = []
+    null_scores = []
+    for fold, (train, test) in enumerate(splits):
+        train_matrix, specifications = _fit_design_matrix(
+            working.iloc[train], predictors,
+        )
+        test_matrix = _transform_design_matrix(
+            working.iloc[test], specifications,
+        )
+        train_weight = weights[train] if weights is not None else None
+        test_weight = weights[test] if weights is not None else None
+        model = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
+            random_state=random_state + fold,
+        )
+        model.fit(train_matrix, truth[train], sample_weight=train_weight)
+        prediction = model.predict(test_matrix)
+        tree_scores.append(balanced_accuracy_score(
+            truth[test], prediction, sample_weight=test_weight,
+        ))
+        if include_null:
+            null = DummyClassifier(strategy="prior")
+            null.fit(train_matrix, truth[train], sample_weight=train_weight)
+            null_prediction = null.predict(test_matrix)
+            null_scores.append(balanced_accuracy_score(
+                truth[test], null_prediction, sample_weight=test_weight,
+            ))
+    return (
+        np.asarray(tree_scores, dtype=float),
+        np.asarray(null_scores, dtype=float) if include_null else None,
+    )
+
+
+def _classification_diagnostics(
+    frame: pd.DataFrame,
+    *,
+    target: str,
+    max_depth: int = 4,
+    min_samples_leaf: float = 0.02,
+    add_sequence: bool = True,
+    sample_weight: pd.Series | np.ndarray | None = None,
+    excluded: set[str] | None = None,
+    cv_folds: int = 5,
+    permutations: int = 199,
+    random_state: int = 2025,
+) -> dict[str, object]:
+    """Evaluate a missingness classifier out of sample against a null model."""
+    matrix, truth, task, weights, working, predictors = _prepare_tree_data(
+        frame,
+        target=target,
+        add_sequence=add_sequence,
+        sample_weight=sample_weight,
+        excluded=excluded,
+    )
+    if task != "classification":
+        raise ValueError("A classification target is required")
+    missing_count = int(np.count_nonzero(truth))
+    observed_count = int(len(truth) - missing_count)
+    minority_count = min(missing_count, observed_count)
+    result = {
+        "Variable": target,
+        "CV Balanced Accuracy": np.nan,
+        "Null Balanced Accuracy": np.nan,
+        "Improvement": np.nan,
+        "Fraction Folds Above Null": np.nan,
+        "Permutation p-value": np.nan,
+        "Missing Count": missing_count,
+        "Observed Count": observed_count,
+        "CV Folds": 0,
+    }
+    if matrix.shape[1] == 0 or minority_count < 2:
+        return result
+    folds = min(max(2, int(cv_folds)), minority_count)
+    splitter = StratifiedKFold(
+        n_splits=folds,
+        shuffle=True,
+        random_state=random_state,
+    )
+    splits = list(splitter.split(matrix, truth))
+    tree_scores, null_scores = _fold_balanced_accuracies(
+        working,
+        predictors,
+        truth,
+        splits,
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+        weights=weights,
+        random_state=random_state,
+        include_null=True,
+    )
+    cv_score = float(np.mean(tree_scores))
+    null_score = float(np.mean(null_scores))
+    rng = np.random.default_rng(random_state)
+    permutation_scores = np.empty(max(0, int(permutations)), dtype=float)
+    for index in range(len(permutation_scores)):
+        permuted_truth = rng.permutation(truth)
+        permutation_splitter = StratifiedKFold(
+            n_splits=folds,
+            shuffle=True,
+            random_state=random_state,
+        )
+        permutation_splits = list(permutation_splitter.split(matrix, permuted_truth))
+        scores, _ = _fold_balanced_accuracies(
+            working,
+            predictors,
+            permuted_truth,
+            permutation_splits,
+            max_depth = max_depth,
+            min_samples_leaf = min_samples_leaf,
+            weights=weights,
+            random_state=random_state,
+            include_null=False,
+        )
+        permutation_scores[index] = float(np.mean(scores))
+    p_value = (
+        float((np.count_nonzero(permutation_scores >= cv_score) + 1) / (len(permutation_scores) + 1))
+        if len(permutation_scores)
+        else np.nan
+    )
+    result.update({
+        "CV Balanced Accuracy": cv_score,
+        "Null Balanced Accuracy": null_score,
+        "Improvement": cv_score - null_score,
+        "Fraction Folds Above Null": float(np.mean(tree_scores > null_scores)),
+        "Permutation p-value": p_value,
+        "CV Folds": folds,
+    })
+    return result
+
+
+def _interpret_missingness_models(
+    table: pd.DataFrame,
+    *,
+    adjust_fdr: bool,
+    alpha: float,
+    minimum_improvement: float,
+    minimum_balanced_accuracy: float,
+    minimum_fold_fraction: float,
+    minimum_class_count: int,
+) -> pd.DataFrame:
+    """Add FDR-aware, practical and stability-based interpretations."""
+    result = table.copy()
+    raw = result["Permutation p-value"]
+    result["Adjusted p-value"] = _benjamini_hochberg(raw) if adjust_fdr else raw
+    enough = (
+        result["Missing Count"].ge(int(minimum_class_count))
+        & result["Observed Count"].ge(int(minimum_class_count))
+        & result["CV Balanced Accuracy"].notna()
+    )
+    statistically_supported = result["Adjusted p-value"].le(float(alpha))
+    practically_useful = (
+        result["Improvement"].ge(float(minimum_improvement))
+        & result["CV Balanced Accuracy"].ge(float(minimum_balanced_accuracy))
+    )
+    stable = result["Fraction Folds Above Null"].ge(float(minimum_fold_fraction))
+    patterned = enough & statistically_supported & practically_useful & stable
+    potentially_patterned = (
+        enough
+        & ~patterned
+        & result["Improvement"].gt(0)
+        & (statistically_supported | practically_useful)
+    )
+    result["Missingness Type"] = "Random/no detected pattern"
+    result.loc[potentially_patterned, "Missingness Type"] = "Potentially patterned"
+    result.loc[patterned, "Missingness Type"] = "Patterned"
+    result.loc[~enough, "Missingness Type"] = "Insufficient data"
+    result["P-value adjustment"] = "Benjamini-Hochberg" if adjust_fdr else "None"
+    return result
+
+
+def _missingness_table(
+    frame: pd.DataFrame,
+    *,
+    targets: list[str] | None = None,
+    max_tree_depth: int = 4,
+    min_leaf_samples: float = 0.02,
+    add_sequence: bool = True,
+    sample_weight: pd.Series | np.ndarray | None = None,
+    excluded: set[str] | None = None,
+    cv_folds: int = 5,
+    permutations: int = 199,
+    adjust_fdr: bool = True,
+    alpha: float = 0.05,
+    minimum_improvement: float = 0.05,
+    minimum_balanced_accuracy: float = 0.55,
+    minimum_fold_fraction: float = 0.8,
+    minimum_class_count: int = 20,
+    random_state: int = 2025,
+) -> pd.DataFrame:
+    """Cross-validate and interpret every incomplete variable's classifier."""
+    rows = []
+    targets = _missing_variables(frame) if targets is None else list(targets)
+    for target in targets:
+        analysis = _fit_missingness_tree(
+            frame,
+            target=target,
+            max_depth=max_tree_depth,
+            min_samples_leaf=min_leaf_samples,
+            add_sequence=add_sequence,
+            sample_weight=sample_weight,
+            excluded=excluded,
+        )
+        row = _classification_diagnostics(
+            frame,
+            target=target,
+            max_depth=max_tree_depth,
+            min_samples_leaf=min_leaf_samples,
+            add_sequence=add_sequence,
+            sample_weight=sample_weight,
+            excluded=excluded,
+            cv_folds=cv_folds,
+            permutations=permutations,
+            random_state=random_state,
+        )
+        row["Branches"] = analysis.branches
+        rows.append(row)
+    columns = [
+        "Variable", "Branches", "CV Balanced Accuracy", "Null Balanced Accuracy",
+        "Improvement", "Fraction Folds Above Null", "Permutation p-value",
+        "Missing Count", "Observed Count", "CV Folds",
+    ]
+    if not rows:
+        empty = pd.DataFrame(columns=columns)
+        return _interpret_missingness_models(
+            empty,
+            adjust_fdr=adjust_fdr,
+            alpha=alpha,
+            minimum_improvement=minimum_improvement,
+            minimum_balanced_accuracy=minimum_balanced_accuracy,
+            minimum_fold_fraction=minimum_fold_fraction,
+            minimum_class_count=minimum_class_count,
+        )
+    table = pd.DataFrame(rows, columns=columns)
+    table = _interpret_missingness_models(
+        table,
+        adjust_fdr=adjust_fdr,
+        alpha=alpha,
+        minimum_improvement=minimum_improvement,
+        minimum_balanced_accuracy=minimum_balanced_accuracy,
+        minimum_fold_fraction=minimum_fold_fraction,
+        minimum_class_count=minimum_class_count,
+    )
+    return table.sort_values(
+        ["Missingness Type", "Variable"],
+        kind="stable",
+    ).reset_index(drop=True)
+
+
+def _empty_figure(message: str) -> go.Figure:
+    figure = go.Figure()
+    figure.add_annotation(
+        text=message,
+        x=0.5,
+        y=0.5,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font={"size": 16, "color": "#6c757d"},
+    )
+    figure.update_layout(
+        template="plotly_white",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#e5ecf6",
+        xaxis={"visible": False},
+        yaxis={"visible": False},
+    )
+    return figure
+
+
+def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
+    """Draw a fitted scikit-learn decision tree using Plotly annotations."""
+    if analysis.model is None or analysis.branches == 0:
+        return _empty_figure(
+            "The selected target has no decision-tree structure"
+        )
+    tree = analysis.model.tree_
+    positions: dict[int, tuple[float, float]] = {}
+    next_leaf = 0
+
+    def visit(node: int, depth: int) -> float:
+        nonlocal next_leaf
+        left = int(tree.children_left[node])
+        right = int(tree.children_right[node])
+
+        if left == right:
+            x = float(next_leaf)
+            next_leaf += 1
+        else:
+            left_x = visit(left, depth + 1)
+            right_x = visit(right, depth + 1)
+            x = (left_x + right_x) / 2
+
+        positions[node] = (x, -float(depth))
+        return x
+
+    visit(0, 0)
+    figure = go.Figure()
+    # Combine all branches into one trace.
+    edge_x: list[float | None] = []
+    edge_y: list[float | None] = []
+    for node in range(tree.node_count):
+        left = int(tree.children_left[node])
+        right = int(tree.children_right[node])
+        if left == right:
+            continue
+        x0, y0 = positions[node]
+        for child in (left, right):
+            x1, y1 = positions[child]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+    figure.add_trace(
+        go.Scatter(
+            x=edge_x,
+            y=edge_y,
+            mode="lines",
+            line={
+                "color": "#6c757d",
+                "width": 1.5,
+            },
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
+    labels: list[str] = []
+    impurities: list[float] = []
+    for node in range(tree.node_count):
+        feature = int(tree.feature[node])
+        samples = int(tree.n_node_samples[node])
+        if feature >= 0:
+            label = (
+                f"{analysis.feature_names[feature]} "
+                f"≤ {tree.threshold[node]:.3g}"
+            )
+        elif analysis.task == "classification":
+            values = tree.value[node][0]
+            total = float(values.sum())
+            proportion = (
+                float(values[-1] / total)
+                if total
+                else 0.0
+            )
+            label = f"Missing = {proportion:.1%}"
+        else:
+            mean_missing = float(tree.value[node].ravel()[0])
+            label = f"Mean missing = {mean_missing:.2f}"
+        labels.append(f"{label}<br>n = {samples}")
+        impurities.append(float(tree.impurity[node]))
+    # Reproduce colorscale="Blues", reversescale=True.
+    impurity_values = np.asarray(impurities, dtype=float)
+    finite = np.isfinite(impurity_values)
+    if finite.any():
+        minimum = float(impurity_values[finite].min())
+        maximum = float(impurity_values[finite].max())
+
+        if maximum > minimum:
+            scaled = (impurity_values - minimum) / (maximum - minimum)
+        else:
+            scaled = np.full_like(impurity_values, 0.5)
+    else:
+        scaled = np.full_like(impurity_values, 0.5)
+    # Reverse the scale as in the original marker definition.
+    scale_positions = 1 - np.clip(scaled, 0, 1)
+    node_colours = sample_colorscale(
+        "Blues",
+        scale_positions.tolist(),
+    )
+    for node, label, colour, scale_position in zip(
+        range(tree.node_count),
+        labels,
+        node_colours,
+        scale_positions,
+    ):
+        x, y = positions[node]
+        # Dark blue backgrounds need white text.
+        font_colour = (
+            "#ffffff"
+            if scale_position >= 0.55
+            else "#212529"
+        )
+        hover_label = (
+            f"{label}"
+            f"<br>Impurity = {tree.impurity[node]:.3f}"
+            f"<br>Weighted n = {tree.weighted_n_node_samples[node]:.1f}"
+        )
+        figure.add_annotation(
+            x=x,
+            y=y,
+            text=label,
+            showarrow=False,
+            align="center",
+            bgcolor=colour,
+            bordercolor="#2c3e50",
+            borderwidth=1,
+            borderpad=7,
+            font={
+                "size": 11,
+                "color": font_colour,
+            },
+            # Annotation hover settings
+            hovertext=hover_label,
+            captureevents=True,
+            hoverlabel={
+                "bgcolor": "#ffffff",
+                "bordercolor": "#2c3e50",
+                "font": {
+                    "size": 12,
+                    "color": "#212529",
+                },
+            },
+        )
+    x_values = [position[0] for position in positions.values()]
+    y_values = [position[1] for position in positions.values()]
+    figure.update_layout(
+        template="plotly_white",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#e5ecf6",
+        margin={
+            "l": 25,
+            "r": 25,
+            "t": 25,
+            "b": 25,
+        },
+        showlegend=False,
+        xaxis={
+            "visible": False,
+            "range": [
+                min(x_values) - 0.75,
+                max(x_values) + 0.75,
+            ],
+        },
+        yaxis={
+            "visible": False,
+            "range": [
+                min(y_values) - 0.5,
+                max(y_values) + 0.5,
+            ],
+        },
+    )
+    return figure
+
+def instance():
+    """Create the mutable missingness-type card."""
+    this = Card(name="missType", mutable=True)
+    this.long_name = "Missingness Type"
+    this.description = "This card uses decision trees to assess whether each variable's missingness is random or not."
+
+    def front():
+        return ui.TagList(
+            ui.div(
+                ui.output_ui(id="Title"),
+                shinywidgets.output_widget(
+                    id="Tree",
+                    fill=True,
+                    guide=this,
+                    title="Decision tree",
+                    text="A decision tree predicting the selected variable's missingness, or the number of missing values in each observation.",
+                    position="left",
+                ),
+                ui.output_ui(id="NoSee"),
+                id="X-Tree",
+                class_="html-fill-container html-fill-item",
+                style="width:100%; height:100%;",
+            )
+        )
+
+    this.front = front
+
+    def back():
+        return ui.TagList(
+            ui.span("Missingness type table", class_="text-primary text-center d-block"),
+            ui.output_ui(
+                id="Table",
+                guide=this,
+                title="Missingness type table",
+                text="Each incomplete variable is classified by whether its decision tree substantially outperforms the null model.",
+                position="left",
+            )
+        )
+
+    this.back = back
+
+    def footer():
+        return ui.div(
+            ui.output_ui(id="Significance"),
+            ui.input_checkbox_group(id="Shadow", label="Add shadow variables", inline=True, choices = [],
+            guide=this, position="top",
+            text="Add a boolean shadow variable for every column containing missing values."),
+            class_ = "vertically-scrollable-footer"
+       )
+
+    this.footer = footer
+
+    def settings():
+        return ui.TagList(
+            ui.input_select(
+                id="MissTarget",
+                label="Missingness target",
+                choices={OBS_COUNT: "Missing count per observation"},
+                selected=OBS_COUNT,
+                guide=this,
+                text="Choose the total missing count or one incomplete variable.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="CVFolds",
+                label="Cross-validation folds",
+                min=2,
+                max=10,
+                value=5,
+                step=1,
+                guide=this,
+                text=(
+                    "Number of stratified held-out folds. This is reduced automatically when the minority class is small.",
+                ),
+                position="left",
+            ),
+            ui.input_select(
+                id="Permutations",
+                label="Permutation repetitions",
+                choices={"100": "99", "200": "199", "500": "499", "1000": "999"},  # because the logic requires reps+1
+                selected="99",
+                guide=this,
+                text="More permutations give a more precise empirical p-value but take longer.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="Alpha",
+                label="Maximum p-value",
+                min=0.01,
+                max=0.10,
+                value=0.05,
+                step=0.01,
+                guide=this,
+                text="""
+                    Maximum raw (or adjusted) permutation p-value for a patterned classification. All p-values below this are deemed statistically significant.
+                    <br>Why use several conditions?<br>
+                    <ul><li>The permutation p-value controls evidence against predictor–missingness independence.</li>
+                    <li>Improvement prevents tiny but statistically significant effects being called meaningful.</li>
+                    <li>Absolute balanced accuracy prevents good-looking improvements over an unusually poor null score.</li>
+                    <li>Fold consistency guards against a result driven by one split.</li>
+                    <li>Minimum class counts prevent unstable conclusions about very rare missingness.</li></ul>
+                    """,
+                position="left",
+            ),
+            ui.input_checkbox(
+                id="AdjustFDR",
+                label="Adjust p-values for multiple variables",
+                value=True,
+                guide=this,
+                text="""
+                    Apply Benjamini-Hochberg false-discovery-rate adjustment across the missingness models.<br>
+                    Because the hypothesis is testing multiple variables, raw permutation p-values should be adjusted for multiple testing. 
+                    The <a href='https://en.wikipedia.org/wiki/False_discovery_rate'>Benjamini–Hochberg false-discovery-rate correction</a> 
+                    is appropriate because this is a screening exercise rather than a single confirmatory hypothesis test."
+                    """,
+                position="left",
+            ),
+            ui.input_slider(
+                id="MinImprovement",
+                label="Minimum balanced-accuracy improvement",
+                min=0,
+                max=0.25,
+                value=0.05,
+                step=0.01,
+                guide=this,
+                text="Minimum practical improvement over the matched null classifier.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="MinBalancedAccuracy",
+                label="Minimum balanced accuracy",
+                min=0.50,
+                max=0.90,
+                value=0.55,
+                step=0.01,
+                guide=this,
+                text="Minimum cross-validated balanced accuracy for a patterned classification.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="MinFoldFraction",
+                label="Minimum fold consistency",
+                min=0.50,
+                max=1,
+                value=0.80,
+                step=0.05,
+                guide=this,
+                text="Minimum fraction of held-out folds in which the tree must beat its null model.",
+                position="left",
+            ),
+            ui.input_numeric(
+                id="MinClassCount",
+                label="Minimum missing and observed cases",
+                value=20,
+                min=2,
+                step=1,
+                guide=this,
+                text="Both classes must contain at least this many cases before a reliable interpretation is made.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="MaxTreeDepth",
+                label="Maximum Tree depth parameter",
+                min=3,
+                max=5,
+                value=3,
+                step=1,
+                guide=this,
+                text="Pre-pruning (for speed) by limiting the depth of the tree hierarchy.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="MinLeafSamples",
+                label="Minimum leaf samples (as a proportion)",
+                min=0.001,
+                max=0.05,
+                value=0.02,
+                step=0.001,
+                guide=this,
+                text="Minimum number of samples to justify a leaf node of the tree hierarchy.",
+                position="left",
+            ),
+            ui.input_checkbox(
+                id="AddSeq",
+                label="Add a row-number predictor",
+                value=True,
+                guide=this,
+                text=(
+                    "Allows detection of missingness associated with row order or time order (if sequential).",
+                    "<br>This extra predictor allows the models to drift. ", 
+                    "It may be that early data had more missing values that more recent data given data ",
+                    "collection has improved over time (assuming the data is in collection order)"
+                ),
+                position="left",
+            ),
+            ui.input_checkbox(
+                id="UseWeights",
+                label="Use observation weights",
+                value=True,
+                guide=this,
+                text="Use any variable assigned with the weighting role as tree observations weights.",
+                position="left",
+            ),
+            ui.input_slider(
+                id="MaxObs",
+                label="Maximum observations to analyse",
+                min=3,
+                max=7,
+                value=4,
+                ticks=True,
+                pre="10^",
+                guide=this,
+                text="Limit to number of observations to process to ensure responsiveness (logarithmic scale).",
+                position="left",
+            ),
+        )
+
+    this.settings = settings
+
+    def server(input, output, session):
+
+        @this.suspendable(calc=True)
+        def incomingProxyData():
+            req(this._imports.is_set())
+            return this._imports.get()
+
+        @this.throttle(2)
+        @this.suspendable(calc=True)
+        def MaxObs():
+            return 10 ** int(input.MaxObs())
+
+        @this.suspendable(calc=True)
+        @this.record_code
+        def PreparedData():
+            samp =  incomingProxyData().sample(n=MaxObs(), mode="random", keep_geometry=True)
+            return samp
+
+        @this.suspendable(calc=True)
+        def MissingVariables():
+            return _missing_variables(incomingProxyData().to_native())
+
+        @this.suspendable()
+        def UpdateChoices():
+            variables = MissingVariables()
+            current = input.MissTarget()
+            selected = current if current == OBS_COUNT or current in variables else OBS_COUNT
+            choices = {OBS_COUNT: "Missing count per observation"}
+            choices.update({column: str(column) for column in variables})
+            ui.update_select(id="MissTarget", choices=choices, selected=selected)
+            ui.update_checkbox_group(id="Shadow", choices={column: str(column) for column in variables})
+
+        def _weighting_column(proxy: ProxyData) -> str | None:
+            columns = sorted(proxy.role_map.columns_with_role(Role.WEIGHTING))
+            return columns[0] if input.UseWeights() and columns else None
+
+        
+        @output
+        @render.ui
+        def Title():
+            if input.MissTarget() == "Obs-count":
+                title = ui.span("Predicting missing value row count", class_="text-info text-center d-block"),
+            else:
+                title = ui.span(f"Predicting missing value in {input.MissTarget()}", class_="text-primary text-center d-block"),
+            return title
+
+        @this.suspendable(calc=True)
+        @this.record_code
+        def Model():
+            proxy = PreparedData()
+            frame = proxy.to_native()
+            weighting = _weighting_column(proxy)
+            weights = frame[weighting] if weighting is not None else None
+            excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
+            if weighting is not None:
+                excluded.add(weighting)
+            return _fit_missingness_tree(
+                frame,
+                target=input.MissTarget(),
+                max_depth=int(input.MaxTreeDepth()),
+                min_samples_leaf=float(input.MinLeafSamples()),
+                add_sequence=bool(input.AddSeq()),
+                sample_weight=weights,
+                excluded=excluded,
+            )
+
+        @this.suspendable(calc=True)
+        @this.record_code
+        def TypeTable():
+            proxy = PreparedData()
+            frame = proxy.to_native()
+            weighting = _weighting_column(proxy)
+            weights = frame[weighting] if weighting is not None else None
+            excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
+            if weighting is not None:
+                excluded.add(weighting)
+            return _missingness_table(
+                frame,
+                targets=MissingVariables(),
+                max_tree_depth=int(input.MaxTreeDepth()),
+                min_leaf_samples=float(input.MinLeafSamples()),
+                add_sequence=bool(input.AddSeq()),
+                sample_weight=weights,
+                excluded=excluded,
+                cv_folds=int(input.CVFolds()),
+                permutations=int(input.Permutations()),
+                adjust_fdr=bool(input.AdjustFDR()),
+                alpha=float(input.Alpha()),
+                minimum_improvement=float(input.MinImprovement()),
+                minimum_balanced_accuracy=float(input.MinBalancedAccuracy()),
+                minimum_fold_fraction=float(input.MinFoldFraction()),
+                minimum_class_count=int(input.MinClassCount()),
+            )
+
+        @this.suspendable(calc=True)
+        @this.record_code
+        def TransformedData():
+            pxd = incomingProxyData().clone()
+            if len(input.Shadow()) == 0:
+                return pxd
+            frame = pxd.to_native()
+            this.log.info(f"Adding shadow to predictors: {input.Shadow()}")
+            for column in input.Shadow():
+                shadow = f"{Card.SHADOW_PREFIX}{column}"
+                frame[shadow] = frame[column].isna()
+                pxd.role_map.set_roles(shadow, [Role.PREDICTOR])
+            return pxd
+
+        @this.suspendable(triggers=[TransformedData])
+        def export():
+            this._exports.set(TransformedData())
+
+        @output
+        @render_widget
+        def Tree():
+            if not MissingVariables():
+                figure = _empty_figure("The data does not contain missing values")
+            else:
+                figure = _tree_figure(Model())
+            figure.update_layout(
+                modebar={"orientation": "v"},
+                modebar_remove=[
+                    "select2d", "lasso2d", "toggleHover", "toggleSpikelines",
+                    "hoverClosestCartesian", "hoverCompareCartesian",
+                ],
+            )
+            widget = go.FigureWidget(figure)
+            widget._config = getattr(widget, "_config", {}) | {
+                "displayModeBar": bool(this.isFullScreen()),
+                "displaylogo": False,
+                "responsive": True,
+            }
+            return widget
+
+        @output
+        @render.ui
+        def Table():
+            return ui.output_data_frame(id="Table2")
+
+        @output
+        @render.data_frame
+        def Table2():
+            table = TypeTable().copy()
+            numeric = [
+                "CV Balanced Accuracy", "Null Balanced Accuracy", "Improvement",
+                "Fraction Folds Above Null", "Permutation p-value", "Adjusted p-value",
+            ]
+            table[numeric] = table[numeric].round(3)
+            return render.DataTable(table, width="100%", height="98%")
+
+        @output
+        @render.ui
+        def Significance():
+            if not MissingVariables():
+                return ui.span(
+                    "The data does not contain missing values.",
+                    class_="text-success text-center d-block",
+                )
+            analysis = Model()
+            if analysis.task == "classification":
+                table = TypeTable()
+                selected = table.loc[table["Variable"] == input.MissTarget()]
+                req(not selected.empty)
+                row = selected.iloc[0]
+                if pd.isna(row["CV Balanced Accuracy"]):
+                    return ui.span(
+                        f"The sample contains {int(row['Missing Count'])} missing and "
+                        f"{int(row['Observed Count'])} observed cases. There is insufficient "
+                        "information for cross-validated interpretation.",
+                        class_="text-warning text-center d-block",
+                    )
+                adjustment = (
+                    "Benjamini-Hochberg-adjusted"
+                    if input.AdjustFDR()
+                    else "unadjusted"
+                )
+                return ui.span(
+                    f"CV balanced accuracy is {row['CV Balanced Accuracy']:.1%}; "
+                    f"null balanced accuracy is {row['Null Balanced Accuracy']:.1%}; "
+                    f"improvement is {row['Improvement']:.1%}. The {adjustment} "
+                    f"permutation p-value is {row['Adjusted p-value']:.3f}. "
+                    f"Interpretation: {row['Missingness Type']}.",
+                    class_="text-info text-center d-block",
+                )
+            mse = float(np.mean((analysis.truth - analysis.prediction) ** 2))
+            null_mse = float(np.var(analysis.truth))
+            return ui.span(
+                f"The tree MSE is {mse:.2f}, compared with {null_mse:.2f} for the null model.",
+                class_="text-info text-center d-block",
+            )
+
+        @output
+        @render.ui
+        def NoSee():
+            if MissingVariables():
+                return None
+            return ui.div(
+                icon("eye-slash", title="No missing values", a11y="sem"),
+                class_="text-center text-success opacity-25",
+                style="font-size: 12rem;",
+            )
+
+    this.server = server
+    return this
+
+
+if Module.running_under_tests():
+    this = instance()
+    df = pd.DataFrame({
+        "age": [20, 25, 30, 35, 40, 45, 50, 55],
+        "group": ["A", "A", "A", "B", "B", "B", "B", "A"],
+        "income": [10.0, np.nan, 12.0, np.nan, 15.0, 16.0, np.nan, 18.0],
+    })
+    this._imports.set(ProxyData(_df=df, _name="Test"))
+    app = this.application()
+elif Module.running_directly(name=__name__):
+    this = instance()
+    df = pd.read_csv(Card.ROOT / "data" / "Ass2.csv")
+    this._imports.set(ProxyData(_df=df, _name="Ass2"))
+    this.run()

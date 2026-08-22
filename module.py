@@ -121,26 +121,24 @@ class Module(ABC):
 
 
     # Initialiser
-    def __init__(self, name, logger = None, *args, **kwargs): # will be inhereted by child classes
+    def __init__(self, name, *args, **kwargs): # will be inherited by child classes
         super().__init__(*args, **kwargs)  # play nicely with multiple inheritance
-        # reactives
-        self._exports = reactive.Value()
-        self._imports = reactive.Value()
         #namespace
-        if name is None:
-            raise ValueError("Name is required — stopping.")
         self.name = name
-        ns = name
+        ns = self.name
         if ns in self.Instances:
             for i in range(self.MaxInstances-1):
-                ns_ = f"{name}_{i}"
+                ns_ = f"{self.name}_{i}"
                 if ns_ not in self.Instances:
                     ns = ns_
                     break
             else:
-                raise ValueError(f"Too many instances of module '{name}': exceeded maximum of {self.MaxInstances}")
+                raise ValueError(f"Too many instances of module '{self.name}': exceeded maximum of {self.MaxInstances}")
         self.Instances[ns] = self
         self.namespace = ns
+        # reactives
+        self._exports = reactive.Value()
+        self._imports = reactive.Value()
         # Guide
         self._shepherd_steps = {}
         if not Module._ui_patched: # only patch once

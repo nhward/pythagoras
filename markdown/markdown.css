@@ -1,0 +1,64 @@
+html,
+body {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    /* background-color: #f2f2f2 !important; */
+    background-color: #d2e5f4 !important;
+    overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
+main,
+main.content,
+#quarto-content {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Wrap ordinary long text and URLs. */
+p,
+li,
+td,
+th {
+    overflow-wrap: anywhere;
+}
+
+/* Wrap long code instead of widening the document. */
+pre,
+pre code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Keep media within the available width. */
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Allow only an oversized table to scroll. */
+table {
+    max-width: 100%;
+}
+
+.table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+html,
+body,
+#quarto-content {
+    background-color: #d2e5f4 !important;
+}

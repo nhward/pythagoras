@@ -1,3 +1,11 @@
+---
+format:
+  html:
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+---
 #### 🧭 Introduction
 
 The purpose of the **Role Assignment card**  is to make the dataset explicitly interpretable by defining how each variable is intended to be used.
@@ -79,8 +87,8 @@ Use the Tour Guide button to learn about the settings of this card.
 
 #### 🎯 Goals
 
- 1. Primary: Identify which single roles should be assigned to each variable.
- 1. Secondary: Validate that each variable's data-type, cardinality, and missing values are appropriate for the assigned role.
+ 1. _Primary:_ Identify which single roles should be assigned to each variable.
+ 1. _Secondary:_ Validate that each variable's data-type, cardinality, and missing values are appropriate for the assigned role.
 
 
 #### 🛠️ Actions

@@ -19,7 +19,7 @@ def instance():
     """
     Creates an instance of Card configured as "roleAssign".
     """
-    this = Card(name = "roleAssign", mutable = True) # "mutable" means it can change the pxd - probably with a commit button
+    this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Role Assignment"
     this.description = "This card enables the variables to be assigned to roles."
 
@@ -129,8 +129,8 @@ def instance():
 
         @this.suspendable(calc = True)
         def PreparedData():
-            pxd = incomingProxyData()
-            return pxd.sample(n = MaxObs(), mode = "random", keep_geometry = True)
+            samp = incomingProxyData().sample(n=MaxObs(), mode="random", keep_geometry=True)
+            return samp
             
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():

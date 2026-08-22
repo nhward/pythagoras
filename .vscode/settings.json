@@ -1,9 +1,11 @@
 {
-    "spellright.language": ["en"],
+    "spellright.language": [
+        "en"
+    ],
     "spellright.documentTypes": [
-        // "markdown",
         "latex",
-        "plaintext"
+        "plaintext",
+        "markdown"
     ],
 
 //     "editor.detectIndentation": false,
@@ -14,5 +16,8 @@
     "search.useIgnoreFiles": false,
     "python.testing.pytestArgs": ["tests"],
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python", 
-    "[python]": {"interpreters.startupBehavior": "auto"}
+    "[python]": {
+        "interpreters.startupBehavior": "auto"
+    },
+    "markdown.validate.enabled": true
 }

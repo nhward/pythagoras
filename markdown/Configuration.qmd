@@ -1,3 +1,11 @@
+---
+format:
+  html:
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+---
 #### 🧭 Introduction
 
 This card analyses the environment in which the analysis is taking place. This can be useful in explaining differences in the reproduction of past results. If you refresh the card at a later time there may be additional packages loaded.
@@ -20,8 +28,8 @@ There are no settings.
 
 #### 🎯 Goals
 
- 1. Primary: Document the package versions in use
- 2. Secondary: Provide evidence about changes
+ 1. _Primary:_ Document the package versions in use
+ 1. _Secondary:_ Provide evidence about changes
 
 
 #### 🛠️ Actions

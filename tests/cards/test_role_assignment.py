@@ -142,7 +142,7 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata(self, card_module):
         card = card_module.this
-        assert card.name == "roleAssign"
+        assert card.name == "RoleAssignment"
         assert card.long_name == "Role Assignment"
         assert "assigned to roles" in card.description
         assert card.mutable

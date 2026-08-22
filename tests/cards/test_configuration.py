@@ -68,7 +68,7 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata(self, card_module):
         card = card_module.this
-        assert card.name == "configuration"
+        assert card.name == "Configuration"
         assert card.long_name == "Configuration"
         assert "host-system configuration" in card.description
         assert not card.mutable

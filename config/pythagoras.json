@@ -18,9 +18,11 @@
         {"module": "DataImport"},
         {"module": "DataTabulation"},
         {"module": "RoleAssignment"},
-        {"module": "DataPlaceholders"},
         {"module": "VarModify"},
-        {"module": "VarDissimilar"}
+        {"module": "VarDissimilar"},
+        {"module": "MissPlaceholders"},
+        {"module": "MissRules"},
+        {"module": "MissType"}
       ]
     },
 
@@ -29,7 +31,6 @@
       "cards": [
         {"module": "DataPlaceholders"},
         {"module": "DataTabulation"}
-
       ]
     }
   ]

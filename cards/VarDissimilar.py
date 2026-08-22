@@ -28,7 +28,7 @@ from roles import Role
 
 def instance():
     """Create the immutable variable-dissimilarity card."""
-    this = Card(name="varDissimilar", mutable=False)
+    this = Card(file=__file__, mutable=False)
     this.long_name = "Variable Dissimilarity"
     this.description = (
         "This card explores the characteristics of each variable and builds "
@@ -159,22 +159,32 @@ def instance():
         @this.suspendable(calc=True)
         @this.record_code
         def PreparedData():
-            ipd = incomingProxyData()
-            d = ipd.sample(n = MaxObs(), mode = "random", keep_geometry = False)
-            if isinstance(d, ProxyData):
-                predictors = d.role_map.columns_with_role(Role.PREDICTOR)
-                frame = d.to_native()
-            else:
-                frame = d.to_pandas() if hasattr(d, "to_pandas") else d
-                predictors = frame.columns
+            samp = incomingProxyData().sample(n=MaxObs(), mode="random", keep_geometry=True)
+            return samp
+
+        @this.suspendable(calc=True)
+        @this.record_code
+        def CleanDf():
+            pxd = PreparedData()
+            predictors = pxd.role_map.columns_with_role(Role.PREDICTOR)
+            frame = pxd.to_native()
             if not isinstance(frame, pd.DataFrame):
                 raise TypeError("Variable dissimilarity requires tabular data")
             keep = [
                 column for column in frame.columns
-                if not str(column).startswith("shadow__") and column in predictors
+                if not str(column).startswith(Card.SHADOW_PREFIX) and column in predictors
             ]
-            frame = pd.DataFrame(frame.loc[:, keep]).copy()
-            return frame
+            frame = pd.DataFrame(frame.loc[:, keep])
+            geometry_columns = [
+                column for column in frame.columns
+                if getattr(frame[column].dtype, "name", None) == "geometry"
+            ]
+            excluded = set(geometry_columns)
+            excluded.update(
+                column for column in frame.columns
+                if str(column).startswith(Card.SHADOW_PREFIX)
+            )
+            return pd.DataFrame(frame.drop(columns=list(excluded), errors="ignore")).copy()
 
         @this.record_code
         def _safe_scale(values: np.ndarray) -> np.ndarray:
@@ -343,7 +353,16 @@ def instance():
         @this.suspendable(calc=True)
         @this.record_code
         def DissimilarityMatrix():
-            frame = PreparedData()
+            pxd = PreparedData()
+            predictors = pxd.role_map.columns_with_role(Role.PREDICTOR)
+            frame = pxd.to_native()
+            if not isinstance(frame, pd.DataFrame):
+                raise TypeError("Variable dissimilarity requires tabular data")
+            keep = [
+                column for column in frame.columns
+                if not str(column).startswith(Card.SHADOW_PREFIX) and column in predictors
+            ]
+            frame = pd.DataFrame(frame.loc[:, keep]).copy()
             names = frame.columns.astype(str).tolist()
             count = len(names)
             if count == 0:

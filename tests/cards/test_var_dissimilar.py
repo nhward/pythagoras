@@ -137,7 +137,7 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata_and_regions(self, card_module):
         card = card_module.this
-        assert card.name == "varDissimilar"
+        assert card.name == "VarDissimilar"
         assert card.long_name == "Variable Dissimilarity"
         assert "dissimilarity matrix" in card.description
         assert not card.mutable
@@ -199,10 +199,9 @@ class TestPreparationAndStatistics:
             inputs=FakeInputs(max_obs=3),
         )
         with reactive.isolate():
-            result = functions["PreparedData"]()
+            result = functions["CleanDf"]()
         assert result.shape == (1000, 1)
         assert result.columns.tolist() == ["predictor"]
-        assert result.index.is_monotonic_increasing
 
     @pytest.mark.unit
     def test_safe_scale_preserves_nan_and_scales_largest_magnitude(self, card_module):

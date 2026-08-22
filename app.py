@@ -99,6 +99,7 @@ def application():
         ),
         ui.busy_indicators.options(spinner_type = "bars2"),
         ui.busy_indicators.use(),
+        ui.output_ui("DocumentViewer"),
         ui.page_navbar(
             *create_sections(),  # << This is the important call here
             ui.nav_spacer(),
@@ -167,6 +168,8 @@ def application():
             """
             return ui.modal(
                 #TODO: make the choices more descriptive - currently just the dict key is used
+                #TODO: provide a guide button for these functions
+                #TODO: provide a info button for the whole app               
                 ui.input_select(
                     id = "CardPicker_selected",
                     label = "Choose a card to insert",
@@ -363,7 +366,14 @@ def application():
                         destination._imports.unset()
                 source = destination
 
-    return App(ui = app_ui, server = server, static_assets = ROOT / "www")
+    return App(
+        ui = app_ui, 
+        server = server, 
+        static_assets = {
+            "/markdown": Module.ROOT / "markdown",
+            "/": Module.ROOT / "www"
+        }
+        )
 
 
 app = application()  # This MUST be called "app" for shiny-mode of IDE integration

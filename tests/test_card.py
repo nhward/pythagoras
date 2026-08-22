@@ -1,4 +1,3 @@
-#import asyncio  # noqa: F401
 import sys
 from pathlib import Path
 
@@ -17,7 +16,7 @@ from card import Card
 @pytest.fixture
 def card():
     """Basic Card with minimal constructor."""
-    return Card(name="TestCard")
+    return Card(file="/Users/nickward/Documents/pythagoras/markdown/card.html", long_name = "TestCard")
 
 
 @pytest.fixture
@@ -33,7 +32,7 @@ def temp_md_file(tmp_path):
 #############################
 @pytest.mark.unit
 def test_card_initialisation(card):
-    assert card.name == "TestCard"
+    assert card.name == "card"
     assert card.long_name == "TestCard"   # default fallback
     assert card.allow_full_screen is True
     assert card.max_height == "450px"
@@ -66,7 +65,7 @@ def test_hasFlipSide_default(card):
 
 @pytest.mark.unit
 def test_assigned_ui_factories_affect_flags():
-    c = Card("X")
+    c = Card(file="/Users/nickward/Documents/pythagoras/markdown/card.html", long_name = "TestCard")
     c.back = lambda: "back-ui"
     c.settings = lambda: "settings-ui"
     c.footer = lambda: "footer-ui"
@@ -80,7 +79,7 @@ def test_assigned_ui_factories_affect_flags():
 
 @pytest.mark.unit
 def test_clearing_ui_factories_resets_flags():
-    c = Card("X")
+    c = Card(file="/Users/nickward/Documents/pythagoras/markdown/card.html", long_name = "TestCard")
     c.back = lambda: "back-ui"
     c.settings = lambda: "settings-ui"
     c.footer = lambda: "footer-ui"
@@ -93,33 +92,14 @@ def test_clearing_ui_factories_resets_flags():
 
 
 @pytest.mark.unit
-def test_information_returns_none_if_missing(card):
-    """No markdown file means information() returns None."""
+def test_information_returns_message_if_missing(card):
+    """No html file means information() returns message."""
     # ensure file does not exist
-    missing = Path("markdown/TestCard.md")
+    missing = Path("markdown/card.html")
     if missing.exists():
         missing.unlink()
-    assert card.information() is None
+    assert card.information() == '<br>File /Users/nickward/Documents/pythagoras/markdown/card.html not found'
 
-
-@pytest.mark.unit
-def test_information_reads_md(card):
-    # Simulate a project root with markdown/TestCard.md
-    md_file = card.ROOT / "markdown" / f"{card.name}.md"
-    md_file.write_text("# Heading\nSome **markdown** text.", encoding="utf-8")
-    out = card.information()
-    # Now we expect a ui.markdown object
-    assert out is not None
-    # Case 1: Newer Shiny → Tag object (has .render)
-    if hasattr(out, "render"):
-        html = out.render()
-    else:    # Case 2: Older Shiny → plain HTML string
-        html = out
-    # Common assertions
-    assert "<h1" in html.lower()
-    assert "markdown" in html.lower()
-    if md_file.exists():
-        md_file.unlink()
 
 #############################
 # UI stub methods

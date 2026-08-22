@@ -20,6 +20,14 @@ The importation of files and URLs supports a variety of file types. These includ
 
 If you have a different file extension, feel free to give it a try to see if it can be imported.
 
+---
+format:
+  html:
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+---
 #### 🔄 Flip side
 
 The back of the card documents:
@@ -37,8 +45,8 @@ Use the Tour Guide button to learn about the settings of this card.
 
 #### 🎯 Goals
 
-1. Primary: Facilitate data importation
-1. Secondary: Help verify whether you have the required dataset.
+1. _Primary:_ Facilitate data importation
+1. _Secondary:_ Help verify whether you have the required dataset.
 
 ***
 All cards downstream of this card will receive the data imported by this card. All variables are assigned to the __Predictor__ role. Dates and date-times that do not declare their time zones are assigned to UTC.
