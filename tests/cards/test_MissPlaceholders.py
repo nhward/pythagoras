@@ -20,6 +20,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from proxyData import ProxyData
+from cyclic_pandas import as_cyclic
+from list_pandas import as_list
 
 app = create_app_fixture(app="../../cards/MissPlaceholders.py", scope="function")
 _HELPER_CARDS = {}
@@ -265,6 +267,52 @@ class TestPlaceholderCodes:
         assert sensitive["value"].tolist() == [2, 1, 1]
 
     @pytest.mark.unit
+    @pytest.mark.parametrize("dtype", ["category", "string"])
+    def test_text_placeholders_cover_categorical_and_code_columns(
+        self, helpers, dtype
+    ):
+        frame = pd.DataFrame({
+            "value": pd.Series(["NA", "present", pd.NA], dtype=dtype)
+        })
+        codes, _ = helpers["PlaceholderCodes"](
+            frame, {"str": ["na"]}, case_sensitive=False
+        )
+        assert codes["value"].tolist() == [2, 1, 0]
+
+    @pytest.mark.unit
+    def test_categorical_cyclic_placeholders_match_labels(self, helpers):
+        ordered = pd.Series(pd.Categorical(
+            ["NA", "morning", "evening"],
+            categories=["NA", "morning", "evening"],
+            ordered=True,
+        ))
+        frame = pd.DataFrame({"cycle": as_cyclic(ordered)})
+        codes, _ = helpers["PlaceholderCodes"](
+            frame, {"str": ["na"]}, case_sensitive=False
+        )
+        assert codes["cycle"].tolist() == [2, 1, 1]
+
+    @pytest.mark.unit
+    def test_numeric_cyclic_placeholders_match_numbers(self, helpers):
+        cycle = as_cyclic(pd.Series([0, 90, 180]), period=360)
+        codes, _ = helpers["PlaceholderCodes"](
+            pd.DataFrame({"cycle": cycle}),
+            {"float": [90]},
+            extrema=False,
+        )
+        assert codes["cycle"].tolist() == [1, 2, 1]
+
+    @pytest.mark.unit
+    def test_list_placeholders_are_detected_elementwise(self, helpers):
+        frame = pd.DataFrame({"items": as_list(pd.Series([
+            ["ok", "NA"], ["present"], ["na"], pd.NA,
+        ]))})
+        codes, _ = helpers["PlaceholderCodes"](
+            frame, {"str": ["NA"]}, case_sensitive=False
+        )
+        assert codes["items"].tolist() == [2, 1, 2, 0]
+
+    @pytest.mark.unit
     def test_geometry_is_dropped_without_losing_other_columns(self, helpers):
         frame = gpd.GeoDataFrame(
             {"value": ["NA", "ok"], "geometry": [Point(1, 2), Point(3, 4)]},
@@ -303,6 +351,64 @@ class TestResolutionAndCharts:
         assert frame["value"].tolist() == ["NA", "na", "present"]
 
     @pytest.mark.unit
+    def test_resolve_categorical_placeholder_preserves_categories(self, helpers):
+        frame = pd.DataFrame({
+            "value": pd.Series(["NA", "present"], dtype="category")
+        })
+        categories = frame["value"].cat.categories.copy()
+        result = helpers["ResolvePlaceholders"](
+            frame, ["str: NA"], case_sensitive=False
+        )
+        assert result["value"].isna().tolist() == [True, False]
+        assert isinstance(result["value"].dtype, pd.CategoricalDtype)
+        assert result["value"].cat.categories.equals(categories)
+
+    @pytest.mark.unit
+    def test_resolve_cyclic_placeholder_preserves_cycle_metadata(self, helpers):
+        ordered = pd.Series(pd.Categorical(
+            ["NA", "morning", "evening"],
+            categories=["NA", "morning", "evening"],
+            ordered=True,
+        ))
+        original = as_cyclic(ordered)
+        result = helpers["ResolvePlaceholders"](
+            pd.DataFrame({"cycle": original}),
+            ["str: na"],
+            case_sensitive=False,
+        )
+        assert result["cycle"].isna().tolist() == [True, False, False]
+        assert result["cycle"].dtype == original.dtype
+
+    @pytest.mark.unit
+    def test_resolve_numeric_cyclic_placeholder_preserves_period(self, helpers):
+        original = as_cyclic(pd.Series([0, 90, 180]), period=360)
+        result = helpers["ResolvePlaceholders"](
+            pd.DataFrame({"cycle": original}),
+            ["float: 90"],
+            extrema=False,
+        )
+        assert result["cycle"].isna().tolist() == [False, True, False]
+        assert result["cycle"].dtype == original.dtype
+
+    @pytest.mark.unit
+    def test_resolve_list_placeholder_removes_elements_and_preserves_dtype(
+        self, helpers
+    ):
+        original = as_list(pd.Series([
+            ["ok", "NA"], ["present"], ["na"], pd.NA, [],
+        ]))
+        result = helpers["ResolvePlaceholders"](
+            pd.DataFrame({"items": original}),
+            ["str: NA"],
+            case_sensitive=False,
+        )
+        assert result["items"].iloc[0] == ["ok"]
+        assert result["items"].iloc[1] == ["present"]
+        assert result["items"].isna().tolist() == [False, False, True, True, False]
+        assert result["items"].iloc[4] == []
+        assert result["items"].dtype == original.dtype
+
+    @pytest.mark.unit
     def test_resolve_float_placeholder(self, helpers):
         frame = pd.DataFrame({"value": [-99.99, 1.5, 2.5]})
         result = helpers["ResolvePlaceholders"](frame, ["float: -99.99"])
@@ -312,6 +418,38 @@ class TestResolutionAndCharts:
     def test_empty_sentinel_selection_returns_data_unchanged(self, helpers):
         frame = pd.DataFrame({"value": [1, 2]})
         assert helpers["ResolvePlaceholders"](frame, []) is frame
+
+    @pytest.mark.unit
+    def test_placeholder_colours_reserve_missing_and_not_missing(
+        self, card_module
+    ):
+        colours = card_module._placeholder_colour_map([0, 1, 13, 27])
+        assert colours[0] == "#6c757d"
+        assert colours[1] == "#0d6efd"
+        assert colours[13] == card_module.pc.qualitative.Set3[0]
+        assert colours[27] == card_module.pc.qualitative.Set3[1]
+        assert colours[13] not in {colours[0], colours[1]}
+        assert colours[27] not in {colours[0], colours[1]}
+
+    @pytest.mark.unit
+    def test_placeholder_palette_assignment_depends_on_present_codes(
+        self, card_module
+    ):
+        alone = card_module._placeholder_colour_map([0, 1, 13])
+        preceded = card_module._placeholder_colour_map([0, 1, 7, 13])
+        assert alone[13] == card_module.pc.qualitative.Set3[0]
+        assert preceded[13] == card_module.pc.qualitative.Set3[1]
+
+    @pytest.mark.unit
+    def test_chart_column_selection_accepts_proxy_and_semantic_types(self, helpers):
+        frame = pd.DataFrame({
+            "category": pd.Series(["A", "B"], dtype="category"),
+            "code": pd.Series(["A", "B"], dtype="string"),
+            "items": as_list(pd.Series([["A"], ["B"]])),
+        })
+        proxy = ProxyData(_df=frame, _name="Semantic types")
+        assert helpers["_select_cols"](proxy, "str") == ["category", "code"]
+        assert helpers["_select_cols"](proxy, "list") == ["items"]
 
     @pytest.mark.unit
     def test_placeholder_chart_contains_transposed_heatmap(
@@ -338,6 +476,13 @@ class TestResolutionAndCharts:
             codes, {0: "Missing", 1: "Not Missing", 2: "str: NA"}, fs=True
         )
         assert [trace.type for trace in figure.data] == ["heatmap", "scatter", "scatter", "scatter", "scatter"]
+        legend_colours = {
+            trace.name: trace.marker.color
+            for trace in figure.data[2:]
+        }
+        assert legend_colours["Missing"] == "#6c757d"
+        assert legend_colours["Not Missing"] == "#0d6efd"
+        assert legend_colours["str: NA"] == card_module.pc.qualitative.Set3[0]
         assert figure.layout.showlegend is True
         assert figure._config["displayModeBar"] is True
 

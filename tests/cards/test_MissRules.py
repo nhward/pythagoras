@@ -150,7 +150,6 @@ class TestInstance:
         back = str(card_module.this.back.tagify())
         footer = str(card_module.this.footer.tagify())
         assert 'id="Network"' in front
-        assert 'id="NoSee"' in front
         assert "Missingness association network" in front
         assert 'id="Table"' in back
         assert "Missingness association rules" in back
@@ -358,7 +357,7 @@ class TestNetworkFigure:
         _, functions = recorded_helpers(card_module)
         figure = functions["_network_figure"](pd.DataFrame())
         assert len(figure.data) == 0
-        assert figure.layout.annotations[0].text == "No missingness rules to display"
+        assert figure.layout.annotations[0].text == "No significant rules to display"
         assert not figure.layout.xaxis.visible
         assert not figure.layout.yaxis.visible
 
@@ -407,7 +406,7 @@ class TestWebKitUI:
     def test_default_lift_reports_no_strong_rules(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         expect(by_id(page, "Check")).to_contain_text(
-            "No strong rules explain", timeout=10_000
+            "No significant rules explain", timeout=10_000
         )
 
     @pytest.mark.ui

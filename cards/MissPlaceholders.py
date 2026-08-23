@@ -17,11 +17,205 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from card import Card
+from cyclic_pandas import is_cyclic
+from list_pandas import is_list
 from module import Module
 from proxyData import ProxyData as Pxy
+from text_pandas import is_text
 
 # Converts missing value placeholders to Na/NaN/NaT
 # Ideally this follows the correct conversion of strings to their real datatype esp. Datetime
+
+SPECIAL_PLACEHOLDER_COLOURS = {
+    0: "#6c757d",  # Missing
+    1: "#0d6efd",  # Not Missing
+}
+
+
+def _placeholder_colour_map(present_codes: list[int]) -> dict[int, str]:
+    """Assign semantic base colours and presence-based placeholder colours."""
+    colours = {
+        code: SPECIAL_PLACEHOLDER_COLOURS[code]
+        for code in present_codes
+        if code in SPECIAL_PLACEHOLDER_COLOURS
+    }
+    palette = pc.qualitative.Set3
+    placeholder_codes = [code for code in present_codes if code > 1]
+    colours.update({
+        code: palette[position % len(palette)]
+        for position, code in enumerate(placeholder_codes)
+    })
+    return colours
+
+
+def _placeholder_kind(series: pd.Series) -> str | None:
+    """Return the semantic placeholder-matching family for a Series."""
+    dtype = series.dtype
+    if getattr(dtype, "name", None) == "geometry":
+        return None
+    if is_list(dtype):
+        return "list"
+    if is_cyclic(dtype):
+        return "str" if dtype.is_categorical else "float"
+    if isinstance(dtype, pd.CategoricalDtype):
+        return "str"
+    if is_text(dtype):
+        return "str"
+    if pd.api.types.is_datetime64_any_dtype(dtype):
+        return "datetime"
+    if pd.api.types.is_integer_dtype(dtype) and not pd.api.types.is_bool_dtype(dtype):
+        return "int"
+    if pd.api.types.is_float_dtype(dtype):
+        return "float"
+    if pd.api.types.is_string_dtype(dtype) or pd.api.types.is_object_dtype(dtype):
+        return "str"
+    return None
+
+
+def _columns_by_placeholder_kind(df: pd.DataFrame) -> dict[str, list[str]]:
+    columns = {"int": [], "float": [], "str": [], "datetime": [], "list": []}
+    for column in df.columns:
+        kind = _placeholder_kind(df[column])
+        if kind is not None:
+            columns[kind].append(column)
+    return columns
+
+
+def _normalise_placeholder_text(value: object, *, case_sensitive: bool) -> str:
+    text = str(value)
+    return text if case_sensitive else text.casefold()
+
+
+def _scalar_placeholder_mask(
+    series: pd.Series,
+    kind: str,
+    placeholder: object,
+    *,
+    float_eps: float,
+    extrema: bool,
+    case_sensitive: bool,
+) -> np.ndarray:
+    """Match one placeholder against a scalar-valued Series."""
+    if kind == "str":
+        values = series.astype("string").fillna("")
+        target = _normalise_placeholder_text(
+            placeholder,
+            case_sensitive=case_sensitive,
+        )
+        if not case_sensitive:
+            values = values.str.casefold()
+        return values.eq(target).to_numpy(dtype=bool, na_value=False)
+    if kind == "datetime":
+        target = pd.to_datetime(placeholder, errors="coerce")
+        if pd.isna(target):
+            return np.zeros(len(series), dtype=bool)
+        return series.eq(target).to_numpy(dtype=bool, na_value=False)
+    if kind == "int":
+        try:
+            target = int(placeholder)
+        except (TypeError, ValueError):
+            return np.zeros(len(series), dtype=bool)
+        if extrema:
+            minimum, maximum = series.min(skipna=True), series.max(skipna=True)
+            if target != minimum and target != maximum:
+                return np.zeros(len(series), dtype=bool)
+        return series.eq(target).to_numpy(dtype=bool, na_value=False)
+    if kind == "float":
+        try:
+            target = float(placeholder)
+        except (TypeError, ValueError):
+            return np.zeros(len(series), dtype=bool)
+        values = series.to_numpy(dtype="float64", na_value=np.nan)
+        finite = values[np.isfinite(values)]
+        if extrema and finite.size:  # noqa: SIM102
+            if not (
+                np.isclose(finite.min(), target, atol=float_eps)
+                or np.isclose(finite.max(), target, atol=float_eps)
+            ):
+                return np.zeros(len(series), dtype=bool)
+        return np.isfinite(values) & (np.abs(values - target) < float_eps)
+    return np.zeros(len(series), dtype=bool)
+
+
+def _apply_list_placeholder_codes(
+    df: pd.DataFrame,
+    columns: list[str],
+    lookup: dict[str, int],
+    codes_arr: np.ndarray,
+    col_pos: dict[str, int],
+    *,
+    case_sensitive: bool,
+) -> None:
+    """Scan every list element once and assign the first matching code per cell."""
+    if not lookup:
+        return
+    for column in columns:
+        output = codes_arr[:, col_pos[column]]
+        for row, value in enumerate(df[column].array):
+            if value is pd.NA:
+                continue
+            for item in value:
+                if not isinstance(item, str):
+                    continue
+                key = item if case_sensitive else item.casefold()
+                code = lookup.get(key)
+                if code is not None:
+                    output[row] = code
+                    break
+
+
+def _rebuild_custom_series(series: pd.Series, values: list[object]) -> pd.Series:
+    array = type(series.array)._from_sequence(values, dtype=series.dtype)
+    return pd.Series(array, index=series.index, name=series.name)
+
+
+def _replace_scalar_matches(series: pd.Series, mask: np.ndarray) -> pd.Series:
+    if not mask.any():
+        return series
+    if is_cyclic(series.dtype) or is_text(series.dtype):
+        values = list(series.array)
+        for position in np.flatnonzero(mask):
+            values[int(position)] = pd.NA
+        return _rebuild_custom_series(series, values)
+    result = series.copy()
+    result.loc[mask] = pd.NaT if pd.api.types.is_datetime64_any_dtype(series.dtype) else pd.NA
+    return result
+
+
+def _remove_list_placeholders(
+    series: pd.Series,
+    placeholders: set[str],
+    *,
+    case_sensitive: bool,
+) -> pd.Series:
+    """Remove matching string elements in one pass, preserving ListDtype."""
+    if not placeholders:
+        return series
+    changed = False
+    values: list[object] = []
+    for value in series.array:
+        if value is pd.NA:
+            values.append(pd.NA)
+            continue
+        retained = [
+            item
+            for item in value
+            if not (
+                isinstance(item, str)
+                and (item if case_sensitive else item.casefold()) in placeholders
+            )
+        ]
+        matched = len(retained) != len(value)
+        if matched:
+            changed = True
+            values.append(retained if retained else pd.NA)
+        else:
+            values.append(value)
+    if not changed:
+        return series
+    # TODO: Implement __setitem__/_putmask in the custom extension arrays so
+    # pandas-native masked assignment can replace this reconstruction step.
+    return _rebuild_custom_series(series, values)
 
 def instance():
     """
@@ -303,16 +497,15 @@ def instance():
             fw._config = (getattr(fw, "_config", {}) | {"displayModeBar": False, "displaylogo": False, "responsive": True})
             return fw
 
-        def _select_cols(df: pd.DataFrame, bucket: str) -> list[str]:
-            if bucket == "int":
-                return df.select_dtypes(include=["int", "Int64", "integer"]).columns
-            if bucket == "float":
-                return df.select_dtypes(include=["float", "Float64", "floating"]).columns
-            if bucket == "str":
-                return df.select_dtypes(include=["string", "object"]).columns
-            if bucket == "datetime":
-                return df.select_dtypes(include=["datetime64[ns]", "datetimetz"]).columns
-            return df.columns
+        @this.record_code
+        def _select_cols(df: pd.DataFrame | Pxy, bucket: str) -> list[str]:
+            native = df.to_native() if isinstance(df, Pxy) else df
+            columns = _columns_by_placeholder_kind(native)
+            if bucket in columns:
+                return columns[bucket]
+            # TODO: Add a dedicated basket/list chart tab if collection-valued
+            # variables become common enough to justify another front panel.
+            return native.columns.tolist()
 
 
         @this.record_code
@@ -326,17 +519,17 @@ def instance():
             if len(present_codes) == 0:
                 return empty_plotly("No data to display")
             this.log.debug(f"Chart drawn: z shape={z.shape}, cells={z.size:,}")
-            palette = pc.qualitative.Set3
+            code_colours = _placeholder_colour_map(present_codes)
             zmin = min(present_codes)
             zmax = max(present_codes)
             if zmin == zmax:
-                color = palette[zmin % len(palette)]
+                color = code_colours[zmin]
                 colorscale = [[0, color], [1, color]]
             else:
                 colorscale = []
                 for code in present_codes:
                     pos = (code - zmin) / (zmax - zmin)
-                    color = palette[code % len(palette)]
+                    color = code_colours[code]
                     colorscale.append([pos, color])
                     colorscale.append([pos, color])
             fig = go.Figure()
@@ -367,7 +560,7 @@ def instance():
                         for row, col, c in zip(yy, xx, codes)
                     ]
 
-                    hover_colors = [palette[c % len(palette)] for c in codes]
+                    hover_colors = [code_colours[c] for c in codes]
 
                     fig.add_trace(go.Scatter(
                         x=xx,
@@ -397,7 +590,7 @@ def instance():
                         mode="markers",
                         marker={
                             "size": 10,
-                            "color": palette[code % len(palette)],
+                            "color": code_colours[code],
                             "symbol": "square",
                         },
                         name=legend.get(code, f"Code {code}"),
@@ -579,84 +772,40 @@ def instance():
             col_pos = {col: i for i, col in enumerate(df.columns)}
             legend = {0: "Missing", 1: "Not Missing"}
             k = 2
-            type_to_cols = {
-                "int": df.select_dtypes(include=["integer"]).columns,
-                "float": df.select_dtypes(include=["floating"]).columns,
-                "str": df.select_dtypes(include=["string", "object"]).columns,
-                "datetime": df.select_dtypes(include=["datetime64[ns]", "datetimetz"]).columns,
-            }
-            # Precompute numeric extrema once
-            int_extrema = {}
-            float_extrema = {}
-            if extrema:
-                for col in type_to_cols["int"]:
-                    s = df[col]
-                    int_extrema[col] = (s.min(skipna=True), s.max(skipna=True))
-                for col in type_to_cols["float"]:
-                    s = df[col]
-                    float_extrema[col] = (s.min(skipna=True), s.max(skipna=True))
-            # Precompute string versions once
-            str_cache = {}
-            if len(type_to_cols["str"]):
-                for col in type_to_cols["str"]:
-                    s = df[col].astype("string").fillna("")
-                    if not case_sensitive:
-                        s = s.str.casefold()
-                    str_cache[col] = s
+            type_to_cols = _columns_by_placeholder_kind(df)
+            list_string_codes: dict[str, int] = {}
             for dtype_key, sent_list in (sentinels or {}).items():
                 cols = type_to_cols.get(dtype_key)
                 if cols is None or len(cols) == 0:
-                    continue
+                    cols = []
                 for sent in sent_list or []:
-                    if dtype_key == "datetime":
-                        dt = pd.to_datetime(sent, errors="coerce")
-                        if pd.isna(dt):
-                            legend[k] = f"{dtype_key}: {sent}"
-                            k += 1
-                            continue
-                        for col in cols:
-                            mask = (df[col] == dt).to_numpy()
-                            if mask.any():
-                                codes_arr[mask, col_pos[col]] = k
-                    elif dtype_key == "float":
-                        try:
-                            f = float(sent)
-                        except Exception:  # noqa: BLE001
-                            legend[k] = f"{dtype_key}: {sent}"
-                            k += 1
-                            continue
-                        for col in cols:
-                            if extrema:
-                                mn, mx = float_extrema[col]
-                                if not (np.isclose(mn, f, atol=float_eps) or np.isclose(mx, f, atol=float_eps)):
-                                    continue
-                            values = df[col].to_numpy(dtype="float64", na_value=np.nan)
-                            mask = np.abs(values - f) < float_eps
-                            if mask.any():
-                                codes_arr[mask, col_pos[col]] = k
-                    elif dtype_key == "int":
-                        try:
-                            i = int(sent)
-                        except Exception:  # noqa: BLE001
-                            legend[k] = f"{dtype_key}: {sent}"
-                            k += 1
-                            continue
-                        for col in cols:
-                            if extrema:
-                                mn, mx = int_extrema[col]
-                                if not (mn == i or mx == i):
-                                    continue
-                            mask = (df[col] == i).to_numpy(dtype=bool, na_value=False)
-                            if mask.any():
-                                codes_arr[mask, col_pos[col]] = k
-                    elif dtype_key == "str":
-                        target = sent if case_sensitive else str(sent).casefold()
-                        for col in cols:
-                            mask = str_cache[col].eq(target).to_numpy(dtype=bool, na_value=False)
-                            if mask.any():
-                                codes_arr[mask, col_pos[col]] = k
+                    for col in cols:
+                        mask = _scalar_placeholder_mask(
+                            df[col],
+                            dtype_key,
+                            sent,
+                            float_eps=float_eps,
+                            extrema=extrema,
+                            case_sensitive=case_sensitive,
+                        )
+                        if mask.any():
+                            codes_arr[mask, col_pos[col]] = k
+                    if dtype_key == "str":
+                        target = _normalise_placeholder_text(
+                            sent,
+                            case_sensitive=case_sensitive,
+                        )
+                        list_string_codes[target] = k
                     legend[k] = f"{dtype_key}: {sent}"
                     k += 1
+            _apply_list_placeholder_codes(
+                df,
+                type_to_cols["list"],
+                list_string_codes,
+                codes_arr,
+                col_pos,
+                case_sensitive=case_sensitive,
+            )
             codes = pd.DataFrame(codes_arr, index=df.index, columns=df.columns)
             return codes, legend
 
@@ -686,53 +835,45 @@ def instance():
             if sentinels is None or len(sentinels) == 0:
                 return df
             df = pd.DataFrame(df).copy()
-            type_to_cols = {
-                "int":      df.select_dtypes(include=["integer"]).columns,           # nullable Int* dtypes
-                "float":    df.select_dtypes(include=["floating"]).columns,          # float/Float64
-                "str":      df.select_dtypes(include=["string", "object"]).columns,
-                "datetime": df.select_dtypes(include=["datetime64[ns]", "datetimetz"]).columns,
+            type_to_cols = _columns_by_placeholder_kind(df)
+            parsed: dict[str, list[str]] = {
+                "int": [], "float": [], "str": [], "datetime": []
             }
             for sent in sentinels:
-                vtype, placeholder = sent.split(sep = ": ", maxsplit = 2)
-                for col in type_to_cols[vtype]:
-                    s = df[col]
-                    if vtype == "datetime":
-                        mask = (s == placeholder.asType("datetime"))
-                        df.loc[mask, col] = pd.NaT
-                    elif vtype == "float":
-                        try:
-                            f = float(placeholder)
-                            if not extrema or (min(s) == f or max(s) == f):
-                                mask = abs(s.astype("float64") - f) < float_eps
-                                this.log.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
-                                df.loc[mask,col] = pd.NA
-                        except Exception:  # noqa: BLE001, S110
-                            pass
-                    elif vtype == "int":
-                        try:
-                            i = int(sent)
-                            if not extrema or (min(s) == i or max(s) == i):
-                                mask = (s == i) # works for pandas nullable Int* dtypes
-                                df.loc[mask,col] = pd.NA
-                        except Exception:  # noqa: BLE001, S110
-                            pass
-                    elif vtype == "str":
-                        if case_sensitive:
-                            mask = (
-                                s.astype("string")
-                                .fillna("")
-                                .str
-                                .eq(str(placeholder))
+                vtype, placeholder = sent.split(sep=": ", maxsplit=1)
+                if vtype in parsed:
+                    parsed[vtype].append(placeholder)
+            for vtype, placeholders in parsed.items():
+                for placeholder in placeholders:
+                    for col in type_to_cols[vtype]:
+                        mask = _scalar_placeholder_mask(
+                            df[col],
+                            vtype,
+                            placeholder,
+                            float_eps=float_eps,
+                            extrema=extrema,
+                            case_sensitive=case_sensitive,
+                        )
+                        if mask.any():
+                            this.log.debug(
+                                f"Replaced {int(mask.sum())} {placeholder} "
+                                f"{vtype} placeholders in {col}"
                             )
-                        else:
-                            mask = (
-                                s.astype("string")
-                                .fillna("")
-                                .str.casefold()
-                                .eq(str(placeholder).casefold())
-                            )
-                        this.log.debug(msg = f"Replaced {sum(mask)} {placeholder} {vtype} placeholders in {col}")
-                        df.loc[mask,col] = pd.NA
+                            df[col] = _replace_scalar_matches(df[col], mask)
+
+            list_placeholders = {
+                _normalise_placeholder_text(
+                    placeholder,
+                    case_sensitive=case_sensitive,
+                )
+                for placeholder in parsed["str"]
+            }
+            for col in type_to_cols["list"]:
+                df[col] = _remove_list_placeholders(
+                    df[col],
+                    list_placeholders,
+                    case_sensitive=case_sensitive,
+                )
             return df
 
         @this.suspendable(calc=True)

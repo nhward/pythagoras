@@ -45,7 +45,7 @@ These rules help businesses understand buying behavior, recommend products, or o
 
 #### 🛒 How do Association Rules identify missing value patterns?
 
-While Association analysis is often used to analyse shopping basket patterns. To do this we need to make a mapping between a basket of shopping and missing data.
+While Association analysis is often used to analyze shopping basket patterns. To do this we need to make a mapping between a basket of shopping and missing data.
 An observation serves as a basket. The variables names are the the goods on sale. If a value is missing then that variable name appears in our basket.
 That way, if an observation is complete (i.e. nothing missing) then our basket is empty. An observation with 3 missing values might look like a basket of \["var1", "var3", "var5"\]. It may be the case over many observations that variable 5 is mainly missing when variable 3 is missing too.
 
@@ -123,7 +123,7 @@ Interpretation: *Customers who buy bread are 8 times more likely to also buy but
 
 #### 🏞️ Front
 
-The card's front charts a network connecting rules with their variables. Hovering over a rule reveals the LHS and RHS basis.
+The card's front charts a network connecting rules with their variables. Rules are drawn as circle shapes. Variables are drawn as square shapes. Hovering over a rule (circle) reveals the LHS and RHS basis.
 
 #### 🔄 Flip side
 
@@ -138,7 +138,7 @@ Use the Tour Guide button to learn about the settings of this card.
 #### 🎯 Goals
 
  1. _Primary:_ To judge whether each variable is missing at random or not (for a limited context)
- 1. _Secondary:_ Discover surprising associations that suggest further investgation. 
+ 1. _Secondary:_ Discover surprising associations that suggest further investigation. 
 
 Note that this analysis neither considers the possibility that missingness is due to non-missing values nor considers whether sequence affects missingness. 
 
@@ -147,7 +147,7 @@ The actions implied by the Association Rules (applied to missingness) are:
 -   Gain understanding of the dominant patterns of missing values.
 -   Objectively assess the strength of the patterns.
 -   Identify variables whose missingness is not random (perhaps common causes?).
--   Hypothesise causes for these patterns.
+-   Hypothesize causes for these patterns.
 
 #### Example
 
