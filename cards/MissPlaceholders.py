@@ -794,7 +794,6 @@ if Module.running_under_tests():
     app = this.application()
 elif Module.running_directly(name =__name__):
     this = instance()
-    
     df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
     pxd = Pxy(_df = df, _name = "Ass2")
     this._imports.set(pxd)

@@ -15,9 +15,12 @@ The raw data is minimally altered:
  - Convert to Pandas if possible
  - Geometries made displayable via _Well Known Text_ (WKT) format
 
+#### 🏞️ Front
+
+The card's front initially shows a short top/bottom listing. Going full-screen gives access to the entirety of the data.
 
 #### 🔄 Flip side
-There is no flip side. Going full-screen gives access to the entirety of the data.
+There is no back side. 
 
 #### ⚙️ Settings
 

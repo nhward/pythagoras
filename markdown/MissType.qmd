@@ -9,7 +9,7 @@ editor:
 
 #### 🧭 Introduction
 
-This card focuses on differentiating between **Random** and **Patterned** causes of missingness. The following possible assesments are calculated based upon a decision tree trying to predict missingness:
+This card focuses on differentiating between **Random** and **Patterned** causes of missingness. The following possible assessments are calculated based upon a decision tree trying to predict missingness:
 
 - Random - Non-Random hypothesis can be rejected
 - Uncertain - The hypothesis test is ambiguous
@@ -55,7 +55,7 @@ Use the Tour Guide button to learn about the settings of this card.
 #### 🎯 Goal
 
 1. _Primary:_ To identify predictors that have __patterned__ missingness. Their missing values should be imputed rather than removing the observations (partial deletion). Deleting observations with patterned missingness will produce non-random omissions that are a potential cause of data bias. 
-1. _Secondary:_ To detect relationships that suggest an explanation and possibly a manual imputation for certain missing values. For example: _In a housing dataset, the category level of "house boat" might explain why the rateable-value variable is missing (manually set these to zero)._
+1. _Secondary:_ To detect relationships that suggest an explanation and possibly a manual imputation for certain missing values. For example: _In a housing dataset, the category level of "house boat" might explain why the ratable-value variable is missing (manually set these to zero)._
 
 The actions implied by the different missingness causes are:
 

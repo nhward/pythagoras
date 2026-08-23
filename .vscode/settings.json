@@ -5,6 +5,7 @@
     "spellright.documentTypes": [
         "latex",
         "plaintext",
+        "quarto",
         "markdown"
     ],
 

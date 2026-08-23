@@ -21,6 +21,7 @@
         {"module": "VarModify"},
         {"module": "VarDissimilar"},
         {"module": "MissPlaceholders"},
+        {"module": "MissInformative"},
         {"module": "MissRules"},
         {"module": "MissType"}
       ]

@@ -72,6 +72,10 @@ Violations are indicated via validation messages.
  - Time series → assign a time variable to Sequence
  - Longitudinal analysis → assign Sequence + Identifier
 
+#### 🏞️ Front
+
+The card's front shows a drag & drop dialogue for assigning the variables to roles. The full-screen mode makes the process easier.
+
 #### 🔄 Flip side
 
 The back of the card documents:

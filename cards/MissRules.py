@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
-from faicons import icon_svg as icon
 from mlxtend.frequent_patterns import apriori, association_rules
 from shiny import render, req, ui
 from shinywidgets import render_widget
@@ -30,28 +29,22 @@ def instance():
 
     def front():
         return ui.TagList(
-            ui.div(
-                ui.span(
-                    "Missingness association network",
-                    class_="text-primary text-center d-block",
+            ui.span(
+                "Missingness association network",
+                class_="text-primary text-center d-block",
+            ),
+            shinywidgets.output_widget(
+                id="Network",
+                fill=True,
+                guide=this,
+                title="Missingness association network",
+                text=(
+                    "Variables are square nodes and association rules are "
+                    "circular nodes. A path from variables through a rule to "
+                    "other variables reads: if the former are missing, the "
+                    "latter are also likely to be missing."
                 ),
-                shinywidgets.output_widget(
-                    id="Network",
-                    fill=True,
-                    guide=this,
-                    title="Missingness association network",
-                    text=(
-                        "Variables are square nodes and association rules are "
-                        "circular nodes. A path from variables through a rule to "
-                        "other variables reads: if the former are missing, the "
-                        "latter are also likely to be missing."
-                    ),
-                    position="left",
-                ),
-                ui.output_ui(id="NoSee"),
-                id="X-Network",
-                class_="p-0 html-fill-container html-fill-item",
-                style="width:100%; height:100%;",
+                position="left",
             )
         )
 
@@ -296,16 +289,7 @@ def instance():
         @this.record_code
         def _network_figure(rules: pd.DataFrame, *, limit: int = 50) -> go.Figure:
             if rules.empty:
-                figure = go.Figure()
-                figure.add_annotation(
-                    text="No missingness rules to display",
-                    x=0.5,
-                    y=0.5,
-                    showarrow=False,
-                )
-                figure.update_xaxes(visible=False)
-                figure.update_yaxes(visible=False)
-                return figure
+                return Card.empty_figure("No significant rules to display")
             selected = rules.sort_values(
                 ["confidence", "support"], ascending=[False, False]
             ).head(limit).reset_index(drop=True)
@@ -444,7 +428,7 @@ def instance():
             if rule_count == 0:
                 return ui.TagList(
                     ui.span(
-                        "No strong rules explain the patterns of missingness.",
+                        "No significant rules explain the patterns of missingness.",
                         class_="text-info",
                     ),
                     ui.br(),
@@ -458,16 +442,6 @@ def instance():
                 class_="text-primary",
             )
 
-        @output
-        @render.ui
-        def NoSee():
-            if MissingVariables():
-                return None
-            return ui.div(
-                icon("eye-slash", title="No missing values", a11y="sem"),
-                class_="text-center text-success opacity-25",
-                style="font-size: 12rem;",
-            )
 
     this.server = server
     return this

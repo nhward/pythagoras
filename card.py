@@ -30,8 +30,10 @@
 ##    Set self.front, and optionally self.back, self.settings, self.footer
 ##    Implement server(input, output, session)
 
+import base64
 from pathlib import Path
 
+import plotly.graph_objects as go
 from faicons import icon_svg as icon
 from shiny import module, reactive, render, ui
 
@@ -60,6 +62,53 @@ class Card(Module):
     max_height = Module.config.get("settings", {}).get("max_card_height")
     SHADOW_PREFIX = "shadow__"
 
+    def empty_figure(
+        message: str,
+        *,
+        icon_name: str = "eye-slash",
+        icon_colour: str = "#198754",
+    ) -> go.Figure:
+        icon_tag = icon(icon_name, title=message, a11y="sem")
+        svg = icon_tag.get_html_string()
+        svg = svg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ',  1)
+        svg = svg.replace('preserveAspectRatio="none"', 'preserveAspectRatio="xMidYMid meet"')
+        svg = svg.replace("fill:currentColor", f"fill:{icon_colour}")
+        encoded_svg = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+        icon_source = f"data:image/svg+xml;base64,{encoded_svg}"
+        figure = go.Figure()
+        figure.add_layout_image(
+            source=icon_source,
+            x=0.5,
+            y=0.62,
+            xref="paper",
+            yref="paper",
+            sizex=0.28,
+            sizey=0.28,
+            xanchor="center",
+            yanchor="middle",
+            sizing="contain",
+            opacity=0.25,
+            layer="above",
+        )
+        figure.add_annotation(
+            text=message,
+            x=0.5,
+            y=0.35,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            align="center",
+            font={"size": 16, "color": "#6c757d"},
+        )
+        figure.update_layout(
+            template="plotly_white",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="#e5ecf6",
+            margin={"l": 20, "r": 20, "t": 20, "b": 20},
+            xaxis={"visible": False, "fixedrange": True},
+            yaxis={"visible": False, "fixedrange": True},
+        )
+        return figure
     def fetch(self, value):
         if value is None:
             return None
@@ -339,7 +388,10 @@ class Card(Module):
             def isFront():
                 if self.back is None:
                     return True
-                return input.FlipButton() % 2 == 0
+                is_front = input.Card_is_front()
+                if isinstance(is_front, bool):
+                    return is_front
+                return True
             self.isFront = reactive.calc(isFront)
 
 
@@ -348,11 +400,6 @@ class Card(Module):
             def show_info():
                 ui.modal_show(
                     ui.modal(
-                        # # the following head_contents() 'seems' to be necessary to add here as modal documents do not reliably inherit from the main document
-                        # ui.head_content(
-                        #     ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
-                        #     ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets
-                        # ),
                         ui.card(
                             ui.card_header(
                                 self.long_name,

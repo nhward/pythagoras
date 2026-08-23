@@ -99,7 +99,6 @@ def application():
         ),
         ui.busy_indicators.options(spinner_type = "bars2"),
         ui.busy_indicators.use(),
-        ui.output_ui("DocumentViewer"),
         ui.page_navbar(
             *create_sections(),  # << This is the important call here
             ui.nav_spacer(),

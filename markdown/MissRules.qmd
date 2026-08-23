@@ -18,7 +18,7 @@ A classic use case is in market basket analysis, where the goal is to find rules
 
 > If a customer buys bread and butter, they are likely to also buy jam.
 
-These rules help businesses understand buying behaviour, recommend products, or optimise store layouts.
+These rules help businesses understand buying behavior, recommend products, or optimize store layouts.
 
 <details class="deep-dive">
   <summary>Click here for a fully expanded discussion of missing values.</summary>
@@ -121,6 +121,9 @@ So:
 
 Interpretation: *Customers who buy bread are 8 times more likely to also buy butter than if the two items were bought independently. That’s a strong association, and this rule is likely interesting and useful.*
 
+#### 🏞️ Front
+
+The card's front charts a network connecting rules with their variables. Hovering over a rule reveals the LHS and RHS basis.
 
 #### 🔄 Flip side
 

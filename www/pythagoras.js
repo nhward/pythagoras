@@ -29,16 +29,36 @@ document.addEventListener("DOMContentLoaded", () => {
         // Flipping
         const flipButton = card.querySelector(".flip-btn");
         flipButton?.addEventListener("click", () => {
-            flipToggle(card)
+            flipToggle(card);
         });
+        publishCardFace(card);
     });
 
 
+    function publishCardFace(card) {
+        const cardbody = card?.querySelector(".card-body");
+        if (!cardbody) return;
+        const isFront = !cardbody.classList.contains("flipped");
+        window.Shiny?.setInputValue?.(
+            `${card.id}_is_front`,
+            isFront,
+            { priority: "event" }
+        );
+    }
+
+    function setCardFlipped(card, flipped) {
+        const cardbody = card?.querySelector(".card-body");
+        if (!cardbody) return;
+        cardbody.scrollTop = 0;
+        cardbody.scrollLeft = 0;
+        cardbody.classList.toggle("flipped", Boolean(flipped));
+        publishCardFace(card);
+    }
+
     function flipToggle(card) {
-        const cardbody = card.querySelector(".card-body");
-        cardbody.scrollTop = 0;  // bring contents to the top before flipping
-        cardbody.scrollLeft= 0;  // bring contents to the left before flipping
-        cardbody.classList.toggle("flipped");
+        const cardbody = card?.querySelector(".card-body");
+        if (!cardbody) return;
+        setCardFlipped(card, !cardbody.classList.contains("flipped"));
     }
 
     /* animate element e.g. shakeX or bounce */
@@ -250,14 +270,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // Pick the most relevant card: fullscreen one if present; otherwise nearest card to focus
         const fsCard = document.querySelector(".card.fullscreen-active");
         if (fsCard) {
-            const flipped = fsCard.querySelector(".flipped")
+            const flipped = fsCard.querySelector(".card-body.flipped");
             if (flipped) {
-                flipped.classList.remove("flipped");
+                setCardFlipped(fsCard, false);
             } else {
                 contractCard(fsCard);
             }
         } else {
-            document.querySelectorAll(".flipped").forEach((el) => el.classList.remove("flipped"));
+            document.querySelectorAll(".card .card-body.flipped").forEach((cardbody) => {
+                const card = cardbody.closest(".card");
+                if (card) setCardFlipped(card, false);
+            });
         }
     });
 
@@ -360,4 +383,3 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
 });
-

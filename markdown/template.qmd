@@ -6,6 +6,14 @@ format:
 editor:
   render-on-save: true
 ---
+
+                        # # the following head_contents() 'seems' to be necessary to add here as modal documents do not reliably inherit from the main document
+                        # ui.head_content(
+                        #     ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
+                        #     ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets
+                        # ),
+
+
 #### 🧭 Introduction
 
 

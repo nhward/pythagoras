@@ -39,6 +39,11 @@ The any buttons in the footer allow any named placeholders to be converted to mi
 }
 </style>
 
+#### 🏞️ Front
+
+The card's front shows a heat-map chart of potential placeholders, as well as missingness. Buttons allow the substitution of each potential 
+placeholder.
+
 #### 🔄 Flip side
 
 The back of the card tabulates the count of each placeholder per variable.

@@ -19,7 +19,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
-from faicons import icon_svg as icon
 from joblib import Parallel, delayed
 from plotly.colors import sample_colorscale
 from shiny import reactive, render, req, ui
@@ -38,11 +37,11 @@ from roles import Role
 
 OBS_COUNT = "Obs-count"
 LOGGER = logging.getLogger(__name__)
-MISSINGNESS_ROW_BACKGROUNDS = {
-    "Random": "#d1e7dd",
-    "Uncertain": "#fff3cd",
-    "Patterned": "#f8d7da",
-    "Insufficient data": "#e2e3e5",
+MISSINGNESS_ROW_CLASSES = {
+    "Random": "miss-type-random-row",
+    "Uncertain": "miss-type-uncertain-row",
+    "Patterned": "miss-type-patterned-row",
+    "Insufficient data": "miss-type-insufficient-row",
 }
 
 @dataclass
@@ -807,43 +806,19 @@ def _missingness_row_styles(table: pd.DataFrame) -> list[dict[str, object]]:
     if "Missingness Type" not in table.columns:
         return []
     styles: list[dict[str, object]] = []
-    for missingness_type, background in MISSINGNESS_ROW_BACKGROUNDS.items():
+    for missingness_type, class_name in MISSINGNESS_ROW_CLASSES.items():
         rows = table.index[table["Missingness Type"].eq(missingness_type)].tolist()
         if rows:
             styles.append({
                 "rows": rows,
-                "style": {"background-color": background},
+                "class": class_name,
             })
     return styles
-
-
-def _empty_figure(message: str) -> go.Figure:
-    figure = go.Figure()
-    figure.add_annotation(
-        text=message,
-        x=0.5,
-        y=0.5,
-        xref="paper",
-        yref="paper",
-        showarrow=False,
-        font={"size": 16, "color": "#6c757d"},
-    )
-    figure.update_layout(
-        template="plotly_white",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6",
-        xaxis={"visible": False},
-        yaxis={"visible": False},
-    )
-    return figure
-
 
 def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
     """Draw a fitted scikit-learn decision tree using Plotly annotations."""
     if analysis.model is None or analysis.branches == 0:
-        return _empty_figure(
-            "The selected target has no decision-tree structure"
-        )
+        return Card.empty_figure("The selected target has no decision-tree structure")
     tree = analysis.model.tree_
     positions: dict[int, tuple[float, float]] = {}
     next_leaf = 0
@@ -1010,14 +985,6 @@ def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
     return figure
 
 
-def _NoSee():
-    return ui.div(
-        icon("eye-slash", title="No missing values", a11y="sem"),
-        class_="text-center text-success opacity-25",
-        style="font-size: 12rem;",
-    )
-
-
 def instance():
     """Create the immutable missingness-type card."""
     this = Card(file=__file__, mutable=False)
@@ -1036,8 +1003,7 @@ def instance():
                     title="Decision tree",
                     text="A decision tree predicting the selected variable's missingness, or the number of missing values in each observation.",
                     position="left",
-                ),
-                ui.output_ui(id="NoSee")
+                )
             ),
             title = None,
             id = "Target", 
@@ -1082,14 +1048,25 @@ def instance():
                     collection has improved over time (assuming the data is in collection order)""",
                 position="left",
             ),
-            ui.input_checkbox(
-                id="UseWeights",
-                label="Use observation weights",
-                value=True,
+                        ui.input_slider(
+                id="MinMissProp",
+                label="Minimum missing proportion",
+                min=0,
+                max=0.5,
+                value=0.05,
+                step=0.01,
                 guide=this,
-                text="Use any variable assigned with the weighting role as tree observations weights.",
+                text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.",
                 position="left",
             ),
+            # ui.input_checkbox(
+            #     id="UseWeights",
+            #     label="Use observation weights",
+            #     value=True,
+            #     guide=this,
+            #     text="Use any variable assigned with the weighting role as tree observations weights.",
+            #     position="left",
+            # ),
             ui.input_slider(
                 id="CVFolds",
                 label="Cross-validation folds",
@@ -1268,6 +1245,10 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
+        @this.throttle(2)
+        @this.suspendable(calc=True)
+        def MinMissProp():
+            return input.MinMissProp()
 
         @this.throttle(2)
         @this.suspendable(calc=True)
@@ -1322,9 +1303,18 @@ def instance():
 
         @this.suspendable(calc=True)
         def MissingVariables():
-            """Return columns containing at least one missing value."""
-            frame = PreparedData()._df
-            return [column for column in frame.columns if frame[column].isna().any()]
+            minimum_missing_proportion = float(MinMissProp())
+            proxy = PreparedData()
+            frame = proxy.to_native()
+            predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
+            return [
+                column
+                for column in frame.columns
+                if (
+                    column in predictors
+                    and frame[column].isna().mean() > minimum_missing_proportion
+                )
+            ]
 
         PastTabs = reactive.value([])
 
@@ -1352,8 +1342,10 @@ def instance():
 
 
         def _weighting_column(proxy: ProxyData) -> str | None:
-            columns = sorted(proxy.role_map.columns_with_role(Role.WEIGHTING))
-            return columns[0] if input.UseWeights() and columns else None
+            w = proxy.role_map.columns_with_role(Role.WEIGHTING)
+            if len(w) == 0:
+                return None
+            return list(w)
 
         def _model_key(
             target: str,
@@ -1500,6 +1492,8 @@ def instance():
         @output
         @render_widget
         def Tree():
+            if not MissingVariables():
+                return Card.empty_figure("There are no significantly missing variables")
             figure = _tree_figure(Model())
             figure.update_layout(
                 modebar={"orientation": "v"},
@@ -1543,7 +1537,7 @@ def instance():
             req(this.isFront())
             if not MissingVariables():
                 return ui.span(
-                    "The data does not contain missing values.",
+                    "The data does not contain significantly missing variables.",
                     class_="text-success text-center d-block",
                 )
             analysis = Model()
@@ -1616,13 +1610,6 @@ def instance():
                         class_="text-info text-center d-block"
                     )
                 )
-
-        @output
-        @render.ui
-        def NoSee():
-            if MissingVariables():
-                return None
-            return _NoSee()
 
     this.server = server
     return this
