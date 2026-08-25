@@ -20,5 +20,6 @@
     "[python]": {
         "interpreters.startupBehavior": "auto"
     },
-    "markdown.validate.enabled": true
+    "markdown.validate.enabled": true,
+    "makefile.buildLog": ""
 }

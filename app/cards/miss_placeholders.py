@@ -217,8 +217,7 @@ def _remove_list_placeholders(
             values.append(value)
     if not changed:
         return series
-    # TODO: Implement __setitem__/_putmask in the custom extension arrays so
-    # pandas-native masked assignment can replace this reconstruction step.
+    # TODO: Implement __setitem__/_putmask in the custom extension arrays so pandas-native masked assignment can replace this reconstruction step.
     return _rebuild_custom_series(series, values)
 
 def instance():
@@ -512,8 +511,7 @@ def instance():
             columns = _columns_by_placeholder_kind(native)
             if bucket in columns:
                 return columns[bucket]
-            # TODO: Add a dedicated basket/list chart tab if collection-valued
-            # variables become common enough to justify another front panel.
+            # TODO: Add a dedicated basket/list chart tab if collection-valued variables become common enough to justify another front panel.
             return native.columns.tolist()
 
 
@@ -664,7 +662,7 @@ def instance():
             codes_df = state["codes"]
             legend = state["legend"]
             fixed = state["fixed"]
-            cols = _select_cols(fixed.to_native(), "floatt")
+            cols = _select_cols(fixed.to_native(), "float")
             if len(cols) == 0:
                 return empty_plotly("No decimal data to display")
             else:

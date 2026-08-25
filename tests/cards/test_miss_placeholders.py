@@ -426,7 +426,7 @@ class TestResolutionAndCharts:
     ):
         colours = card_module._placeholder_colour_map([0, 1, 13, 27])
         assert colours[0] == "#6c757d"
-        assert colours[1] == "#0d6efd"
+        assert colours[1] == "#6fa5f8"
         assert colours[13] == card_module.pc.qualitative.Set3[0]
         assert colours[27] == card_module.pc.qualitative.Set3[1]
         assert colours[13] not in {colours[0], colours[1]}
@@ -482,7 +482,7 @@ class TestResolutionAndCharts:
             for trace in figure.data[2:]
         }
         assert legend_colours["Missing"] == "#6c757d"
-        assert legend_colours["Not Missing"] == "#0d6efd"
+        assert legend_colours["Not Missing"] == "#6fa5f8"
         assert legend_colours["str: NA"] == card_module.pc.qualitative.Set3[0]
         assert figure.layout.showlegend is True
         assert figure._config["displayModeBar"] is True

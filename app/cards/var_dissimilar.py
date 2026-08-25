@@ -32,7 +32,7 @@ from shiny import render, req, ui
 from shinywidgets import render_widget
 
 #TODO: expose correlation extra-weighting as a setting
-#TODO: employ observations weights when available
+#TODO: employ observations weights when available (How?)
 
 def instance():
     """Create the immutable variable-dissimilarity card."""
