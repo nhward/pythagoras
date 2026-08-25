@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Type of missingness</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Type of missingness</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>This card focuses on differentiating between <strong>Random</strong> and <strong>Patterned</strong> causes of missingness. The following possible assessments are calculated based upon a decision tree trying to predict missingness:</p>
+<ul>
+<li>Random - Non-Random hypothesis can be rejected</li>
+<li>Uncertain - The hypothesis test is ambiguous</li>
+<li>Patterned - Non-Random hypothesis cannot be rejected</li>
+<li>Insufficient data - Statistical test is meaningless</li>
+</ul>
+<p>The front face is a set of tabs that each show a decision-tree chart that predicts missingness.</p>
+<!-- See <a href="/markdown/MissingValues.html" target="_blank" rel="noopener noreferrer">here</a> for a background article on missing values. -->
+<details class="deep-dive">
+<summary>
+Click here for a fully expanded discussion of missing values.
+</summary>
+<iframe role="img" src="aaa.html" title="Missing Values" loading="lazy">
+</iframe>
+</details>
+<style>
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+</style>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card reveals a table of predictors: those with missing values. Each row gives an assessment decision and the basis of that decision. The rows can be sorted into ascending p-value clicking the p-value header.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h4 id="goal">🎯 Goal</h4>
+<ol type="1">
+<li><em>Primary:</em> To identify predictors that have <strong>patterned</strong> missingness. Their missing values should be imputed rather than removing the observations (partial deletion). Deleting observations with patterned missingness will produce non-random omissions that are a potential cause of data bias.</li>
+<li><em>Secondary:</em> To detect relationships that suggest an explanation and possibly a manual imputation for certain missing values. For example: <em>In a housing dataset, the category level of “house boat” might explain why the ratable-value variable is missing (manually set these to zero).</em></li>
+</ol>
+<p>The actions implied by the different missingness causes are:</p>
+<ul>
+<li><p><strong>Explainable:</strong> Design manual-imputation strategies for some variables. For example:<br>
+<em>Blood-test results can be missing because no diagnostic justification for the test has yet arisen. Were such tests undertaken unnecessarily they would usually yield results in the normal range (rather than in the extreme range). A possible manual imputation might involve substituting a typically “Normal” result for each missing test. Substituting a mean result would be a <strong>poor</strong> choice.</em></p></li>
+<li><p><strong>Patterned:</strong> Design statistical-imputation strategies. For example:<br>
+<em>The absence of clinical notes is often caused by periods of high workload and emergencies. This is not random and the missing notes might best be estimated by what the subsequent notes.</em></p></li>
+<li><p><strong>Random:</strong> Design partial-deletion or statistical-imputation strategies. For example:<br>
+<em>Instrument failures prevent the recording of routine blood pressure readings. These missed readings can be safely ignored as they appear to occur randomly.</em></p></li>
+</ul>
+<hr>
+<p>All cards downstream of this card will receive any changes enacted by this card.</p>
+
+
+
+
+
+</body></html>

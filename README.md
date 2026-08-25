@@ -1,6 +1,6 @@
 
 
-# <img src="./www/tetractys.png" alt="tetractys" width="40" height="40"> Pythagoras
+# <img src="app/www/tetractys.png" alt="tetractys" width="40" height="40"> Pythagoras
 
 *A modular, workflow-driven data science environment built with Shiny for Python.*
 
@@ -80,7 +80,7 @@ This enables:
 
 ### 📦 Data Flow Model
 
-Each card imports and exports a structured data wrapper (e.g. `ProxyData`) that includes:
+Each card imports and exports a structured data wrapper (e.g. `proxy_data`) that includes:
 
 - The dataset (Pandas / GeoPandas)
 - A **RoleMap** describing variable roles
@@ -131,6 +131,7 @@ This allows:
 
 Cards inherit from base classes:
 
+* ABC: Abstract base class
 * Module: implements shiny modules
 * Card: implements a common look and feel for the cards
 
@@ -156,24 +157,24 @@ Cards (available and planned)
 
 📊 Data Prep
 
-* [Data importation](./markdown/dataImport.md) 
-* [Data tabulation](./markdown/dataTable.md)
-* [Placeholder replacement](./markdown/dataPlaceholders.md)
-* [Variable modification](./markdown/varModify.md)
-* [Role assignment](./markdown/roleAssign.md)
-
+* [Data importation](app/www/markdown/data_import.html) 
+* [Data tabulation](app/www/markdown/data_tabulation.html)
+* [Role assignment](app/www/markdown/role_assignment.html)
+* [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
 
 
 🧹 Data cleaning
 
-* Data type
+* [Variable modification](app/www/markdown/var_modify.html)
 * Duplicate Observations
 
 ∅ Missing Values
 
-* Missing value visualization
+* [Missing Placeholders](app/www/markdown/miss_placeholders.html)
+* [Missingness types](app/www/markdown/miss_type.html)
+* [Informative Missingness](app/www/markdown/miss_informative.html)
 * Excessive missingness
-* Pattern detection
+* [Missingness rules](app/www/markdown/miss_rules.html)
 * Imputation
 
 
@@ -185,7 +186,7 @@ Cards (available and planned)
 * Stratification
 
 Miscellaneous
-* [Configuration](./markdown/configuration.md)
+* [Configuration](app/www/markdown/sys_configuration.html)
 
 ⸻
 

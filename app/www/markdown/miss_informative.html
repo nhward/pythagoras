@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Informative Missingness</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Informative Missingness</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h1 id="introduction">🧭 Introduction</h1>
+<p>The presence of missing values can potentially assist in predicting the target. When this occurs we have “informative missingness”. It is advantageous to create extra binary predictors so that any relationship can be exploited during modeling. These extra features are called “shadow variables”. This is a form a feature extraction. Feature selection can later exclude shadow variables if they ultimately prove unimportant.</p>
+<p>Given a target exists for the dataset, shadow variables are created for certain variables. Only predictors that have more than a trivial proportion of missing values need be considered. A Random Forest model is trained (using cross validation) so as to determine variable importance. Whether any variable’s missingness is “informative” is judged by the shadow variable being amongst the important variables.</p>
+<p>This card focuses on differentiating between <strong>Informative</strong> and <strong>Uninformative</strong> natures of predictor missingness.</p>
+<p>Once imputed, a missing value would be indistinguishable from a non-missing value unless a shadow variable keeps this information available. Since only the predictor role can normally have missing values, only predictor variables will be considered for shadow variables.</p>
+<p>This creation of shadow variables is pointless when observations (with any missing values) are planned to be removed (i.e. partial deletion). This that case, all shadow variables will become constant variables.</p>
+<p>This assessment should follow after any Excess-observational-missing removal and Manual-imputation. It should precede any any learned-imputation</p>
+<details class="deep-dive">
+<summary>
+Click here for a fully expanded discussion of missing values.
+</summary>
+<iframe role="img" src="aaa.html" title="Missing Values" loading="lazy">
+</iframe>
+</details>
+<style>
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+</style>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front shows a variable importance chart. Buttons allow the generation of any plausible shadow variables.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The card’s back shows a variable importance table.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h4 id="goal">Goal</h4>
+<ol type="1">
+<li><em>Primary:</em> To identify predictors that plausibly have informative missingness.</li>
+<li><em>Secondary:</em> To facilitate the generation of the relevant shadow variables.</li>
+</ol>
+<hr>
+<p>All cards downstream of this card will receive any changes enacted by this card.</p>
+
+
+
+
+
+</body></html>

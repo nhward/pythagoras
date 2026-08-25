@@ -1,7 +1,13 @@
+import sys
+from pathlib import Path
+
+path = Path(__file__).resolve().parent.parent / "app"
+if path not in sys.path:
+    sys.path.insert(0, path)
+
 import numpy as np
 import pandas as pd
 import pytest
-
 import text_pandas as tp
 from text_pandas import (
     TextArray,

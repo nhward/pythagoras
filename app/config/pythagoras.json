@@ -1,0 +1,38 @@
+       {
+
+  "$schema": "pythagoras.schema.json",
+
+  "version": 1,
+
+  "settings": {
+    "section_style": "tab",
+    "reuse_cards": true,
+    "max_card_height": "450px",
+    "max_dupl_cards": 10
+  },
+
+  "layout": [
+    {
+      "section": "Data prep",
+      "cards": [
+        {"module": "data_import"},
+        {"module": "data_tabulation"},
+        {"module": "role_assignment"},
+        {"module": "var_modify"},
+        {"module": "var_dissimilar"},
+        {"module": "miss_placeholders"},
+        {"module": "miss_informative"},
+        {"module": "miss_rules"},
+        {"module": "miss_type"}
+      ]
+    },
+
+    {
+      "section": "Missing values",
+      "cards": [
+        {"module": "DataPlaceholders"},
+        {"module": "DataTabulation"}
+      ]
+    }
+  ]
+}

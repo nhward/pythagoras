@@ -1,12 +1,16 @@
 import json
+import sys
+from pathlib import Path
 
+path = Path(__file__).resolve().parent.parent / "app"
+if path not in sys.path:
+    sys.path.insert(0, path)
+
+import geometry_pandas as gp
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
-from shapely.geometry import LineString, Point, mapping
-
-import geometry_pandas as gp
 from geometry_pandas import (
     GeometryEvidence,
     as_geometry,
@@ -14,6 +18,7 @@ from geometry_pandas import (
     is_geometry,
     is_geometry_like,
 )
+from shapely.geometry import LineString, Point, mapping
 
 
 @pytest.fixture

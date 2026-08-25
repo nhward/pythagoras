@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Data tabulation</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Data tabulation</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>All analysis or modeling tasks begin with loading some raw data. The data is expected to be in a rows (observations) and columns (variables) table, or at least be able to be transformed into tabular data.</p>
+<p>Data can be imported through any of three importation styles. Each is implemented on a tab dialogue.</p>
+<ol type="1">
+<li>User’s local file system</li>
+<li>Dataset located within certain python packages</li>
+<li>URL resource</li>
+<li><a href="https://archive.ics.uci.edu/datasets">UC Irvine</a></li>
+</ol>
+<p>The UC Irvine webpage enable datasets to be searched and filtered as a prelude to their selection here.</p>
+<p>The importation of files and URLs supports a variety of file types. These include, but are not limited to, the following file extensions:</p>
+<ul>
+<li>CSV: A comma, semi-colon, or tab-delimited file.</li>
+<li>XLS: A spreadsheet worksheet.</li>
+<li>RDS: An R serialization file containing a data frame.</li>
+<li>GPKG: A spatial data file.</li>
+</ul>
+<p>If you have a different file extension, feel free to give it a try to see if it can be imported.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card documents:</p>
+<ul>
+<li>Dataset Info: Class and dimensions</li>
+<li>Memory usage: Bytes in use</li>
+<li>Variable listing: Column, Non-Null count, Null count, Data type</li>
+<li>Categories: Count, unique, top, frequency</li>
+</ul>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<ul>
+<li>The between-column separator character.</li>
+<li>The worksheet position (for multi-sheet spreadsheets).</li>
+</ul>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> Facilitate data importation</li>
+<li><em>Secondary:</em> Help verify whether you have the required dataset.</li>
+</ol>
+<hr>
+<p>All cards downstream of this card will receive the data imported by this card. All variables are assigned to the <strong>Predictor</strong> role. Dates and date-times that do not declare their time zones are assigned to UTC.</p>
+
+
+
+
+
+</body></html>

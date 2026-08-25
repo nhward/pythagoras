@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Variable dissimilarity</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Variable dissimilarity</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>This card is a dataset summary that explores the characteristics of each predictor variable and builds a dissimilarity matrix which is visualized through a hierarchy graph.</p>
+<p>The variable characteristics employed in assessing dissimilarity are:</p>
+<ul>
+<li>The relative cardinality</li>
+<li>The centrality (if numeric), maximum scaled to 1 (mean or median depending on use of robust statistics)</li>
+<li>The spread as a proportion of the centrality (standard deviation or Median Absolute Deviation (mad) depending on use of robust statistics)</li>
+<li>The skew</li>
+<li>The sequence of value (using correlation distance i.e. <span class="math inline">1 − |<em>c</em><em>o</em><em>r</em><em>r</em>|</span>)</li>
+<li>The name (using q-grams and cosine distance)</li>
+<li>The sequence of missing values (using Jaccard distance)</li>
+</ul>
+<p>The various dissimilarity matrices are unified using a weighted mean. Correlation has a five-fold weighting over the other characteristics.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card documents:</p>
+<ul>
+<li>the dissimilarity matrix. Zero means identical.</li>
+</ul>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<ul>
+<li>Employ robust statistics for correlation, central tendency and spread</li>
+<li>Size of q-grams</li>
+<li>Hierarchical clustering technique</li>
+<li>Hierarchical chart layout</li>
+<li>Limit the maximum number of observations to process</li>
+</ul>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> Judge whether the variables form groups that suggest shared strategies for managing them.</li>
+<li><em>Secondary:</em> Discover surprises that suggest further investigation.</li>
+</ol>
+<p>The actions implied by the dissimilarity are:</p>
+<ul>
+<li>Investigate variables that have (almost) the same name. What makes them different otherwise?</li>
+<li>Apply similar preprocessing to variables that are similar.</li>
+<li>Feature engineer the data to have few similar variables.</li>
+<li>Change the names of variables that sound similar but are quite dissimilar.</li>
+<li>Drop variables that are effectively duplicates.</li>
+</ul>
+<hr>
+<p>All cards downstream of this card will receive the upstream data. This card does not change the data (only its appearance).</p>
+
+
+
+
+
+</body></html>

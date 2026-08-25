@@ -1,0 +1,18 @@
+project: 
+  type: default
+  execute-dir: project
+  render: 
+    - "markdown/*.qmd"
+subtitle: A Pythagoras card
+author: "Nick Ward"
+format:
+  html:
+    toc: false
+    embed-resources: true
+    minimal: true
+editor:
+  render-on-save: true
+execute: 
+  echo: true
+  warning: false
+  error: false

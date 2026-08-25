@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Background on Missing Values</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+<style type="text/css">html,
+body {
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+margin: 0;
+
+background-color: #d2e5f4 !important;
+overflow-x: hidden;
+}
+*,
+*::before,
+*::after {
+box-sizing: inherit;
+}
+main,
+main.content,
+#quarto-content {
+width: 100%;
+max-width: 100%;
+}
+
+p,
+li,
+td,
+th {
+overflow-wrap: anywhere;
+}
+
+pre,
+pre code {
+white-space: pre-wrap;
+overflow-wrap: anywhere;
+word-break: break-word;
+}
+
+img,
+svg,
+video,
+canvas {
+max-width: 100%;
+height: auto;
+}
+
+table {
+max-width: 100%;
+}
+.table-responsive {
+max-width: 100%;
+overflow-x: auto;
+}
+html,
+body,
+#quarto-content {
+background-color: #d2e5f4 !important;
+}</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Background on Missing Values</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h1 id="missing-values">🧩 Missing Values</h1>
+<p>The assessment and resolution of missing values is multifaceted.</p>
+<p>Firstly, the true missing values must be identified. This involves <a href="#placeholders">identifying placeholders</a> for missing values. For example, addresses that hold the value “unknown”. Conversely, it also involves assigning obvious values to certain missing values through domain knowledge and careful reasoning.</p>
+<p>After this each predictor in a dataset needs to have its missing values assessed with respect to <a href="#prevalence">prevalence</a>, <a href="#cause">cause</a>, [association](#association], and the <a href="#nature">nature</a> of any missing values. It is important to determine these as they drive how missingness in each predictor should be handled. These are explained in the section called <a href="#assessment">Assessment</a>.</p>
+<p>Finally, the resolution of missing values encompasses the use of <a href="#shadow">shadow variables</a>, <a href="#variable">variable removal</a>, <a href="#observation">observation removal</a>, imputation and <a href="#implicit">implicit missing value tolerance</a>. Imputation can be <a href="#manual">manual</a> or <a href="#learned">learned</a>. A mixture of several methods may be optimal. These are explained in the section called <a href="#resolution">Resolution</a>.</p>
+<h1 id="assessment">📋 Assessment</h1>
+<p>When assessing missingness it is useful to ask the following question of the data:</p>
+<blockquote>
+<p><em>Is the missingness due an artifact of data curation or intrinsic to the ongoing data-generating and data-collection processes?</em></p>
+</blockquote>
+<p>In other words, will the missingness continue into the foreseeable future or will it cease because it was due to merely historic problems. <strong>If any missingness can be expected into the future, ensure the model can tolerate this in its “prediction” mode.</strong></p>
+<h2 id="prevalence">📊 Prevalence</h2>
+<p>The prevalence levels are:</p>
+<ul>
+<li><strong>Excessively missing</strong> - A predictor whose missing values exceed an acceptability threshold</li>
+<li><strong>Somewhat missing</strong> - A predictor whose missing values fall below an acceptability threshold</li>
+<li><strong>Not missing</strong> - A predictor without missing values</li>
+</ul>
+<p>It is best to assess predictor prevalence <em>after</em> excessively missing observations are removed. Excessively missing variables are best removed <em>except</em> it can be shown that they are important predictive variables.</p>
+<h2 id="cause">🔍 Cause</h2>
+<p>The possible causes of missingness are:</p>
+<ul>
+<li><strong>Random</strong> - A predictor’s missingness has no pattern with respect to the non-missing values of other predictors. This cause is also known as <em>Missing-completely-at-random (MCAR)</em></li>
+<li><strong>Patterned</strong> - A predictor’s missingness has a statistically significant model that predicts much of the missing values using the (non-missing) values of other predictors. This cause is also known as <em>Missing-at-random (MAR)</em></li>
+<li><strong>Explainable</strong> - A predictor’s missingness can be explained by the values that would have existed. By its nature, this is difficult to diagnose using the data. This cause is also known as <em>Missing-not-at-random (MNAR)</em></li>
+</ul>
+<h2 id="association">🔗 Association</h2>
+<p>Variables often have similar causes of missingness that show as correlated missingness. The sharing of <em>common</em> causes or <em>shared</em> causes between predictors can be assessed through the use of <strong>Association rules</strong>, <strong>Jaccard Index</strong>, and the <strong>Upset Chart</strong>.</p>
+<p>When association is present, this can lead to observations having either few or many missing values. The distribution of observation missingness may show a bimodal</p>
+<h2 id="nature">🧬 Nature</h2>
+<p>In addition there is a nature of missingness to consider:</p>
+<ul>
+<li><strong>Informative</strong> - A predictor’s missingness may be predictive of the target.</li>
+<li><strong>Uninformative</strong> - A predictor’s missingness may not be predictive of the target.</li>
+</ul>
+<h1 id="resolution">✅ Resolution</h1>
+<p>The resolution of missing values is about ending up with a dataset that no longer has missing values. Doing so needs to proceed in a particular order.</p>
+<h2 id="placeholders">📍 1 Placeholders for missing-values</h2>
+<p>Not all non-missing values are real. Sometimes, when a entry is compulsory, people will enter a placeholder value to indicate that they have no valid value to offer. For numeric values, -99 has historically suggested that the value is effectively missing. An address that is written as “unknown” again signifies missing data. All such candidate values need to be judged as to whether they are converted to missing values.</p>
+<p>Issues:</p>
+<ul>
+<li>It requires domain knowledge to reliably assign placeholders to missing values.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>When a patient is given the name “Jane Doe”, the suggestion is that the name is not actually known. Combining the records of all the “Jane Does” would be a bad idea.</em></p>
+</blockquote>
+<h2 id="manual">✍️ 2 Manual imputation</h2>
+<p><em>Manual imputation</em> is the process of in-filling certain <strong>explainable</strong> missing values based upon logic and domain knowledge. This need not apply to all the missing values of a single variable. Sparse data is a classic example of the need to manually assign values to the missing values.</p>
+<blockquote>
+<p><em>Sparse data is a dataset where most values are zero, empty, or missing. This happens when a large table has very few actual entries compared to its total size. Common examples include:</em></p>
+</blockquote>
+<blockquote>
+<blockquote>
+<ul>
+<li><em>Movie ratings: Most users rate only a few films out of thousands available.</em></li>
+<li><em>Word lists: Most documents use only a tiny fraction of all words in a dictionary.</em></li>
+<li><em>Online shopping: Most buyers purchase only a few items from a huge store.</em></li>
+</ul>
+</blockquote>
+</blockquote>
+<p>Issues:</p>
+<ul>
+<li><em>Manual imputation</em> needs to occur before any other resolution so that only <strong>unexplainable</strong> missing values get down-stream processing.</li>
+<li>Ideally this is done programmatically and is carefully documented for repeatability.</li>
+<li>Consider whether the programmed in-filling is able to be applied when predicting future observations (in production) which might also contain missing values.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>Blood-test results can be missing because no diagnostic justification for the test has yet arisen. Were such tests undertaken unnecessarily they would usually yield results in the normal range (rather than in the extreme range). A possible manual imputation might involve substituting a typically “Normal” result for each missing test. Substituting a mean result (as <strong>learned imputation</strong> might) would be a <strong>poor</strong> choice.</em></p>
+</blockquote>
+<h2 id="shadow">🌘 3 Shadow variables</h2>
+<p>Shadow variables are additional binary variables manufactured to record which values are missing. When the missing values have an <strong>Informative</strong> nature, a shadow variable supplies this valuable information to the model-fitting even if the values are subsequently imputed.</p>
+<p>Issues:</p>
+<ul>
+<li><em>Shadow variable</em> production needs to occur before any imputation.</li>
+<li>When the missing values are <strong>Uninformative</strong> the additional <em>shadow variables</em> will be no use. A variable selection stage should attempt to remove unnecessary <em>shadow variables</em>.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>The absence of clinical notes is often caused by periods of high workload and surgery emergencies. The target may also be affected by periods of high workload and surgery emergencies. This absence of clinical notes may be informative and a shadow variable should be generated to capture this information.</em></p>
+</blockquote>
+<h2 id="variable">✂️ 4 Variable removal</h2>
+<p>When a variable has a large percentage of missing values, a threshold may be reached where it becomes challenging to perform <em>learned imputation</em>, and the alternative data loss due <em>Observation removal</em> becomes excessive.</p>
+<p>Issues:</p>
+<ul>
+<li>That threshold point changes depending upon the “importance” of the variable to the target. Best practice would be to vary this as a hyper-parameter during model tuning.</li>
+<li><em>Variable removal</em> must precede <em>Observation removal</em> to maximize the number of training observations when these resolutions are used in conjunction.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>Polio protocols have remained absent for decades. The data is more missing than present. This variable deserves to be removed until further notice.</em></p>
+</blockquote>
+<h2 id="observation">🗑️ 5 Observation removal</h2>
+<p><em>Observation removal</em> involves the deletion of observations with (relevant) missing values. This leaves a reduced number of entirely complete observations with which to fit the model. This resolution style is also known as <em>Partial deletion</em>. A more sophisticated variation of this idea can be employed to only remove observations whose incompleteness exceeds a certain threshold.</p>
+<p>Issues:</p>
+<ul>
+<li>What constitutes excessive missingness is poorly defined. Best practice would be to vary this threshold as a hyper-parameter during model tuning.</li>
+<li><em>Observation removal</em> risks introducing data bias if there is some pattern to the missing values. Only truly random missingness is guaranteed to avoid data bias.</li>
+<li>What constitutes relevant predictors may not yet be clear. If a model ends up using only 10 out of 40 predictors, then these 10 are the relevant ones. Best practice would be to iterate through a range of variable importances to discover what might be relevant to <em>Observation removal</em>.</li>
+<li>The number of observations decreases leading to weaker model fitting. This makes <em>Observation removal</em> something to increasingly avoid with smaller sample sizes.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>Instrument failures prevent the recording of routine blood pressure readings. Records involving missed BP readings can be safely ignored as they are believed to occur randomly. No data bias can be associated with a random process.</em></p>
+</blockquote>
+<h2 id="learned">🧠 6 Learned imputation</h2>
+<p><em>Learned imputation</em> is a process of predicting the missing values. It enables observations to remain in the training sample despite being incomplete. This is also known as <em>Statistical imputation</em>.</p>
+<p>Issues:</p>
+<ul>
+<li>It is wrong to think that <em>Learned imputation</em> will necessarily provide accurate predictions. This can be explored by generating CV metrics for such models.</li>
+<li>If the observations are truly independent and predictors are truly independent, then <em>Learned imputation</em> will necessarily be on a par with a constant value estimation.</li>
+<li>Some complex imputation techniques are slow to train.</li>
+<li>Learned imputation has a role to play even in the absence of missing values. The reason for generating a missing value predictor may lie with future in complete observations (in production)</li>
+<li>Learned imputation need good predictors. Feature extraction may need to be performed <strong>before</strong> a strong imputation model can be built.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>The absence of clinical notes is often caused by periods of high workload and surgery emergencies. This is not random: it happens frequently on Friday and Saturday nights. The missing notes might best be estimated by a note typical of the day-of-week and time. Day-of-week needs to be extracted from the observation date first in order to facilitate the imputation training.</em></p>
+</blockquote>
+<h2 id="implicit">👻 7 Implicit missing value tolerance</h2>
+<p>Many models are capable of tolerating missing values by applying a strategy that either removes observations or implicitly imputes according to their proprietary algorithm. Many “Tree” models employ a form of <em>Learned imputation</em>. Many “Linear” models employ a form of <em>Observation removal</em>.</p>
+<p>Issues:</p>
+<ul>
+<li>If you are trialing many model types, some of which have no <em>Implicit missing value tolerance</em> (e.g. SVM), you will need to explicitly employ <em>Learned imputation</em> (or <em>Observation removal</em>) for all models, in order to provide a fair trial of all models.</li>
+<li>Whether a particular model type has <em>Implicit missing value tolerance</em> is often unclear. Intolerant ones may or may not prove exceptions that explain the intolerance clearly.</li>
+<li>Though more convenient, <em>Implicit missing value tolerance</em> should be be assumed to lead to a better result than explicit management of missing values.</li>
+</ul>
+<blockquote>
+<p>Example:<br>
+<em>XGBoost is a good general modeling method that copes well with missing data. Since it is the sole method being considered in the study, I can bypass some missing-value issues. I still need to consider a) missing-value placeholders, b) Manual imputation of explainable missing-values, c) excessive variable missingness, d) excessive observation missingness, and e) Shadow variables for informative missingness.</em></p>
+</blockquote>
+
+
+
+
+
+</body></html>

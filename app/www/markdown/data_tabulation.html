@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>data_tabulation</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>Having direct access to the data is a vital part of data analysis. The small-card version is a head/tail abbreviated table. The full screen version gives access to all the observations. It also allows observation filtering.</p>
+<p>The raw data is minimally altered:</p>
+<ul>
+<li>Convert to Pandas if possible</li>
+<li>Geometries made displayable via <em>Well Known Text</em> (WKT) format</li>
+</ul>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front initially shows a short top/bottom listing. Going full-screen gives access to the entirety of the data.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>There is no back side.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<ul>
+<li>Bounding boxes (Geometries) Converts each geometry to a bounding box representation.<br>
+</li>
+<li>Rounding (Decimal)<br>
+Rounds decimal data, primarily to fit more columns into the available width.<br>
+</li>
+<li>Limit the maximum number of observations to show (on the flip side)</li>
+</ul>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> Gives you direct access to the tables values. Columns are documented with their variable type since this is not always apparent.</li>
+<li><em>Secondary:</em> Provides an opportunity to export the data as a CSV file. The file’s name is based on the card’s unique namespace.</li>
+</ol>
+<hr>
+<p>All cards downstream of this card will receive the upstream data. This card does not change the data (only its appearance).</p>
+
+
+
+
+
+</body></html>

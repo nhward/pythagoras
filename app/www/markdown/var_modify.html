@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Variable data-type modification</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Variable data-type modification</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>Variables can have the wrong data type due their form of storage. For example, CSV files do not distinguish between Text and Nominal, or between Text and Date. Sometimes, missing value place-holders (e.g. “missing”) can turn a column of numbers into a column of numbers-and-text. In this situation the data-type drops to the lowest common denominator which is “Text”.</p>
+<p><em>Likert</em> data consists of ordered responses—such as “strongly agree”, “neutral”, or “strongly disagree” — used in surveys to measure people’s opinions, attitudes, or feelings. It is not uncommon for such raw data sets to assign the wrong data-type to <em>Likert</em> variables. These variables need to be promoted to <strong>Ordinal</strong>. By default, order is simply alphabetical so they need to assigned an explicit ordering as well.</p>
+<p>It is not uncommon for raw data sets to assign the wrong type to <strong>Cyclic</strong> variables such as days-of-the-week, months-of-the-year, seasons, and hours-of-the-day. These variables need to be promoted to <strong>Cyclic</strong> and have their explicit order given.</p>
+<p>This dialogue allows the modification of variables. Variables can be renamed and have their data types changed. The “Alternatives values” settings controls the flexibility afforded to the data-type changes.</p>
+<p>Changes are made by choosing a data variable from the rows of the table. The changes must be manually entered into the fields at the foot of the card. If the field shakes, the entry is not currently valid. For example, if the new variable’s name is already in use.</p>
+<p>Nothing is actioned until pressing the “Commit” button at which point the modified dataset is propagated downstream. This button bounces when it is ready and able to be used. Mistakes can be reversed, in bulk, by pressing the “reset” button.</p>
+<p>Strings can be flexibly converted to dates even if the date-format is not known. A list for possible formats will be attempted until a near-perfect translation is achieved.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card documents the differences between the original dataset and the propagated one. This is shown in the form of a differences dialogue. An example is shown below. “+” lines indicate additions to the structure, “-” indicate subtractions from the structure.</p>
+<pre class="text"><code> --- incoming  
+ +++ modified  
+ @@ -1,7 +1,7 @@  
+  rows: 413  
+  columns: 16  
+  CODE: dtype=str, missing=0, unique=413  
+ -POLITICS: dtype=str, missing=4, unique=5  
+ +POLITICS: dtype=category, missing=4, unique=5  
+  POPULATION: dtype=float64, missing=96, unique=317  
+  AGE25_PROPTN: dtype=float64, missing=92, unique=315  
+  AGE_MEDIAN: dtype=float64, missing=230, unique=183  </code></pre>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h5 id="possible-date-formats">Possible date formats</h5>
+<p>A comma delimited list of alternative date (and time) formats to try. Order is important since the first format that succeeds on at least 95% of data values is considered the correct format for that variable. If you know the date format should be American style, ensure this format is at the front.</p>
+<p><strong>Date components</strong></p>
+<ul>
+<li>%Y — four-digit year, such as 2026</li>
+<li>%y — two-digit year, such as 26</li>
+<li>%m — zero-padded month number: 01–12</li>
+<li>%B — full month name, such as January</li>
+<li>%b — abbreviated month name, such as Jan</li>
+<li>%d — zero-padded day of the month: 01–31</li>
+<li>%j — zero-padded day of the year: 001–366</li>
+</ul>
+<p><strong>Time components</strong></p>
+<ul>
+<li>%H — zero-padded hour using the 24-hour clock: 00–23</li>
+<li>%I — zero-padded hour using the 12-hour clock: 01–12</li>
+<li>%M — zero-padded minute: 00–59</li>
+<li>%S — zero-padded second: 00–59</li>
+<li>%f — microseconds: 000000–999999</li>
+<li>%p — locale-specific AM or PM</li>
+</ul>
+<p><strong>Weekday components</strong></p>
+<ul>
+<li>%A — full weekday name, such as Thursday</li>
+<li>%a — abbreviated weekday name, such as Thu</li>
+<li>%w — weekday number, where Sunday is 0 and Saturday is 6</li>
+<li>%u — ISO weekday number, where Monday is 1 and Sunday is 7</li>
+<li>%W — week number with Monday as the first day</li>
+<li>%U — week number with Sunday as the first day</li>
+<li>%V — ISO 8601 week number</li>
+</ul>
+<p><strong>Time-zone components</strong></p>
+<ul>
+<li>%z — UTC offset, such as +1200</li>
+<li>%Z — time-zone name, such as NZST</li>
+</ul>
+<p><strong>Literal characters</strong></p>
+<ul>
+<li>%% — a literal percent sign</li>
+<li>/, -, :, spaces and commas are included literally</li>
+</ul>
+<h5 id="alternative-types">Alternative types</h5>
+<p>This setting defines how the data types choices are filtered based on the nature of the variable.</p>
+<ul>
+<li><strong>Sensible:</strong> the feasible choices based on values and cardinality e.g. allowing low cardinality Text to Nominal. “Sensible” is the safest to use. It employs heuristic rules (involving data-values, data-type and cardinality) to identify type translations that should work correctly.</li>
+<li><strong>Related:</strong> the type-related choices are offered e.g. allowing Integer to Decimal. “Related” only uses rules relating to data-type.</li>
+<li><strong>All:</strong> all possible choices are offered. e.g. allowing Decimal to Text. “All” is not guaranteed to work, since all rules are disabled.</li>
+</ul>
+<p>##### Max obs. to examine</p>
+<p>Limit the maximum number of observations to test for alternative data types</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> To fix mis-typed variables such as numbers that are recorded as text e.g. “20.1”,“12.7”,“45.3”.</li>
+<li><em>Secondary:</em> Make it easy to change variable names and modify the order of <strong>Ordinal</strong> and <strong>Cyclic</strong> variables.</li>
+</ol>
+<hr>
+<p>All cards downstream of this card will receive any changes enacted by this card.</p>
+
+
+
+
+
+</body></html>

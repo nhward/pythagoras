@@ -7,7 +7,7 @@ name = "pythagoras"
 version = "0.1.0"
 description = "Shiny-for-Python app with card-based analytics"
 readme = "README.md"
-requires-python = ">=3.9.6"
+requires-python = ">=3.10"
 authors = [{ name = "Nick Ward" }]
 dependencies = [
   "faicons>=0.2",
@@ -26,14 +26,13 @@ dependencies = [
   "scipy>=1.10",
   "mlxtend>=0.23",
   "scikit-learn>=1.4",
+  "shinylive==0.8.11",
+  "cards>=2.0.0",
+  "card>=0.0.1",
+  "roles>=1.0.0",
 ]
-
-[project.scripts]
-pythagoras = "app:main"   # lets users run `pythagoras`
 
 [tool.hatch.build]
 include = [
-  "www/**",
-  "markdown/**",
-  "data/**",
+  "app/**",
 ]

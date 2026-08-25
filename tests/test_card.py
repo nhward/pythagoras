@@ -1,12 +1,11 @@
 import sys
 from pathlib import Path
 
+path = Path(__file__).resolve().parent.parent / "app"
+if path not in sys.path:
+    sys.path.insert(0, path)
+
 import pytest
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from card import Card
 
 
@@ -95,10 +94,10 @@ def test_clearing_ui_factories_resets_flags():
 def test_information_returns_message_if_missing(card):
     """No html file means information() returns message."""
     # ensure file does not exist
-    missing = Path("markdown/card.html")
+    missing = Path("app/www/markdown/card.html")
     if missing.exists():
         missing.unlink()
-    assert card.information() == '<br>File /Users/nickward/Documents/pythagoras/markdown/card.html not found'
+    assert card.information() == '<br>File /Users/nickward/Documents/pythagoras/app/www/markdown/card.html not found'
 
 
 #############################

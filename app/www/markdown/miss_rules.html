@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Missing Values Rules</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Missing Values Rules</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<h5 id="what-is-association-rules-analysis">🛒 What Is Association Rules Analysis?</h5>
+<p>Association rules analysis is a data mining technique used to find interesting relationships or patterns between items in large datasets — especially transactional data.</p>
+<p>A classic use case is in market basket analysis, where the goal is to find rules like:</p>
+<blockquote>
+<p>If a customer buys bread and butter, they are likely to also buy jam.</p>
+</blockquote>
+<p>These rules help businesses understand buying behavior, recommend products, or optimize store layouts.</p>
+<details class="deep-dive">
+<summary>
+Click here for a fully expanded discussion of missing values.
+</summary>
+<iframe role="img" src="aaa.html" title="Missing Values" loading="lazy">
+</iframe>
+</details>
+<style>
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+</style>
+<h4 id="how-do-association-rules-identify-missing-value-patterns">🛒 How do Association Rules identify missing value patterns?</h4>
+<p>While Association analysis is often used to analyze shopping basket patterns. To do this we need to make a mapping between a basket of shopping and missing data. An observation serves as a basket. The variables names are the the goods on sale. If a value is missing then that variable name appears in our basket. That way, if an observation is complete (i.e. nothing missing) then our basket is empty. An observation with 3 missing values might look like a basket of [“var1”, “var3”, “var5”]. It may be the case over many observations that variable 5 is mainly missing when variable 3 is missing too.</p>
+<p>We shall ignore all empty baskets from our analysis. The analysis focuses solely on the missing values and does not consider the values of the non-missing data as explanatory.</p>
+<p>We are trying to answer the question: “How strong are any discovered associations?”. Which indirectly answers: “Is missingness completely random for each variable?”</p>
+<h5 id="what-is-an-association-rule">🔗 What Is an Association Rule?</h5>
+<p>An association rule has the form:</p>
+<p><code>IF [Item A and Item B] THEN [Item C]</code> The bracketed terms are addressed as LHS and RHS. This is how they are labelled in the tabulated rules.</p>
+<p>Or more formally:</p>
+<p><code>A, B → C</code></p>
+<p>This means: if items A and B are purchased together, then item C is likely to be purchased as well.</p>
+<h5 id="three-key-metrics-support-confidence-and-lift">📊 Three Key Metrics: Support, Confidence, and Lift</h5>
+<p>To know whether a rule is meaningful, we measure it using <strong>support</strong> and <strong>confidence</strong>. Lift is the ratio of these.</p>
+<p>✅ 1. Support</p>
+<p>Support tells us how frequently the items in the rule appear together in the dataset.</p>
+<p>Definition: Support of A → C = (Number of transactions containing both A and C) / (Total number of transactions)</p>
+<p>Example: <em>There are 1,000 transactions. • 100 transactions contain both bread and jam.</em></p>
+<p>So: <em>Support(bread → jam) = 100 / 1000 = 0.10 (or 10%)</em></p>
+<p>Interpretation: <em>10% of all customers bought both bread and jam together.</em></p>
+<p>✅ 2. Confidence</p>
+<p>Confidence tells us how often the consequent (right-hand side) appears when the antecedent (left-hand side) is present.</p>
+<p>Definition: <em>Confidence of A → C = (Number of transactions containing both A and C) / (Number of transactions containing A)</em></p>
+<p>Example:<em>200 transactions contain bread, 100 of those also contain jam</em></p>
+<p>So: *Confidence(bread → jam) = 100 / 200 = 0.50 (or 50%)</p>
+<p>Interpretation: Among people who bought bread, 50% also bought jam*</p>
+<p>✅ 3. Lift</p>
+<p>Lift tells us how much more likely the right-hand side (consequent) of a rule is to occur when the left-hand side (antecedent) is present — compared to if the two were independent.</p>
+<p>Lift answers this question:</p>
+<blockquote>
+<p>Is the rule actually useful, or is it just describing something that happens frequently anyway?</p>
+</blockquote>
+<p>Definition: <em>Lift of A → C = Confidence(A → C) / Support(A → C)</em></p>
+<p>Example: <em>Let’s say in a grocery store dataset…</em></p>
+<ul>
+<li>10% of transactions include bread</li>
+<li>5% include butter</li>
+<li>4% include both bread and butter</li>
+</ul>
+<p>So:</p>
+<ul>
+<li>Support(bread) = 0.10</li>
+<li>Support(butter) = 0.05</li>
+<li>Support(bread and butter) = 0.04</li>
+<li>Confidence(bread → butter) = 0.04 / 0.10 = 0.40</li>
+<li>Lift(bread → butter) = 0.40 / 0.05 = 8</li>
+</ul>
+<p>Interpretation: <em>Customers who buy bread are 8 times more likely to also buy butter than if the two items were bought independently. That’s a strong association, and this rule is likely interesting and useful.</em></p>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front charts a network connecting rules with their variables. Rules are drawn as circle shapes. Variables are drawn as square shapes. Hovering over a rule (circle) reveals the LHS and RHS basis.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card records, as a table, the Association Rules in descending “lift” order.</p>
+<p>The RHS column records names of variables whose missingness is not random - at the given “lift” value. A “lift” of zero represents independence from the LHS</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> To judge whether each variable is missing at random or not (for a limited context)</li>
+<li><em>Secondary:</em> Discover surprising associations that suggest further investigation.</li>
+</ol>
+<p>Note that this analysis neither considers the possibility that missingness is due to non-missing values nor considers whether sequence affects missingness.</p>
+<p>The actions implied by the Association Rules (applied to missingness) are:</p>
+<ul>
+<li>Gain understanding of the dominant patterns of missing values.</li>
+<li>Objectively assess the strength of the patterns.</li>
+<li>Identify variables whose missingness is not random (perhaps common causes?).</li>
+<li>Hypothesize causes for these patterns.</li>
+</ul>
+<h4 id="example">Example</h4>
+<blockquote>
+<p>When variable A &amp; B are missing together it is a virtual certainty that variables C, D, E are also missing. C,D are occasionally missing without A or B being missing. E is rarely missing without A or B being missing.</p>
+<p>This suggests that the cause of A &amp; B being missing is the same cause of E being missing and probably of C &amp; D.</p>
+</blockquote>
+<hr>
+<p>All cards downstream of this card will receive the upstream data. This card does not change the data.</p>
+
+
+
+
+
+</body></html>

@@ -1,0 +1,63 @@
+---
+title: Informative Missingness
+---
+
+# 🧭 Introduction
+
+The presence of missing values can potentially assist in predicting the target. When this occurs we have "informative missingness". It is advantageous to create extra binary predictors so that any relationship can be exploited during modeling. These extra features are called "shadow variables". This is a form a feature extraction. Feature selection can later exclude shadow variables if they ultimately prove unimportant. 
+
+Given a target exists for the dataset, shadow variables are created for certain variables. Only predictors that have more than a trivial proportion of missing values need be considered. A Random Forest model is trained (using cross validation) so as to determine variable importance. Whether any variable's missingness is "informative" is judged by the shadow variable being amongst the important variables.
+
+This card focuses on differentiating between **Informative** and **Uninformative** natures of predictor missingness. 
+
+Once imputed, a missing value would be indistinguishable from a non-missing value unless a shadow variable keeps this information available. Since only the predictor role can normally have missing values, only predictor variables will be considered for shadow variables.
+
+This creation of shadow variables is pointless when observations (with any missing values) are planned to be removed (i.e. partial deletion). This that case, all shadow variables will become constant variables.
+
+This assessment should follow after any Excess-observational-missing removal and Manual-imputation. It should precede any any learned-imputation
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="aaa.html" title="Missing Values" loading="lazy"></iframe>
+</details>
+
+<style>
+.deep-dive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.deep-dive iframe {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 80vh;
+    margin-top: 1rem;
+    border: 0;
+}
+</style>
+
+#### 🏞️ Front
+
+The card's front shows a variable importance chart. Buttons allow the generation of any plausible shadow variables.
+
+#### 🔄 Flip side
+
+The card's back shows a variable importance table.
+
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+#### Goal
+
+1. _Primary:_ To identify predictors that plausibly have informative missingness. 
+1. _Secondary:_ To facilitate the generation of the relevant shadow variables.
+
+***
+All cards downstream of this card will receive any changes enacted by this card.
+
+

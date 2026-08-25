@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Role assignment</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Role assignment</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>The purpose of the <strong>Role Assignment card</strong> is to make the dataset explicitly interpretable by defining how each variable is intended to be used.</p>
+<p>The card is a visual drag-and-drop interface used to define and validate the statistical role of each variable in the analysis. Move each variable name to the appropriate role slot.</p>
+<p>Subsequent analysis should begin again with a fresh role assignment as the assignments shape the analysis.</p>
+<blockquote>
+<p><em>“Every model makes assumptions. This card makes them explicit.”</em></p>
+</blockquote>
+<p>The following roles are supported:</p>
+<ul>
+<li><strong>Target</strong> — the variable being predicted (the outcome)</li>
+<li><strong>Predictor</strong> — variables used to predict the target</li>
+<li><strong>Treatment</strong> — variables with a potential causal effect on the target (distinct from purely predictive variables)</li>
+<li><strong>Identifier</strong> — variables that uniquely identify observations (optionally combined with Sequence)</li>
+<li><strong>Weighting</strong> — a numeric variable representing observation importance (case weights)</li>
+<li><strong>Partition</strong> — a categorical variable defining train/test splits</li>
+<li><strong>Stratifier</strong> — a low-cardinality grouping variable used for segmentation (e.g. faceting), but not intended to be predictive</li>
+<li><strong>Sequence</strong> — an ordered variable (typically time) defining observation order</li>
+<li><strong>Sensitive</strong> — a variable used for fairness auditing; should not drive predictions</li>
+<li><strong>Geometry</strong> — spatial data (points, lines, polygons) for mapping and spatial analysis</li>
+<li><strong>None</strong> — variables excluded from downstream analysis</li>
+</ul>
+<p>An easy to read introduction to variable roles is available <a href="https://medium.com/@nhward60/a-murder-mystery-for-your-dataset-assigning-roles-to-variables-593983a43214">here</a>.</p>
+<p>We operate under the following presumptions:</p>
+<ul>
+<li>Each variable is assigned to, at most, one role.</li>
+<li>Since we have a <strong>None</strong> role, all variables must be assigned to, at least, one role.</li>
+<li>Although multiple spatial variables are theoretically possible, there are limitations in the handling of spatial data so only one <strong>Geometry</strong> variable is allowed.</li>
+<li>Although multiple dependent variables are theoretically possible, most modeling techniques do not support this, so only one <strong>Target</strong> variable is allowed.</li>
+<li>When multiple variables are assigned to the <strong>Identifier</strong> role their contents are merged using a separator character.</li>
+</ul>
+<h4 id="constraints">🔒 Constraints</h4>
+<p>Role Requirements</p>
+<ul>
+<li>Only the <strong>Predictor</strong> role is required to be filled</li>
+<li>On initial load, Spatial imports automatically assign geometry variables to <strong>Geometry</strong>. All other variables are assigned to <strong>Predictor</strong>.</li>
+</ul>
+<p>Role cardinality:</p>
+<ul>
+<li><strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> roles → may belong to multiple variables</li>
+<li>All other roles → at most one variable</li>
+</ul>
+<p>Additional constraints (validated automatically):</p>
+<ul>
+<li>data type</li>
+<li>missing values</li>
+<li>cardinality</li>
+</ul>
+<p>Violations are indicated via validation messages.</p>
+<h4 id="example-use-cases">🧪 Example Use-Cases</h4>
+<ul>
+<li>Regression → assign a numeric variable to Target</li>
+<li>Classification → assign a categorical variable to Target</li>
+<li>Clustering → leave Target unassigned</li>
+<li>Predefined train/test split → assign to Partition e.g. <a href="HTTPS://www.kaggle.com">Kaggle</a></li>
+<li>Fairness analysis → assign variables to Sensitive e.g. “Sex”</li>
+<li>Spatial modeling → assign spatial variables to Geometry</li>
+<li>Weighted models → assign a non-negative numeric variable to Weighting</li>
+<li>Time series → assign a time variable to Sequence</li>
+<li>Longitudinal analysis → assign Sequence + Identifier</li>
+</ul>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front shows a drag &amp; drop dialogue for assigning the variables to roles. The full-screen mode makes the process easier.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card documents:</p>
+<ul>
+<li>the most recently committed assignments</li>
+</ul>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<ul>
+<li>Separator character when combining multiple variables into a unique identifier.</li>
+<li>Limit the maximum number of observations to analyze for assessing cardinality and missing values.</li>
+</ul>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> Identify which single roles should be assigned to each variable.</li>
+<li><em>Secondary:</em> Validate that each variable’s data-type, cardinality, and missing values are appropriate for the assigned role.</li>
+</ol>
+<h4 id="actions">🛠️ Actions</h4>
+<ul>
+<li>If a variable does not fit any role, assign it to <strong>None</strong></li>
+<li>Understanding roles helps anticipate valid downstream analyses</li>
+<li>Role constraints guide sensible assignments (e.g. singleton roles)</li>
+<li>If no Predictors are defined, most analyses will not be meaningful</li>
+<li>If a variable needs multiple roles, duplicate it and assign each copy separately</li>
+</ul>
+<hr>
+<p>All cards downstream of this card will receive any changes enacted by this card. These changes will only relate to variable roles.</p>
+
+
+
+
+
+</body></html>

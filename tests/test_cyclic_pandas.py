@@ -1,9 +1,15 @@
+import sys
 from datetime import time
+from pathlib import Path
+
+path = Path(__file__).resolve().parent.parent / "app"
+if path not in sys.path:
+    sys.path.insert(0, path)
+
 
 import numpy as np
 import pandas as pd
 import pytest
-
 from cyclic_pandas import (
     DEFAULT_CYCLES,
     CyclicArray,
