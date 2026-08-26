@@ -38,13 +38,41 @@ def instance():
     def front():
         return ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
             id = "DataTable",
-            title = "A quick view", 
+            title = "A data listing", 
             guide = this,
-            text = 'A top and bottom sample of the data.',
+            text = 'A top and bottom sample of the data when not in full-screen; all the rows when the card is in full-screen.',
             position = "left"
         ) 
     
     this.front = front
+
+    def back():
+        return ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
+            id = "StructTable",
+            title = "The meta-data", 
+            guide = this,
+            text = 'The structure of the dataset.',
+            position = "left"
+        ) 
+    
+    this.back = back
+
+
+    def footer():
+        return ui.download_button(
+                id = "Export", 
+                label = 'Export', 
+                icon = icon("file-arrow-down", title = "Export the data", a11y = "sem"),
+                width = "250px", 
+                class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
+                style = "border: 0px; box-shadow: none;",
+                guide = this, 
+                title = "Export button",
+                text = "This button writes the data to a CSV file.",
+                position = "top"
+            )
+
+    this.footer = footer
 
     def settings():
         return ui.TagList(
@@ -81,23 +109,7 @@ def instance():
 
     this.settings = settings
 
-    def footer():
-        return ui.download_button(
-                id = "Export", 
-                label = 'Export', 
-                icon = icon("file-arrow-down", title = "Export the data", a11y = "sem"),
-                width = "250px", 
-                class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
-                style = "border: 0px; box-shadow: none;",
-                guide = this, 
-                title = "Export button",
-                text = "This button writes the data to a CSV file.",
-                position = "top"
-            )
 
-    this.footer = footer
-
-    
     def server(input, output, session):
 
         @this.suspendable(calc = True)
@@ -233,6 +245,103 @@ def instance():
                     pass
             return df
 
+        @this.record_code
+        def _safe_unique_count(series: pd.Series) -> int | None:
+            """Count distinct scalar values, or return None when unsupported."""
+            if is_list(series.dtype) or is_geometry(series.dtype):
+                return None
+            try:
+                return int(series.nunique(dropna=True))
+            except (TypeError, ValueError):
+                return None
+
+        @this.record_code
+        def _column_summary(series: pd.Series) -> str:
+            """Return a compact summary appropriate for the column's dtype."""
+            dtype = series.dtype
+            observed = series.dropna()
+            if observed.empty:
+                return "No observed values"
+
+            if is_geometry(dtype):
+                geometry_types = ", ".join(
+                    sorted(observed.geom_type.dropna().unique().tolist())
+                )
+                crs = getattr(series, "crs", None)
+                parts = [f"geometry: {geometry_types or 'unknown'}"]
+                if crs is not None:
+                    parts.append(f"CRS: {crs}")
+                return "; ".join(parts)
+
+            if is_list(dtype):
+                lengths = observed.map(len)
+                return (
+                    f"list length: median {lengths.median():g}, "
+                    f"range {lengths.min()}–{lengths.max()}"
+                )
+
+            if is_cyclic(dtype):
+                if dtype.is_categorical:
+                    categories = ", ".join(map(str, dtype.categories))
+                    return f"cycle: {categories}"
+                return f"cycle period: {dtype.period:g}"
+
+            if is_text(dtype):
+                lengths = observed.astype("string").str.len()
+                return f"text length: median {lengths.median():g} characters"
+
+            if pd.api.types.is_datetime64_any_dtype(dtype):
+                return f"range: {observed.min()} to {observed.max()}"
+
+            if (
+                pd.api.types.is_numeric_dtype(dtype)
+                and not pd.api.types.is_bool_dtype(dtype)
+            ):
+                return (
+                    f"min {observed.min():g}; median {observed.median():g}; "
+                    f"mean {observed.mean():g}; max {observed.max():g}"
+                )
+
+            try:
+                counts = observed.value_counts(dropna=True)
+            except (TypeError, ValueError):
+                return "No scalar summary"
+            if counts.empty:
+                return "No observed values"
+            return f"mode: {counts.index[0]} ({int(counts.iloc[0])})"
+
+        @this.suspendable(calc = True)
+        @this.record_code
+        def StructureData() -> pd.DataFrame:
+            """Return one structural-summary row for each source variable."""
+            px = incomingproxy_data()
+            req(px is not None)
+            df = px.to_native() if hasattr(px, "to_native") else px
+            if hasattr(df, "to_pandas"):
+                df = df.to_pandas()
+            role_map = getattr(px, "role_map", None)
+            row_count = len(df)
+            rows = []
+            for column in df.columns:
+                series = df[column]
+                missing = int(series.isna().sum())
+                roles = role_map.roles_for(column) if role_map is not None else set()
+                rows.append({
+                    "Variable": str(column),
+                    "Data Type": _dtype_label_from_dtype(series.dtype),
+                    "Storage type": str(series.dtype),
+                    "Role": ", ".join(sorted(role.value for role in roles)),
+                    "Complete": row_count - missing,
+                    "Missing": missing,
+                    "Missing %": round(100 * missing / row_count, 1) if row_count else 0.0,
+                    "Unique": _safe_unique_count(series),
+                    "Summary": _column_summary(series),
+                })
+            return pd.DataFrame(rows, columns=[
+                "Variable", "Data Type", "Storage type", "Role", "Complete",
+                "Missing", "Missing %", "Unique", "Summary",
+            ])
+
         @output
         @render.ui
         def DataTable():
@@ -257,6 +366,23 @@ def instance():
             buf.seek(0)
             yield buf.read()
 
+        @output
+        @render.ui
+        def StructTable():
+            req(incomingproxy_data() is not None)
+            return ui.output_data_frame(id = "Structure")
+
+        @output
+        @render.data_frame
+        def Structure():
+            req(incomingproxy_data() is not None)
+            return render.DataTable(
+                StructureData(),
+                summary=False,
+                filters=False,
+                width="100%",
+                height="98%",
+            )
 
     this.server = server
 

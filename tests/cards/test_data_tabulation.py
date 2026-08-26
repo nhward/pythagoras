@@ -17,6 +17,7 @@ from geometry_pandas import as_geometry
 from list_pandas import as_list
 from playwright.sync_api import Page, expect
 from proxy_data import proxy_data
+from roles import Role, RoleMap
 from shapely.geometry import LineString, Point
 from shiny import reactive
 from shiny.playwright import controller
@@ -115,10 +116,11 @@ class TestInstance:
         assert card.front is not None
         assert card.settings is not None
         assert card.footer is not None
-        assert card.back is None
+        assert card.back is not None
         assert card.hasSidebar()
         assert card.hasFooter()
-        assert not card.hasFlipSide()
+        assert card.hasFlipSide()
+        assert 'id="Structure"' in str(card.back)
 
     @pytest.mark.unit
     def test_test_mode_seeds_expected_data(self, card_module):
@@ -260,6 +262,59 @@ class TestCleanDf:
         assert result.index.is_monotonic_increasing
 
 
+class TestStructureData:
+    @pytest.mark.unit
+    def test_structure_has_one_row_per_variable_with_roles_and_counts(
+        self, card_module
+    ):
+        frame = pd.DataFrame({
+            "amount": [1.0, 2.0, None, 4.0],
+            "group": pd.Categorical(["A", "A", "B", None]),
+            "when": pd.to_datetime([
+                "2025-01-01", "2025-01-02", None, "2025-01-04"
+            ]),
+        })
+        roles = RoleMap()
+        roles.set_roles("amount", [Role.PREDICTOR])
+        roles.set_roles("group", [Role.STRATIFIER])
+        roles.set_roles("when", [Role.SEQUENCE])
+        px = proxy_data(_df=frame, _roles=roles, _name="Test")
+        _, functions = recorded_helpers(card_module, data=px)
+
+        with reactive.isolate():
+            result = functions["StructureData"]()
+
+        assert result["Variable"].tolist() == ["amount", "group", "when"]
+        assert result.columns.tolist() == [
+            "Variable", "Type", "Storage dtype", "Role", "Complete",
+            "Missing", "Missing %", "Unique", "Summary",
+        ]
+        amount = result.set_index("Variable").loc["amount"]
+        assert amount["Role"] == "predictor"
+        assert amount["Complete"] == 3
+        assert amount["Missing"] == 1
+        assert amount["Missing %"] == pytest.approx(25.0)
+        assert amount["Unique"] == 3
+        assert "median 2" in amount["Summary"]
+        assert "mode: A (2)" in result.set_index("Variable").loc["group", "Summary"]
+        assert "2025-01-01" in result.set_index("Variable").loc["when", "Summary"]
+
+    @pytest.mark.unit
+    def test_custom_dtype_summaries_are_conservative(self, card_module):
+        _, functions = recorded_helpers(card_module)
+        basket = as_list([["bread", "milk"], ["bread"], None])
+        geometry = as_geometry([Point(1, 2), LineString([(0, 0), (1, 1)]), None])
+        cycle = as_cyclic(pd.Series([0, 1, 2]), period=12)
+        text = as_text(["short", "a little longer", None])
+
+        assert functions["_safe_unique_count"](basket) is None
+        assert functions["_safe_unique_count"](geometry) is None
+        assert "median 1.5" in functions["_column_summary"](basket)
+        assert "LineString, Point" in functions["_column_summary"](geometry)
+        assert functions["_column_summary"](cycle) == "cycle period: 12"
+        assert "characters" in functions["_column_summary"](text)
+
+
 class TestWebKitUI:
     @pytest.mark.ui
     def test_card_and_data_grid_render(self, page: Page, app: ShinyAppProc):
@@ -285,6 +340,18 @@ class TestWebKitUI:
         grid.expect_cell("10", row=0, col=1)
         grid.expect_cell("A", row=0, col=2)
         grid.expect_cell("Test", row=3, col=4)
+
+    @pytest.mark.ui
+    def test_flip_side_displays_structure_table(self, page: Page, app: ShinyAppProc):
+        page.goto(app.url)
+        by_id(page, "FlipButton").click(force=True)
+        grid = controller.OutputDataFrame(page, namespaced_id(page, "Structure"))
+        grid.expect_nrow(5)
+        grid.expect_ncol(9)
+        grid.expect_column_labels([
+            "Variable", "Type", "Storage dtype", "Role", "Complete",
+            "Missing", "Missing %", "Unique", "Summary",
+        ])
 
     @pytest.mark.ui
     def test_settings_controls_exist(self, page: Page, app: ShinyAppProc):
