@@ -8,3 +8,11 @@ scikit-learn
 vega_datasets
 statsmodels
 ucimlrepo
+pyarrow
+shapely
+plotly
+mlxtend
+joblib
+importlib.metadata
+session_info
+scipy

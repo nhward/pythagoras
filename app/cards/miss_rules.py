@@ -149,22 +149,22 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
-        @this.throttle(2)
-        @this.suspendable(calc=True)
+        @this.settle(seconds=2)
+        @this.suspendable(calc = True)
         def MaxObs():
-            return 10 ** int(input.MaxObs())
+            return 10**input.MaxObs()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinSupport():
             return float(input.MinSupport())
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinLift():
             return float(input.MinLift())
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MaxLength():
             return max(2, int(input.MaxLength()))

@@ -510,7 +510,7 @@ def instance():
                 ticks=True,
                 pre="10^",
                 guide=this,
-                text="Limit to number of observations to process to ensure responsiveness (logarithmic scale).",
+                text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).",
                 position="left",
             ),
         )
@@ -524,22 +524,27 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
-        @this.throttle(2)
-        @this.suspendable(calc=True)
+        @this.settle(seconds=2)
+        @this.suspendable(calc = True)
         def MaxObs():
-            return 10 ** int(input.MaxObs())
+            return 10**input.MaxObs()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
+        @this.suspendable(calc = True)
+        def Shadow():
+            return input.Shadow()
+
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def CVFolds():
             return input.CVFolds()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinMissProp():
             return input.MinMissProp()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
@@ -587,17 +592,12 @@ def instance():
         @reactive.effect
         def UpdateShadowChoices():
             choices = MissingVariables()
-            selected = [
-                column for column in (input.Shadow() or [])
-                if column in choices
-            ]
-            ui.update_checkbox_group(
-                "Shadow",
-                choices=choices,
-                selected=selected,
-                session=session,
-            )
-
+            with reactive.isolate():
+                selected = [
+                    column for column in (input.Shadow() or [])
+                    if column in choices
+                ]
+            ui.update_checkbox_group(id="Shadow", choices=choices, selected=selected)
         @reactive.extended_task
         async def CalculateAnalysis(
             frame,
@@ -639,11 +639,6 @@ def instance():
         @this.record_code
         def Analysis():
             return CalculateAnalysis.result()
-
-        @this.throttle(2)
-        @this.suspendable(calc = True)
-        def Shadow():
-            return input.Shadow()
 
         @this.suspendable(calc=True)
         @this.record_code

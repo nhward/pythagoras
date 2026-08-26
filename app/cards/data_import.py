@@ -601,7 +601,7 @@ def instance():
             ui.update_text(id = "IName", value = input.UciDataset())
 
                 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc = True)
         def Url():
             return input.Url()

@@ -140,7 +140,7 @@ def test_tour_steps_payload_sorts_by_priority_desc():
 
 
 #  Problem with async 
- # -------------------------------------------------------------------
+# -------------------------------------------------------------------
 # create_run_tour: Shepherd steps + custom message
 # -------------------------------------------------------------------
 # @pytest.mark.unit
@@ -302,24 +302,24 @@ def test_code_text_returns_html_snippet():
     # Check that decorators have been cleaned up in some way
     assert "<h3># foo</h3>" in rendered
 
-
-# -------------------------------------------------------------------
-# debounce / throttle: basic smoke tests (no tight timing assertions)
-# -------------------------------------------------------------------
 @pytest.mark.unit
-def test_throttle_wraps_callable_without_raising():
-    m = DummyModule("test-module")
+def test_settle_test_bypass_returns_immediately(monkeypatch):
+    module = DummyModule("test-module")
     calls = {"count": 0}
 
-    @m.throttle(delay_secs=0.01)
+    monkeypatch.setattr(
+        module,
+        "running_under_tests",
+        lambda: True,
+    )
+
+    @module.settle(seconds=2, bypass_during_tests=True)
     def compute():
         calls["count"] += 1
         return 42
 
-    # It should be callable and behave like a function
-    assert callable(compute)
-    # Use a lightweight reactive context so the reactive infra is “properly” set up
     with reactive.isolate():
         result = compute()
+
     assert result == 42
     assert calls["count"] == 1

@@ -34,9 +34,8 @@
 ##       Instance-level dict repository of function code blocks
 ##       Code key-retrieval mechanism
 ##       Long HTML listing of all code blocks
-##    Reactive.calc rate limiting
-##       @debounce decorator 
-##       @throttle decorator
+##    Input Value Settling:
+##       @settle(seconds: float = 2, bypass_during_tests: bool = True) Delays passing a reactive until it has ceased changing 
 ##    Create cards method that looks for files in "cards" and imports them and calls their instance() method
 ##      application(): method that creates the shiny app object
 ##      Run(): method that either runs the single-card app in the viewer
@@ -51,10 +50,10 @@ import re
 import sys
 import textwrap
 import threading
-import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from contextlib import redirect_stdout
+from functools import wraps
 from os import environ
 from pathlib import Path
 from typing import ClassVar
@@ -62,9 +61,10 @@ from typing import ClassVar
 import shinywidgets as _sw
 from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
-from shiny import App, reactive, ui
+from shiny import App, reactive, req, ui
 from shiny import ui as _ui
 
+_UNSET = object()
 
 class Module(ABC):
     """
@@ -436,102 +436,27 @@ class Module(ABC):
             lines.append(f'<h3># {name}</h3><pre>{code}</pre>')
         return _ui.HTML("<hr>".join(lines))
 
-    def debounce(self, delay_secs: int = 1):
-        def wrapper(f):
-            when = reactive.Value(None)
-            trigger = reactive.Value(0)
+    def settle(self, seconds: float = 2, bypass_during_tests: bool = True):
+        def decorator(function):
+            last_value = reactive.value(_UNSET)
 
-            @reactive.calc
-            def cached():
-                """
-                Just in case f isn't a reactive calc already, wrap it in one. This ensures
-                that f() won't execute any more than it needs to.
-                """
-                return f()
+            @wraps(function)
+            def wrapper(*args, **kwargs):
+                # Do not delay reactive values during tests.
+                if bypass_during_tests and Module.running_under_tests():
+                    return function(*args, **kwargs)
+                current = function(*args, **kwargs)
+                with reactive.isolate():
+                    previous = last_value()
+                if previous is not _UNSET and current == previous:
+                    return current
+                last_value.set(current)
+                reactive.invalidate_later(seconds)
+                req(False)
+            return wrapper
 
-            @reactive.effect(priority=102)
-            def primer():
-                """
-                Whenever cached() is invalidated, set a new deadline for when to let
-                downstream know--unless cached() invalidates again
-                """
-                try:
-                    cached()
-                except Exception:  # noqa: BLE001
-                    ...
-                finally:
-                    when.set(time.monotonic() + delay_secs)
-
-            @reactive.effect(priority=101)
-            def timer():
-                """
-                Watches changes to the deadline and triggers downstream if it's expired; if
-                not, use invalidate_later to wait the necessary time and then try again.
-                """
-                deadline = when()
-                if deadline is None:
-                    return
-                time_left = deadline - time.monotonic()
-                if time_left <= 0:
-                    # The timer expired
-                    with reactive.isolate():
-                        when.set(None)
-                        trigger.set(trigger() + 1)
-                else:
-                    reactive.invalidate_later(time_left)
-
-            @reactive.calc
-            @reactive.event(trigger, ignore_none=False)
-            @functools.wraps(f)
-            def debounced():
-                return cached()
-
-            return debounced
-
-        return wrapper
-
-
-    def throttle(self, delay_secs: int = 1):
-        def wrapper(f):
-            last_signaled = reactive.Value(None)
-            last_triggered = reactive.Value(None)
-            trigger = reactive.Value(0)
-
-            @reactive.calc
-            def cached():
-                return f()
-
-            @reactive.effect(priority=102)
-            def primer():
-                try:
-                    cached()
-                except Exception:  # noqa: BLE001
-                    ...
-                finally:
-                    last_signaled.set(time.monotonic())
-
-            @reactive.effect(priority=101)
-            def timer():
-                if last_triggered() is not None and last_signaled() < last_triggered():
-                    return
-
-                now = time.monotonic()
-                if last_triggered() is None or (now - last_triggered()) >= delay_secs:
-                    last_triggered.set(now)
-                    with reactive.isolate():
-                        trigger.set(trigger() + 1)
-                else:
-                    reactive.invalidate_later(delay_secs - (now - last_triggered()))
-
-            @reactive.calc
-            @reactive.event(trigger, ignore_none=False)
-            @functools.wraps(f)
-            def throttled():
-                return cached()
-
-            return throttled
-
-        return wrapper
+        return decorator
+    
 
     # Abstract methods
     @abstractmethod

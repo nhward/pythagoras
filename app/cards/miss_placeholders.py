@@ -232,101 +232,6 @@ def instance():
     # Define the user-interface #
     #############################
 
-    def settings() -> ui.TagList:
-        """
-        These settings related ui elements appear in the sidebar of the card. 
-        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
-        """
-        return ui.TagList(
-            ui.input_selectize(
-                id = "NA_Strings", 
-                label = "Missing string-value placeholders", 
-                choices =  ["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
-                selected = ["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
-                multiple = True,
-                options=({
-                    "placeholder": "Enter string values",
-                    "create": True,
-                }),
-                guide = this,
-                text = 'This comma-delimited list supplies placeholders for missing string-values. Entire string-values that match any of these will be replaced with NA. The search is case insensitive.',
-                position = "left"),
-            ui.input_checkbox(
-                id = "NA_CaseSensitive", 
-                label = "Use a case-sensitive search", 
-                value = False,
-                guide = this,
-                text = 'Whether "N/A" is different to "N/a", "n/a", "n/A".',
-                position = "left"),
-            ui.input_selectize(
-                id = "NA_Integers", 
-                label = "Missing integer-value placeholders", 
-                choices =  [-9999,-999,-99, -1],
-                selected = [-9999,-999,-99, -1],
-                multiple = True,
-                options=({
-                    "placeholder": "Enter integer values",
-                    "create": True,
-                }),
-                guide = this,
-                text = 'This comma-delimited list supplies placeholders for missing numeric-values. Entire values that match any of these will be replaced with NA <em>provided</em> they correspond with the lowest recorded values.',
-                position = "left"),
-            ui.input_selectize(
-                id = "NA_Floats", 
-                label = "Missing decimal-value placeholders", 
-                choices =  [-9999.99,-999.99,-99.99, -99.00, -1.00],
-                selected = [-9999.99,-999.99,-99.99, -99.00, -1.00],
-                multiple = True,
-                options=({
-                    "placeholder": "Enter decimal values",
-                    "create": True,
-                }),
-                guide = this,
-                text = 'This comma-delimited list supplies placeholders for missing decimal-values. Entire values that match any of these will be replaced with NaN <em>provided</em> they correspond with the lowest recorded values.',
-                position = "left"),
-            ui.input_checkbox(
-                id = "NA_Extrema", 
-                label = "Only replace extreme numeric values (at minimum or maximum)", 
-                value = True,
-                guide = this,
-                text = """
-                Only replace numbers <em>provided</em> they correspond with the lowest or highest recorded values. When set ON, a numeric placeholder (e.g. -99) 
-                is only flagged if it sits at the edge of the observed distribution for that variable (i.e., equals the current minimum or maximum).
-                When OFF, any occurrence of the placeholder is matched regardless of position.
-                <br>Example: If a column’s observed range is −1000 … 1200<br>
-                -99 is inside the range → not flagged when `Replace extrema only` is ON.
-                <br>Example: If the range is −99 … 1200:<br>
-                -99 equals the minimum → is flagged when `Replace extrema only` is ON.  
-                """,
-                position = "left"),
-            ui.input_selectize(
-                id = "NA_DateTime", 
-                label = "Missing date/time-value placeholders", 
-                choices = ["0000-00-00", "0001-01-01", "1900-01-01", "0"],
-                selected = ["0000-00-00", "0001-01-01", "1900-01-01", "0"],
-                multiple = True,
-                options=({
-                    "placeholder": "Enter date-literal values",
-                    "create": True,
-                }),
-                guide = this,
-                text = 'This comma-delimited list supplies placeholders for missing date/time-values. Date values that match any of these will be replaced with NaT.',
-                position = "left"),
-            ui.input_slider(
-                id = "MaxObs", 
-                label = "Maximum observations to chart", 
-                min = 3,
-                max = 7,
-                value = 4,
-                ticks = True,
-                pre = "10^",
-                guide = this,
-                text = 'Limit to number of observations to chart to ensure responsiveness (logarithmic scale).',
-                position = "left"),
-        )
-
-    this.settings = settings ## The above "setting" function must be assigned to the instance 
-
     def front() -> ui.TagList:
         """
         These ui elements appear in the front of the card. 
@@ -424,9 +329,102 @@ def instance():
             ),
             class_ = "vertically-scrollable-footer")
 
-
     this.footer = footer  ## The above "footer" function must be assigned to the instance
 
+    def settings() -> ui.TagList:
+        """
+        These settings related ui elements appear in the sidebar of the card. 
+        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
+        """
+        return ui.TagList(
+            ui.input_selectize(
+                id = "NA_Strings", 
+                label = "Missing string-value placeholders", 
+                choices =  ["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
+                selected = ["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
+                multiple = True,
+                options=({
+                    "placeholder": "Enter string values",
+                    "create": True,
+                }),
+                guide = this,
+                text = 'This comma-delimited list supplies placeholders for missing string-values. Entire string-values that match any of these will be replaced with NA. The search is case insensitive.',
+                position = "left"),
+            ui.input_checkbox(
+                id = "NA_CaseSensitive", 
+                label = "Use a case-sensitive search", 
+                value = False,
+                guide = this,
+                text = 'Whether "N/A" is different to "N/a", "n/a", "n/A".',
+                position = "left"),
+            ui.input_selectize(
+                id = "NA_Integers", 
+                label = "Missing integer-value placeholders", 
+                choices =  [-9999,-999,-99, -1],
+                selected = [-9999,-999,-99, -1],
+                multiple = True,
+                options=({
+                    "placeholder": "Enter integer values",
+                    "create": True,
+                }),
+                guide = this,
+                text = 'This comma-delimited list supplies placeholders for missing numeric-values. Entire values that match any of these will be replaced with NA <em>provided</em> they correspond with the lowest recorded values.',
+                position = "left"),
+            ui.input_selectize(
+                id = "NA_Floats", 
+                label = "Missing decimal-value placeholders", 
+                choices =  [-9999.99,-999.99,-99.99, -99.00, -1.00],
+                selected = [-9999.99,-999.99,-99.99, -99.00, -1.00],
+                multiple = True,
+                options=({
+                    "placeholder": "Enter decimal values",
+                    "create": True,
+                }),
+                guide = this,
+                text = 'This comma-delimited list supplies placeholders for missing decimal-values. Entire values that match any of these will be replaced with NaN <em>provided</em> they correspond with the lowest recorded values.',
+                position = "left"),
+            ui.input_checkbox(
+                id = "NA_Extrema", 
+                label = "Only replace extreme numeric values (at minimum or maximum)", 
+                value = True,
+                guide = this,
+                text = """
+                Only replace numbers <em>provided</em> they correspond with the lowest or highest recorded values. When set ON, a numeric placeholder (e.g. -99) 
+                is only flagged if it sits at the edge of the observed distribution for that variable (i.e., equals the current minimum or maximum).
+                When OFF, any occurrence of the placeholder is matched regardless of position.
+                <br>Example: If a column’s observed range is −1000 … 1200<br>
+                -99 is inside the range → not flagged when `Replace extrema only` is ON.
+                <br>Example: If the range is −99 … 1200:<br>
+                -99 equals the minimum → is flagged when `Replace extrema only` is ON.  
+                """,
+                position = "left"),
+            ui.input_selectize(
+                id = "NA_DateTime", 
+                label = "Missing date/time-value placeholders", 
+                choices = ["0000-00-00", "0001-01-01", "1900-01-01", "0"],
+                selected = ["0000-00-00", "0001-01-01", "1900-01-01", "0"],
+                multiple = True,
+                options=({
+                    "placeholder": "Enter date-literal values",
+                    "create": True,
+                }),
+                guide = this,
+                text = 'This comma-delimited list supplies placeholders for missing date/time-values. Date values that match any of these will be replaced with NaT.',
+                position = "left"),
+            ui.input_slider(
+                id = "MaxObs", 
+                label = "Maximum observations to analyse", 
+                min = 3,
+                max = 7,
+                value = 3,
+                ticks = True,
+                pre = "10^",
+                guide = this,
+                text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).',
+                position = "left"),
+        )
+
+    this.settings = settings ## The above "setting" function must be assigned to the instance 
 
     ########################
     # Define the behaviour #
@@ -440,23 +438,21 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc = True)
         def Replace():
             return input.Replace()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc = True)
         def MaxObs():
             return 10**input.MaxObs()
-
 
         @this.suspendable(calc = True)
         @this.record_code
         def PreparedData():
             sample = incomingproxy_data().sample(n = MaxObs(), mode = "random", keep_geometry = False)
             return sample
-
 
         @this.suspendable(calc = True)
         @this.record_code

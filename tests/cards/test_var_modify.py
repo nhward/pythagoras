@@ -188,14 +188,14 @@ class TestInstance:
 class TestSchema:
     @pytest.mark.unit
     def test_max_observations_is_direct_count(self, card_module):
-        _, _, functions, _, _ = recorded_helpers(card_module, max_obs=1234)
-        assert functions["MaxObs"]() == 1234
+        _, _, functions, _, _ = recorded_helpers(card_module, max_obs=6)
+        assert functions["MaxObs"]() == 1000000
 
     @pytest.mark.unit
     def test_prepared_data_respects_sample_limit(self, card_module):
         frame = pd.DataFrame({"value": range(1500)})
         _, _, functions, _, _ = recorded_helpers(
-            card_module, frame=frame, max_obs=1000
+            card_module, frame=frame, max_obs=3
         )
         with reactive.isolate():
             result = functions["PreparedData"]()

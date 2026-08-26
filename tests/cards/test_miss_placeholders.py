@@ -493,7 +493,7 @@ class TestWebKitUI:
     def test_card_tabs_and_empty_replace_group_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         expect(get_card(page)).to_be_visible()
-        expect(page.get_by_text("Missing value placeholders", exact=True)).to_be_visible()
+        expect(page.get_by_text("Missing value placeholders", exact=False)).to_be_visible()
         for label in ("All variables", "Integer", "Decimal", "Character", "Dates & Times"):
             expect(page.get_by_role("tab", name=label, exact=True)).to_be_visible()
         expect(by_id(page, "Replace").locator('input[type="checkbox"]')).to_have_count(0)

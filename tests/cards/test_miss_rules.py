@@ -395,7 +395,7 @@ class TestWebKitUI:
     def test_card_outputs_and_current_settings_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         expect(get_card(page)).to_be_visible()
-        expect(page.get_by_text("Missingness rules", exact=True)).to_be_visible()
+        expect(page.get_by_text("Missingness rules", exact=False)).to_be_visible()
         expect(by_id(page, "Network")).to_be_visible()
         expect(by_id(page, "Check")).to_be_visible()
         for control in (

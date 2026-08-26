@@ -68,14 +68,14 @@ def instance():
             ),
             ui.input_slider(
                 id = "MaxObs", 
-                label = "Maximum observations to chart", 
+                label = "Maximum observations to list", 
                 min = 3,
                 max = 7,
                 value = 4,
                 ticks = True,
                 pre = "10^",
                 guide = this,
-                text = 'Limit to number of observations to chart to ensure responsiveness (logarithmic scale).',
+                text = 'Limit to number of observations to list to ensure responsiveness (logarithmic scale).',
                 position = "left")
         )
 
@@ -105,16 +105,15 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc = True)
         def Decimals():
             return input.Decimals()
         
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc = True)
         def MaxObs():
             return 10**input.MaxObs()
-
 
         @this.record_code
         def _dtype_label_from_dtype(dtype) -> str:
@@ -161,7 +160,7 @@ def instance():
             - Geometries reformatted
             - Numeric data rounded
             """
-            px = PreparedData() #Returns proxy_data
+            px = PreparedData().clone() #Returns proxy_data
             df = px.to_native() if hasattr(px, "to_native") else px
             if hasattr(df, "to_pandas"):     # e.g., Polars
                 df = df.to_pandas()

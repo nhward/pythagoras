@@ -207,15 +207,17 @@ def instance():
                 text="How the data-type choices are offered based on the nature of the variable; <br><b>All:</b> all possible choices are offered, <br><b>Related:</b> the data-type related choices are offered, <br><b>Sensible:</b> the choices based on data-type, values and cardinality",
                 position="left",
             ),
-            ui.input_numeric(
-                id="MaxObs",
-                label="Max obs to examine",
-                min=1000,
-                value=10000,
-                guide=this,
-                text="When assessing the nature of a variable, only this number of observations will be used rather than every possible observation.",
-                position="left",
-            ),
+            ui.input_slider(
+                id = "MaxObs", 
+                label = "Maximum observations to analyse", 
+                min = 3,
+                max = 7,
+                value = 4,
+                ticks = True,
+                pre = "10^",
+                guide = this,
+                text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).',
+                position = "left")
         )
 
     this.settings = settings
@@ -227,15 +229,19 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
-        @this.throttle(2)
-        @this.suspendable(calc=True)
+        @this.settle(seconds=2)
+        @this.suspendable(calc = True)
         def MaxObs():
-            return int(input.MaxObs())
+            return 10**input.MaxObs()
 
         @this.suspendable(calc=True)
         def PreparedData() -> pxd:
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
+
+        @this.suspendable()
+        def PxdChange():
+            this._exports.set(incomingproxy_data())
 
         @this.suspendable(calc = True)
         def Schema():
@@ -448,16 +454,6 @@ def instance():
                 df.loc[df["Orig\nname"]==origName, "New\norder"] = ",".join(input.NewOrder())
                 await Table.update_data(df)
 
-        # @this.suspendable()
-        # def enableCommit():
-        #     table_data = Table.data()
-        #     changed = False
-        #     for origName, newName, origType, newType in table_data[["Orig\nname","New\nname","Orig\nd-type","New\nd-type"]].itertuples(index=False, name=None):
-        #         if origName != newName or origType != newType:
-        #             changed = True
-        #             break
-        #     ui.update_action_button(id="Commit", disabled=not changed)
-
 
         def _dataframe_structure_text(df: pd.DataFrame) -> list[str]:
             """
@@ -531,10 +527,6 @@ def instance():
             ui.update_selectize(id = "NewDataType", selected = row["Orig\nd-type"].iloc[0])
             await Table.update_data(df)
 
-        @this.suspendable()
-        def allowAutoCommit():
-            if not this._exports.is_set() and this._imports.is_set(): 
-                this._exports.set(incomingproxy_data())
 
         def _unique_non_na(series: pd.Series) -> pd.Series:
             """

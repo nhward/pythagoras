@@ -50,14 +50,14 @@ def instance():
                 position = "left"),
             ui.input_slider(
                 id = "MaxObs", 
-                label = "Maximum observations to check for negatives, cardinality etc", 
+                label = "Maximum observations to analyse", 
                 min = 3,
                 max = 7,
                 value = 4,
                 ticks = True,
                 pre = "10^",
                 guide = this,
-                text = 'Limit to number of observations to chart to ensure responsiveness (logarithmic scale).',
+                text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).',
                 position = "left")
         )
 
@@ -128,7 +128,7 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
  
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc = True)
         def MaxObs():
             return 10**input.MaxObs()
@@ -137,7 +137,11 @@ def instance():
         def PreparedData():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
-            
+
+        @this.suspendable()
+        def PxdChange():
+            this._exports.set(incomingproxy_data())
+
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
             this._imports.get()
@@ -190,12 +194,12 @@ def instance():
         def CommitEvent():
             this._exports.set(Committed())
 
-        @this.suspendable()
-        def allowAutoCommit():
-            if not this._exports.is_set() and this._imports.is_set():  # noqa: SIM114
-                this._exports.set(this._imports.get())
-            elif this._imports.is_set() and this._imports.get().role_map == this._exports.get().role_map:
-                this._exports.set(this._imports.get())
+        # @this.suspendable()
+        # def allowAutoCommit():
+        #     if not this._exports.is_set() and this._imports.is_set():
+        #         this._exports.set(this._imports.get())
+        #     elif this._imports.is_set() and this._imports.get().role_map == this._exports.get().role_map:
+        #         this._exports.set(this._imports.get())
 
         @output
         @render.ui

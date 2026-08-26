@@ -1213,7 +1213,7 @@ def instance():
                 ticks=True,
                 pre="10^",
                 guide=this,
-                text="Limit to number of observations to process to ensure responsiveness (logarithmic scale).",
+                text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).",
                 position="left",
             ),
         )
@@ -1252,56 +1252,56 @@ def instance():
             req(this._imports.is_set())
             return this._imports.get()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinMissProp():
             return input.MinMissProp()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinLeafSamples():
             return input.MinLeafSamples()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MaxTreeDepth():
             return input.MaxTreeDepth()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinFoldFraction():
             return input.MinFoldFraction()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinRSquared():
             return input.MinRSquared()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def MinImprovement():
             return input.MinImprovement()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def Alpha():
             return input.Alpha()
 
-        @this.throttle(2)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def CVFolds():
             return input.CVFolds()
 
-        @this.throttle(2)
-        @this.suspendable(calc=True)
+        @this.settle(seconds=2)
+        @this.suspendable(calc = True)
         def MaxObs():
-            return 10 ** int(input.MaxObs())
-
+            return 10**input.MaxObs()
+            
         @this.suspendable(calc=True)
         @this.record_code
         def PreparedData():
