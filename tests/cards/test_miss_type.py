@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from card import Card
+from cyclic_pandas import as_cyclic
+from list_pandas import as_list
 from shiny.pytest import create_app_fixture
 
 app = create_app_fixture(app="../../app/cards/miss_type.py", scope="function")
@@ -132,7 +134,9 @@ class TestSmallHelpers:
 
 class TestDesignMatrix:
     @pytest.mark.unit
-    def test_mixed_design_matrix_is_numeric_and_finite(self, miss_type):
+    def test_mixed_design_matrix_is_numeric_and_imputed(self, miss_type):
+        cyclic = as_cyclic(pd.Series([23.0, 1.0, np.nan]), period=24)
+        basket = as_list(pd.Series([["red", "blue"], ["green"], pd.NA]))
         frame = pd.DataFrame({
             "number": [1.0, np.nan, np.inf],
             "boolean": pd.Series([True, False, pd.NA], dtype="boolean"),
@@ -141,6 +145,8 @@ class TestDesignMatrix:
             )),
             "category": pd.Series(["A", "B", None], dtype="category"),
             "date": pd.to_datetime(["2025-01-01", None, "2025-01-03"]),
+            "cyclic": cyclic,
+            "basket": basket,
         })
         matrix, specifications = miss_type._fit_design_matrix(
             frame, frame.columns.tolist()
@@ -148,23 +154,64 @@ class TestDesignMatrix:
         assert matrix.shape[0] == len(frame)
         assert all(pd.api.types.is_float_dtype(dtype) for dtype in matrix.dtypes)
         assert np.isfinite(matrix.to_numpy()).all()
+        assert matrix["number"].tolist() == pytest.approx([1.0, 1.0, 1.0])
+        assert matrix["boolean"].tolist() == pytest.approx([1.0, 0.0, 0.0])
+        assert matrix["ordered"].tolist() == pytest.approx([0.0, 1.0, 0.0])
+        assert matrix.loc[1, "date"] == pytest.approx(
+            (matrix.loc[0, "date"] + matrix.loc[2, "date"]) / 2
+        )
+        assert matrix["cyclic"].tolist() == pytest.approx([23.0, 1.0, 1.0])
+        category_columns = matrix.filter(like="category =")
+        assert category_columns.columns.tolist() == ["category = A", "category = B"]
+        assert category_columns.loc[2].tolist() == pytest.approx([1.0, 0.0])
+        basket_columns = matrix.filter(like="basket contains")
+        assert basket_columns.shape[1] == 3
+        assert any(
+            basket_columns.loc[2].equals(basket_columns.loc[position])
+            for position in (0, 1)
+        )
+        assert not any("<missing>" in column for column in matrix.columns)
         assert {specification["kind"] for specification in specifications} == {
-            "numeric", "boolean", "ordered", "categorical", "datetime"
+            "numeric", "boolean", "ordered", "categorical", "datetime",
+            "cyclic", "list",
         }
 
     @pytest.mark.unit
-    def test_held_out_transform_reuses_training_categories_and_imputation(
+    def test_held_out_transform_reuses_training_imputation_and_categories(
         self, miss_type
     ):
         train = pd.DataFrame({"number": [1.0, np.nan], "category": ["A", "B"]})
-        test = pd.DataFrame({"number": [np.nan], "category": ["unseen"]})
+        test = pd.DataFrame({
+            "number": [np.nan, 2.0],
+            "category": [None, "unseen"],
+        })
         train_matrix, specifications = miss_type._fit_design_matrix(
             train, ["number", "category"]
         )
         test_matrix = miss_type._transform_design_matrix(test, specifications)
         assert test_matrix.columns.tolist() == train_matrix.columns.tolist()
         assert test_matrix.loc[0, "number"] == pytest.approx(1.0)
-        assert test_matrix.filter(like="category =").iloc[0].eq(0).all()
+        assert test_matrix.filter(like="category =").iloc[0].tolist() == [1.0, 0.0]
+        assert test_matrix.filter(like="category =").iloc[1].eq(0).all()
+        assert np.isfinite(test_matrix.to_numpy()).all()
+        assert not any("<missing>" in column for column in test_matrix.columns)
+
+    @pytest.mark.unit
+    def test_held_out_list_imputation_uses_only_training_donors(self, miss_type):
+        train = pd.DataFrame({
+            "basket": as_list(pd.Series([["A", "B"], ["C"], pd.NA])),
+        })
+        test = pd.DataFrame({
+            "basket": as_list(pd.Series([pd.NA, ["unseen"]])),
+        })
+        train_matrix, specifications = miss_type._fit_design_matrix(
+            train, ["basket"]
+        )
+        test_matrix = miss_type._transform_design_matrix(test, specifications)
+        assert test_matrix.columns.tolist() == train_matrix.columns.tolist()
+        assert test_matrix.iloc[0].sum() in {1.0, 2.0}
+        assert test_matrix.iloc[1].sum() == 0.0
+        assert np.isfinite(test_matrix.to_numpy()).all()
 
 
 class TestTreePreparationAndFit:

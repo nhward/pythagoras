@@ -1,4 +1,6 @@
-console.log("[guide] script running")
+import Shepherd from "./shepherd-15.3.0.mjs";
+
+console.log("[guide] module running");
 
 Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
     console.log("[guide] create_run_tour running");
@@ -12,9 +14,6 @@ Shiny.addCustomMessageHandler("create_run_tour", function(json_steps) {
             scrollTo: true,
             canClickTarget: true,
             arrow: true,   // make sure arrows are drawn
-            popperOptions: {
-                modifiers: [{name: 'offset', options: {offset: [0, 12]}}],
-            }
         }
     });
 

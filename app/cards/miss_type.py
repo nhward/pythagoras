@@ -25,7 +25,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from cyclic_pandas import is_cyclic
 from joblib import Parallel, delayed
+from list_pandas import is_list
 from module import Module
 from plotly.colors import sample_colorscale
 from proxy_data import proxy_data
@@ -111,6 +113,9 @@ def _eligible_predictors(
         series = frame[column]
         if _is_geometry(series):
             continue
+        if is_list(series.dtype):
+            columns.append(column)
+            continue
         if pd.api.types.is_object_dtype(series.dtype):
             try:
                 if series.dropna().map(lambda value: isinstance(value, (list, dict, set))).any():
@@ -132,17 +137,105 @@ def _eligible_predictors(
     return columns
 
 
+def _mode_or_default(series: pd.Series, default: object) -> object:
+    """Return a deterministic non-missing mode, or a supplied default."""
+    modes = series.dropna().mode()
+    return modes.iloc[0] if not modes.empty else default
+
+
+def _circular_median(series: pd.Series) -> float:
+    """Return the observed position minimizing total circular distance."""
+    values = series.cyclic.codes().dropna().to_numpy(dtype=float)
+    if not values.size:
+        return 0.0
+    period = float(series.cyclic.period)
+    candidates = np.unique(values)
+    distances = np.abs(
+        np.mod(values[None, :] - candidates[:, None] + period / 2, period)
+        - period / 2
+    )
+    return float(candidates[np.argmin(distances.sum(axis=1))])
+
+
+def _list_items(donors: list[list[object]]) -> list[object]:
+    """Return stable, representation-distinct items found in donor lists."""
+    items: dict[tuple[str, str], object] = {}
+    for donor in donors:
+        for item in donor:
+            key = (f"{type(item).__module__}.{type(item).__qualname__}", repr(item))
+            items.setdefault(key, item)
+    return [items[key] for key in sorted(items)]
+
+
+def _impute_list_values(
+    series: pd.Series,
+    donors: list[list[object]],
+    *,
+    random_state: int,
+) -> list[list[object]]:
+    """Hot-deck missing lists using reproducibly sampled training donors."""
+    rng = np.random.default_rng(random_state)
+    result: list[list[object]] = []
+    for value in series.array:
+        if value is pd.NA or value is None:
+            if donors:
+                result.append(list(donors[int(rng.integers(len(donors)))]))
+            else:
+                result.append([])
+        else:
+            result.append(list(value))
+    return result
+
+
+def _encode_list_values(
+    values: list[list[object]],
+    items: list[object],
+    name: str,
+) -> dict[str, pd.Series]:
+    """Multi-hot encode imputed lists using training-fold item levels."""
+    converted: dict[str, pd.Series] = {}
+    for position, item in enumerate(items):
+        label = f"{name} contains {item}"
+        if label in converted:
+            label = f"{label} [{position}]"
+        converted[label] = pd.Series(
+            [float(item in value) for value in values],
+            dtype=float,
+        )
+    return converted
+
+
 def _fit_design_matrix(
     frame: pd.DataFrame,
     columns: list[str],
 ) -> tuple[pd.DataFrame, list[dict[str, object]]]:
-    """Learn mixed-type encodings and finite-value imputations from a frame."""
+    """Learn mixed-type encodings and training-fold imputations."""
     converted: dict[str, pd.Series] = {}
     specifications: list[dict[str, object]] = []
     for column in columns:
         series = frame[column]
         name = str(column)
-        if pd.api.types.is_datetime64_any_dtype(series.dtype):
+        if is_list(series.dtype):
+            donors = [list(value) for value in series.array if value is not pd.NA]
+            items = _list_items(donors)
+            seed = 2025 + sum(ord(character) for character in name)
+            values = _impute_list_values(series, donors, random_state=seed)
+            for encoded_name, encoded in _encode_list_values(values, items, name).items():
+                converted[encoded_name] = pd.Series(encoded.to_numpy(), index=frame.index)
+            specifications.append({
+                "column": column,
+                "name": name,
+                "kind": "list",
+                "donors": donors,
+                "items": items,
+                "seed": seed,
+            })
+            continue
+        if is_cyclic(series.dtype):
+            fill = _circular_median(series)
+            values = series.cyclic.codes().astype("Float64").astype(float).fillna(fill)
+            kind = "cyclic"
+        elif pd.api.types.is_datetime64_any_dtype(series.dtype):
             values = series.astype("int64", copy=False).astype("float64")
             values[series.isna()] = np.nan
             kind = "datetime"
@@ -150,7 +243,8 @@ def _fit_design_matrix(
             values = pd.to_numeric(series, errors="coerce").astype("float64")
             kind = "numeric"
         elif pd.api.types.is_bool_dtype(series.dtype):
-            values = series.astype("float64")
+            fill = bool(_mode_or_default(series, False))
+            values = series.fillna(fill).astype("Float64").astype("float64")
             kind = "boolean"
         elif isinstance(series.dtype, pd.CategoricalDtype) and series.cat.ordered:
             categories = list(series.cat.categories)
@@ -159,26 +253,28 @@ def _fit_design_matrix(
                 index=series.index,
                 dtype=float,
             ).replace(-1, np.nan)
-            values = codes
+            fill = float(_mode_or_default(codes, 0.0))
+            values = codes.fillna(fill)
             kind = "ordered"
         else:
-            values = series.astype("string").fillna("<missing>")
+            values = series.astype("string")
+            fill = str(_mode_or_default(values, ""))
+            values = values.fillna(fill)
             categories = sorted(pd.unique(values).tolist())
             specifications.append({
                 "column": column,
                 "name": name,
                 "kind": "categorical",
                 "categories": categories,
+                "fill": fill,
             })
             for category in categories:
                 converted[f"{name} = {category}"] = values.eq(category).astype(float)
             continue
         values = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
-        if values.isna().any():
+        if kind in {"numeric", "datetime"}:
             finite = values.dropna()
             fill = float(finite.median()) if not finite.empty else 0.0
-        else:
-            fill = 0.0
         converted[name] = values.fillna(fill).astype(float)
         specification = {
             "column": column,
@@ -204,12 +300,28 @@ def _transform_design_matrix(
         name = str(specification["name"])
         kind = specification["kind"]
         series = frame[column]
+        if kind == "list":
+            values = _impute_list_values(
+                series,
+                specification["donors"],
+                random_state=int(specification["seed"]),
+            )
+            encoded_values = _encode_list_values(
+                values, specification["items"], name,
+            )
+            for encoded_name, encoded in encoded_values.items():
+                converted[encoded_name] = pd.Series(
+                    encoded.to_numpy(), index=frame.index,
+                )
+            continue
         if kind == "categorical":
-            values = series.astype("string").fillna("<missing>")
+            values = series.astype("string").fillna(str(specification["fill"]))
             for category in specification["categories"]:
                 converted[f"{name} = {category}"] = values.eq(category).astype(float)
             continue
-        if kind == "datetime":
+        if kind == "cyclic":
+            values = series.cyclic.codes().astype("Float64").astype(float)
+        elif kind == "datetime":
             values = series.astype("int64", copy=False).astype("float64")
             values[series.isna()] = np.nan
         elif kind == "ordered":
@@ -223,7 +335,7 @@ def _transform_design_matrix(
                 dtype=float,
             ).replace(-1, np.nan)
         else:
-            values = pd.to_numeric(series, errors="coerce").astype(float)
+            values = pd.to_numeric(series, errors="coerce").astype("Float64").astype(float)
         values = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
         converted[name] = values.fillna(float(specification["fill"])).astype(float)
     return pd.DataFrame(converted, index=frame.index, dtype=float)
@@ -1466,6 +1578,7 @@ def instance():
                 "minimum_balanced_accuracy": float(MinBalancedAccuracy()),
                 "minimum_fold_fraction": float(MinFoldFraction()),
                 "minimum_class_count": int(input.MinClassCount()),
+                "processes": 1
             }
             CalculateTypeTable.invoke(frame, options)
 
@@ -1617,6 +1730,10 @@ def instance():
                         class_="text-info text-center d-block"
                     )
                 )
+        def cancel_type_table() -> None:
+            CalculateTypeTable.cancel()
+
+        session.on_ended(cancel_type_table)
 
     this.server = server
     return this

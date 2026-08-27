@@ -120,7 +120,7 @@ class TestInstance:
         assert card.hasSidebar()
         assert card.hasFooter()
         assert card.hasFlipSide()
-        assert 'id="Structure"' in str(card.back)
+        assert 'id="StructTable"' in str(card.back)
 
     @pytest.mark.unit
     def test_test_mode_seeds_expected_data(self, card_module):
@@ -286,7 +286,7 @@ class TestStructureData:
 
         assert result["Variable"].tolist() == ["amount", "group", "when"]
         assert result.columns.tolist() == [
-            "Variable", "Type", "Storage dtype", "Role", "Complete",
+            "Variable", "Data type", "Storage type", "Role", "Complete",
             "Missing", "Missing %", "Unique", "Summary",
         ]
         amount = result.set_index("Variable").loc["amount"]
@@ -349,7 +349,7 @@ class TestWebKitUI:
         grid.expect_nrow(5)
         grid.expect_ncol(9)
         grid.expect_column_labels([
-            "Variable", "Type", "Storage dtype", "Role", "Complete",
+            "Variable", "Data type", "Storage type", "Role", "Complete",
             "Missing", "Missing %", "Unique", "Summary",
         ])
 

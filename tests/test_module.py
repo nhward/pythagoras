@@ -56,7 +56,7 @@ def test_module_initialises_and_registers_instance():
     assert m.Instances[m.namespace] is m
     # script/css lists populated
     assert (m.ROOT / "www" / "console.js") in m.script_list
-    assert Path(m.ROOT / "www" / "shepherd.css") in  m.css_list
+    assert Path(m.ROOT / "www" / "shepherd-15.3.0.css") in  m.css_list
 
 
 @pytest.mark.unit

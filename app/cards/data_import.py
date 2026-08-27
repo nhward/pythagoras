@@ -5,10 +5,10 @@ import sys
 from pathlib import Path
 
 if __name__ == "__main__":
-    ROOT = Path(__file__).resolve().parent.parent
+    ROOT=Path(__file__).resolve().parent.parent
     # Ensure local modules and packages are resolved from the app directory.
     os.chdir(ROOT)
-    root_string = str(ROOT)
+    root_string=str(ROOT)
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
@@ -36,7 +36,7 @@ import cards  # noqa: F401
 
 
 def capture_output(function, *args, **kwargs) -> str:
-    buffer = io.StringIO()
+    buffer=io.StringIO()
 
     with redirect_stdout(buffer):
         function(*args, **kwargs)
@@ -44,7 +44,6 @@ def capture_output(function, *args, **kwargs) -> str:
     return buffer.getvalue()
 
 # TODO: cleanup exception handling
-# TODO: Need alt URL deafult
 # TODO: allow URL load to unzip zip files (unlikely to resolve multiple files except shp,shx,prj)
 
 
@@ -52,10 +51,10 @@ def instance():
     """
     Creates an instance of Card configured as "dataImport".
     """
-    this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
-    this.long_name = "Data import"
-    this.description = "This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
-    this.requires_import = False
+    this=Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this.long_name="Data import"
+    this.description="This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
+    this.requires_import=False
 
     def _load_sm(name):
         """
@@ -69,44 +68,44 @@ def instance():
         import importlib
 
         import statsmodels.api as sm
-        last_exc = None
+        last_exc=None
         # 1) Rdatasets route: sm.datasets.get_rdataset(...).data
         try:
-            rd = sm.datasets.get_rdataset(name, cache=True)
+            rd=sm.datasets.get_rdataset(name, cache=True)
             if hasattr(rd, "data"):
                 return rd.data
             # if it didn't have .data for some reason, try to return rd itself
             return rd
         except Exception as e:  # noqa: BLE001
-            last_exc = e
+            last_exc=e
         # 2) Try built-in statsmodels dataset modules (e.g., sm.datasets.co2)
         try:
-            dataset_modules = getattr(sm.datasets, "__all__", []) or []
+            dataset_modules=getattr(sm.datasets, "__all__", []) or []
             # search for matching module name (case-insensitive)
             for mod_name in dataset_modules:
                 if mod_name.lower() == name.lower():
-                    mod = importlib.import_module(f"statsmodels.datasets.{mod_name}")
+                    mod=importlib.import_module(f"statsmodels.datasets.{mod_name}")
                     # common loader patterns
                     if hasattr(mod, "load_pandas"):
-                        loaded = mod.load_pandas()
+                        loaded=mod.load_pandas()
                         return getattr(loaded, "data", loaded)
                     if hasattr(mod, "load"):
-                        loaded = mod.load()
+                        loaded=mod.load()
                         return getattr(loaded, "data", loaded)
                     # some modules may expose a top-level variable `data` or similar
                     if hasattr(mod, "data"):
                         return mod.data
             # as a last attempt, check for attribute directly on sm.datasets
-            mod_obj = getattr(sm.datasets, name, None)
+            mod_obj=getattr(sm.datasets, name, None)
             if mod_obj:
                 if hasattr(mod_obj, "load_pandas"):
-                    loaded = mod_obj.load_pandas()
+                    loaded=mod_obj.load_pandas()
                     return getattr(loaded, "data", loaded)
                 if hasattr(mod_obj, "load"):
-                    loaded = mod_obj.load()
+                    loaded=mod_obj.load()
                     return getattr(loaded, "data", loaded)
         except Exception as e:  # noqa: BLE001
-            last_exc = e
+            last_exc=e
         # Give a helpful message including the last exception
         raise ValueError(
             f"Statsmodels: could not load dataset '{name}'. "
@@ -114,7 +113,7 @@ def instance():
             )
 
 
-    DATA_SOURCES = {
+    DATA_SOURCES={
         "seaborn": {
             "fetch": lambda: __import__("seaborn").get_dataset_names(),
             "load":  lambda name: __import__("seaborn").load_dataset(name)
@@ -148,139 +147,147 @@ def instance():
 
 
     def DatasetChoices():
-        choices = {}
+        choices={}
         for pkg, source in DATA_SOURCES.items():
-            result = source["fetch"]()
-            inner = {f"{pkg}::{ds}": ds for ds in result}  # inner dict: {value: label}
-            choices[f"_______Package {pkg}_______"] = inner
+            result=source["fetch"]()
+            inner={f"{pkg}::{ds}": ds for ds in result}  # inner dict: {value: label}
+            choices[f"_______Package {pkg}_______"]=inner
         return choices
 
     def UciChoices():
         try:
-            text = capture_output(list_available_datasets)
+            text=capture_output(list_available_datasets)
         except:  # noqa: E722
-            text = ""
-        names = []
+            text=""
+        names=[]
         for line in text.splitlines():
-            parts = line.rsplit(maxsplit=1)
+            parts=line.rsplit(maxsplit=1)
             if len(parts) == 2 and parts[1].isdigit():
                 names.append(parts[0].strip())
         return names
 
     def front():
-        return ui.navset_bar(
+        panels=[
             ui.nav_panel(
                 "File based",
                 ui.tags.br(),
-                ui.input_file(id = "ServerFile", label = None, button_label = "Local File picker...", multiple = True, width = "80%", 
-                    guide = this, title = "File path", position = "bottom",
-                    text = 'This button starts a file-picker dialogue of data files on the client. The chosen file will be uploaded to the server.'),
-                ui.input_text(id = "FName", label = "Short name", guide = this, position = "bottom",
-                    text = 'This is how you choose to name the dataset. Keep this name short. By default it is initially populated with the file name. Each of the importation styles has this field.')
+                ui.input_file(id="ServerFile", label=None, button_label="Local File picker...", multiple=True, width="80%", 
+                    guide=this, title="File path", position="bottom",
+                    text='This button starts a file-picker dialogue of data files on the client. The chosen file will be uploaded to the server.'),
+                ui.input_text(id="FName", label="Short name", guide=this, position="bottom", update_on="blur",
+                    text='This is how you choose to name the dataset. Keep this name short. By default it is initially populated with the file name. Each of the importation styles has this field.')
             ),
             ui.nav_panel(
                 "Dataset based",
                 ui.tags.br(),
-                ui.input_selectize(id = "Dataset", label = "Package dataset", multiple = False, width = "80%", choices = DatasetChoices(), 
-                guide = this, text = "The available package datasets are organised by package."),
-                ui.input_text(id = "DName", label = "Short name", guide = this, position = "bottom",
-                    text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the chosen dataset name. Each of the importation styles has this field.')
+                ui.input_selectize(id="Dataset", label="Package dataset", multiple=False, width="80%", choices=DatasetChoices(), 
+                guide=this, text="The available package datasets are organised by package."),
+                ui.input_text(id="DName", label="Short name", guide=this, position="bottom", 
+                    text='This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the chosen dataset name. Each of the importation styles has this field.')
             ),
             ui.nav_panel(
                 "Web based",
                 ui.tags.br(),
-                ui.input_text(id = "Url", label = "Url", width = "100%", value  = "https://archive.ics.uci.edu/static/public/109/wine.zip", placeholder = "http://, https://, ftp://, ftps://, or file://", 
-                    guide = this, position = "bottom",
-                    text = 'This text box is for the entry of a valid URL of a data file. Allowed protocols include http://, https://, ftp://, ftps://, and file://\n The field will shake if the URL is invalid.'),
-                ui.input_text(id = "UName", label = "Short name", guide = this, position = "bottom",
-                    text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the base URL. Each of the importation styles has this field.')
-            ),
-            ui.nav_panel(
-                "UC Irvine",
-                ui.tags.a("Visit Official Site", href="https://archive.ics.uci.edu/datasets", target="_blank"),
-                ui.input_selectize(id = "UciDataset", label = "UCI dataset", multiple = False, width = "80%", choices = UciChoices(), 
-                    guide = this, position = "bottom",
-                    text = 'The UCI Machine Learning Repository is a collection of databases that are used by the machine learning community for the analysis of machine learning algorithms.'),
-                ui.input_text(id = "IName", label = "Short name", guide = this, position = "bottom",
-                    text = 'This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the dataset ID. Each of the importation styles has this field.')
-            ),
-            title = None,
-            id = "Navset", 
-            padding = 0, 
-            fillable = True
+                ui.input_text(id="Url", label="Url", width="100%", value ="https://raw.githubusercontent.com/mwaskom/seaborn-data/master/titanic.csv", 
+                    placeholder="http://, https://, ftp://, ftps://, or file://", update_on="blur",
+                    guide=this, position="bottom",
+                    text='This text box is for the entry of a valid URL of a data file. Allowed protocols include http://, https://, ftp://, ftps://, and file://\n The field will shake if the URL is invalid.'),
+                ui.input_text(id="UName", label="Short name", guide=this, position="bottom", 
+                    text='This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the base URL. Each of the importation styles has this field.')
+            )
+        ]
+        if not Module.IS_SHINYLIVE:
+            panels.append(
+                ui.nav_panel(
+                    "UC Irvine",
+                    ui.tags.a("Visit Official Site", href="https://archive.ics.uci.edu/datasets", target="_blank"),
+                    ui.input_selectize(id="UciDataset", label="UCI dataset", multiple=False, width="80%", choices=UciChoices(), 
+                        guide=this, position="bottom",
+                        text='The UCI Machine Learning Repository is a collection of databases that are used by the machine learning community for the analysis of machine learning algorithms.'),
+                    ui.input_text(id="IName", label="Short name", guide=this, position="bottom",
+                        text='This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the dataset ID. Each of the importation styles has this field.')
+                )
+            )
+
+        return ui.navset_bar(
+            *panels,
+            title=None,
+            id="Navset", 
+            padding=0, 
+            fillable=True
         )
     
-    this.front = front
+    this.front=front
 
     def back():
         return ui.TagList(
-            ui.card_header("Data Summary", class_ = "text-primary text-center"),
-            ui.output_ui(id = "Summary", 
-                guide = this, title = "Data Summary", position = "top", priority = -10,
-                text = "This summary shows information specific to diferent classes of data. It is available even before the data has been committed.",
-                style = "font-size: 0.85rem; line-height: 1.1;")
+            ui.card_header("Data Summary", class_="text-primary text-center"),
+            ui.output_ui(id="Summary", 
+                guide=this, title="Data Summary", position="top", priority=-10,
+                text="This summary shows information specific to diferent classes of data. It is available even before the data has been committed.",
+                style="font-size: 0.85rem; line-height: 1.1;")
         )
     
-    this.back = back
+    this.back=back
 
     def footer():
         return ui.TagList(
             ui.input_action_button(
-                id = "Commit", 
-                label = 'Commit Import', 
-                icon = icon("gavel", title = "Commit the import", a11y = "sem"),
-                disabled = True, 
-                width = "250px", 
-                class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
-                style = "border: 0px; box-shadow: none;",
-                guide = this, 
-                title = "Commit button",
-                text = "This button commits the file reading. It bounces momentarily when it is ready to be clicked.",
-                position = "top"
+                id="Commit", 
+                label='Commit Import', 
+                icon=icon("gavel", title="Commit the import", a11y="sem"),
+                disabled=True, 
+                width="250px", 
+                class_="btn rounded-pill btn-sm d-block mx-auto btn-primary",
+                style="border: 0px; box-shadow: none;",
+                guide=this, 
+                title="Commit button",
+                text="This button commits the file reading. It bounces momentarily when it is ready to be clicked.",
+                position="top"
             ),
             ui.output_ui(
-                id = "Check",
-                guide = this, 
-                title = "Card status",
-                text = "This contains a line of colour coded information about the state of the card. Notice that it reveals when only a portion of the available data is being used. This limit can be changed in the settings.",
-                position = "top")
+                id="Check",
+                guide=this, 
+                title="Card status",
+                text="This contains a line of colour coded information about the state of the card. Notice that it reveals when only a portion of the available data is being used. This limit can be changed in the settings.",
+                position="top")
         )
 
-    this.footer = footer
+    this.footer=footer
 
     def settings():
         return ui.TagList(
             ui.input_text(
-                id = "Separator", 
-                label = "Between-column separator", 
-                value = ",",
-                guide = this,
-                text = 'Since tab, semi-colon and comma characters can occur in the data, this string specifies the type of separation string to employ. "Auto" will make an automated assessment.',                position = "left"),
+                id="Separator", 
+                label="Between-column separator", 
+                value=",",
+                guide=this,
+                text='Since tab, semi-colon and comma characters can occur in the data, this string specifies the type of separation string to employ. "Auto" will make an automated assessment.',                position="left"),
             ui.input_numeric(
-                id = "Sheet", 
-                label = "Worksheet position", 
-                value = 1, 
-                min = 1, 
-                guide = this,
-                text = 'When importing from a multi-worksheet spreadsheet, this number represents the particular worksheet to import.',
-                position = "left")
+                id="Sheet", 
+                label="Worksheet position", 
+                value=1, 
+                min=1, 
+                guide=this,
+                text='When importing from a multi-worksheet spreadsheet, this number represents the particular worksheet to import.',
+                position="left")
         )
 
-    this.settings = settings
+    this.settings=settings
 
     def server(input, output, session):
 
         #### Shiny variables ----
-        CommittedData = reactive.Value(None)
+        CommittedData=reactive.Value(None)
 
-        @this.suspendable(calc = True)
+        @this.suspendable(calc=True)
         def TempFilePath():
-            files = input.ServerFile()
+            files=input.ServerFile()
             if not files:
                 return None
             # file_info is a list of dicts (one per file); get the first one
-            file0 = files[0]
-            file = file0["datapath"]
+            file0=files[0]
+            file=file0["datapath"]
             if not os.path.isfile(file):
                 return None
             return file            
@@ -288,7 +295,7 @@ def instance():
         
 
         def dict_to_html(d):
-            html = "<ul style='margin:0;padding-left:1em;'>"
+            html="<ul style='margin:0;padding-left:1em;'>"
             for k, v in d.items():
                 if isinstance(v, dict):
                     html += f"<li><b>{k.capitalize()}</b>: {dict_to_html(v)}</li>"
@@ -297,11 +304,11 @@ def instance():
             html += "</ul>"
             return html
 
-        @this.suspendable(calc = True)
+        @this.suspendable(calc=True)
         @this.record_code
         def GetData():
 
-            def read_file(path, sep = ",", sheet = None , **kwargs):
+            def read_file(path, sep=",", sheet=None , **kwargs):
                 """
                 Generic data importer.
                 Dispatches to pandas, geopandas, or xarray depending on file extension.
@@ -312,12 +319,12 @@ def instance():
                 sheet : the worksheet number.
                 kwargs : passed to the underlying reader.
                 """
-                ext = os.path.splitext(path)[1].lower()
+                ext=os.path.splitext(path)[1].lower()
                 # --- Tabular formats ---
                 if ext in [".csv", ".tsv"]:
-                    df = pd.read_csv(
+                    df=pd.read_csv(
                         path, 
-                        sep = sep or ("\t" if ext == ".tsv" else ","),
+                        sep=sep or ("\t" if ext == ".tsv" else ","),
                         **kwargs
                     )
                     # Promote to GeoDataFrame if "geometry" column exists
@@ -328,25 +335,25 @@ def instance():
                             this.log.warning(e, exc_info=1)
                     return df
                 elif ext in [".xls", ".xlsx"]:
-                    df = pd.read_excel(
+                    df=pd.read_excel(
                         path, 
-                        sheet_name = sheet,
+                        sheet_name=sheet,
                         **kwargs
                     )
                     if "geometry" in df.columns:
                         try:
-                            return gpd.GeoDataFrame(df, geometry = gpd.GeoSeries.from_wkt(df["geometry"]))
+                            return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
                         except Exception as e:
                             this.log.warning(e, exc_info=1)
                     return df
                 elif ext in [".parquet"]:
-                    df = pd.read_parquet(
+                    df=pd.read_parquet(
                         path, 
                         **kwargs
                     )
                     if "geometry" in df.columns:
                         try:
-                            return gpd.GeoDataFrame(df, geometry = gpd.GeoSeries.from_wkt(df["geometry"]))
+                            return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
                         except Exception as e:
                             this.log.warning(e, exc_info=1)
                     return df
@@ -362,7 +369,7 @@ def instance():
                     )
                 # --- Time-series / multidimensional ---
                 elif ext in [".nc", ".grib", ".h5", ".hdf5"]:
-                    d = xr.open_dataset(path, **kwargs)
+                    d=xr.open_dataset(path, **kwargs)
                     try:
                         return d.to_dataframe()
                     except Exception as e:
@@ -373,25 +380,25 @@ def instance():
             if input.Navset() == "File based":
                 if TempFilePath() is None:
                     return None
-                d = read_file(path = TempFilePath(), sep = input.Separator(), sheet = input.Sheet())
+                d=read_file(path=TempFilePath(), sep=input.Separator(), sheet=input.Sheet())
             elif input.Navset() == "Web based":
                 if Url() is None:
                     return None
-                d =  read_file(path = Url(), sep = input.Separator(), sheet = input.Sheet())
+                d= read_file(path=Url(), sep=input.Separator(), sheet=input.Sheet())
             elif input.Navset() == "Dataset based":
                 req(input.Dataset())
-                package, name = input.Dataset().split("::", 1)
-                source = DATA_SOURCES.get(package)
+                package, name=input.Dataset().split("::", 1)
+                source=DATA_SOURCES.get(package)
                 if not source:
                     raise ValueError(f"No dataset source available for '{package}'")
-                d =  source["load"](name)
+                d= source["load"](name)
             elif input.Navset() == "UC Irvine":
                 req(input.UciDataset())
-                uci = fetch_ucirepo(name = input.UciDataset())
-                d = uci.data.original
+                uci=fetch_ucirepo(name=input.UciDataset())
+                d=uci.data.original
             return d
 
-        @this.suspendable(calc = True)
+        @this.suspendable(calc=True)
         @this.record_code
         def GetPxyData():
             if GetData() is None:
@@ -404,149 +411,150 @@ def instance():
         @this.record_code
         def Summary():
 
-            def pd_basic_html(df: pd.DataFrame, isFullScreen = False) -> str:
+            def pd_basic_html(df: pd.DataFrame, isFullScreen=False) -> str:
                 """
                 Return an HTML table similar to df.info()
                 """
                 if isFullScreen:
-                    table_size = ""
+                    table_size=""
                 else:
-                    table_size = " table_sm"
-                rows = []
-                t = type(df)
+                    table_size=" table_sm"
+                rows=[]
+                t=type(df)
                 rows.append({"Property" : "Data Class", "Value" : ".".join([t.__module__,f"<b>{t.__name__}</b>"])})
                 rows.append({"Property" : "Columns", "Value" : df.shape[1]})
                 rows.append({"Property" : "Distinct Data Types", "Value" : df.dtypes.nunique()})
-                table1 = pd.DataFrame(rows)
+                table1=pd.DataFrame(rows)
                 # High-level info
-                hl_html = "<h4>Dataset info:</h4>" + table1.to_html(index = False, escape = False, border = False, 
+                hl_html="<h4>Dataset info:</h4>" + table1.to_html(index=False, escape=False, border=False, 
                     classes="table table-hover table-striped" + table_size
                 )
                 # Memory usage
-                mem_bytes = df.memory_usage(deep=True).sum()
-                mem_mb = mem_bytes / (1024 ** 2)
-                mem_str = f"<br><h4>Memory usage:</h4> {mem_mb:.2f} MB ({mem_bytes:,} bytes)</p>"
+                mem_bytes=df.memory_usage(deep=True).sum()
+                mem_mb=mem_bytes / (1024 ** 2)
+                mem_str=f"<br><h4>Memory usage:</h4> {mem_mb:.2f} MB ({mem_bytes:,} bytes)</p>"
                 return hl_html + mem_str
 
-            def pd_info_html(df: pd.DataFrame, isFullScreen = False) -> str:
+            def pd_info_html(df: pd.DataFrame, isFullScreen=False) -> str:
                 """
                 Return an HTML table similar to df.info()
                 """
                 if isFullScreen:
-                    table_size = ""
+                    table_size=""
                 else:
-                    table_size = " table_sm"
+                    table_size=" table_sm"
 
                 # Table rendering
-                rows = []
+                rows=[]
                 for col in df.columns:
-                    non_null = df[col].count()
-                    nulls = len(df) - non_null
-                    row = {
+                    non_null=df[col].count()
+                    nulls=len(df) - non_null
+                    row={
                         "Column" : col,
                         "Non-Null Count" : f"{non_null} non-null",
                         "Null Count" : f"{nulls}",
                         "Dtype" : str(df[col].dtype)
                     }
                     rows.append(row)
-                summary = pd.DataFrame(rows)
-                table_html = "<h4>Variables:</h4>" + summary.to_html(
-                    index = False, 
-                    escape = True, 
-                    border = False, 
-                    max_rows = 100, 
-                    classes = "table table-hover table-striped" + table_size
+                summary=pd.DataFrame(rows)
+                table_html="<h4>Variables:</h4>" + summary.to_html(
+                    index=False, 
+                    escape=True, 
+                    border=False, 
+                    max_rows=100, 
+                    classes="table table-hover table-striped" + table_size
                 )
                 # Category summary
-                cat_cols = df.select_dtypes(include=['object', 'str', 'category'])
+                # cat_cols=df.select_dtypes(include=['object', 'str', 'category'])  Shinylive does not like this line 
+                cat_cols=df.select_dtypes(include=['object', 'category'])
                 if cat_cols.empty:
-                    cat_html = ""
+                    cat_html=""
                 else:
-                    df = pd.DataFrame(cat_cols.describe().T)
-                    cat_html = "<h4>Categories:</h4>" + df.to_html(
-                        index = True, 
-                        escape = True, 
-                        border = False, 
+                    df=pd.DataFrame(cat_cols.describe().T)
+                    cat_html="<h4>Categories:</h4>" + df.to_html(
+                        index=True, 
+                        escape=True, 
+                        border=False, 
                         classes="table table-hover table-striped" + table_size
                     )
                 return table_html + cat_html
 
-            def gpd_info_html(df: gpd.GeoDataFrame, isFullScreen = False):
+            def gpd_info_html(df: gpd.GeoDataFrame, isFullScreen=False):
                 if isFullScreen:
-                    table_size = ""
+                    table_size=""
                 else:
-                    table_size = " table_sm"
+                    table_size=" table_sm"
 
                 #TODO: allow for multiple geometry columns
-                rows = []
+                rows=[]
                 rows.append({"Property" : "CRS", "Value" : df.crs})
                 rows.append({"Property" : "Columns", "Value" : df.geometry.name})
                 rows.append({"Property" : "Types", "Value" : df.geometry.geom_type.value_counts().to_dict()})
                 rows.append({"Property" : "Bounds", "Value" : df.total_bounds})
-                summary = pd.DataFrame(rows)
+                summary=pd.DataFrame(rows)
                 return "<h4>Geometry:</h4>" + summary.to_html(
-                    index = False, 
-                    escape = True, 
-                    border = False, 
-                    max_rows = 100, 
-                    classes = "table table-hover table-striped" + table_size
+                    index=False, 
+                    escape=True, 
+                    border=False, 
+                    max_rows=100, 
+                    classes="table table-hover table-striped" + table_size
                 )
 
-            def xr_info_html(df: xr.Dataset, isFullScreen = False):
+            def xr_info_html(df: xr.Dataset, isFullScreen=False):
                 if isFullScreen:
-                    table_size = ""
+                    table_size=""
                 else:
-                    table_size = " table_sm"
-                t = type(df)
-                rows = []
+                    table_size=" table_sm"
+                t=type(df)
+                rows=[]
                 rows.append({"Property" : "Data Class",  "Value" : ".".join([t.__module__,f"<b>{t.__name__}</b>"])})
                 rows.append({"Property" : "Dimensions",  "Value" : data.dims})
                 rows.append({"Property" : "Coordinates", "Value" : list(data.coords)})
                 rows.append({"Property" : "Variables",   "Value" : len(data.data_vars)})
                 rows.append({"Property" : "Data Attributes",  "Value" : len(data.attrs.keys())})
-                table1 = pd.DataFrame(rows)
+                table1=pd.DataFrame(rows)
 
 
-                rows = []
+                rows=[]
                 for var_name, da in data.data_vars.items():
                     rows.append({"Variable" : var_name, "Dimensions" : da.dims, "Shape" : da.shape, "Data Type" : da.dtype, "Variable Attributes" : dict_to_html(da.attrs)})
-                table2 = pd.DataFrame(rows)
+                table2=pd.DataFrame(rows)
                 # Dataset-level attributes
-                attr_html = ""
+                attr_html=""
                 if data.attrs:
-                    attr_html = "<h4>Data attributes:</h4>" + dict_to_html(data.attrs)
+                    attr_html="<h4>Data attributes:</h4>" + dict_to_html(data.attrs)
                     # for k, v in data.attrs.items():
-                    #     attr_html = attr_html +(f"{k.capitalize()}: {v}<br>")
+                    #     attr_html=attr_html +(f"{k.capitalize()}: {v}<br>")
                 return table1.to_html(
-                    index = False, 
-                    escape = False, 
-                    border = False, 
-                    max_rows = 100, 
-                    classes = "table table-hover table-striped" + table_size
+                    index=False, 
+                    escape=False, 
+                    border=False, 
+                    max_rows=100, 
+                    classes="table table-hover table-striped" + table_size
                 ) + "<h4>Variables:</h4>" + table2.to_html(
-                    index = False, 
-                    escape = False, 
-                    border = False, 
-                    max_rows = 100, 
-                    classes = "table table-hover table-striped" + table_size
+                    index=False, 
+                    escape=False, 
+                    border=False, 
+                    max_rows=100, 
+                    classes="table table-hover table-striped" + table_size
                 ) + attr_html
 
-            d = GetPxyData()
+            d=GetPxyData()
             req(d is not None)
-            data = d.to_native()
+            data=d.to_native()
             if data is None or len(data) == 0:
-                return ui.span("No Data", class_ = "text-warning")
-            output = []
+                return ui.span("No Data", class_="text-warning")
+            output=[]
             if isinstance(data, pd.DataFrame):
-                output.append(pd_basic_html(data, isFullScreen = this.isFullScreen()))
+                output.append(pd_basic_html(data, isFullScreen=this.isFullScreen()))
             if isinstance(data, gpd.GeoDataFrame):
-                output.append(gpd_info_html(data, isFullScreen = this.isFullScreen()))
+                output.append(gpd_info_html(data, isFullScreen=this.isFullScreen()))
             if isinstance(data, pd.DataFrame):
-                output.append(pd_info_html(data, isFullScreen = this.isFullScreen()))
+                output.append(pd_info_html(data, isFullScreen=this.isFullScreen()))
             # if isinstance(data, xr.Dataset):
-            #     output.append(xr_info_html(data, isFullScreen = this.isFullScreen()))
+            #     output.append(xr_info_html(data, isFullScreen=this.isFullScreen()))
             if len(output) == 0:
-                return ui.span(f"Data class '{type(data).__name__}'not expected", class_ = "text-warning")
+                return ui.span(f"Data class '{type(data).__name__}'not expected", class_="text-warning")
             return ui.HTML("".join(output))
 
 
@@ -557,9 +565,8 @@ def instance():
             """
             # --- pandas.DataFrame or geopandas.GeoDataFrame ---
             if hasattr(data, "shape") and not hasattr(data, "dims"):
-                rows, cols = data.shape
-                type_name = type(data).__name__
-
+                rows, cols=data.shape
+                type_name=type(data).__name__
                 if max_rows and rows == max_rows:
                     return f"({type_name}: Obs limited to first {rows}, Vars = {cols})"
                 else:
@@ -567,59 +574,59 @@ def instance():
             # --- xarray.Dataset ---
             elif hasattr(data, "dims"):
                 # xarray.Dataset.dims is a mapping: {'time': 2920, 'lat': 25, 'lon': 53}
-                dims = data.dims
-                n_dims = len(dims)
-                total_size = 1
+                dims=data.dims
+                n_dims=len(dims)
+                total_size=1
                 for dim_size in dims.values():
                     total_size *= dim_size
-                n_vars = len(data.data_vars)
+                n_vars=len(data.data_vars)
                 return f"(xarray.Dataset: Obs = {total_size}, Vars = {n_vars + n_dims})"
             # --- Fallback ---
             else:
                 return f"({type(data).__name__}: shape unknown)"
 
 
-        @this.suspendable(triggers = [input.ServerFile])
+        @this.suspendable(triggers=[input.ServerFile])
         def ServerFile():
             req(input.ServerFile())
-            files = input.ServerFile()
-            file0 = files[0]
-            filename = file0["name"]
-            stem, _ = os.path.splitext(filename)  # Remove the extension
-            ui.update_text(id = "FName", value = stem)
+            files=input.ServerFile()
+            file0=files[0]
+            filename=file0["name"]
+            stem, _=os.path.splitext(filename)  # Remove the extension
+            ui.update_text(id="FName", value=stem)
 
 
         @this.suspendable()
         def DatasetName():
             req(input.Dataset())
-            _, stem = input.Dataset().split("::", 1)
-            ui.update_text(id = "DName", value = stem)
+            _, stem=input.Dataset().split("::", 1)
+            ui.update_text(id="DName", value=stem)
 
         @this.suspendable()
         def UciDatasetName():
             req(input.UciDataset())
-            ui.update_text(id = "IName", value = input.UciDataset())
+            ui.update_text(id="IName", value=input.UciDataset())
 
                 
         @this.settle(seconds=2)
-        @this.suspendable(calc = True)
+        @this.suspendable(calc=True)
         def Url():
             return input.Url()
 
 
-        @this.suspendable(triggers = [Url])
+        @this.suspendable(triggers=[Url])
         def Url2():
             req(Url())
-            path = urlparse(Url()).path  # Extract the path part of the URL
-            filename = os.path.basename(path)  # Get the filename
-            stem, _ = os.path.splitext(filename)  # Remove the extension
-            ui.update_text(id = "UName", value = stem)
+            path=urlparse(Url()).path  # Extract the path part of the URL
+            filename=os.path.basename(path)  # Get the filename
+            stem, _=os.path.splitext(filename)  # Remove the extension
+            ui.update_text(id="UName", value=stem)
 
 
         def url_exists(url: str) -> bool:
             this.log.debug(f"Checking url: {url}")
             try:
-                response = requests.head(url, allow_redirects=True, timeout=5)
+                response=requests.head(url, allow_redirects=True, timeout=5)
                 return response.status_code == 200
             except requests.RequestException:
                 return False
@@ -629,128 +636,128 @@ def instance():
         @render.ui
         async def Check():
             if input.Navset() == "Web based":
-                butt_disabled = input.UName().strip() == "" 
+                butt_disabled=input.UName().strip() == "" 
                 if Url().strip() == "":
-                    message = ui.span("No URL supplied", class_ = "text-center text-warning")
-                    butt_disabled = True
+                    message=ui.span("No URL supplied", class_="text-center text-warning")
+                    butt_disabled=True
                 else:
-                    ok = url_exists(Url())
+                    ok=url_exists(Url())
                     if ok is None:
-                        butt_disabled = True
-                        message = ui.span("No internet connectivity", class_ = "text-center text-warning")
+                        butt_disabled=True
+                        message=ui.span("No internet connectivity", class_="text-center text-warning")
                     elif not ok:
-                        message = ui.span("The URL is not valid", class_ = "text-center text-danger")
+                        message=ui.span("The URL is not valid", class_="text-center text-danger")
                         await session.send_custom_message("animate", {"id" : session.ns("Url"), "animation" : "shakeX", "delay" : 500})
-                        butt_disabled = True
+                        butt_disabled=True
                     else:
                         try:
-                            d = GetPxyData()
-                            d.name = Url()
-                            text = size_text(GetData())
+                            d=GetPxyData()
+                            d.name=Url()
+                            text=size_text(GetData())
                             if CommittedData() == d:
-                                message = ui.span("Web import successful ", text, class_ = "text-center text-success")
+                                message=ui.span("Web import successful ", text, class_="text-center text-success")
                             else:
-                                message = ui.span("Web import ready ", text, class_ = "text-center text-primary")
+                                message=ui.span("Web import ready ", text, class_="text-center text-primary")
                                 await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
                         except SilentException:
-                            message = ""
+                            message=""
                         except Exception as e:  # noqa: BLE001
-                            message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
-                            butt_disabled = True
+                            message=ui.span(f"Error ({type(e).__name__}): {e}", class_="text-center text-danger")
+                            butt_disabled=True
             elif input.Navset() == "File based":
-                butt_disabled = input.FName().strip() == "" 
+                butt_disabled=input.FName().strip() == "" 
                 try:
-                    d = GetPxyData()
+                    d=GetPxyData()
                     if d is None:
-                        message = ui.span("No file supplied yet", class_ = "text-center text-warning")
-                        butt_disabled = True
+                        message=ui.span("No file supplied yet", class_="text-center text-warning")
+                        butt_disabled=True
                     else:
-                        d.name = input.FName()
-                        text = size_text(GetData())
+                        d.name=input.FName()
+                        text=size_text(GetData())
                         if CommittedData() == d:
-                            message = ui.span("File import successful ", text, class_ = "text-center text-success")
+                            message=ui.span("File import successful ", text, class_="text-center text-success")
                         else:
-                            message = ui.span("File import ready ", text, class_ = "text-center text-primary")
+                            message=ui.span("File import ready ", text, class_="text-center text-primary")
                             await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
                 except Exception as e:  # noqa: BLE001
-                    message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
-                    butt_disabled = True
+                    message=ui.span(f"Error ({type(e).__name__}): {e}", class_="text-center text-danger")
+                    butt_disabled=True
             elif input.Navset() == "Dataset based":
-                butt_disabled = input.DName().strip() == "" 
+                butt_disabled=input.DName().strip() == "" 
                 if input.Dataset() is None:
-                    message = ui.span("No dataset selected", class_ = "text-center text-warning")
-                    butt_disabled = True
+                    message=ui.span("No dataset selected", class_="text-center text-warning")
+                    butt_disabled=True
                 else:
                     try:
-                        d = GetPxyData()
+                        d=GetPxyData()
                         if d is None:
-                            message = ui.span("No dataset chosen yet", class_ = "text-center text-warning")
-                            butt_disabled = True
+                            message=ui.span("No dataset chosen yet", class_="text-center text-warning")
+                            butt_disabled=True
                         else:
-                            d.name = input.DName()
-                            text = size_text(GetData())
+                            d.name=input.DName()
+                            text=size_text(GetData())
                             if CommittedData() == d:
-                                message = ui.span("Dataset import successful ", text, class_ = "text-center text-success")
+                                message=ui.span("Dataset import successful ", text, class_="text-center text-success")
                             else:
-                                message = ui.span("Dataset import ready ", text, class_ = "text-center text-primary")
+                                message=ui.span("Dataset import ready ", text, class_="text-center text-primary")
                                 await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
                     except SilentException:
-                        message = ""
-                        butt_disabled = True
+                        message=""
+                        butt_disabled=True
 
                     except Exception as e:  # noqa: BLE001
-                        message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
-                        butt_disabled = True
+                        message=ui.span(f"Error ({type(e).__name__}): {e}", class_="text-center text-danger")
+                        butt_disabled=True
             elif input.Navset() == "UC Irvine":
-                butt_disabled = input.IName().strip() == "" 
+                butt_disabled=input.IName().strip() == "" 
                 if input.UciDataset() is None:
-                    message = ui.span("No dataset selected", class_ = "text-center text-warning")
-                    butt_disabled = True
+                    message=ui.span("No dataset selected", class_="text-center text-warning")
+                    butt_disabled=True
                 else:
                     try:
-                        d = GetPxyData()
+                        d=GetPxyData()
                         if d is None:
-                            message = ui.span("No dataset chosen yet", class_ = "text-center text-warning")
-                            butt_disabled = True
+                            message=ui.span("No dataset chosen yet", class_="text-center text-warning")
+                            butt_disabled=True
                         else:
-                            d.name = input.IName()
-                            text = size_text(GetData())
+                            d.name=input.IName()
+                            text=size_text(GetData())
                             if CommittedData() == d:
-                                message = ui.span("Dataset import successful ", text, class_ = "text-center text-success")
+                                message=ui.span("Dataset import successful ", text, class_="text-center text-success")
                             else:
-                                message = ui.span("Dataset import ready ", text, class_ = "text-center text-primary")
+                                message=ui.span("Dataset import ready ", text, class_="text-center text-primary")
                                 await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
                     except SilentException:
-                        message = ""
-                        butt_disabled = True
+                        message=""
+                        butt_disabled=True
 
                     except Exception as e:  # noqa: BLE001
-                        message = ui.span(f"Error ({type(e).__name__}): {e}", class_ = "text-center text-danger")
-                        butt_disabled = True
-            ui.update_action_button(id = "Commit", label = "Commit Import", disabled = butt_disabled)
+                        message=ui.span(f"Error ({type(e).__name__}): {e}", class_="text-center text-danger")
+                        butt_disabled=True
+            ui.update_action_button(id="Commit", label="Commit Import", disabled=butt_disabled)
             return message
 
 
         #### Commit event ----
-        @this.suspendable(triggers = [input.Commit])
+        @this.suspendable(triggers=[input.Commit])
         async def CommitEvent():
-            pxd = GetPxyData()
+            pxd=GetPxyData()
             if input.Navset() == "File based":
-                pxd.name = input.FName()
+                pxd.name=input.FName()
             elif input.Navset() == "Web based":
-                pxd.name = input.UName()
+                pxd.name=input.UName()
             elif input.Navset() == "Dataset based":
-                pxd.name = input.DName()
+                pxd.name=input.DName()
             CommittedData.set(pxd.clone())
             this._exports.set(CommittedData())
 
 
-    this.server = server
+    this.server=server
 
     return this
 if Module.running_under_tests():
-    this = instance()
-    app = this.application()
+    this=instance()
+    app=this.application()
 elif Module.running_directly(name =__name__):
-    this = instance()
+    this=instance()
     this.run()

@@ -319,6 +319,7 @@ def instance():
         The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
         """
         return ui.div(
+            ui.output_ui(id="Message"),
             ui.input_checkbox_group(
                 id = "Replace",
                 label = None,
@@ -465,18 +466,29 @@ def instance():
             }
 
 
-        @this.suspendable()
-        def UpdateButtons():
+        @this.suspendable(calc=True)
+        def Choices():
             rawstate = RawCodes()
             flat = pd.Series(rawstate["codes"].to_numpy().ravel())
             used_codes = pd.to_numeric(flat, errors="coerce").dropna().astype(int).unique().tolist()
             used_codes = sorted(k for k in used_codes if k not in (0, 1))
             reduced_labels = [str(rawstate["legend"].get(k, f"Code {k}")) for k in used_codes]
-            choices = [f"Replace {lab}" for lab in reduced_labels]
+            return [f"Replace {lab}" for lab in reduced_labels]
+
+        @output
+        @render.ui
+        def Message():
+            if len(Choices())==0:
+                return ui.span("Placeholders not detected", class_="text-success")
+
+        @this.suspendable()
+        def UpdateButtons():
+            choices = Choices()
             with reactive.isolate():
                 previous = input.Replace() or []
             selected = [c for c in previous if c in choices]
-            ui.update_checkbox_group(id="Replace", choices=choices, selected=selected)
+            ui.update_checkbox_group(id="Replace", choices=choices, selected=selected, )
+
 
 
         def empty_plotly(message="No data to display", subtext=None):

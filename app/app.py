@@ -107,7 +107,8 @@ def application():
         ui.head_content(
             ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
             [ui.include_js(script, method="inline") for script in dict.fromkeys(Module.script_list)], # iterate through unique js scripts
-            [ui.include_css(css, method="inline") for css in dict.fromkeys(Module.css_list)] # iterate through unique CSS documents
+            [ui.include_css(css, method="inline") for css in dict.fromkeys(Module.css_list)], # iterate through unique CSS documents
+            [ui.tags.script(type = "module", src=script) for script in dict.fromkeys(Module.mjs_list)] # iterate through unique mjs modules
         ),
         ui.busy_indicators.options(spinner_type = "bars2"),
         ui.busy_indicators.use(),

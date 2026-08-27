@@ -328,7 +328,7 @@ def instance():
                 roles = role_map.roles_for(column) if role_map is not None else set()
                 rows.append({
                     "Variable": str(column),
-                    "Data Type": _dtype_label_from_dtype(series.dtype),
+                    "Data type": _dtype_label_from_dtype(series.dtype),
                     "Storage type": str(series.dtype),
                     "Role": ", ".join(sorted(role.value for role in roles)),
                     "Complete": row_count - missing,
@@ -338,7 +338,7 @@ def instance():
                     "Summary": _column_summary(series),
                 })
             return pd.DataFrame(rows, columns=[
-                "Variable", "Data Type", "Storage type", "Role", "Complete",
+                "Variable", "Data type", "Storage type", "Role", "Complete",
                 "Missing", "Missing %", "Unique", "Summary",
             ])
 
@@ -356,15 +356,11 @@ def instance():
             return render.DataTable(CleanDf(), summary=full, filters=full, width="100%", height="98%")
 
         @output
-        @render.download(filename=f"{this.namespace}_data.csv")
+        @render.download_button(filename=f"{this.namespace}_data.csv", media_type="text/csv")
         def Export():
             req(incomingproxy_data())
-            df = incomingproxy_data()  # export raw not preparedData
-            import io
-            buf = io.StringIO()
-            df.to_csv(buf, index=False, header = True)
-            buf.seek(0)
-            yield buf.read()
+            frame = incomingproxy_data()
+            yield frame.to_csv(index=False, header=True)
 
         @output
         @render.ui

@@ -85,17 +85,18 @@ class Module(ABC):
     Instances: ClassVar[dict] = {}  # class level dictionary of all instances keyed by their namespaces (possibly including deleted ones with empty values)
     script_list: ClassVar[list] = [
         ROOT / "www" / "console.js",
-        ROOT / "www" / "jquery-ui.min.js",
-        ROOT / "www" / "shepherd.js",
-        ROOT / "www" / "guide.js",
-        ROOT / "www" / "sortable.min.js",
+        ROOT / "www" / "jquery-ui-1.14.2.min.js",
+        ROOT / "www" / "sortable-1.15.7.min.js",
         ROOT / "www" / "pythagoras.js"
     ]
     css_list: ClassVar[list] = [
         ROOT / "www" / "pythagoras.css",
-        ROOT / "www" / "shepherd.css",
+        ROOT / "www" / "shepherd-15.3.0.css",
         ROOT / "www" / "animate.css"
     ]        
+    mjs_list: ClassVar[list] = [
+        "/guide.mjs",
+    ]
     _ui_patched = False  # whether patching has been performed
     min_log_level = logging.DEBUG
     log = logging.getLogger("pythagoras")
@@ -474,7 +475,8 @@ class Module(ABC):
                 ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
                 [ui.include_js(script, method = "inline") for script in dict.fromkeys(Module.script_list)],  # iterate through unique js scripts
                 [ui.include_css(css, method = "inline") for css in dict.fromkeys(Module.css_list)],  # iterate through unique CSS documents
-            ),
+                [ui.tags.script(type = "module", src=script) for script in dict.fromkeys(Module.mjs_list)] # iterate through unique mjs modules
+           ),
             ui.busy_indicators.options(spinner_type = "bars2"),
             ui.busy_indicators.use(),
             ui.page_navbar(
