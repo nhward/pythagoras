@@ -53,6 +53,7 @@ class Card(Module):
         self.initially_hidden = False
         self.description = None
         self.long_name = long_name
+        self._section = None
         self._front = None
         self._back = None
         self._settings = None
@@ -115,6 +116,13 @@ class Card(Module):
             return value()
         else:
             return value
+
+    @property
+    def section(self):
+        return self.fetch(self._section) 
+    @section.setter
+    def section(self, value):
+        self._section = value
 
     @property
     def front(self):
@@ -486,6 +494,15 @@ class Card(Module):
                 id = self.ns('Card')
                 self.reset()
                 ui.remove_ui(selector=f"#{id}")
+
+                _name = self.section
+                card_id = self.ns("Card")
+                container = f"{_name}-cards-container"
+                imp_id = f"{_name}_CardOrder"
+                async def after_flush(card_id=card_id, container = container, container_id = imp_id):
+                    await session.send_custom_message("UpdateCardOrder", {"id": container, "input_id": container_id})
+                session.on_flushed(after_flush, once=True)
+
 
             @self.suspendable(triggers=[input.CancelRemove])
             def _cancel():

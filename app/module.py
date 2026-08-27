@@ -51,8 +51,9 @@ import sys
 import textwrap
 import threading
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from collections import deque, namedtuple
 from contextlib import redirect_stdout
+from datetime import datetime
 from functools import wraps
 from os import environ
 from pathlib import Path
@@ -65,6 +66,47 @@ from shiny import App, reactive, req, ui
 from shiny import ui as _ui
 
 _UNSET = object()
+
+
+class ApplicationLogHandler(logging.Handler):
+    """Keep a bounded, thread-safe snapshot of application log records."""
+
+    def __init__(self, capacity: int = 5_000):
+        super().__init__(level=logging.DEBUG)
+        self._records = deque(maxlen=capacity)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = record.getMessage()
+            if record.exc_info:
+                formatter = self.formatter or logging.Formatter()
+                traceback = formatter.formatException(record.exc_info)
+                message = f"{message}\n{traceback}"
+            item = {
+                "Time": datetime.fromtimestamp(record.created).astimezone(),
+                "Level": record.levelname,
+                "Logger": record.name,
+                "Message": message,
+                "Source": record.pathname,
+                "Line": record.lineno,
+                "Thread": record.threadName,
+            }
+            self.acquire()
+            try:
+                self._records.append(item)
+            finally:
+                self.release()
+        except Exception:  # noqa: BLE001
+            self.handleError(record)
+
+    def snapshot(self) -> list[dict[str, object]]:
+        """Return copies so readers cannot mutate the shared buffer."""
+        self.acquire()
+        try:
+            return [record.copy() for record in self._records]
+        finally:
+            self.release()
+
 
 class Module(ABC):
     """
@@ -99,6 +141,7 @@ class Module(ABC):
     ]
     _ui_patched = False  # whether patching has been performed
     min_log_level = logging.DEBUG
+    log_handler = ApplicationLogHandler()
     log = logging.getLogger("pythagoras")
     if not log.handlers:
         h = logging.StreamHandler(sys.stdout)
@@ -120,6 +163,10 @@ class Module(ABC):
         except ValidationError as e:
             log.exception("Invalid configuration")
             raise ValueError(f"Invalid configuration: {e.message}")
+    
+    if log_handler not in log.handlers:
+        log.addHandler(log_handler)
+
     MaxInstances = config.get("settings", {}).get("max_dupl_cards")
 
 
@@ -158,6 +205,8 @@ class Module(ABC):
                 "%(asctime)s | %(levelname)s | %(name)s | %(message)s", datefmt="%H:%M:%S"
             ))
             base.addHandler(h)
+        if Module.log_handler not in base.handlers:
+            base.addHandler(Module.log_handler)
         base.propagate = False
         self.log = base  # or a LoggerAdapter if you want extra fields
         self.log.setLevel(Module.min_log_level)
@@ -168,7 +217,7 @@ class Module(ABC):
 
 
     def reset(self):
-        self.log.debug(f"Cleaning up namespace {self.namespace}")
+        self.log.debug(f"🧹 Cleaning up namespace {self.namespace}")
         reuse_cards = self.config.get("settings", {}).get("reuse_cards")
         if reuse_cards:
             self.Instances.pop(self.namespace)
@@ -202,6 +251,8 @@ class Module(ABC):
     def ns(self, id): # this is equivilent to what @module.ui does
         return f"{self.namespace}-{id}"
 
+    def section_normalise(name: str) -> str:
+        return name.strip().replace(" ", "_")
 
     @staticmethod
     def running_under_tests():

@@ -250,7 +250,7 @@ def instance():
                 return next(iter(roles)).value if roles else ""
 
             px = PreparedData()
-            req(px)
+            req(px is not None)
 
             def levels(series):
                 if _dtype_choice(series.dtype) == "ordered":
@@ -279,8 +279,10 @@ def instance():
         @output
         @render.data_frame
         def Table():
+            schema = Schema()
+            req(schema is not None)
             return render.DataGrid(
-                Schema(),
+                schema,
                 selection_mode="row",
             )
 

@@ -934,6 +934,7 @@ def instance():
 
     return this
 
+
 if Module.running_under_tests():
     this = instance()
     df = pd.DataFrame(

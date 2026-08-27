@@ -755,6 +755,8 @@ def instance():
     this.server=server
 
     return this
+  
+    
 if Module.running_under_tests():
     this=instance()
     app=this.application()

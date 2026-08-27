@@ -17,22 +17,19 @@ import sys
 import threading
 from pathlib import Path
 
-from faicons import icon_svg as icon
-from shiny import App, reactive, req, ui
+#TODO: provide a guide button for the sections and buttons
+#TODO: provide a info button for the whole app               
 
+# Ensure local modules and packages are resolved from the app directory.
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-
-# Ensure local modules and packages are resolved from the app directory.
 os.chdir(ROOT)
 
-root_string = str(ROOT)
-if root_string not in sys.path:
-    sys.path.insert(0, root_string)
-
 import cards  # noqa: F401
+from faicons import icon_svg as icon
 from module import Module
+from shiny import App, reactive, req, ui
 
 log = logging.getLogger("pythagoras")
 if not log.handlers:
@@ -44,10 +41,19 @@ if not log.handlers:
 log.propagate = False
 log.setLevel(logging.DEBUG)
 
-config = Module.config
 
-def section_id(name: str) -> str:
-    return name.strip().replace(" ", "_")
+jslog = logging.getLogger("<Javascript>")
+h = logging.StreamHandler(sys.stdout)
+h.setFormatter(logging.Formatter(
+    "%(asctime)s | %(levelname)s | %(name)s | %(message)s", datefmt="%H:%M:%S"
+))
+jslog.addHandler(h)
+jslog.propagate = False
+jslog.setLevel(logging.DEBUG)
+if Module.log_handler not in jslog.handlers:
+    jslog.addHandler(Module.log_handler)
+
+config = Module.config
 
 def sections() -> list[str]:
     """
@@ -62,7 +68,7 @@ def create_sections():
     panels = []
     if group_style == "tab":
         for name in sections():
-            _name = section_id(name)
+            _name = Module.section_normalise(name)
             panels.append(
                 ui.nav_panel(
                     name,
@@ -82,7 +88,7 @@ def create_sections():
                         ui.accordion_panel(
                             name,
                             ui.div(
-                                id=f"{section_id(name)}-cards-container",
+                                id=f"{Module.section_normalise(name)}-cards-container",
                                 class_="cards-grid",
                             ),
                             value=name
@@ -155,7 +161,81 @@ def application():
     # main server function for the app
     def server(input, output, session):
         Module.ModSession = session
-        sections_populated = []
+        
+        PreviousSection = reactive.value()
+        SectionsVisited = reactive.value([])
+
+
+        @reactive.calc
+        def currentSection():
+            """
+            Uses the group_style to determine how to assess the current group name.
+            The name is tested in case it is not a valid group name (i.e. a nav_bar button)
+            """
+            section_style = config.get("settings", {}).get("section_style")
+            if section_style == "tab":
+                current = input.Navbar()
+            else:
+                current = input.Accordion()
+                req(current)
+                req(len(current) == 1)
+                current = current[0]
+            valid =  [section.get("section") for section in config.get("layout", [])]
+            #Check that the current tab-item is not a button etc
+            req(current in valid)
+            log.debug(f"🔀 Section switched to {current!r} using {section_style} style")
+            return current
+
+        def create_card(name: str):
+            module_name = f"cards.{name}"
+            try:
+                module = importlib.import_module(module_name)
+                if not hasattr(module, "instance"):
+                    raise AttributeError(f"{module_name} does not define instance()")
+                module = module.instance()
+                module.log.info(msg=f"✅ Card instantiated ({module.namespace})")
+                return module
+            except Exception:
+                log.exception(f"⚠️ Failed to instantiate card {module_name}")
+                return None
+
+        @reactive.effect
+        def create_section_cards():
+            current = currentSection()
+            with reactive.isolate():
+                if PreviousSection.is_set():
+                    #Suspend previous
+                    earlierCards = BeforeCurrentCardOrder()
+                    if earlierCards is not None:
+                        for cardns in earlierCards:
+                            card = Module.Instances.get(cardns)
+                            #TODO: temp       card.suspend()
+            PreviousSection.set(current)
+            if current not in SectionsVisited.get():
+                model_group = next((group for group in config.get("layout", []) if group.get("section") == current), None)
+                req(model_group is not None)
+                for card in model_group["cards"]:
+                    instance = create_card(card["module"])
+                    if instance is None:
+                        continue
+                    ui.insert_ui(ui = instance.call_ui(), selector = f"#{Module.section_normalise(current)}-cards-container", where = "beforeEnd")
+                    instance.call_server(input, output, session)
+                    instance.resume()
+                    card_id = instance.ns("Card")
+                    instance.section = Module.section_normalise(current)
+                    async def after_flush(card_id=card_id):
+                        await session.send_custom_message("init_card", {"id": card_id})
+                    session.on_flushed(after_flush, once=True)
+                async def after_flush2(current=current):
+                    _name = Module.section_normalise(current)
+                    container = f"{_name}-cards-container"
+                    imp_id = f"{_name}_CardOrder"
+                    await session.send_custom_message("MakeSortable", {"id": container, "input_id": imp_id})
+                session.on_flushed(after_flush2, once=True)
+                sv = SectionsVisited.get()
+                sv.append(current)
+                SectionsVisited.set([item for item in sections() if item in sv])  # always store in the order of the sections regardless of the visiting order
+
 
         @reactive.calc
         def available_cards():
@@ -180,8 +260,6 @@ def application():
             """
             return ui.modal(
                 #TODO: make the choices more descriptive - currently just the dict key is used
-                #TODO: provide a guide button for these functions
-                #TODO: provide a info button for the whole app               
                 ui.input_select(
                     id = "CardPicker_selected",
                     label = "Choose a card to insert",
@@ -219,71 +297,6 @@ def application():
         async def _cancel_picker():
             ui.modal_remove()
 
-
-        @reactive.calc
-        def currentSection():
-            """
-            Uses the group_style to determine how to assess the current group name.
-            The name is tested in case it is not a valid group name (i.e. a nav_bar button)
-            """
-            section_style = config.get("settings", {}).get("section_style")
-            if section_style == "tab":
-                current = input.Navbar()
-            else:
-                current = input.Accordion()
-                req(current)
-                req(len(current) == 1)
-                current = current[0]
-            valid =  [section.get("section") for section in config.get("layout", [])]
-            #Check that the current tab-item is not a button etc
-            req(current in valid)
-            log.debug(f"Section switched to {current!r} using style {section_style}")
-            return current
-
-        def create_card(name: str):
-            module_name = f"cards.{name}"
-            try:
-                module = importlib.import_module(module_name)
-                if not hasattr(module, "instance"):
-                    raise AttributeError(f"{module_name} does not define instance()")
-                module = module.instance()
-                module.log.info(msg="✅ Instantiated")
-                return module
-            except Exception:
-                log.exception(f"⚠️ Failed to instantiate card {module_name}")
-                return None
-
-
-        @reactive.effect
-        def create_section_cards():
-            current = currentSection()
-            if current in sections_populated:
-                #TODO: suspend others, resume current
-                pass 
-            else:
-                model_group = next((group for group in config.get("layout", []) if group.get("section") == current), None)
-                req(model_group is not None)
-                for card in model_group["cards"]:
-                    instance = create_card(card["module"])
-                    if instance is None:
-                        continue
-                    ui.insert_ui(ui = instance.call_ui(), selector = f"#{section_id(current)}-cards-container", where = "beforeEnd")
-                    instance.call_server(input, output, session)
-                    instance.resume()
-                    card_id = instance.ns("Card")
-                    async def after_flush(card_id=card_id):
-                        await session.send_custom_message("init_card", {"id": card_id})
-                    session.on_flushed(after_flush, once=True)
-                async def after_flush2(current=current):
-                    _name = section_id(current)
-                    container = f"{_name}-cards-container"
-                    imp_id = f"{_name}_CardOrder"
-                    await session.send_custom_message("MakeSortable", {"id": container, "input_id": imp_id})
-                session.on_flushed(after_flush2, once=True)
-                sections_populated.append(current)
-
-
-
         @reactive.effect
         @reactive.event(input.CardPicker_ok)
         def _confirm_picker():
@@ -295,10 +308,11 @@ def application():
             if not name or name not in available_cards():
                 return
             current = currentSection()
-            _name = section_id(current)
+            _name = Module.section_normalise(current)
             instance = create_card(name)
             ui.insert_ui(ui = instance.call_ui(), selector = f"#{_name}-cards-container", where = "beforeEnd")
             instance.call_server(input, output, session)
+            instance.section = _name
             instance.resume()
             card_id = instance.ns("Card")
             container = f"{_name}-cards-container"
@@ -317,7 +331,7 @@ def application():
             Because full-screen is browser specific this may be unreliable.
             The implememtation is in pythagoras.js
             """
-            log.info("Full-screen app requested")
+            log.info("🙏 Full-screen app requested")
             await session.send_custom_message("fullscreen_app", None)
         
 
@@ -329,7 +343,7 @@ def application():
             Because closing tabs is browser specific this may be unreliable.
             The implememtation is in pythagoras.js
             """
-            log.info("Quit app requested")
+            log.info("🙏 Quit app requested")
             await session.send_custom_message("quit_app", None)
             await session.close()  # in case the window close is ignored
         
@@ -344,33 +358,58 @@ def application():
             message = input.Console_log()
             level = message['level'].upper()
             if level =="ERROR":
-                log.error(msg = f"<javascript> | {message['text']}")
+                jslog.error(msg = f"☢️ {message['text']}")
             elif level == "INFO":
-                log.info(msg = f"<javascript> | {message['text']}")
+                jslog.info(msg = f"ℹ️ {message['text']}")
             elif level == "WARNING":
-                log.warning(msg = f"<javascript> | {message['text']}")
+                jslog.warning(msg = f"⚠️ {message['text']}")
             else:
-                log.debug(msg = f"<javascript> | {message['text']}")
+                jslog.debug(msg = f"🪲 {message['text']}")
+
+
+        @reactive.calc
+        def BeforeCurrentCardOrder() -> list[str]: #given in namespaces
+            with reactive.isolate():
+                sections = SectionsVisited.get()
+            try:
+                index = sections.index(currentSection())
+            except ValueError:
+                index = -1
+            if index > 0:
+                previous = sections[index - 1]
+                order = req(input[f"{Module.section_normalise(previous)}_CardOrder"]())
+                order = [s.removesuffix("-Card") for s in order]
+                return order
+            else:
+                return None
 
         @reactive.calc
         def CurrentSectionCardOrder() -> list[str]: #given in namespaces
             section = req(currentSection())
-            order = req(input[f"{section_id(section)}_CardOrder"]())
+            order = req(input[f"{Module.section_normalise(section)}_CardOrder"]())
             order = [s.removesuffix("-Card") for s in order]
             return order
 
         @reactive.effect
         def cascade():
             order = req(CurrentSectionCardOrder())
-            log.debug(msg = "Card flow cascade invoked")
-            source  = None
+            log.debug(msg = "𑙬 Card flow cascade invoked")
+            # Link last card of before section to first card of currrent section
+            earlierCards = BeforeCurrentCardOrder()
+            if earlierCards is not None and len(earlierCards) > 1:
+                last = earlierCards[-1]
+                source = Module.Instances.get(last)
+                source.log.info(msg=f"➡️ The card ({source.namespace}) is data-source to section {currentSection()!r}")
+            else:
+                source = None
             for cardns in order:
                 destination = Module.Instances.get(cardns)
                 if destination is None:
                     continue
+                destination.resume()
                 if source is None:
                     destination._imports.unset()
-                    destination.log.debug(msg="No data source currently attached")
+                    destination.log.debug(msg=f"📭 The card ({destination.namespace}) has no data-source")
                 else:
                     if source._exports.is_set():
                         destination._imports.set(source._exports.get())
@@ -407,10 +446,10 @@ if __name__ == "__main__":
     """
     if "ipykernel" in sys.modules:
         t = threading.Thread(target=main, daemon=True)
-        log.info("Shiny (running in background thread)")
+        log.info("🔙 Shiny (running in background thread)")
         t.start()
     else:
-        log.info("Shiny (running in foreground thread)")
+        log.info("➬ Shiny (running in foreground thread)")
         main()  # normal script behavior
 else:
     app  # noqa: B018

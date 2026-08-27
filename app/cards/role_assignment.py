@@ -174,7 +174,7 @@ def instance():
             this._imports.get()
             req(this._imports.is_set())
             req(input.role_map())
-            this.log.debug("Validating changes")
+            this.log.debug("☑️ Validating changes")
             # Convert the json to the RoleMap class
             rm = RoleMap.from_primitive(input.role_map())
             pxd = PreparedData()
@@ -194,12 +194,6 @@ def instance():
         def CommitEvent():
             this._exports.set(Committed())
 
-        # @this.suspendable()
-        # def allowAutoCommit():
-        #     if not this._exports.is_set() and this._imports.is_set():
-        #         this._exports.set(this._imports.get())
-        #     elif this._imports.is_set() and this._imports.get().role_map == this._exports.get().role_map:
-        #         this._exports.set(this._imports.get())
 
         @output
         @render.ui

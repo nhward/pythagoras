@@ -1638,6 +1638,7 @@ def instance():
         @output
         @render.data_frame
         def Table2():
+            req(TypeTable() is not None)
             table = TypeTable().copy()
             numeric = [
                 "CV Balanced Accuracy", "Null Balanced Accuracy", "Improvement",

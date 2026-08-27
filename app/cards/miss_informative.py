@@ -743,6 +743,7 @@ def instance():
     this.server = server
     return this
 
+
 if Module.running_under_tests():
     this = instance()
     df = pd.DataFrame({

@@ -10,7 +10,6 @@ from playwright.sync_api import Page, expect
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
 APP_FILE = APP_DIR / "app.py"
 MODULE_NAME = "pythagoras_app_under_test"
@@ -63,9 +62,9 @@ def sample_config() -> dict[str, object]:
 
 class TestApplicationHelpers:
     @pytest.mark.unit
-    def test_section_id_normalises_surrounding_and_internal_spaces(self, app_module):
-        assert app_module.section_id("Data prep") == "Data_prep"
-        assert app_module.section_id("  Missing values  ") == "Missing_values"
+    def test_section_normalise_surrounding_and_internal_spaces(self, app_module):
+        assert app_module.Module.section_normalise("Data prep") == "Data_prep"
+        assert app_module.Module.section_normalise("  Missing values  ") == "Missing_values"
 
     @pytest.mark.unit
     def test_sections_preserves_configured_order(

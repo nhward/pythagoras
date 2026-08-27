@@ -78,7 +78,6 @@ def test_namespace_limit_raises_after_max_instances():
     with pytest.raises(ValueError):
         DummyModule(name = "dup")
 
-
 @pytest.mark.unit
 def test_reset_removes_instance_from_registry():
     m = DummyModule(name = "card")

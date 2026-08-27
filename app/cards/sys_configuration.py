@@ -133,7 +133,7 @@ def instance():
         @this.record_code
         def Folders():
             input.Refresh()
-            dirs = ["." , "./www", "./markdown", "./cards"]
+            dirs = ["." , "./www", "./www/markdown", "./cards", "./config"]
             rows = []
             for label, d in zip(["home", "www", "markdown", "cards"], dirs):
                 abs_path = os.path.abspath(d)
@@ -163,7 +163,7 @@ def instance():
 
     return this
 
-app = None
+
 if Module.running_under_tests():
     this = instance()
     app = this.application()

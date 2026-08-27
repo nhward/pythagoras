@@ -20,18 +20,26 @@
         {"module": "role_assignment"},
         {"module": "var_modify"},
         {"module": "var_dissimilar"},
-        {"module": "miss_placeholders"},
-        {"module": "miss_informative"},
-        {"module": "miss_rules"},
-        {"module": "miss_type"}
+        {"module": "data_tabulation"}
       ]
     },
 
     {
       "section": "Missing values",
       "cards": [
-        {"module": "DataPlaceholders"},
-        {"module": "DataTabulation"}
+        {"module": "miss_placeholders"},
+        {"module": "miss_informative"},
+        {"module": "miss_rules"},
+        {"module": "miss_type"},
+        {"module": "data_tabulation"}
+      ]
+    },
+
+    {
+      "section": "System",
+      "cards": [
+        {"module": "sys_configuration"},
+        {"module": "system_log"}
       ]
     }
   ]
