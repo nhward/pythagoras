@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -25,7 +25,7 @@ from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 from text_pandas import as_text
 
-app = create_app_fixture(app="../../app/cards/data_tabulation.py", scope="function")
+app = create_app_fixture(app="../scenarios/data_tabulation.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -37,6 +37,26 @@ def browser_context_args():
 @pytest.fixture
 def card_module():
     return importlib.import_module("cards.data_tabulation")
+
+
+def sample_frame() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "y": [1, 0, 1, 0],
+            "x1": [10.0, 11.0, 12.0, 13.0],
+            "x2": ["A", "B", "A", "B"],
+            "id": [100, 101, 102, 103],
+            "part": ["Train", "Train", "Test", "Test"],
+        }
+    )
+
+
+@pytest.fixture
+def card(card_module):
+    card = card_module.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=sample_frame(), _name="Test"))
+    return card
 
 
 def get_card(page: Page):
@@ -103,16 +123,14 @@ def recorded_helpers(card_module, *, data=None, decimals=2, bounded=True, fullsc
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata(self, card_module):
-        card = card_module.this
+    def test_metadata(self, card):
         assert card.name == "data_tabulation"
         assert card.long_name == "Data tabulation"
         assert "listed and searched" in card.description
         assert not card.mutable
 
     @pytest.mark.unit
-    def test_ui_regions_are_present(self, card_module):
-        card = card_module.this
+    def test_ui_regions_are_present(self, card):
         assert card.front is not None
         assert card.settings is not None
         assert card.footer is not None
@@ -123,17 +141,17 @@ class TestInstance:
         assert 'id="StructTable"' in str(card.back)
 
     @pytest.mark.unit
-    def test_test_mode_seeds_expected_data(self, card_module):
+    def test_fixture_seeds_expected_data(self, card):
         with reactive.isolate():
-            assert card_module.this._imports.is_set()
-            frame = card_module.this._imports.get().to_native()
+            assert card._imports.is_set()
+            frame = card._imports.get().to_native()
         assert frame.shape == (4, 5)
         assert frame.columns.tolist() == ["y", "x1", "x2", "id", "part"]
         assert frame["x1"].tolist() == [10.0, 11.0, 12.0, 13.0]
 
     @pytest.mark.unit
-    def test_settings_have_expected_controls_and_defaults(self, card_module):
-        html = str(card_module.this.settings)
+    def test_settings_have_expected_controls_and_defaults(self, card):
+        html = str(card.settings)
         assert "Decimals" in html
         assert "Bounded" in html
         assert "MaxObs" in html
@@ -142,8 +160,8 @@ class TestInstance:
         assert "Maximum observations" in html
 
     @pytest.mark.unit
-    def test_footer_contains_csv_export(self, card_module):
-        html = str(card_module.this.footer)
+    def test_footer_contains_csv_export(self, card):
+        html = str(card.footer)
         assert "Export" in html
         assert "download" in html.lower()
 

@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -22,7 +22,7 @@ from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 from text_pandas import is_text
 
-app = create_app_fixture(app="../../app/cards/var_modify.py", scope="function")
+app = create_app_fixture(app="../scenarios/var_modify.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -34,6 +34,34 @@ def browser_context_args():
 @pytest.fixture
 def card_module():
     return importlib.import_module("cards.var_modify")
+
+
+def seeded_frame() -> pd.DataFrame:
+    dates = ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"]
+    return pd.DataFrame(
+        {
+            "y32": pd.Series([1, 0, 1, 0], dtype="int32"),
+            "y64": pd.Series([1, 0, 1, 0], dtype="int64"),
+            "x32": pd.Series([10.0, 11.0, 12.0, 13.0], dtype="float32"),
+            "x64": pd.Series([10.0, 11.0, 12.0, 13.0], dtype="float64"),
+            "log": [True, False, True, True],
+            "cat": pd.Series(["A", "B", "A", "B"], dtype="category"),
+            "id": pd.Series([100, 101, 102, 103], dtype="Int64"),
+            "part": ["Train", "Train", "Test", "Test"],
+            "items": ["House;Car", "TV", "House;TV", None],
+            "date_text": pd.Series(dates, dtype="string"),
+            "date_DT": pd.to_datetime(dates),
+            "date_D": pd.to_datetime(dates).date,
+        }
+    )
+
+
+@pytest.fixture
+def card(card_module):
+    card = card_module.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
+    return card
 
 
 class FakeInputs:
@@ -141,16 +169,14 @@ def by_id(page: Page, local_id: str):
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata(self, card_module):
-        card = card_module.this
+    def test_metadata(self, card):
         assert card.name == "var_modify"
         assert card.long_name == "Modification"
         assert "modification of variables" in card.description
         assert card.mutable
 
     @pytest.mark.unit
-    def test_expected_ui_regions(self, card_module):
-        card = card_module.this
+    def test_expected_ui_regions(self, card):
         assert card.front is not None
         assert card.back is not None
         assert card.footer is not None
@@ -160,20 +186,20 @@ class TestInstance:
         assert card.hasFooter()
 
     @pytest.mark.unit
-    def test_front_back_footer_and_settings_controls(self, card_module):
-        assert 'id="Table"' in str(card_module.this.front)
-        assert 'id="DFDiff"' in str(card_module.this.back)
-        footer = str(card_module.this.footer)
+    def test_front_back_footer_and_settings_controls(self, card):
+        assert 'id="Table"' in str(card.front)
+        assert 'id="DFDiff"' in str(card.back)
+        footer = str(card.footer)
         for control in ("NewName", "NewDataType", "NewOrder", "Commit", "Reset"):
             assert f'id="{control}"' in footer
-        settings = str(card_module.this.settings)
+        settings = str(card.settings)
         for control in ("Formats", "Alternatives", "MaxObs"):
             assert f'id="{control}"' in settings
 
     @pytest.mark.unit
-    def test_seeded_test_data_have_expected_columns_and_dtypes(self, card_module):
+    def test_fixture_data_have_expected_columns_and_dtypes(self, card):
         with reactive.isolate():
-            frame = card_module.this._imports.get().to_native()
+            frame = card._imports.get().to_native()
         assert frame.shape == (4, 12)
         assert frame.columns.tolist() == [
             "y32", "y64", "x32", "x64", "log", "cat", "id", "part",

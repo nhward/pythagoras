@@ -1102,36 +1102,7 @@ def instance():
     return this
 
 
-if Module.running_under_tests():
-    this = instance()
-    df = pd.DataFrame(
-        {
-            "y32": pd.Series([1, 0, 1, 0], dtype="int32"),
-            "y64": pd.Series([1, 0, 1, 0], dtype="int64"),
-            "x32": pd.Series([10.0, 11.0, 12.0, 13.0], dtype="float32"),
-            "x64": pd.Series([10.0, 11.0, 12.0, 13.0], dtype="float64"),
-            "log": [True, False, True, True],
-            "cat": pd.Series(["A", "B", "A", "B"], dtype="category"),
-            "id": pd.Series([100, 101, 102, 103], dtype="Int64"),
-            "part": ["Train", "Train", "Test", "Test"],
-            "items": ["House;Car", "TV", "House;TV", None],
-            "date_text": pd.Series(
-                ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
-                dtype="string",
-            ),
-            "date_DT": pd.to_datetime(
-                ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"]
-            ),
-            "date_D": pd.to_datetime(
-                ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"]
-            ).date,
-        }
-    )
-    px = pxd(_df=df, _name="Test")
-    this._imports.set(px)
-    app = this.application()
-
-elif Module.running_directly(name=__name__):
+if Module.running_directly(name=__name__):
     this = instance()
     df = pd.read_csv(Card.ROOT / "data" / "Assmnt.csv")
     px = pxd(_df=df, _name="Ass2")

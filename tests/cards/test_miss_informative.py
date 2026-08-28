@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -14,7 +14,12 @@ import numpy as np
 import pandas as pd
 import pytest
 from card import Card
+from playwright.sync_api import Page, expect
+from proxy_data import proxy_data
 from shiny import reactive
+from shiny.playwright import controller
+from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
 from shinywidgets._serialization import json_packer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
@@ -22,10 +27,63 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+app = create_app_fixture(app="../scenarios/miss_informative.py", scope="function")
+
+
+@pytest.fixture(scope="session")
+def browser_context_args():
+    return {"viewport": {"width": 1600, "height": 1000}}
+
 
 @pytest.fixture
 def miss_informative():
     return importlib.import_module("cards.miss_informative")
+
+
+def sample_frame() -> pd.DataFrame:
+    return pd.DataFrame({
+        "age": [20, 25, 30, 35, 40, 45, 50, 55],
+        "group": ["A", "A", "A", "B", "B", "B", "B", "A"],
+        "income": [10.0, np.nan, 12.0, np.nan, 15.0, 16.0, np.nan, 18.0],
+    })
+
+
+@pytest.fixture
+def card(miss_informative):
+    card = miss_informative.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=sample_frame(), _name="Test"))
+    return card
+
+
+def get_card(page: Page):
+    return page.locator(".card").first
+
+
+def get_namespace(page: Page) -> str:
+    card_id = get_card(page).get_attribute("id")
+    assert card_id is not None
+    return card_id.partition("-")[0]
+
+
+def namespaced_id(page: Page, local_id: str) -> str:
+    return f"{get_namespace(page)}-{local_id}"
+
+
+def by_id(page: Page, local_id: str):
+    return page.locator(f"#{namespaced_id(page, local_id)}")
+
+
+def set_shiny_input(page: Page, local_id: str, value):
+    page.wait_for_function("() => !!window.Shiny?.setInputValue")
+    page.evaluate(
+        """
+        ([inputId, inputValue]) => window.Shiny.setInputValue(
+            inputId, inputValue, {priority: "event"}
+        )
+        """,
+        [namespaced_id(page, local_id), value],
+    )
 
 
 @pytest.fixture
@@ -91,8 +149,7 @@ def importance_table(miss_informative) -> pd.DataFrame:
 
 class TestCardDefinition:
     @pytest.mark.unit
-    def test_metadata_and_regions(self, miss_informative):
-        card = miss_informative.this
+    def test_metadata_and_regions(self, card):
         assert card.name == "miss_informative"
         assert card.long_name == "Informative Missingness"
         assert card.mutable
@@ -101,11 +158,11 @@ class TestCardDefinition:
         assert card.hasFooter()
 
     @pytest.mark.unit
-    def test_expected_outputs_and_controls_are_present(self, miss_informative):
-        front = str(miss_informative.this.front.tagify())
-        back = str(miss_informative.this.back.tagify())
-        footer = str(miss_informative.this.footer.tagify())
-        settings = str(miss_informative.this.settings)
+    def test_expected_outputs_and_controls_are_present(self, card):
+        front = str(card.front.tagify())
+        back = str(card.back.tagify())
+        footer = str(card.footer.tagify())
+        settings = str(card.settings)
         assert 'id="Importance"' in front
         assert 'id="Table"' in back
         assert 'id="Significance"' in footer
@@ -114,9 +171,9 @@ class TestCardDefinition:
             assert f'id="{control}"' in settings
 
     @pytest.mark.unit
-    def test_test_mode_seeds_expected_frame(self, miss_informative):
+    def test_fixture_seeds_expected_frame(self, card):
         with reactive.isolate():
-            proxy = miss_informative.this._imports.get()
+            proxy = card._imports.get()
         frame = proxy.to_native()
         assert frame.shape == (8, 3)
         assert frame.columns.tolist() == ["age", "group", "income"]
@@ -420,3 +477,76 @@ class TestImportanceFigure:
             analysis, maximum_variables=3
         )
         assert len(figure.data[0].x) == 3
+
+
+class TestWebKitUI:
+    @pytest.mark.ui
+    def test_card_chart_status_and_settings_render(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        expect(get_card(page)).to_be_visible()
+        expect(page.get_by_text("Informative Missingness", exact=True)).to_be_visible()
+        expect(by_id(page, "Importance")).to_be_visible()
+        expect(by_id(page, "Importance").locator(".plotly")).to_be_attached(
+            timeout=30_000
+        )
+        expect(by_id(page, "Significance")).to_contain_text(
+            "Potentially informative missingness: x.", timeout=30_000
+        )
+        for control in (
+            "CVFolds", "MinMissProp", "MinBalancedAccuracy", "MaxObs", "Shadow"
+        ):
+            expect(by_id(page, control)).to_be_attached()
+
+    @pytest.mark.ui
+    def test_shadow_choice_is_populated_from_incomplete_predictors(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        expect(by_id(page, "Significance")).to_contain_text(
+            "Potentially informative missingness: x.", timeout=30_000
+        )
+        expect(by_id(page, "Shadow")).to_contain_text("x")
+
+    @pytest.mark.ui
+    def test_flip_displays_shadow_importance_table(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        expect(by_id(page, "Significance")).to_contain_text(
+            "Potentially informative missingness: x.", timeout=30_000
+        )
+        by_id(page, "FlipButton").click(force=True)
+        table = controller.OutputDataFrame(page, namespaced_id(page, "Table2"))
+        table.expect_nrow(1)
+        table.expect_column_labels([
+            "Variable",
+            "Missing Proportion",
+            "Importance",
+            "Importance SD",
+            "Positive Fraction",
+            "Interpretation",
+        ])
+        table.expect_cell("shadow__x", row=0, col=0)
+        table.expect_cell("Informative", row=0, col=5)
+
+    @pytest.mark.ui
+    def test_missing_proportion_change_recalculates_analysis(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        expect(by_id(page, "Significance")).to_contain_text(
+            "Potentially informative missingness: x.", timeout=30_000
+        )
+
+        set_shiny_input(page, "MinMissProp", 0.5)
+        expect(by_id(page, "Significance")).to_contain_text(
+            "No predictors exceed the minimum missing-value proportion",
+            timeout=30_000,
+        )
+
+        set_shiny_input(page, "MinMissProp", 0.49)
+        expect(by_id(page, "Significance")).to_contain_text(
+            "Potentially informative missingness: x.", timeout=30_000
+        )

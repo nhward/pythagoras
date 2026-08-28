@@ -757,9 +757,6 @@ def instance():
     return this
   
     
-if Module.running_under_tests():
-    this=instance()
-    app=this.application()
-elif Module.running_directly(name =__name__):
+if Module.running_directly(name =__name__):
     this=instance()
     this.run()

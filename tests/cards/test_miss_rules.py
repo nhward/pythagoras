@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -20,7 +20,7 @@ from shiny import reactive
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../../app/cards/miss_rules.py", scope="function")
+app = create_app_fixture(app="../scenarios/miss_rules.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -32,6 +32,24 @@ def browser_context_args():
 @pytest.fixture
 def card_module():
     return importlib.import_module("cards.miss_rules")
+
+
+def seeded_frame() -> pd.DataFrame:
+    return pd.DataFrame({
+        "y": [1, 0, 1, 0],
+        "x1": [np.nan, np.nan, 12.0, 13.0],
+        "x2": [None, None, "A", "B"],
+        "id": [np.nan, 101, 102, 103],
+        "part": ["Train", "Train", "Test", "Test"],
+    })
+
+
+@pytest.fixture
+def card(card_module):
+    card = card_module.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
+    return card
 
 
 class FakeInputs:
@@ -135,8 +153,7 @@ def set_shiny_input(page: Page, local_id: str, value):
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata_and_regions(self, card_module):
-        card = card_module.this
+    def test_metadata_and_regions(self, card):
         assert card.name == "miss_rules"
         assert card.long_name == "Missingness rules"
         assert "Association Rules" in card.description
@@ -146,10 +163,10 @@ class TestInstance:
         assert card.hasFooter()
 
     @pytest.mark.unit
-    def test_front_back_and_footer_outputs(self, card_module):
-        front = str(card_module.this.front.tagify())
-        back = str(card_module.this.back.tagify())
-        footer = str(card_module.this.footer.tagify())
+    def test_front_back_and_footer_outputs(self, card):
+        front = str(card.front.tagify())
+        back = str(card.back.tagify())
+        footer = str(card.footer.tagify())
         assert 'id="Network"' in front
         assert "Missingness association network" in front
         assert 'id="Table"' in back
@@ -157,8 +174,8 @@ class TestInstance:
         assert 'id="Check"' in footer
 
     @pytest.mark.unit
-    def test_settings_contain_current_controls(self, card_module):
-        html = str(card_module.this.settings)
+    def test_settings_contain_current_controls(self, card):
+        html = str(card.settings)
         for control in (
             "MinSupport", "MinLift", "MaxLength", "RemoveRedundant", "MaxObs"
         ):
@@ -167,9 +184,9 @@ class TestInstance:
         assert "10^" in html
 
     @pytest.mark.unit
-    def test_test_mode_seeds_missing_values(self, card_module):
+    def test_fixture_seeds_missing_values(self, card):
         with reactive.isolate():
-            proxy = card_module.this._imports.get()
+            proxy = card._imports.get()
         frame = proxy.to_native()
         assert frame.shape == (4, 5)
         assert frame.columns.tolist() == ["y", "x1", "x2", "id", "part"]

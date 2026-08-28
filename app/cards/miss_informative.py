@@ -744,16 +744,7 @@ def instance():
     return this
 
 
-if Module.running_under_tests():
-    this = instance()
-    df = pd.DataFrame({
-        "age": [20, 25, 30, 35, 40, 45, 50, 55],
-        "group": ["A", "A", "A", "B", "B", "B", "B", "A"],
-        "income": [10.0, np.nan, 12.0, np.nan, 15.0, 16.0, np.nan, 18.0],
-    })
-    this._imports.set(proxy_data(_df=df, _name="Test"))
-    app = this.application()
-elif Module.running_directly(name=__name__):
+if Module.running_directly(name=__name__):
     this = instance()
     df = pd.read_csv(Card.ROOT / "data" / "Ass2.csv")
     pxd = proxy_data(_df=df, _name="Ass2")

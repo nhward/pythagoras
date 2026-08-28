@@ -12,12 +12,12 @@ from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
-app = create_app_fixture(app="../../app/cards/sys_configuration.py", scope="function")
+app = create_app_fixture(app="../scenarios/sys_configuration.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -29,6 +29,11 @@ def browser_context_args():
 @pytest.fixture
 def card_module():
     return importlib.import_module("cards.sys_configuration")
+
+
+@pytest.fixture
+def card(card_module):
+    return card_module.instance()
 
 
 def get_card(page: Page):
@@ -74,16 +79,14 @@ def recorded_helpers(card_module):
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata(self, card_module):
-        card = card_module.this
+    def test_metadata(self, card):
         assert card.name == "sys_configuration"
         assert card.long_name == "Configuration"
         assert "host-system configuration" in card.description
         assert not card.mutable
 
     @pytest.mark.unit
-    def test_expected_ui_regions(self, card_module):
-        card = card_module.this
+    def test_expected_ui_regions(self, card):
         assert card.front is not None
         assert card.back is not None
         assert card.footer is not None
@@ -93,21 +96,21 @@ class TestInstance:
         assert not card.hasSidebar()
 
     @pytest.mark.unit
-    def test_front_contains_all_tabs_and_outputs(self, card_module):
-        html = str(card_module.this.front.tagify())
+    def test_front_contains_all_tabs_and_outputs(self, card):
+        html = str(card.front.tagify())
         for label in ("Summary", "Url", "Packages", "Folders"):
             assert label in html
         for output_id in ("Summary", "Url", "Packages", "Folders"):
             assert f'id="{output_id}"' in html
 
     @pytest.mark.unit
-    def test_back_contains_session_output(self, card_module):
-        html = str(card_module.this.back)
+    def test_back_contains_session_output(self, card):
+        html = str(card.back)
         assert 'id="Session"' in html
 
     @pytest.mark.unit
-    def test_footer_contains_refresh_control(self, card_module):
-        html = str(card_module.this.footer)
+    def test_footer_contains_refresh_control(self, card):
+        html = str(card.footer)
         assert 'id="Refresh"' in html
         assert "Refresh" in html
 

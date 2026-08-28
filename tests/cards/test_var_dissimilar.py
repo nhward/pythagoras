@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -24,7 +24,7 @@ from shiny import reactive
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../../app/cards/var_dissimilar.py", scope="function")
+app = create_app_fixture(app="../scenarios/var_dissimilar.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -77,6 +77,24 @@ def sample_frame() -> pd.DataFrame:
         "group": ["A", "A", "B", "B", None, "C"],
         "code": ["a1", "a2", "b1", "b2", "c1", "c2"],
     })
+
+
+def seeded_frame() -> pd.DataFrame:
+    return pd.DataFrame({
+        "y": [1, 0, 1, 0],
+        "x1": [10.0, 11.0, 12.0, 13.0],
+        "x2": ["A", "B", "A", "B"],
+        "id": [100, 101, 102, 103],
+        "part": ["Train", "Train", "Test", "Test"],
+    })
+
+
+@pytest.fixture
+def card(card_module):
+    card = card_module.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
+    return card
 
 
 def recorded_helpers(card_module, *, frame=None, inputs=None, role_map=None, fullscreen=False):
@@ -139,8 +157,7 @@ def set_shiny_input(page: Page, local_id: str, value):
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata_and_regions(self, card_module):
-        card = card_module.this
+    def test_metadata_and_regions(self, card):
         assert card.name == "var_dissimilar"
         assert card.long_name == "Variable Dissimilarity"
         assert "dissimilarity matrix" in card.description
@@ -150,26 +167,26 @@ class TestInstance:
         assert not card.hasFooter()
 
     @pytest.mark.unit
-    def test_front_and_back_have_expected_outputs(self, card_module):
-        front = str(card_module.this.front.tagify())
-        back = str(card_module.this.back.tagify())
+    def test_front_and_back_have_expected_outputs(self, card):
+        front = str(card.front.tagify())
+        back = str(card.back.tagify())
         assert 'id="Chart"' in front
         assert "Variable Dissimilarity chart" in front
         assert 'id="Table"' in back
         assert "Variable Dissimilarity table" in back
 
     @pytest.mark.unit
-    def test_settings_have_all_controls(self, card_module):
-        html = str(card_module.this.settings)
+    def test_settings_have_all_controls(self, card):
+        html = str(card.settings)
         for control in ("Robust", "Qgram", "Which", "Style", "MaxObs"):
             assert f'id="{control}"' in html
         for choice in ("Agglomerative", "Divisive", "Rectangular", "Radial"):
             assert choice in html
 
     @pytest.mark.unit
-    def test_test_mode_seeds_expected_frame(self, card_module):
+    def test_fixture_seeds_expected_frame(self, card):
         with reactive.isolate():
-            proxy = card_module.this._imports.get()
+            proxy = card._imports.get()
         assert proxy.to_native().shape == (4, 5)
         assert proxy.to_native().columns.tolist() == ["y", "x1", "x2", "id", "part"]
 

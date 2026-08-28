@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -18,7 +18,7 @@ from shapely.geometry import Point
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../../app/cards/data_import.py", scope="function")
+app = create_app_fixture(app="../scenarios/data_import.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -50,6 +50,11 @@ def deterministic_dataset_catalogues():
 @pytest.fixture
 def card_module(deterministic_dataset_catalogues):
     return importlib.import_module("cards.data_import")
+
+
+@pytest.fixture
+def card(card_module):
+    return card_module.instance()
 
 
 @pytest.fixture
@@ -164,8 +169,7 @@ class TestCaptureOutput:
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata(self, card_module):
-        card = card_module.this
+    def test_metadata(self, card):
         assert card.name == "data_import"
         assert card.long_name == "Data import"
         assert "ingestion of data" in card.description
@@ -173,8 +177,7 @@ class TestInstance:
         assert not card.requires_import
 
     @pytest.mark.unit
-    def test_expected_ui_regions(self, card_module):
-        card = card_module.this
+    def test_expected_ui_regions(self, card):
         assert card.front is not None
         assert card.back is not None
         assert card.footer is not None
@@ -184,24 +187,24 @@ class TestInstance:
         assert card.hasSidebar()
 
     @pytest.mark.unit
-    def test_front_contains_four_import_modes(self, card_module):
-        html = str(card_module.this.front.tagify())
+    def test_front_contains_four_import_modes(self, card):
+        html = str(card.front.tagify())
         for label in ("File based", "Dataset based", "Web based", "UC Irvine"):
             assert label in html
         for input_id in ("ServerFile", "Dataset", "Url", "UciDataset"):
             assert f'id="{input_id}"' in html
 
     @pytest.mark.unit
-    def test_footer_contains_disabled_commit_and_status(self, card_module):
-        html = str(card_module.this.footer)
+    def test_footer_contains_disabled_commit_and_status(self, card):
+        html = str(card.footer)
         assert 'id="Commit"' in html
         assert "Commit Import" in html
         assert "disabled" in html
         assert 'id="Check"' in html
 
     @pytest.mark.unit
-    def test_settings_defaults(self, card_module):
-        html = str(card_module.this.settings)
+    def test_settings_defaults(self, card):
+        html = str(card.settings)
         assert 'id="Separator"' in html
         assert 'value=","' in html or 'value=","' in html.replace("'", '"')
         assert 'id="Sheet"' in html

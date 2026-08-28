@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -21,7 +21,7 @@ from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../../app/cards/role_assignment.py", scope="function")
+app = create_app_fixture(app="../scenarios/role_assignment.py", scope="function")
 _HELPER_CARDS = {}
 
 VALID_ROLE_MAP = {
@@ -57,6 +57,14 @@ def seeded_frame() -> pd.DataFrame:
         "id": [100, 101, 102, 103],
         "part": ["Train", "Train", "Test", "Test"],
     })
+
+
+@pytest.fixture
+def card(card_module):
+    card = card_module.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
+    return card
 
 
 class FakeInputs:
@@ -148,16 +156,14 @@ def populate_roles(page: Page, payload: dict[str, list[str]]):
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata(self, card_module):
-        card = card_module.this
+    def test_metadata(self, card):
         assert card.name == "role_assignment"
         assert card.long_name == "Role Assignment"
         assert "assigned to roles" in card.description
         assert card.mutable
 
     @pytest.mark.unit
-    def test_expected_ui_regions(self, card_module):
-        card = card_module.this
+    def test_expected_ui_regions(self, card):
         assert card.front is not None
         assert card.back is not None
         assert card.settings is not None
@@ -167,29 +173,29 @@ class TestInstance:
         assert card.hasFooter()
 
     @pytest.mark.unit
-    def test_front_contains_every_role_bucket(self, card_module):
-        html = str(card_module.this.front)
+    def test_front_contains_every_role_bucket(self, card):
+        html = str(card.front)
         for role in Role:
             assert f'data-role="{role.value}"' in html
             assert f'id="role-{role.value}"' in html
 
     @pytest.mark.unit
-    def test_settings_contain_expected_controls(self, card_module):
-        html = str(card_module.this.settings)
+    def test_settings_contain_expected_controls(self, card):
+        html = str(card.settings)
         for control in ("Separator", "CardinalityThreshold", "MaxObs"):
             assert f'id="{control}"' in html
 
     @pytest.mark.unit
-    def test_footer_contains_commit_and_status(self, card_module):
-        html = str(card_module.this.footer)
+    def test_footer_contains_commit_and_status(self, card):
+        html = str(card.footer)
         assert 'id="Commit"' in html
         assert 'id="Check"' in html
         assert "Commit Assignments" in html
 
     @pytest.mark.unit
-    def test_test_mode_seeds_predictor_roles(self, card_module):
+    def test_fixture_seeds_predictor_roles(self, card):
         with reactive.isolate():
-            proxy = card_module.this._imports.get()
+            proxy = card._imports.get()
         assert proxy.to_native().equals(seeded_frame())
         assert proxy.name == "Test"
         assert proxy.role_map.columns_with_role(Role.PREDICTOR) == {

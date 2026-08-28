@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-path = Path(__file__).resolve().parent.parent.parent / 'app'
+path = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -24,7 +24,7 @@ from shiny import reactive
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../../app/cards/miss_placeholders.py", scope="function")
+app = create_app_fixture(app="../scenarios/miss_placeholders.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -36,6 +36,26 @@ def browser_context_args():
 @pytest.fixture
 def card_module():
     return importlib.import_module("cards.miss_placeholders")
+
+
+def seeded_frame() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "y": [1, 0, 1, 0],
+            "x1": [10.0, 11.0, 12.0, 13.0],
+            "x2": ["A", "B", "A", "B"],
+            "id": [100, 101, 102, 103],
+            "part": ["Train", "Train", "Test", "Test"],
+        }
+    )
+
+
+@pytest.fixture
+def card(card_module):
+    card = card_module.instance()
+    with reactive.isolate():
+        card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
+    return card
 
 
 class FakeInputs:
@@ -156,8 +176,7 @@ def set_shiny_input(page: Page, local_id: str, value):
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata_and_regions(self, card_module):
-        card = card_module.this
+    def test_metadata_and_regions(self, card):
         assert card.name == "miss_placeholders"
         assert card.long_name == "Missing value placeholders"
         assert "replacement with NA" in card.description
@@ -167,8 +186,8 @@ class TestInstance:
         assert card.hasFooter()
 
     @pytest.mark.unit
-    def test_settings_contain_expected_controls(self, card_module):
-        html = str(card_module.this.settings)
+    def test_settings_contain_expected_controls(self, card):
+        html = str(card.settings)
         for control in (
             "NA_Strings", "NA_CaseSensitive", "NA_Integers", "NA_Floats",
             "NA_Extrema", "NA_DateTime", "MaxObs",
@@ -176,23 +195,23 @@ class TestInstance:
             assert f'id="{control}"' in html
 
     @pytest.mark.unit
-    def test_front_contains_all_tabs_and_charts(self, card_module):
-        html = str(card_module.this.front.tagify())
+    def test_front_contains_all_tabs_and_charts(self, card):
+        html = str(card.front.tagify())
         for label in ("All variables", "Integer", "Decimal", "Character", "Dates &amp; Times"):
             assert label in html
         for output_id in ("AllChart", "IntegerChart", "FloatChart", "CharacterChart", "DateChart"):
             assert f'id="{output_id}"' in html
 
     @pytest.mark.unit
-    def test_back_and_footer_outputs(self, card_module):
-        assert 'id="Summary"' in str(card_module.this.back)
-        assert "Placeholder Summary" in str(card_module.this.back)
-        assert 'id="Replace"' in str(card_module.this.footer)
+    def test_back_and_footer_outputs(self, card):
+        assert 'id="Summary"' in str(card.back)
+        assert "Placeholder Summary" in str(card.back)
+        assert 'id="Replace"' in str(card.footer)
 
     @pytest.mark.unit
-    def test_test_mode_seeds_expected_data(self, card_module):
+    def test_fixture_seeds_expected_data(self, card):
         with reactive.isolate():
-            proxy = card_module.this._imports.get()
+            proxy = card._imports.get()
         assert proxy.to_native().shape == (4, 5)
         assert proxy.to_native().columns.tolist() == ["y", "x1", "x2", "id", "part"]
 

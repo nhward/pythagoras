@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-path = Path(__file__).resolve().parent.parent.parent / "app"
+path = Path(__file__).resolve().parents[2] / "app"
 os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
@@ -16,10 +16,14 @@ import pytest
 from card import Card
 from cyclic_pandas import as_cyclic
 from list_pandas import as_list
+from playwright.sync_api import Page, expect
+from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
+from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../../app/cards/miss_type.py", scope="function")
 _HELPER_CARDS = {}
+
+app = create_app_fixture(app="../scenarios/miss_type.py", scope="function")
 
 @pytest.fixture(scope="session")
 def browser_context_args():
@@ -29,6 +33,41 @@ def browser_context_args():
 def miss_type():
     """Import the card module from the app package."""
     return importlib.import_module("cards.miss_type")
+
+
+@pytest.fixture
+def card(miss_type):
+    return miss_type.instance()
+
+
+def get_card(page: Page):
+    return page.locator(".card").first
+
+
+def get_namespace(page: Page) -> str:
+    card_id = get_card(page).get_attribute("id")
+    assert card_id is not None
+    return card_id.partition("-")[0]
+
+
+def namespaced_id(page: Page, local_id: str) -> str:
+    return f"{get_namespace(page)}-{local_id}"
+
+
+def by_id(page: Page, local_id: str):
+    return page.locator(f"#{namespaced_id(page, local_id)}")
+
+
+def set_shiny_input(page: Page, local_id: str, value):
+    page.wait_for_function("() => !!window.Shiny?.setInputValue")
+    page.evaluate(
+        """
+        ([inputId, inputValue]) => window.Shiny.setInputValue(
+            inputId, inputValue, {priority: "event"}
+        )
+        """,
+        [namespaced_id(page, local_id), value],
+    )
 
 
 def classification_frame(rows: int = 80) -> pd.DataFrame:
@@ -53,8 +92,7 @@ def regression_frame(rows: int = 80) -> pd.DataFrame:
 
 class TestInstance:
     @pytest.mark.unit
-    def test_metadata_and_regions(self, miss_type):
-        card = miss_type.this
+    def test_metadata_and_regions(self, card):
         assert card.name == "miss_type"
         assert card.long_name == "Missingness Type"
         assert "decision trees" in card.description
@@ -65,11 +103,11 @@ class TestInstance:
 
 
     @pytest.mark.unit
-    def test_expected_outputs_and_settings_are_present(self, miss_type):
-        front = str(miss_type.this.front.tagify())
-        back = str(miss_type.this.back.tagify())
-        footer = str(miss_type.this.footer.tagify())
-        settings = str(miss_type.this.settings)
+    def test_expected_outputs_and_settings_are_present(self, card):
+        front = str(card.front.tagify())
+        back = str(card.back.tagify())
+        footer = str(card.footer.tagify())
+        settings = str(card.settings)
         assert 'id="Target"' in front
         assert 'id="Tree"' in front
         assert 'id="Summary"' in footer
@@ -433,3 +471,112 @@ class TestTableAndPlot:
         assert sum(value is None for value in figure.data[0].x) >= 2
         assert figure.layout.xaxis.visible is False
         assert figure.layout.yaxis.visible is False
+
+
+class TestWebKitUI:
+    @pytest.mark.ui
+    def test_card_targets_and_settings_render(self, page: Page, app: ShinyAppProc):
+        page.goto(app.url)
+        expect(get_card(page)).to_be_visible()
+        expect(page.get_by_text("Missingness Type", exact=True)).to_be_visible()
+        expect(page.get_by_role("tab", name="Obs-count", exact=True)).to_be_visible()
+        expect(page.get_by_role("tab", name="target", exact=True)).to_be_visible(
+            timeout=30_000
+        )
+        for control in (
+            "MaxTreeDepth", "MinLeafSamples", "MinMissProp", "CVFolds",
+            "Permutations", "AdjustFDR", "Alpha", "MinImprovement",
+            "MinBalancedAccuracy", "MinRSquared", "MinFoldFraction",
+            "MinClassCount", "AddSeq", "MaxObs",
+        ):
+            expect(by_id(page, control)).to_be_attached()
+
+    @pytest.mark.ui
+    def test_variable_tree_and_summary_complete(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        target_tab = page.get_by_role("tab", name="target", exact=True)
+        target_tab.click(timeout=30_000)
+        expect(target_tab).to_have_attribute("aria-selected", "true")
+        expect(by_id(page, "target__Tree")).to_be_visible()
+        expect(by_id(page, "target__Tree").locator(".plotly")).to_be_attached(
+            timeout=30_000
+        )
+        expect(by_id(page, "Summary")).to_contain_text(
+            "Interpretation: Patterned.", timeout=30_000
+        )
+
+    @pytest.mark.ui
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "The dynamically inserted target tab becomes active in Bootstrap but "
+            "does not update Shiny input.Target; the summary remains Obs-count."
+        ),
+    )
+    def test_selecting_variable_tab_changes_summary_to_classification(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        target_tab = page.get_by_role("tab", name="target", exact=True)
+        target_tab.click(timeout=30_000)
+        expect(target_tab).to_have_attribute("aria-selected", "true")
+        expect(by_id(page, "Summary")).to_contain_text(
+            "Interpretation: Patterned.", timeout=30_000
+        )
+        expect(by_id(page, "Summary")).to_contain_text(
+            "CV balanced accuracy is", timeout=3_000
+        )
+
+    @pytest.mark.ui
+    def test_flip_displays_missingness_diagnostics(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        target_tab = page.get_by_role("tab", name="target", exact=True)
+        target_tab.click(timeout=30_000)
+        expect(target_tab).to_have_attribute("aria-selected", "true")
+        expect(by_id(page, "Summary")).to_contain_text(
+            "Interpretation: Patterned.", timeout=30_000
+        )
+        by_id(page, "FlipButton").click(force=True)
+        table = controller.OutputDataFrame(page, namespaced_id(page, "Table2"))
+        table.expect_nrow(1)
+        table.expect_column_labels([
+            "Variable",
+            "Branches",
+            "CV Balanced Accuracy",
+            "Null Balanced Accuracy",
+            "Improvement",
+            "Fraction Folds Above Null",
+            "Permutation p-value",
+            "Missing Count",
+            "Observed Count",
+            "CV Folds",
+            "Adjusted p-value",
+            "Missingness Type",
+        ])
+        table.expect_cell("target", row=0, col=0)
+        table.expect_cell("Patterned", row=0, col=11)
+
+    @pytest.mark.ui
+    def test_missing_proportion_change_rebuilds_target_tabs(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        expect(page.get_by_role("tab", name="target", exact=True)).to_be_visible(
+            timeout=30_000
+        )
+
+        set_shiny_input(page, "MinMissProp", 0.5)
+        expect(by_id(page, "Summary")).to_contain_text(
+            "The data does not contain significantly missing variables.",
+            timeout=30_000,
+        )
+        expect(page.get_by_role("tab", name="target", exact=True)).to_have_count(0)
+
+        set_shiny_input(page, "MinMissProp", 0.49)
+        expect(page.get_by_role("tab", name="target", exact=True)).to_be_visible(
+            timeout=30_000
+        )

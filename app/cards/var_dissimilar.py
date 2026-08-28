@@ -617,18 +617,7 @@ def instance():
     return this
 
 
-if Module.running_under_tests():
-    this = instance()
-    df = pd.DataFrame({
-        "y": [1, 0, 1, 0],
-        "x1": [10.0, 11.0, 12.0, 13.0],
-        "x2": ["A", "B", "A", "B"],
-        "id": [100, 101, 102, 103],
-        "part": ["Train", "Train", "Test", "Test"],
-    })
-    this._imports.set(proxy_data(_df=df, _name="Test"))
-    app = this.application()
-elif Module.running_directly(name=__name__):
+if Module.running_directly(name=__name__):
     this = instance()
     df = pd.read_csv(Card.ROOT / "data" / "Ass2.csv")
     this._imports.set(proxy_data(_df=df, _name="Ass2"))
