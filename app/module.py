@@ -108,6 +108,47 @@ class ApplicationLogHandler(logging.Handler):
             self.release()
 
 
+class BusyTracker:
+    """Collect session-local extended tasks for a reactive busy display."""
+
+    def __init__(self):
+        self._tasks: list[tuple[object, str]] = []
+
+    def track(self, message: str):
+        """Register an ExtendedTask without changing its invocation or result."""
+        def decorator(task):
+            status = getattr(task, "status", None)
+            if not callable(status):
+                raise TypeError(
+                    "@busy.track must be placed above @reactive.extended_task"
+                )
+            self._tasks.append((task, message))
+            return task
+
+        return decorator
+
+    def ui(self):
+        """Return a spinner and the messages for tasks currently running."""
+        messages = [
+            message
+            for task, message in self._tasks
+            if task.status() == "running"
+        ]
+        if not messages:
+            return None
+        return ui.div(
+            ui.span(
+                class_="spinner-border spinner-border-sm me-2",
+                role="status",
+                aria_hidden="true",
+            ),
+            ui.span("; ".join(dict.fromkeys(messages))),
+            class_="text-info text-center d-block",
+            role="status",
+            aria_live="polite",
+        )
+
+
 class Module(ABC):
     """
     Base class relating to shiny modules that:
@@ -508,6 +549,11 @@ class Module(ABC):
             return wrapper
 
         return decorator
+
+    @staticmethod
+    def busy() -> BusyTracker:
+        """Create a busy tracker for one server session."""
+        return BusyTracker()
     
 
     # Abstract methods

@@ -2,12 +2,12 @@ import json
 import sys
 from pathlib import Path
 
-path = Path(__file__).resolve().parent.parent / "app"
+path = str(Path(__file__).resolve().parent.parent / "app")
 if path not in sys.path:
     sys.path.insert(0, path)
 
 import pytest
-from module import Module
+from module import BusyTracker, Module
 from shiny import reactive, ui
 
 
@@ -322,3 +322,36 @@ def test_settle_test_bypass_returns_immediately(monkeypatch):
 
     assert result == 42
     assert calls["count"] == 1
+
+
+class FakeExtendedTask:
+    def __init__(self, status="initial"):
+        self.current_status = status
+
+    def status(self):
+        return self.current_status
+
+
+@pytest.mark.unit
+def test_busy_tracker_decorator_preserves_task_and_tracks_running_status():
+    busy = BusyTracker()
+    task = FakeExtendedTask()
+
+    decorated = busy.track("Calculating…")(task)
+
+    assert decorated is task
+    assert busy.ui() is None
+
+    task.current_status = "running"
+    rendered = str(busy.ui())
+    assert "Calculating…" in rendered
+    assert "spinner-border" in rendered
+    assert 'aria-live="polite"' in rendered
+
+
+@pytest.mark.unit
+def test_busy_tracker_rejects_wrong_decorator_order():
+    busy = BusyTracker()
+
+    with pytest.raises(TypeError, match="reactive.extended_task"):
+        busy.track("Calculating…")(lambda: None)

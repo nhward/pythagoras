@@ -454,6 +454,7 @@ def instance():
 
     def footer():
         return ui.div(
+            ui.output_ui(id="Busy"),
             ui.output_ui(id="Significance"),
             ui.input_checkbox_group(id="Shadow", label="Permanently add shadow variables", inline=True, choices = [],
             guide=this, position="top",
@@ -518,6 +519,7 @@ def instance():
     this.settings = settings
 
     def server(input, output, session):
+        busy = this.busy()
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
@@ -598,6 +600,7 @@ def instance():
                     if column in choices
                 ]
             ui.update_checkbox_group(id="Shadow", choices=choices, selected=selected)
+        @busy.track("Analysing informative missingness…")
         @reactive.extended_task
         async def CalculateAnalysis(
             frame,
@@ -618,6 +621,11 @@ def instance():
                 cv_folds=cv_folds,
                 minimum_balanced_accuracy=minimum_balanced_accuracy,
             )
+
+        @output
+        @render.ui
+        def Busy():
+            return busy.ui()
 
         @this.suspendable()
         def StartAnalysis():

@@ -165,6 +165,7 @@ class TestCardDefinition:
         settings = str(card.settings)
         assert 'id="Importance"' in front
         assert 'id="Table"' in back
+        assert 'id="Busy"' in footer
         assert 'id="Significance"' in footer
         assert 'id="Shadow"' in footer
         for control in ("CVFolds", "MinMissProp", "MinBalancedAccuracy", "MaxObs"):

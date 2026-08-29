@@ -16,7 +16,8 @@ The raw data is minimally altered:
 The card's front initially shows a short top/bottom listing. Going full-screen gives access to the entirety of the data.
 
 #### 🔄 Flip side
-There is no back side. 
+
+The back of the card lists the variables of the dataset with summary statistics which vary by data type.
 
 #### ⚙️ Settings
 

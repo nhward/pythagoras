@@ -1135,6 +1135,7 @@ def instance():
     def back():
         return ui.TagList(
             ui.span("Missingness type table", class_="text-primary text-center d-block"),
+            ui.output_ui(id="Busy"),
             ui.output_ui(
                 id="Table",
                 guide=this,
@@ -1333,6 +1334,7 @@ def instance():
     this.settings = settings
 
     def server(input, output, session):
+        busy = this.busy()
         model_cache: OrderedDict[tuple[object, ...], TreeAnalysis] = OrderedDict()
         regression_cache: OrderedDict[tuple[object, ...], dict[str, object]] = OrderedDict()
         cache_owner: proxy_data | None = None
@@ -1541,6 +1543,7 @@ def instance():
                 ),
             )
 
+        @busy.track("Classifying missingness types…")
         @reactive.extended_task
         async def CalculateTypeTable(
             frame: pd.DataFrame,
@@ -1552,6 +1555,11 @@ def instance():
                 frame,
                 **options,
             )
+
+        @output
+        @render.ui
+        def Busy():
+            return busy.ui()
 
         @this.suspendable()
         def StartTypeTable():
