@@ -369,14 +369,18 @@ def application():
 
         @reactive.calc
         def BeforeCurrentCardOrder() -> list[str]: #given in namespaces
+            section = currentSection()
             with reactive.isolate():
-                sections = SectionsVisited.get()
+                OrdSections = SectionsVisited.get().copy()
+                if section not in OrdSections:
+                    OrdSections.append(section)
+                    OrdSections = [item for item in sections() if item in OrdSections]  # always store in the order of the sections regardless of the visiting order
             try:
-                index = sections.index(currentSection())
+                index = OrdSections.index(section)
             except ValueError:
                 index = -1
             if index > 0:
-                previous = sections[index - 1]
+                previous = OrdSections[index - 1]
                 order = req(input[f"{Module.section_normalise(previous)}_CardOrder"]())
                 order = [s.removesuffix("-Card") for s in order]
                 return order

@@ -110,7 +110,7 @@ class TestInstance:
         settings = str(card.settings)
         assert 'id="Target"' in front
         assert 'id="Tree"' in front
-        assert 'id="Busy"' in footer
+        assert 'id="Busy"' in back
         assert 'id="Summary"' in footer
         assert 'id="Table"' in back
         for control in (
