@@ -55,6 +55,24 @@ if Module.log_handler not in jslog.handlers:
 
 config = Module.config
 
+
+def welcome():
+    """ 
+    Read html from a file 
+    """
+    html_file = Path("www/markdown/welcome.html")
+    if html_file.exists():
+        try:
+            text = html_file.read_text(encoding="utf-8")
+            return ui.HTML(text)
+        except Exception:  # noqa: BLE001
+            log.error(f"Error reading {html_file} file")
+            return ""
+    else:
+        log.error(f"File {html_file} not found")
+        return ""
+
+
 def sections() -> list[str]:
     """
     return a list of section names
@@ -66,6 +84,25 @@ def sections() -> list[str]:
 def create_sections():
     group_style = config.get("settings", {}).get("section_style")
     panels = []
+    if config.get("settings", {}).get("show_start"):
+        panels.append(
+            ui.nav_panel(
+                "Start",
+                ui.div(
+                    welcome(),
+                    ui.input_action_button(
+                        id = "GuideButton", 
+                        label= "Guide me", 
+                        icon = icon("eye", title = "Take a guided tour of this card", a11y = "sem"), 
+                        class_ = "btn rounded-pill hover-btn btn-sm guide-btn",
+                        style = "border: 0px; box-shadow: none;",
+                        aria_label = "Take a guided tour of this card"
+                    ),
+                    id="Start-cards-container",
+                    class_=""
+                ),
+            )
+    )
     if group_style == "tab":
         for name in sections():
             _name = Module.section_normalise(name)
@@ -165,6 +202,10 @@ def application():
         PreviousSection = reactive.value()
         SectionsVisited = reactive.value([])
 
+        @reactive.effect
+        async def startup():
+            if config.get("settings", {}).get("show_start"):
+                await session.send_custom_message("animate", {"id" : session.ns("GuideButton"), "animation" : "bounce", "delay" : 500})
 
         @reactive.calc
         def currentSection():

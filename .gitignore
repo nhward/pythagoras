@@ -3,11 +3,6 @@
 __pycache__/
 *.py[cod]
 old_markdown/
-old_www/
-old_cards/
-old_data/
-old_config/
-old_code/
 .venv/
 venv/
 env/

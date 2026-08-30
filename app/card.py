@@ -367,7 +367,6 @@ class Card(Module):
     def information(self):
         card_file = Path(self.file).resolve()
         html_file = self.ROOT / "www" / "markdown" / card_file.with_suffix(".html").name
-        print(f"  ROOT={self.ROOT}  ")
         if html_file.exists():
             try:
                 text = html_file.read_text(encoding="utf-8")

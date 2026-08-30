@@ -20,6 +20,10 @@
           "enum": ["tab", "accordion"]
         },
 
+        "show_start": {
+          "type": "boolean"
+        },
+
         "reuse_cards": {
           "type": "boolean"
         },

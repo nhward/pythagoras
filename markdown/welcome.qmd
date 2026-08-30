@@ -1,0 +1,39 @@
+---
+subtitle: ""
+author: ""
+backgroundcolor: rgba(63, 228, 243, 0.76)
+---
+
+# Welcome to Pythagoras
+
+***
+
+### What you need to get started:
+
+ 1. Buttons (far right)
+    - The app is can exited by pressing the ⏹ button.
+    - Add extra cards by using the + button
+    - You can request a full-screen mode using the [] button.
+    - TODO can save your configuration to disk
+
+ 1. Tabs - The top of the app holds a set of tabs. The first of these is called "Start". By clicking on a tab you navigate to that section. Progress sequentially through each of the tabs from left to right. What appears are sets of "cards". Each card is a data-related task that operate together as a workflow; the input of each is taken from the output of the preceding one. Workflows begin by reading-in a dataset.
+
+>_Pythagoras is the scaffold that holds the cards together._
+
+### Some points of difference:
+
+- Everything runs within your browser - there is no installation.
+- The variables are assigned roles that determine how downstream cards will utilize them.
+- The card approach is extensible: you can write your own in Python
+- Each card has a set of standard features 
+    - Can be made full screen
+    - Cards can be reordered by dragging their handles
+    - Has a flip side with additional information
+    - Provides an explanation of the cards purpose
+    - Has a sidebar with card-specific settings
+    - Can reveal its code (for use in notebooks)
+    - Will guide you through the use of the card
+ - The workflow (i.e. sets of cards) allows
+    - Cards can be added and removed
+    - Data to flow from card to card sequentially
+    - A workflow to be saved and reused
