@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Missingness map</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+<style type="text/css">
+:root {
+--py-table-row-hover: #f0f1cc;
+--py-table-cell-hover: #d4d4b8;
+}
+
+body.bslib-gap-spacing {
+gap: 0.25rem;
+}
+
+.hidden {
+display: none !important;
+}
+
+.flip-container {
+perspective: 1000px;
+}
+.flippable {
+position: relative;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 1.3s ease-in-out;
+}
+.flip-container.flipped .flippable {
+transform: rotateY(180deg);
+}
+.front,
+.back {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+-webkit-backface-visibility: hidden;
+}
+.front {
+z-index: 2;
+transform: rotateY(0);
+}
+.back {
+z-index: 1;
+transform: rotateY(180deg);
+}
+
+.bslib-card,
+.card {
+position: relative;
+overflow: visible;
+}
+.card {
+outline: 1px solid grey;
+}
+.card.shadow {
+box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
+}
+.card.fullscreen-active {
+position: fixed;
+inset: 0;
+z-index: 1050;
+width: 100vw;
+height: 100vh !important;
+max-height: none !important;
+min-height: 0 !important;
+margin: 0 !important;
+border-radius: 0;
+transition: all 0.5s ease;
+}
+.card.fullscreen-active .card-body {
+flex: 1 1 auto;
+overflow-y: auto;
+padding: 2rem;
+}
+.card.fullscreen-active .card-footer {
+flex-shrink: 0;
+margin-top: 0;
+padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.card.fullscreen-active .drag-handle {
+display: none !important;
+}
+
+#shiny-modal-wrapper {
+position: absolute;
+z-index: 10000 !important;
+}
+
+.hover-card {
+position: relative;
+}
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+visibility: visible !important;
+}
+.hover-card:not(.tour-running) .hover-btn {
+visibility: hidden;
+}
+
+.cards-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+margin: 0 auto;
+gap: 0.5rem;
+}
+.drag-ghost {
+opacity: 0.5;
+}
+.drag-handle {
+display: inline-flex;
+align-items: center;
+padding: 0 0.4rem;
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+.drag-handle * {
+cursor: inherit;
+}
+.drag-tab {
+position: absolute !important;
+top: 50%;
+left: 0;
+z-index: 2;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 28px;
+height: 48px;
+transform: translate(-50%, -50%);
+border: 1px solid rgba(0, 0, 0, 0.06);
+border-radius: 999px;
+outline: 1px solid grey;
+background: #f3f4f6;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-tab::before {
+width: 10px;
+height: 20px;
+background:
+radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+opacity: 0.55;
+content: "";
+}
+.dragging .drag-tab,
+.drag-tab:active {
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+@media (max-width: 600px) {
+.drag-tab {
+display: none;
+}
+}
+
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
+max-width: 180px;
+padding: 0.2rem 0.4rem;
+overflow: hidden;
+line-height: 1.2;
+text-align: left;
+text-overflow: ellipsis;
+vertical-align: middle;
+white-space: nowrap;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+overflow: visible !important;
+white-space: normal !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
+line-height: 1.2;
+white-space: pre-line !important;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) {
+border-top: 1px solid var(--bs-table-border-color) !important;
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+border-collapse: collapse;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+background-color: var(--bs-body-bg, #fff) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-informative-row {
+background-color: rgba(233, 36, 66, 0.22) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-random-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-uncertain-row {
+background-color: #ddcfa7 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-patterned-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+background-color: var(--py-table-row-hover) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+position: relative;
+z-index: 10;
+overflow: visible;
+background-color: var(--py-table-cell-hover) !important;
+white-space: normal;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-top: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+border-bottom: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-bottom: 1px solid #000 !important;
+}
+
+.across-row{
+display:flex;
+align-items:end;
+gap:.5rem
+}
+.across-row .shiny-input-container{
+flex:1
+}
+.across-row .btn{
+flex:none;
+margin-bottom:0
+}
+
+.roles-layout {
+display: grid;
+grid-template-columns: auto 1fr;
+gap: 1rem;
+align-items: start;
+width: 100%;
+min-width: 0;
+overflow-x: auto;
+}
+.roles-grid {
+display: grid;
+grid-template-columns: repeat(11, minmax(200px, 1fr));
+gap: 1rem;
+width: 100%;
+overflow-x: auto;
+min-width: 0;
+}
+.roles-grid > * {
+min-width: 0;
+}
+.role-box {
+border: 1px solid #d0d7de;
+border-radius: 10px;
+padding: 0.75rem;
+min-height: 315px;
+background: #d5e6f8;
+width: 100%;
+min-width: 0;
+}
+.role-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+width: 100%;
+min-width: 0;
+}
+.role-list {
+min-height: 220px;
+padding: 0.25rem;
+border: 1px dashed #c7ced6;
+border-radius: 8px;
+background: white;
+width: 100%;
+min-width: 0;
+overflow-y: auto;
+}
+.var-chip {
+border: 1px solid #c7ced6;
+border-radius: 999px;
+padding: 0.35rem 0.7rem;
+margin: 0.35rem 0;
+background: #d0ddf6;
+cursor: grab;
+user-select: none;
+width: 100%;
+min-width: 0;
+}
+.ghost {
+opacity: 0.4;
+}
+.chosen {
+background: #dce9ff;
+}
+
+.selectize-control.multi .selectize-input > .item {
+background-color: #dce6f2;
+color: #1f3b5c;
+border-radius: 999px;
+padding: 2px 10px;
+margin: 2px;
+border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+border-radius: 6px;
+padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+background-color: #dce6f2;
+color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+background-color: var(--bs-primary);
+color: white;
+}
+ span.btn.btn-default.btn-file:has(.shiny-input-file) {
+background-color: var(--bs-primary);
+border-color: var(--bs-primary);
+color: white;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group {
+display: inline-flex;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox, label.checkbox-inline) {
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
+background-color: #0b5494;
+border-color: var(--bs-primary, #0d6efd);
+color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span::before {
+content: "☐";
+display: inline-block;
+flex: 0 0 1em;
+width: 1em;
+font-size: 1em;
+line-height: 1;
+text-align: center;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+content: "☑";
+color: currentColor;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) {
+margin-bottom: 0;
+}
+
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+padding: 0px 0px 0px 0px !important;
+}
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+padding-top: 20px;
+padding-left: 12px;
+}
+.bslib-card .card-header {
+padding-right: 40px !important;
+}
+body.fullscreen-mode { overflow: hidden; } 
+
+.dragging, .dragging * {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+}
+
+@keyframes pulse-outline {
+0% { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+70% { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+animation: pulse-outline 700ms ease-out;
+}
+
+@keyframes jello {
+0% { transform: scale3d(1, 1, 1); }
+30% { transform: scale3d(1.07, 0.93, 1); }
+45% { transform: scale3d(0.95, 1.05, 1); }
+60% { transform: scale3d(1.03, 0.97, 1); }
+75% { transform: scale3d(0.99, 1.01, 1); }
+100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+will-change: transform; 
+}
+
+@media (prefers-reduced-motion: reduce) {
+.card.animate-jello { animation: none; }
+.card.animate-highlight { animation-duration: 300ms; }
+}
+
+.progress-bar {
+height: 1rem !important;
+}
+.vertically-scrollable-footer {
+max-height: 70px;
+overflow-y: auto;
+}
+
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Missingness map</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<p><!-- 
+ ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
+ ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets 
+--></p>
+<h4 id="introduction">🧭 Introduction</h4>
+<p>In this card we look at the <strong>Map of Missingness</strong>. This card enables the “missingness” of variables and observations to be examined and assessed.</p>
+<p>High missingness is a bad characteristic. The threshold at which missingness is no longer acceptable is not universally agreed. The default value of 50% is a reasonable starting point. The threshold can be changed in the card’s sidebar for either variables or observations. Setting this to zero is equivalent to partial deletion.</p>
+<p>Sometimes variables that are excessively missing have a simple explanation. Such explanations may suggest a manual imputation that fixes many of the missing values. Bear in mind the subtle difference between <em>Not Applicable</em> and <em>Not Available</em>.</p>
+<p>Sometimes missingness is not constant across time. Data collection processes often improve over time.</p>
+<p>Sometimes the observations that are only a few hours old are still incomplete.</p>
+<p>It is common for software systems (e.g. banking systems) to collect more personal information as they evolve more complexity over the years. This is evident in a declining missing value rate over time since early records will not have collected the more modern information. For example, email addresses before 2000.</p>
+<h5 id="variables">Variables</h5>
+<p>Drop variables that are excessively missing. Drop variables responsibly. Check the variable’s importance.</p>
+<h5 id="observations">Observations</h5>
+<p>Drop observations that are excessively missing. If the threshold is set too low this may result in too few usable observations. Buttons exist for the removal of excessively missing variables and observations. If both are selected, variables will always be processed first so as to minimize the loss of observations.</p>
+<p>Provided missingness is not an artifact of how the data was collected and curated, your observations strategy should also apply to future cases. This has the advantage of preventing the model producing dubious results where most predictors are missing. It does mean that not every future case is guaranteed to produce a prediction.</p>
+<details class="deep-dive">
+<summary>
+Click here for a fully expanded discussion of missing values.
+</summary>
+<iframe role="img" src="aaa.html" title="Missing Values" loading="lazy">
+</iframe>
+</details>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front is a heat-map chart. When expanded to full-screen, the chart shows extra information including the thresholds as lines on the chart</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card shows the excessive cases. In the case of variables: the variable name(s). In the case of observations: the observation identifier value (this falls back to row number.)</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> To decide on excessively missing variables to remove</li>
+<li><em>Secondary:</em> To decide on excessively missing observations to remove</li>
+</ol>
+<hr>
+<p>All cards downstream of this card will receive any changes enacted by this card.</p>
+<h4 id="example">Example</h4>
+<blockquote>
+<p>A variable records patient results of a rare blood test. The variable is 55% missing because most patients have not needed to have this test. The fact that the test has not been required suggests that patient’s results would have been in the normal range. Manually replacing these missing values with a normal result would bring the missingness down. Note that this is not a the same as replacing the missing values with a mean test result due to sampling bias.</p>
+</blockquote>
+
+
+
+
+
+</body></html>

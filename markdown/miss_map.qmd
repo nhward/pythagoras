@@ -1,0 +1,62 @@
+---
+title: Missingness map
+---
+
+ <!-- 
+ ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
+ ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets 
+-->
+
+#### 🧭 Introduction
+
+In this card we look at the **Map of Missingness**. This card enables the "missingness" of variables and observations to be examined and assessed.
+
+High missingness is a bad characteristic. The threshold at which missingness is no longer acceptable is not universally agreed. The default value of 50% is a reasonable starting point. The threshold can be changed in the card's sidebar for either variables or observations. Setting this to zero is equivalent to partial deletion.
+
+Sometimes variables that are excessively missing have a simple explanation. Such explanations may suggest a manual imputation that fixes many of the missing values. Bear in mind the subtle difference between *Not Applicable* and *Not Available*.
+
+Sometimes missingness is not constant across time. Data collection processes often improve over time.
+
+Sometimes the observations that are only a few hours old are still incomplete.
+
+It is common for software systems (e.g. banking systems) to collect more personal information as they evolve more complexity over the years. This is evident in a declining missing value rate over time since early records will not have collected the more modern information. For example, email addresses before 2000.
+
+
+##### Variables
+Drop variables that are excessively missing. Drop variables responsibly. Check the variable's importance.
+
+##### Observations
+Drop observations that are excessively missing. If the threshold is set too low this may result in too few usable observations. Buttons exist for the removal of excessively missing variables and observations. If both are selected, variables will always be processed first so as to minimize the loss of observations.
+
+Provided missingness is not an artifact of how the data was collected and curated, your observations strategy should also apply to future cases. This has the advantage of preventing the model producing dubious results where most predictors are missing. It does mean that not every future case is guaranteed to produce a prediction.
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="aaa.html" title="Missing Values" loading="lazy"></iframe>
+</details>
+
+#### 🏞️ Front
+
+The card's front is a heat-map chart. When expanded to full-screen, the chart shows extra information including the thresholds as lines on the chart 
+
+#### 🔄 Flip side
+
+The back of the card shows the excessive cases. In the case of variables: the variable name(s). In the case of observations: the observation identifier value (this falls back to row number.)
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+
+#### 🎯 Goals
+
+ 1. _Primary:_ To decide on excessively missing variables to remove
+ 1. _Secondary:_ To decide on excessively missing observations to remove
+
+***
+All cards downstream of this card will receive any changes enacted by this card.
+
+
+#### Example
+
+> A variable records patient results of a rare blood test. The variable is 55% missing because most patients have not needed to have this test. The fact that the test has not been required suggests that patient's results would have been in the normal range. Manually replacing these missing values with a normal result would bring the missingness down. Note that this is not a the same as replacing the missing values with a mean test result due to sampling bias.

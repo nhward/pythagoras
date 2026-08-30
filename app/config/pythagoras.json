@@ -30,6 +30,7 @@
       "cards": [
         {"module": "miss_placeholders"},
         {"module": "miss_informative"},
+        {"module": "miss_map"},
         {"module": "miss_sets"},
         {"module": "miss_rules"},
         {"module": "miss_type"},
