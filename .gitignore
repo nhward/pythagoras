@@ -17,6 +17,6 @@ site
 .python-version
 .quarto/
 **/*.quarto_ipynb
-
 /.quarto/
 /.make/test-passed
+/old_data
