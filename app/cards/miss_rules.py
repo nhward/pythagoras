@@ -78,7 +78,6 @@ def instance():
     def footer():
         return ui.div(
             ui.output_ui(id="Check"),
-            id="X-Check",
             class_="html-fill-container html-fill-item text-center",
         )
 

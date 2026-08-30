@@ -164,15 +164,15 @@ Cards (available and planned)
 
 
 🧹 Data cleaning
-
 * [Variable modification](app/www/markdown/var_modify.html)
-* Duplicate Observations
+* [Duplicate Observations](app/www/markdown/obs_duplicates.html)
 
 ∅ Missing Values
 
 * [Missing Placeholders](app/www/markdown/miss_placeholders.html)
 * [Missingness types](app/www/markdown/miss_type.html)
 * [Informative Missingness](app/www/markdown/miss_informative.html)
+* [Missingness sets](app/www/markdown/miss_sets.html)
 * Excessive missingness
 * [Missingness rules](app/www/markdown/miss_rules.html)
 * Imputation
@@ -187,6 +187,7 @@ Cards (available and planned)
 
 Miscellaneous
 * [Configuration](app/www/markdown/sys_configuration.html)
+* [System log](app/www/markdown/system_log.html)
 
 ⸻
 

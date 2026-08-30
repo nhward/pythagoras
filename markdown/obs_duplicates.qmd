@@ -1,0 +1,37 @@
+---
+title: Duplicate Observations
+---
+
+#### 🧭 Introduction
+
+Near duplicates are observations that differ (i.e. mismatch) by a low number of variables. A near duplicate is not one whose mismatches are close, rather, it relates to the number of mismatches regardless of their magnitude.
+A true duplicate is an observation that is an exact match to another observation. Its differences are zero. In contrast, a near duplicate may be
+an exact match to 8 out of 9 variables and be recorded against the "1 difference" tally.
+
+For this assessment all variables are examined **except** those with _no role_, _geometry role_, _weighting role_, and the _identifier role_ (roles = None, Geometry, Weighting, Identifier).
+
+The advanced settings allow the decimal data to be compared at a lower accuracy. This enables close numeric values to be exact matches. Integer data is not affected.
+The process of rounding is performed to a fixed number of significant places, rather than decimal places, due to different scales that variables can have. 
+This has the effect of increasing the tally of each of the chart's bars.
+
+
+#### 🏞️ Front
+
+The card's front shows a bar chart of the frequency of 0-differences, 1-difference, 2-differences etc. The important bar is the first one; the one that indicates the number of exact duplicates.
+
+#### 🔄 Flip side
+
+The back of the card gives this information in a table.
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+
+#### 🎯 Goals
+
+ 1. _Primary:_ To detect, count and visualize the diversity of the observations
+ 1. _Secondary:_ To remove observations so that exact duplicates no longer exist  
+
+***
+All cards downstream of this card will receive any changes enacted by this card.

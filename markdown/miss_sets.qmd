@@ -1,0 +1,56 @@
+---
+title: Missing sets
+---
+
+#### 🧭 Introduction
+
+Missing values are often missing as sets of variables. This implies that there is a common cause of missingness that tends to affect several variables simultaneously. This suggests that seeking to understand such a causal explanation may resolve many missing values.
+
+An UpSet plot is a data visualization method used to show overlapping relationships and intersections between multiple sets. Here the sets are observations and the members are the variables that are missing.
+
+![An upset chart](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTsuDkvm-P1BOnhxBw5h44WzdShKhhz-KNGnfRtOzZ23A&s=10)
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="aaa.html" title="Missing Values" loading="lazy"></iframe>
+</details>
+
+<style>
+.deep-dive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.deep-dive iframe {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 80vh;
+    margin-top: 1rem;
+    border: 0;
+}
+</style>
+
+#### 🏞️ Front
+
+The card's front is an "upset" chart. 
+
+#### 🔄 Flip side
+
+The back of the card is similar information to the chart but in table form.
+
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+
+#### 🎯 Goals
+
+ 1. _Primary:_ Visualize missingness as sets and thereby discover and explore common causes of the major sets.
+ 1. _Secondary:_ Discover surprising missingness sets that suggest further investigation. 
+
+***
+All cards downstream of this card will receive any changes enacted by this card.

@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Type of missingness</title>
+<title>Duplicate Observations</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -564,7 +564,7 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Type of missingness</h1>
+<h1 class="title">Duplicate Observations</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -572,56 +572,20 @@ border: 0;
 
 
 <h4 id="introduction">🧭 Introduction</h4>
-<p>This card focuses on differentiating between <strong>Random</strong> and <strong>Patterned</strong> causes of missingness. The following possible assessments are calculated based upon a decision tree trying to predict missingness:</p>
-<ul>
-<li>Random - Non-Random hypothesis can be rejected</li>
-<li>Uncertain - The hypothesis test is ambiguous</li>
-<li>Patterned - Non-Random hypothesis cannot be rejected</li>
-<li>Insufficient data - Statistical test is meaningless</li>
-</ul>
-<p>The front face is a set of tabs that each show a decision-tree chart that predicts missingness.</p>
-<!-- See <a href="/markdown/MissingValues.html" target="_blank" rel="noopener noreferrer">here</a> for a background article on missing values. -->
-<details class="deep-dive">
-<summary>
-Click here for a fully expanded discussion of missing values.
-</summary>
-<iframe role="img" src="aaa.html" title="Missing Values" loading="lazy">
-</iframe>
-</details>
-<style>
-.deep-dive {
-width: 100%;
-max-width: 100%;
-min-width: 0;
-}
-.deep-dive iframe {
-display: block;
-box-sizing: border-box;
-width: 100%;
-max-width: 100%;
-height: 80vh;
-margin-top: 1rem;
-border: 0;
-}
-</style>
+<p>Near duplicates are observations that differ (i.e. mismatch) by a low number of variables. A near duplicate is not one whose mismatches are close, rather, it relates to the number of mismatches regardless of their magnitude. A true duplicate is an observation that is an exact match to another observation. Its differences are zero. In contrast, a near duplicate may be an exact match to 8 out of 9 variables and be recorded against the “1 difference” tally.</p>
+<p>For this assessment all variables are examined <strong>except</strong> those with <em>no role</em>, <em>geometry role</em>, <em>weighting role</em>, and the <em>identifier role</em> (roles = None, Geometry, Weighting, Identifier).</p>
+<p>The advanced settings allow the decimal data to be compared at a lower accuracy. This enables close numeric values to be exact matches. Integer data is not affected. The process of rounding is performed to a fixed number of significant places, rather than decimal places, due to different scales that variables can have. This has the effect of increasing the tally of each of the chart’s bars.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front shows a bar chart of the frequency of 0-differences, 1-difference, 2-differences etc. The important bar is the first one; the one that indicates the number of exact duplicates.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card reveals a table of predictors: those with missing values. Each row gives an assessment decision and the basis of that decision. The rows can be sorted into ascending p-value clicking the p-value header.</p>
+<p>The back of the card gives this information in a table.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>Use the Tour Guide button to learn about the settings of this card.</p>
-<h4 id="goal">🎯 Goal</h4>
+<h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><em>Primary:</em> To identify predictors that have <strong>patterned</strong> missingness. Their missing values should be imputed rather than removing the observations (partial deletion). Deleting observations with patterned missingness will produce non-random omissions that are a potential cause of data bias.</li>
-<li><em>Secondary:</em> To detect relationships that suggest an explanation and possibly a manual imputation for certain missing values. For example: <em>In a housing dataset, the category level of “house boat” might explain why the ratable-value variable is missing (manually set these to zero).</em></li>
+<li><em>Primary:</em> To detect, count and visualize the diversity of the observations</li>
+<li><em>Secondary:</em> To remove observations so that exact duplicates no longer exist</li>
 </ol>
-<p>The actions implied by the different missingness causes are:</p>
-<ul>
-<li><p><strong>Explainable:</strong> Design manual-imputation strategies for some variables. For example:<br>
-<em>Blood-test results can be missing because no diagnostic justification for the test has yet arisen. Were such tests undertaken unnecessarily they would usually yield results in the normal range (rather than in the extreme range). A possible manual imputation might involve substituting a typically “Normal” result for each missing test. Substituting a mean result would be a <strong>poor</strong> choice.</em></p></li>
-<li><p><strong>Patterned:</strong> Design statistical-imputation strategies. For example:<br>
-<em>The absence of clinical notes is often caused by periods of high workload and emergencies. This is not random and the missing notes might best be estimated by what the subsequent notes.</em></p></li>
-<li><p><strong>Random:</strong> Design partial-deletion or statistical-imputation strategies. For example:<br>
-<em>Instrument failures prevent the recording of routine blood pressure readings. These missed readings can be safely ignored as they appear to occur randomly.</em></p></li>
-</ul>
 <hr>
 <p>All cards downstream of this card will receive any changes enacted by this card.</p>
 

@@ -449,19 +449,23 @@ span.btn.btn-default.btn-file:has(.shiny-input-file) {
     color: white;
 }
 
-/* Inline checkbox-groups → toggle-pill buttons */
-.shiny-input-checkboxgroup.shiny-input-container-inline .shiny-options-group {
+/* Checkbox groups → toggle-pill buttons, whether inline or stacked.
+   Support both Shiny's legacy .checkbox wrapper and checkbox-inline label. */
+.shiny-input-checkboxgroup .shiny-options-group {
   display: inline-flex;
   flex-wrap: wrap;
   gap: .35rem;
+  padding-top: .2rem;
 }
 
-.shiny-input-checkboxgroup .shiny-options-group .checkbox {
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox, label.checkbox-inline) {
   margin: 0;
 }
 
-/* Keep the real checkbox square & hidden (accessibility preserved) */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"] {
+/* Hide the native checkbox visually while preserving input semantics. */
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -469,52 +473,63 @@ span.btn.btn-default.btn-file:has(.shiny-input-file) {
   margin: 0;
 }
 
-/* Pill face (UNchecked) — solid, darker primary-tint (no transparency) */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span {
+/* Unchecked pill face. */
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) > span {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
-  padding: .40rem .80rem;
-  border-radius: 50rem; /* pill */
+  padding: .25rem .5rem;
   border: 1px solid var(--bs-primary, #0d6efd);
+  border-radius: 50rem;
   background-color: var(--bs-primary, #0d6efd);
   color: #fff;
   cursor: pointer;
+  font-size: .875rem;
   font-weight: 500;
+  line-height: 1.5;
   user-select: none;
   transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
 }
 
-/* Hover: slightly stronger */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label:hover > span {
-  background-color: #0b5494; /* darker solid */
-} 
-
-/* Focus ring */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:focus + span {
-  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
-}
-
-/* CHECKED pill */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span {
+/* Hover and checked states. */
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
   background-color: #0b5494;
   border-color: var(--bs-primary, #0d6efd);
   color: #fff;
 }
 
-/* Square checkbox glyphs (not circles) */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span::before {
-  content: "☐";        /* square box (off) */
-  font-size: 1.8em;
-  line-height: 1;
-}
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span::before {
-  content: "☑";        /* square box with tick (on) */
-  color: currentColor; /* inherits white when checked */
+/* Keyboard focus ring. */
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
 }
 
-/* Tighten legacy BS3 label spacing */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label { margin-bottom: 0; }
+/* Square checkbox glyphs. */
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) > span::before {
+  content: "☐";
+  display: inline-block;
+  flex: 0 0 1em;
+  width: 1em;
+  font-size: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+  content: "☑";
+  color: currentColor;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+  :is(.checkbox label, label.checkbox-inline) {
+  margin-bottom: 0;
+}
 
 /* Sidebar styling */
 .bslib-sidebar-layout.sidebar-collapsed>.main,
@@ -576,84 +591,26 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 }
 
 
-/* Inline checkbox-groups → toggle-pill buttons */
-.shiny-input-checkboxgroup.shiny-input-container-inline .shiny-options-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-}
-
-.shiny-input-checkboxgroup .shiny-options-group .checkbox {
-  margin: 0;
-}
-
-/* Keep the real checkbox square & hidden (accessibility preserved) */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
-}
-
-/* Pill face (UNchecked) — solid, darker primary-tint (no transparency) */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .25rem .5rem;
-  font-size: .875rem;
-  line-height: 1.5;
-  border: 1px solid var(--bs-primary, #0d6efd);
-  border-radius: 50rem; /* pill */
-  background-color: var(--bs-primary, #0d6efd);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 500;
-  user-select: none;
-  transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
-}
-
-/* Hover: slightly stronger */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label:hover > span {
-  background-color: #0b5494; /* darker solid */
-} 
-
-/* Focus ring */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:focus + span {
-  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
-}
-
-/* CHECKED pill */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span {
-  background-color: #0b5494;
-  border-color: var(--bs-primary, #0d6efd);
-  color: #fff;
-}
-
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:checked + span::before {
-  content: "☑";        /* square box with tick (on) */
-  color: currentColor; /* inherits white when checked */
-}
-
-/* Tighten legacy BootStrap3 label spacing */
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label { margin-bottom: 0; }
-
-.shiny-input-checkboxgroup .shiny-options-group .checkbox input[type="checkbox"]:focus-visible + span {
-  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13, 110, 253), .35);
-}
-
-.shiny-input-checkboxgroup .shiny-options-group .checkbox label > span::before {
-  content: "☐";
-  display: inline-block;
-  flex: 0 0 1em;
-  width: 1em;
-  font-size: 1em;
-  line-height: 1;
-  text-align: center;
-}
-
 .vertically-scrollable-footer {
   max-height: 70px;
   overflow-y: auto;
+}
+
+
+
+/*styles for markdown html*/
+.deep-dive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.deep-dive iframe {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 80vh;
+    margin-top: 1rem;
+    border: 0;
 }

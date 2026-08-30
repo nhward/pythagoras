@@ -5,6 +5,7 @@ project:
     - "markdown/*.qmd"
 subtitle: A Pythagoras card
 author: "Nick Ward"
+css: app/www/pythagoras.css
 format:
   html:
     toc: false
