@@ -312,45 +312,30 @@ def instance():
     def settings():
         return ui.TagList(
             ui.input_slider(
-                id="VariableThreshold",
-                label="Excessive variable missingness (%)",
-                min=0,
-                max=100,
-                value=50,
-                step=1,
+                id="VariableThreshold", label="Excessive variable missingness (%)", min=0, max=100, value=50, step=1,
+                guide = this, text = "The excessive-missingness threshold of the <em>variables</em> as a percentage", position="left"
             ),
             ui.input_slider(
-                id="ObservationThreshold",
-                label="Excessive observation missingness (%)",
-                min=0,
-                max=100,
-                value=50,
-                step=1,
+                id="ObservationThreshold", label="Excessive observation missingness (%)", min=0, max=100, value=50, step=1,
+                guide = this, text = "The excessive-missingness threshold of the <em>observations</em> as a percentage", position="left"
+
             ),
             ui.input_checkbox(
-                id="HideComplete",
-                label="Hide variables without missing values",
-                value=True,
+                id="HideComplete", label="Hide variables without missing values", value=True,
+                guide = this, text = "Whether to hide variables that have zero missing values", position="left"
             ),
             ui.input_checkbox(
-                id="SortVariables",
-                label="Sort variables by missingness",
-                value=True,
+                id="SortVariables", label="Sort variables by missingness", value=True,
+                guide = this, text = "Sort the variables by descending degrees of missingness", position="left"
             ),
             ui.input_checkbox(
-                id="ShowThresholds",
-                label="Show thresholds in full screen",
-                value=True,
+                id="ShowThresholds", label="Show thresholds in full screen", value=True,
+                guide = this, text = "Display the two thresholds on the chart (when in full-screen mode)", position="left"
             ),
             ui.input_slider(
-                id="MaxObs",
-                label="Maximum observations to display",
-                min=3,
-                max=7,
-                value=4,
-                ticks=True,
-                pre="10^",
-            ),
+                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position="left",
+            ),        
         )
 
     this.settings = settings
@@ -462,7 +447,7 @@ def instance():
                 messages.append(f"{excessive_observations} observations exceed their threshold")
             if not messages:
                 return ui.span("No variables or observations exceed their thresholds.", class_="text-success")
-            return ui.span(messages, class_="text-warning")
+            return ui.span("; ".join(messages), class_="text-warning")
 
     this.server = server
     return this

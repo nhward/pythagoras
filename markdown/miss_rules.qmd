@@ -17,26 +17,8 @@ These rules help businesses understand buying behavior, recommend products, or o
 
 <details class="deep-dive">
   <summary>Click here for a fully expanded discussion of missing values.</summary>
-  <iframe src="aaa.html" title="Missing Values" loading="lazy"></iframe>
+  <iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
 </details>
-
-<style>
-.deep-dive {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-}
-
-.deep-dive iframe {
-    display: block;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    height: 80vh;
-    margin-top: 1rem;
-    border: 0;
-}
-</style>
 
 #### 🛒 How do Association Rules identify missing value patterns?
 

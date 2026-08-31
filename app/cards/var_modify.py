@@ -190,34 +190,18 @@ def instance():
     def settings() -> ui.TagList:
         return ui.TagList(
             ui.input_text(
-                id="Formats",
-                label="Possible date formats",
-                width="100%",
-                value=", ".join(map(str, DATE_FORMATS)),
-                guide=this,
-                text="Comma-delimited date formats to try - in this order. %Y means year; %m means month; %d means day.",
-                position="left",
+                id="Formats", label="Possible date formats", width="100%", value=", ".join(map(str, DATE_FORMATS)),
+                guide=this, text="Comma-delimited date formats to try - in this order. %Y means year; %m means month; %d means day.", position="left",
             ),
             ui.input_radio_buttons(
-                id="Alternatives",
-                label="Alternative types",
-                choices=["Sensible", "Related", "All"],
-                selected="Sensible",
-                guide=this,
-                text="How the data-type choices are offered based on the nature of the variable; <br><b>All:</b> all possible choices are offered, <br><b>Related:</b> the data-type related choices are offered, <br><b>Sensible:</b> the choices based on data-type, values and cardinality",
-                position="left",
+                id="Alternatives", label="Alternative types", choices=["Sensible", "Related", "All"], selected="Sensible",
+                guide=this, position="left", text="""How the data-type choices are offered based on the nature of the variable; <br>
+                <b>All:</b> all possible choices are offered, <br><b>Related:</b> the data-type related choices are offered, <br>
+                <b>Sensible:</b> the choices based on data-type, values and cardinality""",
             ),
             ui.input_slider(
-                id = "MaxObs", 
-                label = "Maximum observations to analyse", 
-                min = 3,
-                max = 7,
-                value = 4,
-                ticks = True,
-                pre = "10^",
-                guide = this,
-                text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).',
-                position = "left")
+                id = "MaxObs", label = "Maximum observations to analyse", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+                guide = this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position = "left")
         )
 
     this.settings = settings

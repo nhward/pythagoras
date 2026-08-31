@@ -93,55 +93,24 @@ def instance():
     def settings():
         return ui.TagList(
             ui.input_checkbox(
-                id="Robust",
-                label="Employ robust statistics for central tendency and spread",
-                value=True,
-                guide=this,
-                text="Robust uses the median and MAD; otherwise mean and standard deviation are used.",
-                position="left",
+                id="Robust", label="Employ robust statistics for central tendency and spread", value=True, 
+                guide=this,  text="Robust uses the median and MAD; otherwise mean and standard deviation are used.", position="left",
             ),
             ui.input_slider(
-                id="Qgram",
-                label="The size of q-grams",
-                min=1,
-                max=5,
-                value=2,
-                guide=this,
-                text="Q-grams compare variable names and dtype names. Values of one or two are usually appropriate.",
-                position="left",
+                id="Qgram", label="The size of q-grams", min=1, max=5, value=2,
+                guide=this, text="Q-grams compare variable names and dtype names. Values of one or two are usually appropriate.", position="left",
             ),
             ui.input_radio_buttons(
-                id="Which",
-                label="Hierarchical clustering technique",
-                choices=["Agglomerative", "Divisive"],
-                selected="Agglomerative",
-                guide=this,
-                text="Choose bottom-up agglomerative or top-down divisive clustering.",
-                position="left",
+                id="Which", label="Hierarchical clustering technique", choices=["Agglomerative", "Divisive"], selected="Agglomerative",
+                guide=this, text="Choose bottom-up agglomerative or top-down divisive clustering.", position="left",
             ),
             ui.input_radio_buttons(
-                id="Style",
-                label="Hierarchy chart layout",
-                choices={
-                    "rectangular": "Rectangular",
-                    "radial": "Radial",
-                },
-                selected="radial",
-                guide=this,
-                text="Rectangular and radial chart layouts of the same hierarchy information.",
-                position="left",
+                id="Style", label="Hierarchy chart layout", choices={"rectangular": "Rectangular", "radial": "Radial"}, selected="radial",
+                guide=this, text="Rectangular and radial chart layouts of the same hierarchy information.", position="left",
             ),
             ui.input_slider(
-                id = "MaxObs", 
-                label = "Maximum observations to analyse", 
-                min = 3,
-                max = 7,
-                value = 4,
-                ticks = True,
-                pre = "10^",
-                guide = this,
-                text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).',
-                position = "left"
+                id = "MaxObs", label = "Maximum observations to analyse", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+                guide = this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position = "left"
             ),
         )
 

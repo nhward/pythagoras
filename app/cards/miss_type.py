@@ -1157,27 +1157,17 @@ def instance():
     def settings():
         return ui.TagList(
             ui.input_checkbox(
-                id="AddSeq",
-                label="Add a row-number predictor",
-                value=True,
-                guide=this,
-                text="""
+                id="AddSeq", label="Add a row-number predictor", value=True,
+                guide=this, position="left", text="""
                     "Allows detection of missingness associated with row order or time order (if sequential).
                     <br>This extra predictor allows the models to drift. 
                     It may be that early data had more missing values that more recent data given data 
                     collection has improved over time (assuming the data is in collection order)""",
-                position="left",
+                
             ),
-                        ui.input_slider(
-                id="MinMissProp",
-                label="Minimum missing proportion",
-                min=0,
-                max=0.5,
-                value=0.05,
-                step=0.01,
-                guide=this,
-                text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.",
-                position="left",
+            ui.input_slider(
+                id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
+                guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
             ),
             # ui.input_checkbox(
             #     id="UseWeights",
@@ -1188,36 +1178,16 @@ def instance():
             #     position="left",
             # ),
             ui.input_slider(
-                id="CVFolds",
-                label="Cross-validation folds",
-                min=2,
-                max=10,
-                value=5,
-                step=1,
-                guide=this,
-                text=(
-                    "Number of stratified held-out folds. This is reduced automatically when the minority class is small.",
-                ),
-                position="left",
+                id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
+                guide=this, text="Number of stratified held-out folds. This is reduced automatically when the minority class is small.", position="left",
             ),
             ui.input_select(
-                id="Permutations",
-                label="Permutation repetitions",
-                choices={"99": "100", "199": "200", "499": "500", "999": "1000"},  # because the logic requires reps+1
-                selected="99",
-                guide=this,
-                text="More permutations give a more precise empirical p-value but take longer.",
-                position="left",
+                id="Permutations", label="Permutation repetitions", selected="99", choices={"99": "100", "199": "200", "499": "500", "999": "1000"},  # because the logic requires reps+1
+                guide=this, text="More permutations give a more precise empirical p-value but take longer.", position="left",
             ),
             ui.input_slider(
-                id="Alpha",
-                label="Maximum p-value",
-                min=0.01,
-                max=0.10,
-                value=0.05,
-                step=0.01,
-                guide=this,
-                text="""
+                id="Alpha", label="Maximum p-value", min=0.01, max=0.10, value=0.05, step=0.01,
+                guide=this, position="left", text="""
                     Maximum raw (or adjusted) permutation p-value for a patterned interpretation. Individual-variable classification p-values may be adjusted; the single aggregate regression p-value is unadjusted.
                     <br>Why use several conditions?<br>
                     <ul><li>The permutation p-value controls evidence against predictor–missingness independence.</li>
@@ -1226,108 +1196,47 @@ def instance():
                     <li>Fold consistency guards against a result driven by one split.</li>
                     <li>Minimum class counts prevent unstable classification conclusions about very rare missingness.</li></ul>
                     """,
-                position="left",
             ),
             ui.input_checkbox(
-                id="AdjustFDR",
-                label="Adjust p-values for multiple variables",
-                value=True,
-                guide=this,
-                text="""
+                id="AdjustFDR", label="Adjust p-values for multiple variables", value=True, 
+                guide=this, position="left", text="""
                     Apply Benjamini-Hochberg false-discovery-rate adjustment across the missingness models.<br>
                     Because the hypothesis is testing multiple variables, raw permutation p-values should be adjusted for multiple testing. 
                     The <a href='https://en.wikipedia.org/wiki/False_discovery_rate'>Benjamini–Hochberg false-discovery-rate correction</a> 
                     is appropriate because this is a screening exercise rather than a single confirmatory hypothesis test."
                     """,
-                position="left",
             ),
             ui.input_slider(
-                id="MinImprovement",
-                label="Minimum score improvement",
-                min=0,
-                max=0.25,
-                value=0.15,
-                step=0.05,
-                guide=this,
-                text="Minimum practical improvement in balanced accuracy or R-squared over the matched null model.",
-                position="left",
+                id="MinImprovement", label="Minimum score improvement", min=0, max=0.25, value=0.15, step=0.05,
+                guide=this, text="Minimum practical improvement in balanced accuracy or R-squared over the matched null model.", position="left",
             ),
             ui.input_slider(
-                id="MinBalancedAccuracy",
-                label="Minimum balanced accuracy",
-                min=0.50,
-                max=0.90,
-                value=0.55,
-                step=0.01,
-                guide=this,
-                text="Minimum cross-validated balanced accuracy for a patterned classification.",
-                position="left",
+                id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
+                guide=this, text="Minimum cross-validated balanced accuracy for a patterned classification.", position="left",
             ),
             ui.input_slider(
-                id="MinRSquared",
-                label="Minimum R-squared",
-                min=0,
-                max=0.50,
-                value=0.10,
-                step=0.01,
-                guide=this,
-                text="Minimum cross-validated R-squared for a patterned missing-count regression.",
-                position="left",
+                id="MinRSquared", label="Minimum R-squared", min=0, max=0.50, value=0.10, step=0.01,
+                guide=this, text="Minimum cross-validated R-squared for a patterned missing-count regression.", position="left",
             ),
             ui.input_slider(
-                id="MinFoldFraction",
-                label="Minimum fold consistency",
-                min=0.50,
-                max=1,
-                value=0.80,
-                step=0.05,
-                guide=this,
-                text="Minimum fraction of held-out folds in which the tree must beat its null model.",
-                position="left",
+                id="MinFoldFraction", label="Minimum fold consistency", min=0.50, max=1, value=0.80, step=0.05,
+                guide=this, text="Minimum fraction of held-out folds in which the tree must beat its null model.", position="left",
             ),
             ui.input_numeric(
-                id="MinClassCount",
-                label="Minimum missing and observed cases",
-                value=20,
-                min=2,
-                step=1,
-                guide=this,
-                text="Both classes must contain at least this many cases before a reliable interpretation is made.",
-                position="left",
+                id="MinClassCount", label="Minimum missing and observed cases", value=20, min=2, step=1,
+                guide=this, text="Both classes must contain at least this many cases before a reliable interpretation is made.", position="left",
             ),
             ui.input_slider(
-                id="MaxTreeDepth",
-                label="Maximum Tree depth parameter",
-                min=1,
-                max=5,
-                value=3,
-                step=1,
-                guide=this,
-                text="Pre-pruning (for speed) by limiting the depth of the tree hierarchy.",
-                position="left",
+                id="MaxTreeDepth", label="Maximum Tree depth parameter", min=1, max=5, value=3, step=1,
+                guide=this, text="Pre-pruning (for speed) by limiting the depth of the tree hierarchy.", position="left",
             ),
             ui.input_slider(
-                id="MinLeafSamples",
-                label="Minimum leaf samples (as a proportion)",
-                min=0.001,
-                max=0.05,
-                value=0.02,
-                step=0.001,
-                guide=this,
-                text="Minimum number of samples to justify a leaf node of the tree hierarchy.",
-                position="left",
+                id="MinLeafSamples", label="Minimum leaf samples (as a proportion)", min=0.001, max=0.05, value=0.02, step=0.001,
+                guide=this, text="Minimum number of samples to justify a leaf node of the tree hierarchy.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs",
-                label="Maximum observations to analyse",
-                min=3,
-                max=7,
-                value=4,
-                ticks=True,
-                pre="10^",
-                guide=this,
-                text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).",
-                position="left",
+                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).", position="left",
             ),
         )
 

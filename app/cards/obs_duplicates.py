@@ -243,26 +243,12 @@ def instance():
     def settings():
         return ui.TagList(
             ui.input_slider(
-                id="SignificantFigures",
-                label="Significant figures used to compare numeric values",
-                min=1,
-                max=16,
-                value=16,
-                step=1,
-                guide=this,
-                text="Reducing this value rounds floating-point data and can make nearby numeric values compare as equal. Integers are unchanged.",
-                position="left",
+                id="SignificantFigures", label="Significant figures used to compare numeric values", min=1, max=16, value=16, step=1,
+                guide=this, text="Reducing this value rounds floating-point data and can make nearby numeric values compare as equal. Integers are unchanged.", position="left",
             ),
             ui.input_slider(
-                id="MaxDifferences",
-                label="Maximum number of differences tolerated",
-                min=0,
-                max=10,
-                value=2,
-                step=1,
-                guide=this,
-                text="Increasing this searches more column subsets and can become computationally expensive for wide data.",
-                position="left",
+                id="MaxDifferences", label="Maximum number of differences tolerated", min=0, max=10, value=2, step=1,
+                guide=this, text="Increasing this searches more column subsets and can become computationally expensive for wide data.", position="left",
             ),
         )
 

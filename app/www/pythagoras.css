@@ -274,6 +274,22 @@ shiny-data-frame .shiny-data-grid > table
     background-color: rgba(233, 36, 66, 0.22) !important;
 }
 
+/* Imputation quality relative to the random-donor baseline. */
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-strong-row {
+    background-color: #d1e7dd !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-weak-row {
+    background-color: #f8d7da !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-insufficient-row {
+    background-color: #e2e3e5 !important;
+}
+
 /* Missingness-type colours also take precedence over even-row striping. */
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-type-random-row {

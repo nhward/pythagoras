@@ -412,12 +412,8 @@ def instance():
         return ui.TagList(
             ui.span("Cross-validated variable importance", class_="text-primary text-center d-block"),
             shinywidgets.output_widget(
-                id="Importance",
-                fill=True,
-                guide=this,
-                title="Variable importance chart",
-                text="Variable importance of variables of a Random Forest model predicting the target.",
-                position="left",
+                id="Importance", fill=True, guide=this, position="left",
+                title="Variable importance chart", text="Variable importance of variables of a Random Forest model predicting the target."
             )
         )
 
@@ -427,9 +423,7 @@ def instance():
         return ui.TagList(
             ui.span("Cross-validated shadow-variable importance", class_="text-primary text-center d-block"),
             ui.output_ui(
-                id="Table",
-                guide=this,
-                title="Variable importance table",
+                id="Table", guide=this, title="Variable importance table", position="left",
                 text="""
                     Shadow rows describe whether each predictor's missingness 
                     helps predict the target. The 'Interpretation' column is the conclusion.
@@ -445,8 +439,7 @@ def instance():
                     <li>Positive Fraction: The proportion of permutations where the importance is greater than zero</li>
                     <li>Interpretation: Informative or not</li>
                     </ul>
-                    """,
-                position="left",
+                    """
             ),
         )
 
@@ -467,52 +460,20 @@ def instance():
     def settings():
         return ui.TagList(
             ui.input_slider(
-                id="CVFolds",
-                label="Cross-validation folds",
-                min=2,
-                max=10,
-                value=5,
-                step=1,
-                guide=this,
-                text=(
-                    "Number of held-out folds. For classification this is reduced "
-                    "automatically when the minority class is small."
-                ),
-                position="left",
+                id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
+                guide=this, text="Number of held-out folds. For classification this is reduced automatically when the minority class is small.", position="left",
             ),
             ui.input_slider(
-                id="MinMissProp",
-                label="Minimum missing proportion",
-                min=0,
-                max=0.5,
-                value=0.05,
-                step=0.01,
-                guide=this,
-                text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.",
-                position="left",
+                id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
+                guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
             ),
             ui.input_slider(
-                id="MinBalancedAccuracy",
-                label="Minimum balanced accuracy",
-                min=0.50,
-                max=0.90,
-                value=0.55,
-                step=0.01,
-                guide=this,
-                text="Minimum cross-validated balanced accuracy for a patterned classification.",
-                position="left",
+                id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
+                guide=this, text="Minimum cross-validated balanced accuracy for a patterned classification.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs",
-                label="Maximum observations to analyse",
-                min=3,
-                max=7,
-                value=4,
-                ticks=True,
-                pre="10^",
-                guide=this,
-                text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).",
-                position="left",
+                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).", position="left",
             ),
         )
 
@@ -724,8 +685,9 @@ def instance():
         @render.ui
         def Significance():
             analysis = Analysis()
-            if analysis.message:
-                return ui.span(analysis.message, class_="text-secondary")
+            if analysis.message:  
+                return None
+            #     return ui.span(analysis.message, class_="text-secondary") # this is displayed in in the chart area
             shadow = analysis.importance[
                 analysis.importance["Variable Type"].eq("Shadow")
             ]

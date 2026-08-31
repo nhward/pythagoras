@@ -77,34 +77,17 @@ def instance():
     def settings():
         return ui.TagList(
             ui.input_slider(
-                id = "Decimals", 
-                label = "Number of decimal places to show", 
-                min = -2,
-                max = 10, 
-                value = 2,
-                guide = this,
-                text = 'The numeric variables in the data table will be rounded to this number of decimal places.',
-                position = "left"
+                id = "Decimals", label = "Number of decimal places to show", min = -2, max = 10, value = 2, 
+                guide = this, text = 'The numeric variables in the data table will be rounded to this number of decimal places.', position = "left"
             ),
             ui.input_checkbox(
-                    id = "Bounded", 
-                    label = "Each Geometry variable summarised as a bounding box", 
-                    value = True,
-                    guide = this,
-                    text = 'Any geometery columns are individually summarised as bounding boxes.',
-                    position = "left"
+                    id = "Bounded", label = "Each Geometry variable summarised as a bounding box", value = True,
+                    guide = this, text = 'Any geometery columns are individually summarised as bounding boxes.', position = "left"
             ),
             ui.input_slider(
-                id = "MaxObs", 
-                label = "Maximum observations to list", 
-                min = 3,
-                max = 7,
-                value = 4,
-                ticks = True,
-                pre = "10^",
-                guide = this,
-                text = 'Limit to number of observations to list to ensure responsiveness (logarithmic scale).',
-                position = "left")
+                id = "MaxObs", label = "Maximum observations to list", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+                guide = this, text = 'Limit to number of observations to list to ensure responsiveness (logarithmic scale).', position = "left"
+            )
         )
 
     this.settings = settings

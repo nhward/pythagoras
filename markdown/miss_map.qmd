@@ -2,11 +2,6 @@
 title: Missingness map
 ---
 
- <!-- 
- ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
- ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets 
--->
-
 #### 🧭 Introduction
 
 In this card we look at the **Map of Missingness**. This card enables the "missingness" of variables and observations to be examined and assessed.
@@ -32,7 +27,7 @@ Provided missingness is not an artifact of how the data was collected and curate
 
 <details class="deep-dive">
   <summary>Click here for a fully expanded discussion of missing values.</summary>
-  <iframe src="aaa.html" title="Missing Values" loading="lazy"></iframe>
+  <iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
 </details>
 
 #### 🏞️ Front
