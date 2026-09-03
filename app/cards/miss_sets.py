@@ -228,7 +228,7 @@ def _upset_figure(
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6",
+        plot_bgcolor="#bbd6f8",
         margin={"l": 15, "r": 20, "t": 10, "b": 15},
         bargap=0.22,
         hovermode="closest",

@@ -9,7 +9,7 @@ Parallel coordinate charts are especially useful when:
  - You need an interactive, exploratory tool to dig into how individual observations behave across dimensions.
 
 ##### Warning
-One limitation of the parallel cocordinates chart is that it does not tolerate missing values. It is necessary to remove all missing values before charting. If the missing values are not completely random, this can bias the conclusions from the chart.
+One limitation of the parallel coordinates chart is that it does not tolerate missing values. It is necessary to remove all missing values before charting. If the missing values are not completely random, this can bias the conclusions from the chart.
 
 ***
 

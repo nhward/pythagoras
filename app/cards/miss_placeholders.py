@@ -464,7 +464,6 @@ def instance():
             fig.update_layout(
                 xaxis={"visible": False}, 
                 yaxis={"visible": False},
-                plot_bgcolor="#f8f9fa", # make same as card
                 paper_bgcolor="rgba(0,0,0,0)",
                 margin={"l": 0, "r": 0, "t": 0, "b": 0},
                 hovermode=False, 
@@ -576,7 +575,7 @@ def instance():
             fig.update_layout(
                 xaxis={"title": "Observation"},
                 yaxis={"title": "Variables", "type": "category", "autorange": "reversed"},
-                plot_bgcolor="#e5ecf6",
+                plot_bgcolor="#bbd6f8",
                 margin={"l": 2, "r": 2, "t": 2, "b": 2},
                 showlegend=fs,
                 legend={

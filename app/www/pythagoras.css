@@ -290,6 +290,32 @@ shiny-data-frame .shiny-data-grid > table
     background-color: #e2e3e5 !important;
 }
 
+/* Practical effect-size classes in the Data Homogeneity card. */
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-strong-row {
+    background-color: #f8d7da !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-moderate-row {
+    background-color: #fff3cd !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-weak-row {
+    background-color: #cff4fc !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-stable-row {
+    background-color: #d1e7dd !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-excluded-row {
+    background-color: #e2e3e5 !important;
+}
+
 /* Missingness-type colours also take precedence over even-row striping. */
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-type-random-row {

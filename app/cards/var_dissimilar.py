@@ -524,7 +524,7 @@ def instance():
             figure.update_layout(
                 template="plotly_white",
                 paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="#e5ecf6",
+                polar={"bgcolor":"#bbd6f8"},
                 margin={"l": 20, "r": 20, "t": 15, "b": 45},
                 showlegend=False,
             )
@@ -540,7 +540,7 @@ def instance():
                 style=input.Style(),
             )
             fig.update_layout(
-                plot_bgcolor="#e5ecf6",
+                plot_bgcolor="#bbd6f8",
                 margin={"l": 20, "r": 20, "t": 20, "b": 20},
                 modebar={"orientation": "v"},
                 modebar_remove=[

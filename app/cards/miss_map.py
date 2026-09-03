@@ -260,7 +260,6 @@ def _missingness_figure(
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6",
         margin={"l": 15, "r": 20, "t": 10, "b": 35},
         showlegend=False,
         modebar={"orientation": "v"}

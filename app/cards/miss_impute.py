@@ -374,7 +374,7 @@ def _missingness_figure(summary: pd.DataFrame, applied: bool, full_screen: bool 
     ))
     figure.update_layout(
         template="plotly_white", barmode="group", paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6", xaxis_title="Missing observations",
+        plot_bgcolor="#bbd6f8", xaxis_title="Missing observations",
         margin={"l": 20, "r": 25, "t": 10, "b": 90},
         modebar={"orientation": "v"},
         legend={

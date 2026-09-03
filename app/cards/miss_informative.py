@@ -394,7 +394,7 @@ def _importance_figure(
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6",
+        plot_bgcolor="#bbd6f8",
         margin={"l": 20, "r": 25, "t": 20, "b": 45},
         xaxis_title="Held-out permutation importance (score decrease)",
         yaxis_title=None,

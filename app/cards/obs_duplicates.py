@@ -169,7 +169,7 @@ def _duplicates_figure(results: pd.DataFrame, *, full_screen: bool = False) -> g
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6",
+        plot_bgcolor="#bbd6f8",
         margin={"l": 45, "r": 30 if full_screen else 10, "t": 10, "b": 55},
         xaxis_title="Number of differences tolerated",
         yaxis_title="Redundant observations",

@@ -103,7 +103,7 @@ class Card(Module):
         figure.update_layout(
             template="plotly_white",
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="#e5ecf6",
+            plot_bgcolor="#bbd6f8",
             margin={"l": 20, "r": 20, "t": 20, "b": 20},
             xaxis={"visible": False, "fixedrange": True},
             yaxis={"visible": False, "fixedrange": True},

@@ -6,9 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content>
+<meta name="author" content="Nick Ward">
 
-<title>welcome</title>
+<title>Variable transforms</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -598,47 +598,47 @@ border: 0;
 <body>
 
 
+<header id="title-block-header">
+<h1 class="title">Variable transforms</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
 
 
-
-<h1 id="welcome-to-pythagoras">Welcome to Pythagoras</h1>
-<hr>
-<h3 id="what-you-need-to-get-started">What you need to get started:</h3>
-<ol type="1">
-<li>Buttons (far right)
+<h4 id="introduction">🧭 Introduction</h4>
+<p>This card explores the distributional shape of each continuous predictor.</p>
+<p>The distributional analysis is achieved by charting each variable in 2D “distribution spaces”, characterized by centrality, spread, skew and kurtosis.</p>
+<p>In the flip side of the card, the distributional parameters are tabulated for each relevant predictor. One of these parameters is the lambda value relating to <a href="https://en.wikipedia.org/wiki/Power_transform">power transforms</a> which are used in the normalization of skew. Removing skew mainly helps in the detection of outliers in downstream processes that assume symmetrical outlier behaviour. It may also assist certain types of linear modeling tasks. In power transformations, lambda (λ) is the parameter used to determine the optimal transformation of numerical variables into a less skewed shape. A lambda of 1.00 means that an identity transform is recommended (i.e. no change). A lambda value of NA means that no optimal power transform could be found.</p>
+<h4 id="important-limitations">⛔️ Important limitations</h4>
 <ul>
-<li>The app is can exited by pressing the ⏹ button.</li>
-<li>Add extra cards by using the + button</li>
-<li>You can request a full-screen mode using the [] button.</li>
-<li>TODO can save your configuration to disk</li>
+<li>Only real-values predictors are explored (i.e. of type “double”)
+<ul>
+<li>Any integer variables, which are typically counts, are ignored. Integer data is often “count” data and often follows a binomial distribution that is definitely not symmetrical. Be on the look out for integer variables that have become real-values through previous normalization.</li>
+<li>Categorical variables are ignored. Power transforms do not apply to categorical data.</li>
+<li>Text, cyclic, geometry are ignored.</li>
 </ul></li>
-<li>Tabs - The top of the app holds a set of tabs. The first of these is called “Start”. By clicking on a tab you navigate to that section. Progress sequentially through each of the tabs from left to right. What appears are sets of “cards”. Each card is a data-related task that operate together as a workflow; the input of each is taken from the output of the preceding one. Workflows begin by reading-in a dataset.</li>
-</ol>
-<blockquote>
-<p><em>Pythagoras is the scaffold that holds the cards together.</em></p>
-</blockquote>
-<h3 id="some-points-of-difference">Some points of difference:</h3>
-<ul>
-<li>Everything runs within your browser - there is no installation.</li>
-<li>The variables are assigned roles that determine how downstream cards will utilize them.</li>
-<li>The card approach is extensible: you can write your own in Python</li>
-<li>Each card has a set of standard features
-<ul>
-<li>Can be made full screen</li>
-<li>Cards can be reordered by dragging their handles</li>
-<li>Has a flip side with additional information</li>
-<li>Provides an explanation of the cards purpose</li>
-<li>Has a sidebar with card-specific settings</li>
-<li>Can reveal its code (for use in notebooks)</li>
-<li>Will guide you through the use of the card</li>
-</ul></li>
-<li>The workflow (i.e. sets of cards) allows
-<ul>
-<li>Cards can be added and removed</li>
-<li>Data to flow from card to card sequentially</li>
-<li>A workflow to be saved and reused</li>
-</ul></li>
+<li>The power transform used in this card is the Yeo-Johnson transform as it allows for both positive and negative values. For variables that are entirely greater than zero. the Box-Cox transform is viable. However this variation is not currently implemented.</li>
 </ul>
+<h4 id="front">🏞️ Front</h4>
+<p>The card’s front initially shows a chart of location (mean) versus spread (standard deviation). In full-screen the chart enlarges into a 3 subplot charts.</p>
+<ol type="1">
+<li>Mean versus Standard Deviation</li>
+<li>Standard Deviation versus Skew</li>
+<li>Skew versus Kurtosis</li>
+</ol>
+<p>When the transform buttons are checked, the charts show before and after points - linked by a straight line.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The back of the card gives the before and after statistics for all the variables.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><em>Primary:</em> Whether sets of variables have similar distributional characteristics.</li>
+<li><em>Secondary:</em> The transformation of the variables to manage centrality, spread and skew.</li>
+</ol>
+<hr>
+<p>All cards downstream of this card will receive any changes enacted by this card.</p>
 
 
 

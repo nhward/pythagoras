@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Data homogeneity</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+<style type="text/css">
+:root {
+--py-table-row-hover: #f0f1cc;
+--py-table-cell-hover: #d4d4b8;
+}
+
+body.bslib-gap-spacing {
+gap: 0.25rem;
+}
+
+.hidden {
+display: none !important;
+}
+
+.flip-container {
+perspective: 1000px;
+}
+.flippable {
+position: relative;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 1.3s ease-in-out;
+}
+.flip-container.flipped .flippable {
+transform: rotateY(180deg);
+}
+.front,
+.back {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+-webkit-backface-visibility: hidden;
+}
+.front {
+z-index: 2;
+transform: rotateY(0);
+}
+.back {
+z-index: 1;
+transform: rotateY(180deg);
+}
+
+.bslib-card,
+.card {
+position: relative;
+overflow: visible;
+}
+.card {
+outline: 1px solid grey;
+}
+.card.shadow {
+box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
+}
+.card.fullscreen-active {
+position: fixed;
+inset: 0;
+z-index: 1050;
+width: 100vw;
+height: 100vh !important;
+max-height: none !important;
+min-height: 0 !important;
+margin: 0 !important;
+border-radius: 0;
+transition: all 0.5s ease;
+}
+.card.fullscreen-active .card-body {
+flex: 1 1 auto;
+overflow-y: auto;
+padding: 2rem;
+}
+.card.fullscreen-active .card-footer {
+flex-shrink: 0;
+margin-top: 0;
+padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.card.fullscreen-active .drag-handle {
+display: none !important;
+}
+
+#shiny-modal-wrapper {
+position: absolute;
+z-index: 10000 !important;
+}
+
+.hover-card {
+position: relative;
+}
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+visibility: visible !important;
+}
+.hover-card:not(.tour-running) .hover-btn {
+visibility: hidden;
+}
+
+.cards-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+margin: 0 auto;
+gap: 0.5rem;
+}
+.drag-ghost {
+opacity: 0.5;
+}
+.drag-handle {
+display: inline-flex;
+align-items: center;
+padding: 0 0.4rem;
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+.drag-handle * {
+cursor: inherit;
+}
+.drag-tab {
+position: absolute !important;
+top: 50%;
+left: 0;
+z-index: 2;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 28px;
+height: 48px;
+transform: translate(-50%, -50%);
+border: 1px solid rgba(0, 0, 0, 0.06);
+border-radius: 999px;
+outline: 1px solid grey;
+background: #f3f4f6;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-tab::before {
+width: 10px;
+height: 20px;
+background:
+radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+opacity: 0.55;
+content: "";
+}
+.dragging .drag-tab,
+.drag-tab:active {
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+@media (max-width: 600px) {
+.drag-tab {
+display: none;
+}
+}
+
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
+max-width: 180px;
+padding: 0.2rem 0.4rem;
+overflow: hidden;
+line-height: 1.2;
+text-align: left;
+text-overflow: ellipsis;
+vertical-align: middle;
+white-space: nowrap;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+overflow: visible !important;
+white-space: normal !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
+line-height: 1.2;
+white-space: pre-line !important;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) {
+border-top: 1px solid var(--bs-table-border-color) !important;
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+border-collapse: collapse;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+background-color: var(--bs-body-bg, #fff) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-informative-row {
+background-color: rgba(233, 36, 66, 0.22) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-strong-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-weak-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-strong-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-moderate-row {
+background-color: #fff3cd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-weak-row {
+background-color: #cff4fc !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-stable-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-excluded-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-random-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-uncertain-row {
+background-color: #ddcfa7 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-patterned-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+background-color: var(--py-table-row-hover) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+position: relative;
+z-index: 10;
+overflow: visible;
+background-color: var(--py-table-cell-hover) !important;
+white-space: normal;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-top: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+border-bottom: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-bottom: 1px solid #000 !important;
+}
+
+.across-row{
+display:flex;
+align-items:end;
+gap:.5rem
+}
+.across-row .shiny-input-container{
+flex:1
+}
+.across-row .btn{
+flex:none;
+margin-bottom:0
+}
+
+.roles-layout {
+display: grid;
+grid-template-columns: auto 1fr;
+gap: 1rem;
+align-items: start;
+width: 100%;
+min-width: 0;
+overflow-x: auto;
+}
+.roles-grid {
+display: grid;
+grid-template-columns: repeat(11, minmax(200px, 1fr));
+gap: 1rem;
+width: 100%;
+overflow-x: auto;
+min-width: 0;
+}
+.roles-grid > * {
+min-width: 0;
+}
+.role-box {
+border: 1px solid #d0d7de;
+border-radius: 10px;
+padding: 0.75rem;
+min-height: 315px;
+background: #d5e6f8;
+width: 100%;
+min-width: 0;
+}
+.role-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+width: 100%;
+min-width: 0;
+}
+.role-list {
+min-height: 220px;
+padding: 0.25rem;
+border: 1px dashed #c7ced6;
+border-radius: 8px;
+background: white;
+width: 100%;
+min-width: 0;
+overflow-y: auto;
+}
+.var-chip {
+border: 1px solid #c7ced6;
+border-radius: 999px;
+padding: 0.35rem 0.7rem;
+margin: 0.35rem 0;
+background: #d0ddf6;
+cursor: grab;
+user-select: none;
+width: 100%;
+min-width: 0;
+}
+.ghost {
+opacity: 0.4;
+}
+.chosen {
+background: #dce9ff;
+}
+
+.selectize-control.multi .selectize-input > .item {
+background-color: #dce6f2;
+color: #1f3b5c;
+border-radius: 999px;
+padding: 2px 10px;
+margin: 2px;
+border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+border-radius: 6px;
+padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+background-color: #dce6f2;
+color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+background-color: var(--bs-primary);
+color: white;
+}
+ span.btn.btn-default.btn-file:has(.shiny-input-file) {
+background-color: var(--bs-primary);
+border-color: var(--bs-primary);
+color: white;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group {
+display: inline-flex;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox, label.checkbox-inline) {
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
+background-color: #0b5494;
+border-color: var(--bs-primary, #0d6efd);
+color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span::before {
+content: "☐";
+display: inline-block;
+flex: 0 0 1em;
+width: 1em;
+font-size: 1em;
+line-height: 1;
+text-align: center;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+content: "☑";
+color: currentColor;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) {
+margin-bottom: 0;
+}
+
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+padding: 0px 0px 0px 0px !important;
+}
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+padding-top: 20px;
+padding-left: 12px;
+}
+.bslib-card .card-header {
+padding-right: 40px !important;
+}
+body.fullscreen-mode { overflow: hidden; } 
+
+.dragging, .dragging * {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+}
+
+@keyframes pulse-outline {
+0% { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+70% { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+animation: pulse-outline 700ms ease-out;
+}
+
+@keyframes jello {
+0% { transform: scale3d(1, 1, 1); }
+30% { transform: scale3d(1.07, 0.93, 1); }
+45% { transform: scale3d(0.95, 1.05, 1); }
+60% { transform: scale3d(1.03, 0.97, 1); }
+75% { transform: scale3d(0.99, 1.01, 1); }
+100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+will-change: transform; 
+}
+
+@media (prefers-reduced-motion: reduce) {
+.card.animate-jello { animation: none; }
+.card.animate-highlight { animation-duration: 300ms; }
+}
+
+.progress-bar {
+height: 1rem !important;
+}
+.vertically-scrollable-footer {
+max-height: 70px;
+overflow-y: auto;
+}
+
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Data homogeneity</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>This card explores whether each variable behaves consistently throughout a meaningful ordering of the observations. A variable is <strong>homogeneous</strong> when its distribution remains broadly similar from one part of the sequence to another. <strong>Heterogeneity</strong> means that the distribution, or the frequency of missing values, changes along that sequence.</p>
+<p>When the sequence is time, this is commonly called <strong>data-drift analysis</strong>. The same approach can also reveal structure in non-temporal orders, such as customer number, production batch, collection order, treatment date, geographic progression, or the current row order.</p>
+<p>The choice of sequence is central to the interpretation:</p>
+<ul>
+<li>A time sequence asks whether the data-generating process has changed over time.</li>
+<li>A batch or site sequence may reveal operational or geographical differences.</li>
+<li>An identifier may be useful if its ordering has real-world meaning.</li>
+<li>Current row order is useful only when that order has deliberately been preserved.</li>
+<li>A genuinely random order should normally produce no sustained pattern. It can be a useful informal comparison, but a quiet heat-map does not prove that the data is homogeneous under every meaningful ordering.</li>
+</ul>
+<p>Variables assigned the <strong>Sequence</strong> or <strong>Identifier</strong> role are offered first. Such variables may contain repeated values, as can occur in longitudinal data. If those roles have not been assigned, scalar variables whose observed values are all unique are offered as possible sequences. Complete unique variables are preferred because observations with a missing sequence value must otherwise be placed at the end.</p>
+<h4 id="how-the-comparison-is-constructed">👷🏽‍♂️ How the comparison is constructed</h4>
+<p>The observations are first sorted by the selected sequence. They are then divided into consecutive, approximately equal-sized groups. The requested number of groups is automatically reduced when necessary so that every group contains at least five observations.</p>
+<p>For each selected variable and sequence group, the card makes two comparisons:</p>
+<ol type="1">
+<li><strong>Distribution drift</strong> asks whether the observed values in the group differ from the chosen reference distribution.</li>
+<li><strong>Missingness drift</strong> asks whether the group’s proportion of missing values differs from the reference proportion.</li>
+</ol>
+<p>The <strong>raw drift</strong> for a cell is the larger of these two discrepancies. This prevents a strong change in completeness from being hidden by stable observed values, and vice versa.</p>
+<p>For numeric and datetime variables, distribution drift is based on a robustly scaled distance between the two empirical distributions. It is sensitive to changes in location, spread, and distribution shape—not only to changes in the mean. For Boolean, string, and categorical variables, the score measures how much the proportions of their levels have changed. Missing values are excluded from the distribution comparison because they are assessed separately by the missingness score.</p>
+<p>Raw discrepancies are necessarily positive when a small empirical group is compared with a larger reference, even if the ordering is random. The card therefore calibrates each variable against 100 deterministic random permutations of the observation order. For every permutation it records the largest raw discrepancy across all groups. The 95th percentile of these random maxima becomes that variable’s <strong>random boundary</strong>.</p>
+<p>Only raw drift above this boundary is displayed. The excess is scaled by the variable’s own random variability—the distance between its median random maximum and its 95th-percentile random maximum—and constrained to zero through one. This calibration accounts for group size, missingness, distribution shape, outliers, and the number of groups without pretending that the same raw cutoff is suitable for every variable.</p>
+<p>The resulting <strong>excess-drift</strong> scores have the following interpretation:</p>
+<ul>
+<li><strong>0</strong> means the raw discrepancy did not exceed what random ordering commonly produced.</li>
+<li>Values above <strong>0</strong> indicate discrepancy beyond the random 95% maximum boundary.</li>
+<li>Values nearer <strong>1</strong> indicate increasingly strong excess relative to the variable’s random variation.</li>
+<li>A score is not a probability, percentage, hypothesis-test result, or estimate of the proportion of incorrect observations.</li>
+</ul>
+<p>The raw scores and random boundary remain available in the cell hover information and on the flip-side. A very high random boundary is itself informative: it can indicate that small groups are unstable or that extreme values and unresolved placeholders are dominating the comparison.</p>
+<h4 id="choosing-the-reference-distribution">💼 Choosing the reference distribution</h4>
+<p>The reference setting changes the question being asked.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Reference</th>
+<th>Question answered</th>
+<th>Particularly useful for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>All observations</strong></td>
+<td>How unusual is this group relative to the dataset as a whole?</td>
+<td>General exploration and locating locally unusual regions</td>
+</tr>
+<tr class="even">
+<td><strong>First sequence group</strong></td>
+<td>How far has each group moved from the starting population?</td>
+<td>Long-term drift, ageing processes, and before-versus-after comparisons</td>
+</tr>
+<tr class="odd">
+<td><strong>Previous sequence group</strong></td>
+<td>How different is this group from the group immediately before it?</td>
+<td>Sudden changes, process breaks, and change-point investigation</td>
+</tr>
+</tbody>
+</table>
+<p>With <strong>All observations</strong>, each group is itself part of the reference distribution, so its score is slightly moderated. With <strong>First sequence group</strong>, the first group necessarily has zero drift relative to itself. With <strong>Previous sequence group</strong>, the first group also has zero drift, and a gradual change may appear as several modest steps rather than one large score.</p>
+<h4 id="front-reading-the-heat-map">🏞️ Front: reading the heat-map</h4>
+<p>The front shows variables on the vertical axis and consecutive sequence groups on the horizontal axis. Group 1 is the earliest or lowest part of the selected sequence; later groups proceed from left to right.</p>
+<p>Each cell describes one variable in one group:</p>
+<ul>
+<li>Pale cells indicate no drift beyond the random-order allowance.</li>
+<li>Darker blue cells indicate increasing excess drift.</li>
+<li>Brown cells are at or beyond the upper end of the chance-corrected scale.</li>
+</ul>
+<p>The color scale is shared across the heat-map, allowing cells to be compared visually. Very strong values can saturate at the top color, so hover over a cell when the precise value matters.</p>
+<p>Useful visual patterns include:</p>
+<ul>
+<li><strong>A vertical band across many variables</strong> suggests a dataset-wide event, such as a source-system change, policy change, altered sampling process, or different population entering the data.</li>
+<li><strong>A dark run within one variable</strong> suggests a variable-specific change, such as recalibration, recoding, a revised question, or changing completeness.</li>
+<li><strong>Gradual strengthening from left to right</strong> can indicate progressive drift. It is clearest when the first group is the reference.</li>
+<li><strong>A single isolated cell</strong> may indicate a temporary event, unusual batch, small-group instability, or data-quality problem.</li>
+<li><strong>Similar patterns across several variables</strong> may indicate a shared cause or correlated change.</li>
+<li><strong>Strong cells at the end of a sequence</strong> deserve special attention when recent observations are incomplete or still being processed.</li>
+<li><strong>A uniformly quiet heat-map</strong> means no material changes were found at the current group size, reference, sequence, and variable selection. It does not prove permanent homogeneity.</li>
+</ul>
+<p>Hovering over a cell gives:</p>
+<ul>
+<li>the variable and sequence interval;</li>
+<li>the excess-drift score shown by the color;</li>
+<li>the uncalibrated raw drift;</li>
+<li>the variable’s random maximum boundary;</li>
+<li>raw distribution drift;</li>
+<li>raw missingness difference;</li>
+<li>a compact summary of the group; and</li>
+<li>the equivalent summary of the reference data.</li>
+</ul>
+<p>For numeric variables, the compact summary reports the median. For categorical variables, it reports the most common observed level and its proportion. These summaries help explain the direction of a change, but the drift calculation uses more of the distribution than the displayed summary alone.</p>
+<p>When interpreting a dark cell, first compare the raw <strong>Distribution drift</strong> with the raw <strong>Missingness difference</strong>:</p>
+<ul>
+<li>If distribution drift is larger, the recorded values themselves have changed.</li>
+<li>If missingness drift is larger, data completeness is the main issue.</li>
+<li>If both are large, the observed population and its recording process may both have changed.</li>
+</ul>
+<h4 id="flip-side-reading-the-summary-table">🔄 Flip side: reading the summary table</h4>
+<p>The flip-side presents one row per analyzed variable, ordered from the strongest evidence of heterogeneity to the weakest. Unsupported variables are listed after the analyzed variables with an explanation.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Variable</strong></td>
+<td>The variable being assessed.</td>
+</tr>
+<tr class="even">
+<td><strong>Type</strong></td>
+<td>The broad data type used to choose the comparison method.</td>
+</tr>
+<tr class="odd">
+<td><strong>Overall drift</strong></td>
+<td>The mean heat-map score across all sequence groups. A high value indicates sustained or repeated heterogeneity.</td>
+</tr>
+<tr class="even">
+<td><strong>Maximum drift</strong></td>
+<td>The strongest single heat-map cell for the variable. The status classification is based on this value.</td>
+</tr>
+<tr class="odd">
+<td><strong>Raw maximum</strong></td>
+<td>The largest uncalibrated discrepancy found in the actual sequence. It should not be interpreted without the random boundary.</td>
+</tr>
+<tr class="even">
+<td><strong>Random boundary</strong></td>
+<td>The 95th percentile of the maximum raw discrepancy found under random orderings. Raw values below this boundary are calibrated to zero.</td>
+</tr>
+<tr class="odd">
+<td><strong>Peak location</strong></td>
+<td>The sequence interval containing the maximum drift score. Use this to locate the observations requiring investigation.</td>
+</tr>
+<tr class="even">
+<td><strong>First-to-last drift</strong></td>
+<td>A separately chance-corrected comparison of the first and last groups, regardless of the selected reference setting. It is useful for detecting net movement from the beginning to the end.</td>
+</tr>
+<tr class="odd">
+<td><strong>Trend</strong></td>
+<td>For numeric and datetime variables, the direction and strength of the relationship between group order and group medians. Values nearer 1 indicate a more consistently increasing or decreasing sequence. This is not calculated for categorical variables.</td>
+</tr>
+<tr class="even">
+<td><strong>Maximum missingness difference</strong></td>
+<td>The largest raw absolute change in missing-value proportion between a group and its selected reference.</td>
+</tr>
+<tr class="odd">
+<td><strong>Status</strong></td>
+<td>A practical classification based on the variable’s maximum drift.</td>
+</tr>
+<tr class="even">
+<td><strong>Reason</strong></td>
+<td>Explains why an excluded variable was not analyzed.</td>
+</tr>
+</tbody>
+</table>
+<p>The row colors correspond to the status:</p>
+<ul>
+<li><strong>Strong:</strong> maximum drift is at least the selected strong-drift threshold.</li>
+<li><strong>Moderate:</strong> maximum drift is at least half the threshold but below the full threshold.</li>
+<li><strong>Weak:</strong> maximum drift is above 0.02 but below the moderate boundary.</li>
+<li><strong>Stable:</strong> maximum drift is no greater than 0.02.</li>
+<li><strong>Excluded:</strong> the variable could not be compared defensibly.</li>
+</ul>
+<p>The default strong-drift threshold is 0.25. Lowering it makes the classification more sensitive; raising it restricts <strong>Strong</strong> to larger excess effects. The threshold changes the labels and heat-map color gradient, not the raw or chance-corrected scores.</p>
+<p><strong>Overall drift</strong> and <strong>Maximum drift</strong> should be considered together. A high maximum with a low overall score suggests a localized event. High values for both suggest sustained heterogeneity. A high first-to-last score with an increasing or decreasing trend suggests systematic movement through the sequence.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>Use the Tour Guide button for a concise description of each control.</p>
+<h4 id="variables-not-analyzed">🚫 Variables not analyzed</h4>
+<p>Cyclic, list, geometry, free-text-like high-cardinality categorical, shadow, and unsupported variables are excluded because their values require specialized notions of distance. Variables assigned the Sequence or Identifier role are used to organize the observations rather than treated as measurements to assess. Variables with fewer than two observed values also cannot provide a meaningful distribution comparison.</p>
+<p>An excluded variable is not necessarily unimportant. It means only that this card cannot currently measure its heterogeneity defensibly. For example, geographic drift should normally be investigated with spatial methods, while cyclic variables may require circular statistics.</p>
+<h4 id="important-limitations">⛔️ Important limitations</h4>
+<ul>
+<li>This is exploratory effect-size analysis, not a formal significance test.</li>
+<li>A detected change does not establish its cause.</li>
+<li>Several correlated variables can respond to the same underlying event.</li>
+<li>Groups contain approximately equal numbers of observations, not necessarily equal spans of time. Sparse periods can therefore cover longer intervals than dense periods.</li>
+<li>Small groups naturally produce more variable distribution estimates.</li>
+<li>Calibration estimates a random-order boundary from 100 permutations. Repeating the calculation is deterministic, but the boundary remains a finite simulation estimate.</li>
+<li>Extreme values and unresolved numeric placeholders can raise the random boundary substantially. Calibration prevents them from producing automatic false drift, but it can also reduce sensitivity to genuine changes. Such values should still be corrected upstream.</li>
+<li>The first-to-last comparison can miss a temporary change that later reverses.</li>
+<li>Trend describes group medians only; a variable can have changing spread or shape without a median trend.</li>
+<li>Observation weighting is not currently applied.</li>
+<li>Results depend on sequence, group count, reference choice, and selected variables. Sensitivity to these settings is informative and should be explored.</li>
+</ul>
+<h4 id="suggested-investigation-workflow">📌 Suggested investigation workflow</h4>
+<ol type="1">
+<li>Choose the sequence with the strongest real-world interpretation.</li>
+<li>Begin with <strong>All observations</strong> as the reference and look for broad patterns.</li>
+<li>Hover over the strongest cells to distinguish distribution drift from missingness drift.</li>
+<li>Use the flip-side to identify the variables and sequence intervals with the largest effects.</li>
+<li>Switch to <strong>First sequence group</strong> to assess cumulative departure from the starting population.</li>
+<li>Switch to <strong>Previous sequence group</strong> to locate abrupt transitions.</li>
+<li>Change the number of groups to determine whether the pattern is persistent or an artifact of one binning choice.</li>
+<li>Inspect the underlying observations around peak locations and relate them to known collection, operational, policy, or system events.</li>
+<li>Decide whether the appropriate response is correction, stratification, time-aware validation, recalibration, monitoring, or a model that explicitly accommodates drift.</li>
+</ol>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Identify variables whose distributions or missingness rates change materially through a relevant sequence.</li>
+<li><strong>Secondary:</strong> Locate where those changes occur and distinguish sustained drift, abrupt change, and localized heterogeneity.</li>
+<li><strong>Tertiary:</strong> Identify plausible operational or data-quality explanations and guide more specialized analysis.</li>
+</ol>
+<hr>
+<p>This is an immutable diagnostic card. It does not alter the data passed to downstream cards.</p>
+
+
+
+
+
+</body></html>

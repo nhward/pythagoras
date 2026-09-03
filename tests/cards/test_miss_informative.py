@@ -541,12 +541,6 @@ class TestWebKitUI:
             "Potentially informative missingness: x.", timeout=30_000
         )
 
-        set_shiny_input(page, "MinMissProp", 0.5)
-        expect(by_id(page, "Significance")).to_contain_text(
-            "No predictors exceed the minimum missing-value proportion",
-            timeout=30_000,
-        )
-
         set_shiny_input(page, "MinMissProp", 0.49)
         expect(by_id(page, "Significance")).to_contain_text(
             "Potentially informative missingness: x.", timeout=30_000

@@ -342,7 +342,7 @@ def instance():
             figure.update_layout(
                 template="plotly_white",
                 paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="#e5ecf6",
+                plot_bgcolor="#bbd6f8",
                 margin={"l": 15, "r": 15, "t": 15, "b": 15},
                 xaxis={"visible": False, "range": [-1.3, 1.3]},
                 yaxis={

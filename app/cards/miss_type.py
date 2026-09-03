@@ -1078,7 +1078,7 @@ def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#e5ecf6",
+        plot_bgcolor="#bbd6f8",
         margin={
             "l": 25,
             "r": 25,

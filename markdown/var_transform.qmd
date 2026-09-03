@@ -1,0 +1,47 @@
+---
+title: Variable transforms
+---
+
+#### 🧭 Introduction
+
+This card explores the distributional shape of each continuous predictor. 
+
+The distributional analysis is achieved by charting each variable in 2D "distribution spaces", characterized by centrality, spread, skew and kurtosis.
+
+In the flip side of the card, the distributional parameters are tabulated for each relevant predictor. One of these parameters is the lambda value relating to [power transforms](https://en.wikipedia.org/wiki/Power_transform) which are used in the normalization of skew. Removing skew mainly helps in the detection of outliers in downstream processes that assume symmetrical outlier behaviour. It may also assist certain types of linear modeling tasks. In power transformations, lambda (λ) is the parameter used to determine the optimal transformation of numerical variables into a less skewed shape. A lambda of 1.00 means that an identity transform is recommended (i.e. no change). A lambda value of NA means that no optimal power transform could be found. 
+
+#### ⛔️ Important limitations
+
+ * Only real-values predictors are explored (i.e. of type "double")
+   - Any integer variables, which are typically counts, are ignored. Integer data is often "count" data and often follows a binomial distribution that is definitely not symmetrical. Be on the look out for integer variables that have become real-values through previous normalization.
+   - Categorical variables are ignored. Power transforms do not apply to categorical data.
+   - Text, cyclic, geometry are ignored.
+ * The power transform used in this card is the Yeo-Johnson transform as it allows for both positive and negative values. For variables that are entirely greater than zero. the Box-Cox transform is viable. However this variation is not currently implemented. 
+
+ 
+#### 🏞️ Front
+
+The card's front initially shows a chart of location (mean) versus spread (standard deviation). In full-screen the chart enlarges into a 3 subplot charts.
+
+ 1. Mean versus Standard Deviation
+ 1. Standard Deviation versus Skew
+ 1. Skew versus Kurtosis
+
+When the transform buttons are checked, the charts show before and after points - linked by a straight line.
+
+#### 🔄 Flip side
+
+The back of the card gives the before and after statistics for all the variables.
+
+#### ⚙️ Settings
+
+Use the Tour Guide button to learn about the settings of this card.
+
+
+#### 🎯 Goals
+
+ 1. _Primary:_ Whether sets of variables have similar distributional characteristics.
+ 1. _Secondary:_ The transformation of the variables to manage centrality, spread and skew.
+
+***
+All cards downstream of this card will receive any changes enacted by this card.

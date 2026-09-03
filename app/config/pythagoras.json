@@ -19,6 +19,8 @@
         {"module": "data_import"},
         {"module": "data_tabulation"},
         {"module": "role_assignment"},
+        {"module": "data_homogeneity"},
+        {"module": "var_transform"},
         {"module": "var_modify"},
         {"module": "var_dissimilar"},
         {"module": "data_tabulation"}
