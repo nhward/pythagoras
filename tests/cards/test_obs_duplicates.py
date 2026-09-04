@@ -215,12 +215,19 @@ def test_bar_chart_represents_each_tolerance_level(card_module):
         duplicate_frame(), maximum_differences=2
     )
 
-    figure = card_module._duplicates_figure(results)
+    after = results.copy()
+    after["Count"] = [0, 1, 1]
+    figure = card_module._duplicates_figure(results, after)
 
-    assert len(figure.data) == 1
-    assert figure.data[0].type == "bar"
+    assert len(figure.data) == 2
+    assert [trace.type for trace in figure.data] == ["bar", "bar"]
+    assert [trace.name for trace in figure.data] == ["Before", "After"]
     assert list(figure.data[0].x) == ["0", "1", "2"]
     assert list(figure.data[0].y) == [1, 1, 1]
+    assert list(figure.data[1].x) == ["0", "1", "2"]
+    assert list(figure.data[1].y) == [0, 1, 1]
+    assert figure.layout.barmode == "group"
+    assert figure.layout.showlegend is not False
     assert figure.layout.xaxis.title.text == "Number of differences tolerated"
 
 
@@ -234,7 +241,7 @@ def test_chart_is_empty_when_no_duplicates_or_near_duplicates(card_module):
         maximum_differences=1,
     )
 
-    figure = card_module._duplicates_figure(results)
+    figure = card_module._duplicates_figure(results, results)
 
     assert len(figure.data) == 0
     assert len(figure.layout.annotations) == 1

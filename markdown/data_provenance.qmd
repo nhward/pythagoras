@@ -1,0 +1,151 @@
+---
+title: Data journey
+---
+
+#### 🧭 Introduction
+
+The **Data journey** card explains how the data reaching this point in the application was prepared. It presents the recorded operations as a left-to-right sequence beginning with the imported source and ending with the current materialized preview.
+
+The card answers questions such as:
+
+* Which data-changing cards have participated in this path?
+* Which operations were enabled, and which were left inactive?
+* Which variables and settings were involved?
+* Did an operation add or remove observations or variables?
+* Which operations changed the data immediately, and which are retained as trainable steps?
+
+The journey belongs to the data arriving at this particular card. Moving the card, changing an upstream setting, or changing the upstream card order can therefore change the journey.
+
+#### 🧱 What counts as a step?
+
+Not every card produces a journey step. Immutable diagnostic cards inspect their input but pass it onwards unchanged, so they are normally absent. A mutable card contributes a step when it records a cleaning operation or adds a transformation to the learning pipeline.
+
+One journey step represents one card operation, rather than necessarily one individual control. For example, removing excessively incomplete variables and observations in the **Missingness map** card is recorded as one operation. Its parameters preserve which choices were enabled and the thresholds used.
+
+There are two main processing stages.
+
+##### 🧽 Cleaning steps
+
+A **Cleaning** step is materialized immediately. Its result becomes the cleaned data available to subsequent processing. Cleaning operations do not estimate reusable parameters that must be learned independently within every training partition.
+
+Examples include:
+
+* correcting values or variable definitions;
+* adding deterministic variables, such as selected missingness indicators;
+* removing observations or variables;
+* removing exact duplicates; and
+* applying other explicitly chosen data-quality corrections.
+
+Cleaning does not mean that the operation is harmless or statistically neutral. Removing observations can still change the population represented by the data. The term means only that the operation is recorded as a materialized, non-pipeline change.
+
+##### 🎓 Learning steps
+
+A **Learning** step estimates something from data and is represented by a scikit-learn transformer in the accumulating pipeline. Examples currently include learned imputation and variable transformation.
+
+The card may calculate a fitted full-data result so the user can see an immediate preview. That fitted preview is not the estimator retained for formal model training. The stored pipeline step remains unfitted and should later be fitted separately inside each training partition, cross-validation fold, or resampling iteration. This distinction prevents information from held-out observations leaking into imputation or transformation parameters.
+
+The journey therefore distinguishes two related objects:
+
+1. the **current materialized preview**, used by downstream cards for interactive display; and
+2. the **unfitted learning pipeline**, intended to be fitted during formal training.
+
+#### 🏞️ Front
+
+Read the chart from left to right. The number inside each box corresponds to the **Step** number on the flip-side table.
+
+| Colour | Stage | Meaning |
+|---|---|---|
+| Grey | **Source** | The imported starting data known to this journey. |
+| Green | **Cleaning** | A materialized, non-pipeline operation. |
+| Orange | **Learning** | A trainable scikit-learn pipeline step. |
+| Blue | **Preview** | The current full-data preview after the recorded operations. |
+
+The source and preview boxes are bookends, not ordinary card operations. The arrows describe execution order. The current design is linear: it does not depict branches, merges, separate training and test paths, or a complete model graph.
+
+Hover over a box to see its corresponding table fields. Long hover values are abbreviated to keep the tooltip readable; use the flip-side table for more complete information. Operation labels beneath the boxes are also shortened when space is limited. Full-screen mode enlarges the nodes but does not change the journey.
+
+When several steps are present, look particularly for:
+
+* an unexpected operation or card instance;
+* a large row or variable reduction;
+* settings that differ from those intended;
+* a learning step occurring earlier or later than expected; and
+* an inactive operation that was expected to be enabled.
+
+#### 🔄 Flip side
+
+The flip-side contains one row for every visible chart box. It supports column filtering and is the better view for investigating long variable lists and parameter values.
+
+| Column | Interpretation |
+|---|---|
+| **Step** | The sequence number shown inside the corresponding chart box. Step 0 is the source. |
+| **Stage** | Source, Cleaning, Learning, or Preview. Row shading follows the chart colors. |
+| **Attempted** | **Yes** means the data-changing option was enabled. **No** means it was not enabled. Source and preview rows are blank. |
+| **Card** | The technical card or card-instance identity. Learning steps use the card namespace so repeated instances can be distinguished. |
+| **Operation** | The human-readable operation. For learning steps this is normally the card's long name. |
+| **Method** | How the operation was implemented, such as a materialized operation or the class of the scikit-learn transformer. |
+| **Variables** | Variables associated with the operation. **Dataset** means that the record applies generally or has no more specific variable list. |
+| **Parameters** | Recorded choices such as thresholds, selected methods, iteration counts, or enabled sub-operations. |
+| **Input shape** | Number of observations × number of variables entering the step. |
+| **Output shape** | Number of observations × number of variables leaving the step or appearing in its preview. |
+| **Row change** | Output observations minus input observations. A negative value means observations were removed. |
+| **Variable change** | Output variables minus input variables. A negative value means variables were removed. |
+
+A zero row or variable change does **not** necessarily mean that nothing happened. Imputation, recoding, scaling, centering, and de-skewing can alter values while preserving the shape. Likewise, an enabled removal operation remains an attempted step even when no observations satisfy its removal rule.
+
+The **Card** and **Operation** columns deliberately serve different purposes. The card namespace is a machine-oriented identity that distinguishes repeated instances; the operation is a user-oriented description. The **Method** identifies the underlying implementation and may therefore be more technical.
+
+#### ✅ Attempted operations versus no-op results
+
+The card distinguishes an operation that was not enabled from one that was enabled but happened to make no change:
+
+* **Attempted = No:** the relevant data-changing control was not selected.
+* **Attempted = Yes, shape change = 0:** the operation was enabled. It may have changed values without changing shape, or it may have found nothing requiring action.
+
+This distinction is useful for reproducibility. “Duplicate removal was enabled but found no duplicates” conveys more information than omitting duplicate removal from the record altogether.
+
+#### ⚙️ Settings
+
+**Hide steps that were not enabled** is selected by default. It removes intermediate rows whose **Attempted** value is **No** from both the chart and table. The source and current preview remain visible.
+
+Clear the setting when you want to audit configuration choices as well as executed operations. Inactive steps can reveal that a relevant card was present but its data-changing option was deliberately or accidentally left off.
+
+The setting does not hide an enabled operation merely because its row and variable changes are zero.
+
+#### 🧪 Interpreting the preview row
+
+The final blue row reports the current materialized data seen by downstream cards. For a journey containing learning steps, this is a fitted full-data preview produced for interactive exploration. It should not be mistaken for a leakage-safe training result.
+
+During formal modeling, the unfitted pipeline should be cloned and fitted only on the appropriate training observations. Held-out observations should then be transformed using parameters learned from that training partition. The preview row confirms what the transformed data currently looks like; it does not claim that a final model has been trained.
+
+#### 📌 Suggested review workflow
+
+1. Confirm that the source name and shape are plausible.
+1. Read the green cleaning steps and check that important removals or corrections were intended.
+1. Inspect row and variable changes, especially unexpectedly large negative values.
+1. Read the orange learning steps in order and confirm that their variables and parameters are appropriate.
+1. Compare the cleaned-data shape entering learning with the final preview shape.
+1. Clear **Hide steps that were not enabled** and check whether expected operations were inactive.
+1. Use the flip-side filters to isolate a stage, card instance, operation, or affected variable.
+1. Investigate surprising steps in their originating cards rather than treating this summary as the place to alter them.
+
+#### ⛔️ Important limitations
+
+* This is a descriptive provenance summary, not an executable recipe. It records what cards report; it does not contain sufficient code to rebuild every cleaning operation independently.
+* Operations performed before import are outside the journey unless the importing process records them separately.
+* Immutable analytical cards generally do not appear because they do not change the data or pipeline.
+* Direct, unrecorded mutation of a data frame cannot be reconstructed. Data-changing cards must use the application's recording interfaces for their operations to appear reliably.
+* This is not yet a complete regulatory audit trail: it does not systematically capture user identity, timestamps, software versions, source-file checksums, or every external dependency.
+* Parameters describe the selected operation but may use compact representations for very large structures.
+* The chart is linear. Future partitioning, parallel branches, ensembles, or merged data sources would require a richer graph representation.
+* The journey describes the current reactive path. It is not a permanent history of every setting the user previously tried.
+
+#### 🎯 Goals
+
+1. **Primary:** Make the current sequence of materialized cleaning and trainable learning operations visible and understandable.
+1. **Secondary:** Help detect unexpected settings, ordering, row loss, variable loss, or inactive operations before modeling.
+1. **Tertiary:** Provide a concise provenance summary that can later support a more reproducible, executable workflow.
+
+***
+
+This is an immutable diagnostic card. It does not alter the data or pipeline passed to downstream cards.

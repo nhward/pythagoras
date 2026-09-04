@@ -100,6 +100,17 @@ body.bslib-gap-spacing {
     display: none !important;
 }
 
+.journey-chart-scroll {
+    width: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.journey-chart-scroll > .shiny-ipywidget-output {
+    min-height: 100%;
+}
+
 /* Keep modal dialogs above fullscreen cards. */
 #shiny-modal-wrapper {
     position: absolute;

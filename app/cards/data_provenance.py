@@ -54,6 +54,9 @@ STAGE_ROW_COLOURS = {
 }
 
 HOVER_VALUE_MAX_LENGTH = 40
+CARD_STEPS_PER_ROW = 6
+FULL_SCREEN_STEPS_PER_ROW = 12
+JOURNEY_ROW_HEIGHT = 175
 
 
 def _shape_text(shape: tuple[int, int]) -> str:
@@ -264,16 +267,35 @@ def _hover_value(
     return f"{text[:max_length - 3].rstrip()}..."
 
 
+def _journey_positions(
+    step_count: int,
+    *,
+    steps_per_row: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Place sequential steps in alternating horizontal rows."""
+    indices = np.arange(step_count, dtype=int)
+    rows = indices // steps_per_row
+    offsets = indices % steps_per_row
+    x = np.where(rows % 2 == 0, offsets, steps_per_row - 1 - offsets)
+    return x.astype(float), -rows.astype(float)
+
+
 def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Figure:
-    """Draw a responsive, left-to-right processing flow."""
+    """Draw a responsive processing flow that snakes across multiple rows."""
     if table.empty:
         return Card.empty_figure("No data journey is available")
 
     figure = go.Figure()
-    x = np.arange(len(table), dtype=float)
+    steps_per_row = (
+        FULL_SCREEN_STEPS_PER_ROW if full_screen else CARD_STEPS_PER_ROW
+    )
+    x, y = _journey_positions(
+        len(table), steps_per_row=steps_per_row,
+    )
+    row_count = int(np.ceil(len(table) / steps_per_row))
     figure.add_trace(go.Scatter(
         x=x,
-        y=np.zeros(len(table)),
+        y=y,
         mode="lines",
         line={"color": "rgba(70,80,90,0.45)", "width": 4},
         hoverinfo="skip",
@@ -289,15 +311,16 @@ def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Fig
         ]
         + ["<extra></extra>"]
     )
-    marker_size = max(30, min(68 if full_screen else 56, 420 // len(table)))
+    marker_size = 64 if full_screen else 52
     for stage, colour in STAGE_COLOURS.items():
         selected = table["Stage"].eq(stage)
         if not selected.any():
             continue
         subset = table.loc[selected]
+        selected_positions = np.flatnonzero(selected.to_numpy())
         figure.add_trace(go.Scatter(
-            x=subset.index.to_numpy(dtype=float),
-            y=np.zeros(len(subset)),
+            x=x[selected_positions],
+            y=y[selected_positions],
             mode="markers+text",
             marker={
                 "symbol": "square",
@@ -318,20 +341,26 @@ def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Fig
         ))
 
     for index, row in table.iterrows():
+        position = table.index.get_loc(index)
         figure.add_annotation(
-            x=float(index),
-            y=-0.24,
+            x=x[position],
+            y=y[position] - 0.27,
             text=_short_label(row["Operation"]),
             showarrow=False,
             align="center",
             font={"size": 11 if not full_screen else 13, "color": "#334155"},
         )
-        if index:
+        if position:
+            delta_x = x[position] - x[position - 1]
+            delta_y = y[position] - y[position - 1]
+            distance = float(np.hypot(delta_x, delta_y))
+            unit_x = delta_x / distance
+            unit_y = delta_y / distance
             figure.add_annotation(
-                x=float(index) - 0.34,
-                y=0,
-                ax=float(index) - 0.66,
-                ay=0,
+                x=x[position] - 0.34 * unit_x,
+                y=y[position] - 0.34 * unit_y,
+                ax=x[position - 1] + 0.34 * unit_x,
+                ay=y[position - 1] + 0.34 * unit_y,
                 xref="x",
                 yref="y",
                 axref="x",
@@ -348,6 +377,7 @@ def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Fig
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        height=max(300, row_count * JOURNEY_ROW_HEIGHT + 105),
         margin={"l": 25, "r": 25, "t": 15, "b": 75},
         hovermode="closest",
         legend={
@@ -358,11 +388,15 @@ def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Fig
             "yanchor": "top",
         },
         xaxis={
-            "range": [-0.55, len(table) - 0.45],
+            "range": [-0.6, max(float(x.max()), 0.0) + 0.6],
             "visible": False,
             "fixedrange": not full_screen,
         },
-        yaxis={"range": [-0.48, 0.42], "visible": False, "fixedrange": True},
+        yaxis={
+            "range": [-row_count + 0.45, 0.45],
+            "visible": False,
+            "fixedrange": True,
+        },
     )
     return figure
 
@@ -391,16 +425,13 @@ def instance():
                 "Data cleaning and learning journey",
                 class_="text-primary text-center d-block",
             ),
-            shinywidgets.output_widget(
-                id="JourneyChart",
-                fill=True,
-                guide=this,
-                title="Data journey",
-                text=(
-                    "Read from left to right. Green boxes are materialised "
-                    "cleaning operations; orange boxes are learned sklearn steps."
+            ui.div(
+                shinywidgets.output_widget(
+                    id="JourneyChart", width="100%", height="auto", fill=False,
+                    guide=this, title="Data journey", position="left",
+                    text="Follow each row in alternating directions. Green boxes are materialised cleaning operations; orange boxes are learned sklearn steps."
                 ),
-                position="left",
+                class_="journey-chart-scroll html-fill-item",
             ),
         )
 
@@ -414,13 +445,8 @@ def instance():
             ),
             ui.output_data_frame(
                 id="JourneyTable",
-                guide=this,
-                title="Data journey table",
-                text=(
-                    "Each row corresponds to a chart box and reports its card, "
-                    "method, affected variables, parameters, and shape change."
-                ),
-                position="left",
+                guide=this, title="Data journey table", position="left",
+                text="Each row corresponds to a chart box and reports its card, method, affected variables, parameters, and shape change."
             ),
         )
 
@@ -428,7 +454,11 @@ def instance():
 
     def footer():
         return ui.div(
-            ui.output_ui(id="Status"),
+            ui.output_ui(
+                id="Status",
+                guide=this, title="Summary", position="left",
+                text="A summary of the data-journey steps"
+            ),
             class_="html-fill-container html-fill-item text-center",
         )
 
@@ -436,17 +466,9 @@ def instance():
 
     def settings():
         return ui.input_checkbox(
-            id="HideInactive",
-            label="Hide steps that were not enabled",
-            value=True,
-            guide=this,
-            title="Hide inactive steps",
-            text=(
-                "Hide operations whose data-changing control was not enabled. "
-                "An enabled operation remains visible even when the data did "
-                "not require any change."
-            ),
-            position="left",
+            id="HideInactive", label="Hide steps that were not enabled", value=True,
+            guide=this, title="Hide inactive steps", position="left",
+            text="Hide operations whose data-changing control was not enabled. An enabled operation remains visible even when the data did not require any change."
         )
 
     this.settings = settings

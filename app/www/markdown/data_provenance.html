@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Data journey</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+<style type="text/css">
+:root {
+--py-table-row-hover: #f0f1cc;
+--py-table-cell-hover: #d4d4b8;
+}
+
+body.bslib-gap-spacing {
+gap: 0.25rem;
+}
+
+.hidden {
+display: none !important;
+}
+
+.flip-container {
+perspective: 1000px;
+}
+.flippable {
+position: relative;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 1.3s ease-in-out;
+}
+.flip-container.flipped .flippable {
+transform: rotateY(180deg);
+}
+.front,
+.back {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+-webkit-backface-visibility: hidden;
+}
+.front {
+z-index: 2;
+transform: rotateY(0);
+}
+.back {
+z-index: 1;
+transform: rotateY(180deg);
+}
+
+.bslib-card,
+.card {
+position: relative;
+overflow: visible;
+}
+.card {
+outline: 1px solid grey;
+}
+.card.shadow {
+box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
+}
+.card.fullscreen-active {
+position: fixed;
+inset: 0;
+z-index: 1050;
+width: 100vw;
+height: 100vh !important;
+max-height: none !important;
+min-height: 0 !important;
+margin: 0 !important;
+border-radius: 0;
+transition: all 0.5s ease;
+}
+.card.fullscreen-active .card-body {
+flex: 1 1 auto;
+overflow-y: auto;
+padding: 2rem;
+}
+.card.fullscreen-active .card-footer {
+flex-shrink: 0;
+margin-top: 0;
+padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.card.fullscreen-active .drag-handle {
+display: none !important;
+}
+
+#shiny-modal-wrapper {
+position: absolute;
+z-index: 10000 !important;
+}
+
+.hover-card {
+position: relative;
+}
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+visibility: visible !important;
+}
+.hover-card:not(.tour-running) .hover-btn {
+visibility: hidden;
+}
+
+.cards-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+margin: 0 auto;
+gap: 0.5rem;
+}
+.drag-ghost {
+opacity: 0.5;
+}
+.drag-handle {
+display: inline-flex;
+align-items: center;
+padding: 0 0.4rem;
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+.drag-handle * {
+cursor: inherit;
+}
+.drag-tab {
+position: absolute !important;
+top: 50%;
+left: 0;
+z-index: 2;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 28px;
+height: 48px;
+transform: translate(-50%, -50%);
+border: 1px solid rgba(0, 0, 0, 0.06);
+border-radius: 999px;
+outline: 1px solid grey;
+background: #f3f4f6;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-tab::before {
+width: 10px;
+height: 20px;
+background:
+radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+opacity: 0.55;
+content: "";
+}
+.dragging .drag-tab,
+.drag-tab:active {
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+@media (max-width: 600px) {
+.drag-tab {
+display: none;
+}
+}
+
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
+max-width: 180px;
+padding: 0.2rem 0.4rem;
+overflow: hidden;
+line-height: 1.2;
+text-align: left;
+text-overflow: ellipsis;
+vertical-align: middle;
+white-space: nowrap;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+overflow: visible !important;
+white-space: normal !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
+line-height: 1.2;
+white-space: pre-line !important;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) {
+border-top: 1px solid var(--bs-table-border-color) !important;
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+border-collapse: collapse;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+background-color: var(--bs-body-bg, #fff) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-informative-row {
+background-color: rgba(233, 36, 66, 0.22) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-strong-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-weak-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-strong-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-moderate-row {
+background-color: #fff3cd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-weak-row {
+background-color: #cff4fc !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-stable-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-excluded-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-random-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-uncertain-row {
+background-color: #ddcfa7 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-patterned-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+background-color: var(--py-table-row-hover) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+position: relative;
+z-index: 10;
+overflow: visible;
+background-color: var(--py-table-cell-hover) !important;
+white-space: normal;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-top: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+border-bottom: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-bottom: 1px solid #000 !important;
+}
+
+.across-row{
+display:flex;
+align-items:end;
+gap:.5rem
+}
+.across-row .shiny-input-container{
+flex:1
+}
+.across-row .btn{
+flex:none;
+margin-bottom:0
+}
+
+.roles-layout {
+display: grid;
+grid-template-columns: auto 1fr;
+gap: 1rem;
+align-items: start;
+width: 100%;
+min-width: 0;
+overflow-x: auto;
+}
+.roles-grid {
+display: grid;
+grid-template-columns: repeat(11, minmax(200px, 1fr));
+gap: 1rem;
+width: 100%;
+overflow-x: auto;
+min-width: 0;
+}
+.roles-grid > * {
+min-width: 0;
+}
+.role-box {
+border: 1px solid #d0d7de;
+border-radius: 10px;
+padding: 0.75rem;
+min-height: 315px;
+background: #d5e6f8;
+width: 100%;
+min-width: 0;
+}
+.role-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+width: 100%;
+min-width: 0;
+}
+.role-list {
+min-height: 220px;
+padding: 0.25rem;
+border: 1px dashed #c7ced6;
+border-radius: 8px;
+background: white;
+width: 100%;
+min-width: 0;
+overflow-y: auto;
+}
+.var-chip {
+border: 1px solid #c7ced6;
+border-radius: 999px;
+padding: 0.35rem 0.7rem;
+margin: 0.35rem 0;
+background: #d0ddf6;
+cursor: grab;
+user-select: none;
+width: 100%;
+min-width: 0;
+}
+.ghost {
+opacity: 0.4;
+}
+.chosen {
+background: #dce9ff;
+}
+
+.selectize-control.multi .selectize-input > .item {
+background-color: #dce6f2;
+color: #1f3b5c;
+border-radius: 999px;
+padding: 2px 10px;
+margin: 2px;
+border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+border-radius: 6px;
+padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+background-color: #dce6f2;
+color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+background-color: var(--bs-primary);
+color: white;
+}
+ span.btn.btn-default.btn-file:has(.shiny-input-file) {
+background-color: var(--bs-primary);
+border-color: var(--bs-primary);
+color: white;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group {
+display: inline-flex;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox, label.checkbox-inline) {
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
+background-color: #0b5494;
+border-color: var(--bs-primary, #0d6efd);
+color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span::before {
+content: "☐";
+display: inline-block;
+flex: 0 0 1em;
+width: 1em;
+font-size: 1em;
+line-height: 1;
+text-align: center;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+content: "☑";
+color: currentColor;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) {
+margin-bottom: 0;
+}
+
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+padding: 0px 0px 0px 0px !important;
+}
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+padding-top: 20px;
+padding-left: 12px;
+}
+.bslib-card .card-header {
+padding-right: 40px !important;
+}
+body.fullscreen-mode { overflow: hidden; } 
+
+.dragging, .dragging * {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+}
+
+@keyframes pulse-outline {
+0% { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+70% { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+animation: pulse-outline 700ms ease-out;
+}
+
+@keyframes jello {
+0% { transform: scale3d(1, 1, 1); }
+30% { transform: scale3d(1.07, 0.93, 1); }
+45% { transform: scale3d(0.95, 1.05, 1); }
+60% { transform: scale3d(1.03, 0.97, 1); }
+75% { transform: scale3d(0.99, 1.01, 1); }
+100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+will-change: transform; 
+}
+
+@media (prefers-reduced-motion: reduce) {
+.card.animate-jello { animation: none; }
+.card.animate-highlight { animation-duration: 300ms; }
+}
+
+.progress-bar {
+height: 1rem !important;
+}
+.vertically-scrollable-footer {
+max-height: 70px;
+overflow-y: auto;
+}
+
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Data journey</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="introduction">🧭 Introduction</h4>
+<p>The <strong>Data journey</strong> card explains how the data reaching this point in the application was prepared. It presents the recorded operations as a left-to-right sequence beginning with the imported source and ending with the current materialized preview.</p>
+<p>The card answers questions such as:</p>
+<ul>
+<li>Which data-changing cards have participated in this path?</li>
+<li>Which operations were enabled, and which were left inactive?</li>
+<li>Which variables and settings were involved?</li>
+<li>Did an operation add or remove observations or variables?</li>
+<li>Which operations changed the data immediately, and which are retained as trainable steps?</li>
+</ul>
+<p>The journey belongs to the data arriving at this particular card. Moving the card, changing an upstream setting, or changing the upstream card order can therefore change the journey.</p>
+<h4 id="what-counts-as-a-step">🧱 What counts as a step?</h4>
+<p>Not every card produces a journey step. Immutable diagnostic cards inspect their input but pass it onwards unchanged, so they are normally absent. A mutable card contributes a step when it records a cleaning operation or adds a transformation to the learning pipeline.</p>
+<p>One journey step represents one card operation, rather than necessarily one individual control. For example, removing excessively incomplete variables and observations in the <strong>Missingness map</strong> card is recorded as one operation. Its parameters preserve which choices were enabled and the thresholds used.</p>
+<p>There are two main processing stages.</p>
+<h5 id="cleaning-steps">🧽 Cleaning steps</h5>
+<p>A <strong>Cleaning</strong> step is materialized immediately. Its result becomes the cleaned data available to subsequent processing. Cleaning operations do not estimate reusable parameters that must be learned independently within every training partition.</p>
+<p>Examples include:</p>
+<ul>
+<li>correcting values or variable definitions;</li>
+<li>adding deterministic variables, such as selected missingness indicators;</li>
+<li>removing observations or variables;</li>
+<li>removing exact duplicates; and</li>
+<li>applying other explicitly chosen data-quality corrections.</li>
+</ul>
+<p>Cleaning does not mean that the operation is harmless or statistically neutral. Removing observations can still change the population represented by the data. The term means only that the operation is recorded as a materialized, non-pipeline change.</p>
+<h5 id="learning-steps">🎓 Learning steps</h5>
+<p>A <strong>Learning</strong> step estimates something from data and is represented by a scikit-learn transformer in the accumulating pipeline. Examples currently include learned imputation and variable transformation.</p>
+<p>The card may calculate a fitted full-data result so the user can see an immediate preview. That fitted preview is not the estimator retained for formal model training. The stored pipeline step remains unfitted and should later be fitted separately inside each training partition, cross-validation fold, or resampling iteration. This distinction prevents information from held-out observations leaking into imputation or transformation parameters.</p>
+<p>The journey therefore distinguishes two related objects:</p>
+<ol type="1">
+<li>the <strong>current materialized preview</strong>, used by downstream cards for interactive display; and</li>
+<li>the <strong>unfitted learning pipeline</strong>, intended to be fitted during formal training.</li>
+</ol>
+<h4 id="front">🏞️ Front</h4>
+<p>Read the chart from left to right. The number inside each box corresponds to the <strong>Step</strong> number on the flip-side table.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Colour</th>
+<th>Stage</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Grey</td>
+<td><strong>Source</strong></td>
+<td>The imported starting data known to this journey.</td>
+</tr>
+<tr class="even">
+<td>Green</td>
+<td><strong>Cleaning</strong></td>
+<td>A materialized, non-pipeline operation.</td>
+</tr>
+<tr class="odd">
+<td>Orange</td>
+<td><strong>Learning</strong></td>
+<td>A trainable scikit-learn pipeline step.</td>
+</tr>
+<tr class="even">
+<td>Blue</td>
+<td><strong>Preview</strong></td>
+<td>The current full-data preview after the recorded operations.</td>
+</tr>
+</tbody>
+</table>
+<p>The source and preview boxes are bookends, not ordinary card operations. The arrows describe execution order. The current design is linear: it does not depict branches, merges, separate training and test paths, or a complete model graph.</p>
+<p>Hover over a box to see its corresponding table fields. Long hover values are abbreviated to keep the tooltip readable; use the flip-side table for more complete information. Operation labels beneath the boxes are also shortened when space is limited. Full-screen mode enlarges the nodes but does not change the journey.</p>
+<p>When several steps are present, look particularly for:</p>
+<ul>
+<li>an unexpected operation or card instance;</li>
+<li>a large row or variable reduction;</li>
+<li>settings that differ from those intended;</li>
+<li>a learning step occurring earlier or later than expected; and</li>
+<li>an inactive operation that was expected to be enabled.</li>
+</ul>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip-side contains one row for every visible chart box. It supports column filtering and is the better view for investigating long variable lists and parameter values.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Step</strong></td>
+<td>The sequence number shown inside the corresponding chart box. Step 0 is the source.</td>
+</tr>
+<tr class="even">
+<td><strong>Stage</strong></td>
+<td>Source, Cleaning, Learning, or Preview. Row shading follows the chart colors.</td>
+</tr>
+<tr class="odd">
+<td><strong>Attempted</strong></td>
+<td><strong>Yes</strong> means the data-changing option was enabled. <strong>No</strong> means it was not enabled. Source and preview rows are blank.</td>
+</tr>
+<tr class="even">
+<td><strong>Card</strong></td>
+<td>The technical card or card-instance identity. Learning steps use the card namespace so repeated instances can be distinguished.</td>
+</tr>
+<tr class="odd">
+<td><strong>Operation</strong></td>
+<td>The human-readable operation. For learning steps this is normally the card’s long name.</td>
+</tr>
+<tr class="even">
+<td><strong>Method</strong></td>
+<td>How the operation was implemented, such as a materialized operation or the class of the scikit-learn transformer.</td>
+</tr>
+<tr class="odd">
+<td><strong>Variables</strong></td>
+<td>Variables associated with the operation. <strong>Dataset</strong> means that the record applies generally or has no more specific variable list.</td>
+</tr>
+<tr class="even">
+<td><strong>Parameters</strong></td>
+<td>Recorded choices such as thresholds, selected methods, iteration counts, or enabled sub-operations.</td>
+</tr>
+<tr class="odd">
+<td><strong>Input shape</strong></td>
+<td>Number of observations × number of variables entering the step.</td>
+</tr>
+<tr class="even">
+<td><strong>Output shape</strong></td>
+<td>Number of observations × number of variables leaving the step or appearing in its preview.</td>
+</tr>
+<tr class="odd">
+<td><strong>Row change</strong></td>
+<td>Output observations minus input observations. A negative value means observations were removed.</td>
+</tr>
+<tr class="even">
+<td><strong>Variable change</strong></td>
+<td>Output variables minus input variables. A negative value means variables were removed.</td>
+</tr>
+</tbody>
+</table>
+<p>A zero row or variable change does <strong>not</strong> necessarily mean that nothing happened. Imputation, recoding, scaling, centering, and de-skewing can alter values while preserving the shape. Likewise, an enabled removal operation remains an attempted step even when no observations satisfy its removal rule.</p>
+<p>The <strong>Card</strong> and <strong>Operation</strong> columns deliberately serve different purposes. The card namespace is a machine-oriented identity that distinguishes repeated instances; the operation is a user-oriented description. The <strong>Method</strong> identifies the underlying implementation and may therefore be more technical.</p>
+<h4 id="attempted-operations-versus-no-op-results">✅ Attempted operations versus no-op results</h4>
+<p>The card distinguishes an operation that was not enabled from one that was enabled but happened to make no change:</p>
+<ul>
+<li><strong>Attempted = No:</strong> the relevant data-changing control was not selected.</li>
+<li><strong>Attempted = Yes, shape change = 0:</strong> the operation was enabled. It may have changed values without changing shape, or it may have found nothing requiring action.</li>
+</ul>
+<p>This distinction is useful for reproducibility. “Duplicate removal was enabled but found no duplicates” conveys more information than omitting duplicate removal from the record altogether.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p><strong>Hide steps that were not enabled</strong> is selected by default. It removes intermediate rows whose <strong>Attempted</strong> value is <strong>No</strong> from both the chart and table. The source and current preview remain visible.</p>
+<p>Clear the setting when you want to audit configuration choices as well as executed operations. Inactive steps can reveal that a relevant card was present but its data-changing option was deliberately or accidentally left off.</p>
+<p>The setting does not hide an enabled operation merely because its row and variable changes are zero.</p>
+<h4 id="interpreting-the-preview-row">🧪 Interpreting the preview row</h4>
+<p>The final blue row reports the current materialized data seen by downstream cards. For a journey containing learning steps, this is a fitted full-data preview produced for interactive exploration. It should not be mistaken for a leakage-safe training result.</p>
+<p>During formal modeling, the unfitted pipeline should be cloned and fitted only on the appropriate training observations. Held-out observations should then be transformed using parameters learned from that training partition. The preview row confirms what the transformed data currently looks like; it does not claim that a final model has been trained.</p>
+<h4 id="suggested-review-workflow">📌 Suggested review workflow</h4>
+<ol type="1">
+<li>Confirm that the source name and shape are plausible.</li>
+<li>Read the green cleaning steps and check that important removals or corrections were intended.</li>
+<li>Inspect row and variable changes, especially unexpectedly large negative values.</li>
+<li>Read the orange learning steps in order and confirm that their variables and parameters are appropriate.</li>
+<li>Compare the cleaned-data shape entering learning with the final preview shape.</li>
+<li>Clear <strong>Hide steps that were not enabled</strong> and check whether expected operations were inactive.</li>
+<li>Use the flip-side filters to isolate a stage, card instance, operation, or affected variable.</li>
+<li>Investigate surprising steps in their originating cards rather than treating this summary as the place to alter them.</li>
+</ol>
+<h4 id="important-limitations">⛔️ Important limitations</h4>
+<ul>
+<li>This is a descriptive provenance summary, not an executable recipe. It records what cards report; it does not contain sufficient code to rebuild every cleaning operation independently.</li>
+<li>Operations performed before import are outside the journey unless the importing process records them separately.</li>
+<li>Immutable analytical cards generally do not appear because they do not change the data or pipeline.</li>
+<li>Direct, unrecorded mutation of a data frame cannot be reconstructed. Data-changing cards must use the application’s recording interfaces for their operations to appear reliably.</li>
+<li>This is not yet a complete regulatory audit trail: it does not systematically capture user identity, timestamps, software versions, source-file checksums, or every external dependency.</li>
+<li>Parameters describe the selected operation but may use compact representations for very large structures.</li>
+<li>The chart is linear. Future partitioning, parallel branches, ensembles, or merged data sources would require a richer graph representation.</li>
+<li>The journey describes the current reactive path. It is not a permanent history of every setting the user previously tried.</li>
+</ul>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Make the current sequence of materialized cleaning and trainable learning operations visible and understandable.</li>
+<li><strong>Secondary:</strong> Help detect unexpected settings, ordering, row loss, variable loss, or inactive operations before modeling.</li>
+<li><strong>Tertiary:</strong> Provide a concise provenance summary that can later support a more reproducible, executable workflow.</li>
+</ol>
+<hr>
+<p>This is an immutable diagnostic card. It does not alter the data or pipeline passed to downstream cards.</p>
+
+
+
+
+
+</body></html>

@@ -56,6 +56,7 @@ def test_card_is_immutable_with_chart_table_and_status(card_module):
     assert card.mutable is False
     assert card.long_name == "Data journey"
     assert 'id="JourneyChart"' in str(card.front)
+    assert 'class="journey-chart-scroll html-fill-item"' in str(card.front)
     assert 'id="JourneyTable"' in str(card.back)
     assert 'id="Status"' in str(card.footer)
     assert card.hasSidebar()
@@ -195,6 +196,42 @@ def test_full_screen_allows_larger_nodes(card_module):
     full_nodes = next(trace for trace in full_figure.data if trace.name == "Cleaning")
 
     assert full_nodes.marker.size > card_nodes.marker.size
+
+
+@pytest.mark.unit
+def test_chart_wraps_after_six_steps_and_reverses_each_row(card_module):
+    x, y = card_module._journey_positions(
+        14, steps_per_row=card_module.CARD_STEPS_PER_ROW,
+    )
+
+    assert x.tolist() == [
+        0, 1, 2, 3, 4, 5,
+        5, 4, 3, 2, 1, 0,
+        0, 1,
+    ]
+    assert y.tolist() == [
+        0, 0, 0, 0, 0, 0,
+        -1, -1, -1, -1, -1, -1,
+        -2, -2,
+    ]
+
+
+@pytest.mark.unit
+def test_full_screen_uses_fewer_rows(card_module):
+    table = pd.concat(
+        [card_module._journey_table(journey_proxy())] * 4,
+        ignore_index=True,
+    )
+    table["Step"] = range(len(table))
+
+    card_figure = card_module._journey_figure(table, full_screen=False)
+    full_figure = card_module._journey_figure(table, full_screen=True)
+    card_path = card_figure.data[0]
+    full_path = full_figure.data[0]
+
+    assert len(set(card_path.y)) == 3
+    assert len(set(full_path.y)) == 2
+    assert full_figure.layout.height < card_figure.layout.height
 
 
 def get_card(page: Page):

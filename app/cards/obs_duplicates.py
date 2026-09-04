@@ -33,7 +33,7 @@ RESULT_COLUMNS = [
 ]
 MAX_COMBINATIONS = 50_000
 EXCLUDED_ROLES = {Role.NONE, Role.GEOMETRY, Role.WEIGHTING, Role.IDENTIFIER}
-
+BUTTON_VALUE="Remove exact duplicates"
 
 def _eligible_columns(proxy: proxy_data) -> list[str]:
     """Select comparison columns, respecting roles used by the application."""
@@ -156,32 +156,57 @@ def _duplicate_results(
     return pd.DataFrame(rows, columns=RESULT_COLUMNS)
 
 
-def _duplicates_figure(results: pd.DataFrame, *, full_screen: bool = False) -> go.Figure:
-    if results.empty:
+def _duplicates_figure(
+    before: pd.DataFrame,
+    after: pd.DataFrame,
+    *,
+    full_screen: bool = False,
+) -> go.Figure:
+    if before.empty:
         return Card.empty_figure("No variables are available for duplicate comparison")
-    if int(results["Count"].sum()) == 0:
+    if int(before["Count"].sum()) == 0 and int(after["Count"].sum()) == 0:
         return Card.empty_figure("No duplicates or near duplicates")
-    figure = go.Figure(go.Bar(
-        x=results["Differences tolerated"].astype(str),
-        y=results["Count"],
-        marker_color="#154c79",
-        customdata=results["Differences tolerated"],
+    figure = go.Figure()
+    figure.add_trace(go.Bar(
+        x=before["Differences tolerated"].astype(str),
+        y=before["Count"],
+        name="Before",
+        marker_color="#9aa7b2",
+        customdata=before["Differences tolerated"],
         hovertemplate=(
             "%{y:,} redundant observation(s) first detected with "
-            "%{customdata} difference(s) tolerated<extra></extra>"
+            "%{customdata} difference(s) tolerated<extra>Before</extra>"
+        ),
+    ))
+    figure.add_trace(go.Bar(
+        x=after["Differences tolerated"].astype(str),
+        y=after["Count"],
+        name="After",
+        marker_color="#154c79",
+        customdata=after["Differences tolerated"],
+        hovertemplate=(
+            "%{y:,} redundant observation(s) first detected with "
+            "%{customdata} difference(s) tolerated<extra>After</extra>"
         ),
     ))
     figure.update_layout(
         template="plotly_white",
+        barmode="group",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#bbd6f8",
-        margin={"l": 45, "r": 30 if full_screen else 10, "t": 10, "b": 55},
+        margin={"l": 45, "r": 30 if full_screen else 10, "t": 10, "b": 90},
         xaxis_title="Number of differences tolerated",
         yaxis_title="Redundant observations",
         yaxis={"rangemode": "tozero", "fixedrange": not full_screen},
         xaxis={"type": "category", "fixedrange": not full_screen},
         bargap=0.25,
-        showlegend=False,
+        legend={
+            "orientation": "h",
+            "x": 0.5,
+            "xanchor": "center",
+            "y": -0.28,
+            "yanchor": "top",
+        },
     )
     return figure
 
@@ -233,14 +258,11 @@ def instance():
             ui.output_ui(id="Busy"),
             ui.output_ui(id="Check"),
             ui.input_checkbox_group(
-                id="RemoveExact", 
-                label = "Remove",
-                choices=["Exact duplicates"],
-                inline=True,
+                id="RemoveExact", label = None, choices=[], inline=True, selected =[],
                 guide=this, title="Remove exact duplicates", position="top",
                 text="Remove later observations that exactly duplicate an earlier observation under the current significant-figures setting.",
             ),
-            class_ = "vertically-scrollable-footer", # class_="html-fill-container html-fill-item text-center",
+            class_="html-fill-container html-fill-item",
         )
 
     this.footer = footer
@@ -281,13 +303,14 @@ def instance():
         @this.record_code
         def TransformedData():
             proxy = incomingproxy_data()
-            if not "Exact duplicates" in (input.RemoveExact() or []) :
-                return proxy.with_inactive_step(
-                    stage="Cleaning",
-                    card="obs_duplicates",
-                    operation="Remove exact duplicate observations",
-                )
-            return _deduplicate_proxy(proxy, SignificantFigures())
+            if BUTTON_VALUE in (input.RemoveExact() or []) :
+                return _deduplicate_proxy(proxy, SignificantFigures())
+            return proxy.with_inactive_step(
+                stage="Cleaning",
+                card="obs_duplicates",
+                operation="Remove exact duplicate observations",
+            )
+
 
         @this.suspendable(calc=True)
         @this.record_code
@@ -301,17 +324,23 @@ def instance():
         def export():
             this._exports.set(TransformedData())
 
-        @busy.track("Searching for duplicate and near-duplicate observations…")
+        @busy.track("Searching for (near) duplicate observations…")
         @reactive.extended_task
         async def CalculateDuplicates(
-            frame: pd.DataFrame,
+            before: pd.DataFrame,
+            after: pd.DataFrame,
             maximum_differences: int,
-        ) -> pd.DataFrame:
-            return await asyncio.to_thread(
-                _duplicate_results,
-                frame,
-                maximum_differences=maximum_differences,
-            )
+        ) -> tuple[pd.DataFrame, pd.DataFrame]:
+            def calculate():
+                return (
+                    _duplicate_results(
+                        before, maximum_differences=maximum_differences,
+                    ),
+                    _duplicate_results(
+                        after, maximum_differences=maximum_differences,
+                    ),
+                )
+            return await asyncio.to_thread(calculate)
 
         @output
         @render.ui
@@ -320,19 +349,40 @@ def instance():
 
         @this.suspendable()
         def StartAnalysis():
-            frame = PreparedData().copy()
+            source = incomingproxy_data()
+            columns = _eligible_columns(source)
+            before = _round_significant(
+                source.frame.loc[:, columns], SignificantFigures()
+            )
+            after = PreparedData().copy()
             maximum = min(
                 MaxDifferences(),
-                max(0, frame.shape[1] - 1),
+                max(0, before.shape[1] - 1),
             )
-            CalculateDuplicates.invoke(frame, maximum)
+            CalculateDuplicates.invoke(before, after, maximum)
+
+        @this.suspendable(calc=True)
+        def BeforeResults():
+            return CalculateDuplicates.result()[0]
 
         @this.suspendable(calc=True)
         @this.record_code
         def Results():
-            return CalculateDuplicates.result()
+            return CalculateDuplicates.result()[1]
 
-        @reactive.effect
+        @this.suspendable(calc=True)
+        def ExactDuplicateCount():
+            return int(_exact_duplicate_mask(
+                incomingproxy_data(), SignificantFigures()
+            ).sum())
+
+        @this.suspendable()
+        def SomeDupl():
+            if ExactDuplicateCount() > 0:
+                ui.update_checkbox_group(id="RemoveExact", choices = [BUTTON_VALUE], selected=[BUTTON_VALUE])
+
+
+        @this.suspendable()
         def LimitDifferences():
             column_count = len(_eligible_columns(incomingproxy_data()))
             maximum = min(10, max(0, column_count - 1))
@@ -362,7 +412,9 @@ def instance():
         @render_widget
         def BarChart():
             full_screen = bool(this.isFullScreen())
-            figure = _duplicates_figure(Results(), full_screen=full_screen)
+            figure = _duplicates_figure(
+                BeforeResults(), Results(), full_screen=full_screen,
+            )
             figure.update_layout(
                 modebar={"orientation": "v"},
                 modebar_remove=[
@@ -402,12 +454,9 @@ def instance():
                     class_="text-info",
                 )
             if int(results["Count"].sum()) == 0:
-                return ui.span(
-                    "No duplicates or near duplicates",
-                    class_="text-success",
-                )
+                return None
             removed = original_observations - observations
-            if "Exact duplicates" in (input.RemoveExact() or []) and removed:
+            if BUTTON_VALUE in (input.RemoveExact() or []) and removed:
                 noun = "row" if removed == 1 else "rows"
                 return ui.span(
                     f"Removed {removed} redundant exact-duplicate {noun}; "
