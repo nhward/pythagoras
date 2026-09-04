@@ -249,10 +249,10 @@ def instance():
                 {
                     "Orig\nname": px.columns,
                     "New\nname": px.columns,
-                    "Orig\nd-type": [_dtype_choice(px.data[c].dtype) for c in px.columns],
-                    "New\nd-type": [_dtype_choice(px.data[c].dtype) for c in px.columns],
-                    "Orig\norder": [levels(px.data[c]) for c in px.columns],
-                    "New\norder": [levels(px.data[c]) for c in px.columns],
+                    "Orig\nd-type": [_dtype_choice(px.frame[c].dtype) for c in px.columns],
+                    "New\nd-type": [_dtype_choice(px.frame[c].dtype) for c in px.columns],
+                    "Orig\norder": [levels(px.frame[c]) for c in px.columns],
+                    "New\norder": [levels(px.frame[c]) for c in px.columns],
                     "Role": [first_role(c) for c in px.columns],
                 }
             )
@@ -337,7 +337,7 @@ def instance():
                 px = PreparedData()
                 req(px)
                 origName = row["Orig\nname"].iloc[0]
-                df = px.data
+                df = px.frame
                 req(not df.empty)
                 series = df[origName]
                 if is_cyclic_like(series):
@@ -411,7 +411,7 @@ def instance():
             if input.NewDataType() in ["ordered", "cyclic"]:
                 px = PreparedData()
                 req(px)
-                var = px.data[row["Orig\nname"].iloc[0]]
+                var = px.frame[row["Orig\nname"].iloc[0]]
                 if not isinstance(var, pd.CategoricalDtype):
                     var = var.astype("category")
                 order = var.cat.categories.tolist()
@@ -463,8 +463,8 @@ def instance():
 
         @render.ui
         def DFDiff():
-            old_lines = _dataframe_structure_text(incomingproxy_data().to_native())
-            new_lines = _dataframe_structure_text(this._exports.get().to_native())
+            old_lines = _dataframe_structure_text(incomingproxy_data().frame)
+            new_lines = _dataframe_structure_text(this._exports.get().frame)
             diff = "\n".join(
                 difflib.unified_diff(
                     old_lines,
@@ -486,14 +486,40 @@ def instance():
             rm = data._copy_roles()
             table_data = Table.data()
             #Transform the data as per Table control
-            d = data.to_native().copy()
+            d = data.frame.copy()
+            changes = []
             for name, newName, origType, newType, origOrder, newOrder in table_data[["Orig\nname","New\nname","Orig\nd-type","New\nd-type","Orig\norder","New\norder"]].itertuples(index=False, name=None):
                 if origType != newType or origOrder != newOrder:
                     d[name] = convert_series(series = d[name], new_type = newType, order=newOrder, formats = input.Formats)
+                    changes.append({
+                        "variable": name,
+                        "original_type": origType,
+                        "new_type": newType,
+                        "original_order": origOrder,
+                        "new_order": newOrder,
+                    })
                 if name != newName:
                     d.rename(columns={name: newName}, inplace=True)
                     rm.rename_column(from_=name, to_=newName)
-            data2 = pxd(_df=d, _roles=rm, _name=data.name)
+                    changes.append({
+                        "variable": name,
+                        "new_name": newName,
+                    })
+            data2 = (
+                data.with_cleaned_data(
+                    d,
+                    card="var_modify",
+                    operation="Modify variable definitions",
+                    parameters={"changes": changes},
+                    role_map=rm,
+                )
+                if changes
+                else data.with_inactive_step(
+                    stage="Cleaning",
+                    card="var_modify",
+                    operation="Modify variable definitions",
+                )
+            )
             #set the output data
             this._exports.set(data2)
 

@@ -541,7 +541,7 @@ def instance():
 
             d=GetPxyData()
             req(d is not None)
-            data=d.to_native()
+            data=d.frame
             if data is None or len(data) == 0:
                 return ui.span("No Data", class_="text-warning")
             output=[]

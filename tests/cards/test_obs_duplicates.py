@@ -120,10 +120,16 @@ def test_deduplicate_proxy_removes_later_exact_rows_and_preserves_metadata(
     assert result is not proxy
     assert result.name == "Duplicates"
     assert result.role_map == proxy.role_map
-    assert result.to_native().index.tolist() == [0, 2, 3, 4]
-    assert len(proxy.to_native()) == 5
+    assert result.frame.index.tolist() == [0, 2, 3, 4]
+    assert len(proxy.frame) == 5
+    assert len(result.cleaning_records) == 1
+    record = result.cleaning_records[0]
+    assert record.card == "obs_duplicates"
+    assert record.parameters == {"significant_figures": 16}
+    assert record.input_shape == (5, 3)
+    assert record.output_shape == (4, 3)
     recalculated = card_module._duplicate_results(
-        result.to_native(), maximum_differences=2
+        result.frame, maximum_differences=2
     )
     assert recalculated.loc[0, "Count"] == 0
 
@@ -138,8 +144,8 @@ def test_deduplication_respects_significant_figure_rounding(card_module):
     precise = card_module._deduplicate_proxy(proxy, significant_figures=16)
     rounded = card_module._deduplicate_proxy(proxy, significant_figures=3)
 
-    assert len(precise.to_native()) == 3
-    assert len(rounded.to_native()) == 2
+    assert len(precise.frame) == 3
+    assert len(rounded.frame) == 2
 
 
 @pytest.mark.unit
@@ -216,6 +222,26 @@ def test_bar_chart_represents_each_tolerance_level(card_module):
     assert list(figure.data[0].x) == ["0", "1", "2"]
     assert list(figure.data[0].y) == [1, 1, 1]
     assert figure.layout.xaxis.title.text == "Number of differences tolerated"
+
+
+@pytest.mark.unit
+def test_chart_is_empty_when_no_duplicates_or_near_duplicates(card_module):
+    results = card_module._duplicate_results(
+        pd.DataFrame({
+            "A": [1, 2, 3],
+            "B": ["x", "y", "z"],
+        }),
+        maximum_differences=1,
+    )
+
+    figure = card_module._duplicates_figure(results)
+
+    assert len(figure.data) == 0
+    assert len(figure.layout.annotations) == 1
+    assert (
+        figure.layout.annotations[0].text
+        == "No duplicates or near duplicates"
+    )
 
 
 class TestWebKitUI:

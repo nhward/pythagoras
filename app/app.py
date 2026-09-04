@@ -441,7 +441,7 @@ def application():
             log.debug(msg = "𑙬 Card flow cascade invoked")
             # Link last card of before section to first card of currrent section
             earlierCards = BeforeCurrentCardOrder()
-            if earlierCards is not None and len(earlierCards) > 1:
+            if earlierCards is not None and len(earlierCards) > 0:
                 last = earlierCards[-1]
                 source = Module.Instances.get(last)
                 source.log.info(msg=f"➡️ The card ({source.namespace}) is data-source to section {currentSection()!r}")

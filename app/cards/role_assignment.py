@@ -186,7 +186,7 @@ def instance():
         @this.suspendable(calc = True)
         def Committed():
             req(input.role_map())
-            return Pxy(_df = incomingproxy_data().to_native(), _roles = input.role_map(), _name = incomingproxy_data().name) 
+            return incomingproxy_data().with_roles(input.role_map())
             
 
         #### Commit event ----

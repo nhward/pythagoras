@@ -10,7 +10,147 @@ import itertools
 import pandas as pd
 import proxy_data as pxd
 import pytest
+from cleaning_record import CleaningRecord
 from roles import Role
+from sklearn.preprocessing import StandardScaler
+
+
+@pytest.mark.unit
+def test_frame_is_the_preferred_dataframe_accessor():
+    native = pd.DataFrame({"value": [1, 2]})
+    data = pxd.proxy_data.from_native(native)
+
+    assert data.frame is data.to_native()
+    assert data.frame is data.data
+
+
+@pytest.mark.unit
+def test_with_cleaned_data_returns_successor_and_records_operation():
+    source = pxd.proxy_data(
+        pd.DataFrame({"keep": [1, 2, 3], "drop": [4, 5, 6]}),
+        _name="example",
+    )
+
+    result = source.with_cleaned_data(
+        source.frame.loc[:, ["keep"]],
+        card="example_card",
+        operation="Drop a variable",
+        parameters={"variable": "drop"},
+    )
+
+    assert source.frame.columns.tolist() == ["keep", "drop"]
+    assert result.frame.columns.tolist() == ["keep"]
+    assert result.name == "example"
+    assert result.role_map.columns_with_role(Role.PREDICTOR) == {"keep"}
+    assert source.cleaning_records == ()
+    assert result.cleaning_records == (
+        CleaningRecord(
+            card="example_card",
+            operation="Drop a variable",
+            parameters={"variable": "drop"},
+            input_shape=(3, 2),
+            output_shape=(3, 1),
+        ),
+    )
+
+
+@pytest.mark.unit
+def test_cleaning_records_are_preserved_and_appended_in_order():
+    source = pxd.proxy_data(pd.DataFrame({"value": [1, 1, 2]}))
+    first = source.with_cleaned_data(
+        source.frame.drop_duplicates(),
+        card="duplicates",
+        operation="Remove duplicates",
+    )
+    second = first.with_cleaned_data(
+        first.frame.rename(columns={"value": "measurement"}),
+        card="modify",
+        operation="Rename variable",
+    )
+
+    assert [record.card for record in second.cleaning_records] == [
+        "duplicates",
+        "modify",
+    ]
+    assert second.clone().cleaning_records == second.cleaning_records
+    assert second.sample(mode="all").cleaning_records == second.cleaning_records
+
+
+@pytest.mark.unit
+def test_proxy_equality_includes_cleaning_records_by_default():
+    frame = pd.DataFrame({"value": [1, 2]})
+    plain = pxd.proxy_data(frame)
+    recorded = plain.with_cleaned_data(
+        frame,
+        card="modify",
+        operation="Confirm values",
+    )
+
+    assert plain != recorded
+    assert plain.equals(recorded, check_cleaning_records=False)
+
+
+@pytest.mark.unit
+def test_pipeline_keeps_clean_source_and_unfitted_training_blueprint():
+    source = pxd.proxy_data(pd.DataFrame({"value": [1.0, 2.0, 3.0, 100.0]}))
+    preview_scaler = StandardScaler().set_output(transform="pandas")
+    preview = preview_scaler.fit_transform(source.frame)
+
+    result = source.with_pipeline_step(
+        preview_scaler,
+        name="scale",
+        preview_frame=preview,
+    )
+
+    pd.testing.assert_frame_equal(result.clean_frame, source.frame)
+    pd.testing.assert_frame_equal(result.frame, preview)
+    assert result.pipeline_steps == ("scale",)
+    assert not hasattr(result.pipeline.named_steps["scale"], "mean_")
+
+    train = result.clean_frame.iloc[:3]
+    test = result.clean_frame.iloc[3:]
+    fitted = result.pipeline_for_training().fit(train)
+    assert fitted.transform(train)["value"].mean() == pytest.approx(0.0)
+    assert fitted.transform(test)["value"].iloc[0] > 100
+
+
+@pytest.mark.unit
+def test_pipeline_steps_chain_with_unique_names_and_survive_clone():
+    source = pxd.proxy_data(pd.DataFrame({"value": [1.0, 2.0, 3.0]}))
+    scaler = StandardScaler().set_output(transform="pandas")
+    first_preview = scaler.fit_transform(source.frame)
+    first = source.with_pipeline_step(
+        scaler, name="scale", preview_frame=first_preview,
+    )
+    second_scaler = StandardScaler(with_std=False).set_output(transform="pandas")
+    second_preview = second_scaler.fit_transform(first.frame)
+    second = first.with_pipeline_step(
+        second_scaler, name="scale", preview_frame=second_preview,
+    )
+
+    assert second.pipeline_steps == ("scale", "scale_2")
+    assert second.clone().pipeline_steps == second.pipeline_steps
+    pd.testing.assert_frame_equal(second.clone().clean_frame, source.frame)
+
+
+@pytest.mark.unit
+def test_cleaning_and_direct_replacement_are_rejected_after_pipeline_starts():
+    source = pxd.proxy_data(pd.DataFrame({"value": [1.0, 2.0, 3.0]}))
+    scaler = StandardScaler().set_output(transform="pandas")
+    transformed = source.with_pipeline_step(
+        scaler,
+        name="scale",
+        preview_frame=scaler.fit_transform(source.frame),
+    )
+
+    with pytest.raises(RuntimeError, match="Cleaning operations cannot run"):
+        transformed.with_cleaned_data(
+            transformed.frame,
+            card="late_cleaner",
+            operation="Invalid late cleaning",
+        )
+    with pytest.raises(RuntimeError, match="Cannot replace data directly"):
+        transformed.data = transformed.frame.copy()
 
 
 def _is_strictly_increasing(seq):

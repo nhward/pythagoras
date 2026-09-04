@@ -1335,7 +1335,7 @@ def instance():
         def MissingVariables():
             minimum_missing_proportion = float(MinMissProp())
             proxy = PreparedData()
-            frame = proxy.to_native()
+            frame = proxy.frame
             predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
             return [
                 column
@@ -1393,7 +1393,7 @@ def instance():
 
         def _cached_model(proxy: proxy_data, target: str) -> TreeAnalysis:
             _activate_cache(proxy)
-            frame = proxy.to_native()
+            frame = proxy.frame
             weighting = _weighting_column(proxy)
             weights = frame[weighting] if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
@@ -1426,7 +1426,7 @@ def instance():
         def RegressionDiagnostics():
             proxy = PreparedData()
             _activate_cache(proxy)
-            frame = proxy.to_native()
+            frame = proxy.frame
             weighting = _weighting_column(proxy)
             weights = frame[weighting] if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
@@ -1474,7 +1474,7 @@ def instance():
         def StartTypeTable():
             """Snapshot reactive values and start a nonblocking table calculation."""
             proxy = PreparedData()
-            frame = proxy.to_native()
+            frame = proxy.frame
             weighting = _weighting_column(proxy)
             weights = frame[weighting] if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))

@@ -156,7 +156,7 @@ def instance():
             - Numeric data rounded
             """
             px = PreparedData().clone() #Returns proxy_data
-            df = px.to_native() if hasattr(px, "to_native") else px
+            df = px.frame
             if hasattr(df, "to_pandas"):     # e.g., Polars
                 df = df.to_pandas()
             long_geom = not input.Bounded()
@@ -299,7 +299,7 @@ def instance():
             """Return one structural-summary row for each source variable."""
             px = incomingproxy_data()
             req(px is not None)
-            df = px.to_native() if hasattr(px, "to_native") else px
+            df = px.frame
             if hasattr(df, "to_pandas"):
                 df = df.to_pandas()
             role_map = getattr(px, "role_map", None)

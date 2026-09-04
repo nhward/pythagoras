@@ -95,9 +95,9 @@ def _exact_duplicate_mask(proxy: proxy_data, significant_figures: int) -> np.nda
     """Identify later exact duplicates using the card's comparison policy."""
     columns = _eligible_columns(proxy)
     if not columns:
-        return np.zeros(len(proxy.to_native()), dtype=bool)
+        return np.zeros(len(proxy.frame), dtype=bool)
     comparison = _round_significant(
-        proxy.to_native().loc[:, columns], significant_figures
+        proxy.frame.loc[:, columns], significant_figures
     )
     comparison = _comparison_frame(comparison)
     return comparison.duplicated(keep="first").to_numpy()
@@ -109,9 +109,12 @@ def _deduplicate_proxy(
 ) -> proxy_data:
     """Return a cloned proxy with later exact duplicates removed."""
     duplicate = _exact_duplicate_mask(proxy, significant_figures)
-    result = proxy.clone()
-    result.data = result.to_native().iloc[~duplicate].copy()
-    return result
+    return proxy.with_cleaned_data(
+        proxy.frame.iloc[~duplicate].copy(),
+        card="obs_duplicates",
+        operation="Remove exact duplicate observations",
+        parameters={"significant_figures": int(significant_figures)},
+    )
 
 
 def _duplicate_results(
@@ -156,6 +159,8 @@ def _duplicate_results(
 def _duplicates_figure(results: pd.DataFrame, *, full_screen: bool = False) -> go.Figure:
     if results.empty:
         return Card.empty_figure("No variables are available for duplicate comparison")
+    if int(results["Count"].sum()) == 0:
+        return Card.empty_figure("No duplicates or near duplicates")
     figure = go.Figure(go.Bar(
         x=results["Differences tolerated"].astype(str),
         y=results["Count"],
@@ -277,7 +282,11 @@ def instance():
         def TransformedData():
             proxy = incomingproxy_data()
             if not "Exact duplicates" in (input.RemoveExact() or []) :
-                return proxy
+                return proxy.with_inactive_step(
+                    stage="Cleaning",
+                    card="obs_duplicates",
+                    operation="Remove exact duplicate observations",
+                )
             return _deduplicate_proxy(proxy, SignificantFigures())
 
         @this.suspendable(calc=True)
@@ -285,7 +294,7 @@ def instance():
         def PreparedData():
             proxy = TransformedData()
             columns = _eligible_columns(proxy)
-            frame = proxy.to_native().loc[:, columns]
+            frame = proxy.frame.loc[:, columns]
             return _round_significant(frame, SignificantFigures())
 
         @this.suspendable(triggers=[TransformedData])
@@ -385,12 +394,17 @@ def instance():
         def Check():
             results = Results()
             source = incomingproxy_data()
-            original_observations = len(source.to_native())
-            observations = len(TransformedData().to_native())
+            original_observations = len(source.frame)
+            observations = len(TransformedData().frame)
             if results.empty:
                 return ui.span(
                     "No variables are available for duplicate comparison.",
                     class_="text-info",
+                )
+            if int(results["Count"].sum()) == 0:
+                return ui.span(
+                    "No duplicates or near duplicates",
+                    class_="text-success",
                 )
             removed = original_observations - observations
             if "Exact duplicates" in (input.RemoveExact() or []) and removed:

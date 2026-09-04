@@ -183,6 +183,31 @@ class TestCardDefinition:
 
 class TestPreparation:
     @pytest.mark.unit
+    def test_adding_shadow_updates_current_and_clean_frames(
+        self, miss_informative
+    ):
+        from proxy_data import proxy_data
+        from roles import Role
+
+        source = proxy_data(pd.DataFrame({
+            "value": [1.0, np.nan, 3.0],
+            "other": [1, 2, 3],
+        }))
+
+        result = miss_informative._add_shadow_variables(source, ["value"])
+
+        assert list(result.frame.columns) == [
+            "value", "other", "shadow__value",
+        ]
+        assert list(result.clean_frame.columns) == list(result.frame.columns)
+        assert result.frame["shadow__value"].tolist() == [0, 1, 0]
+        assert result.role_map.roles_for("shadow__value") == {Role.PREDICTOR}
+        assert list(source.frame.columns) == ["value", "other"]
+        assert len(result.cleaning_records) == 1
+        assert result.cleaning_records[0].card == "miss_informative"
+        assert list(result.clone().frame.columns) == list(result.clean_frame.columns)
+
+    @pytest.mark.unit
     def test_empty_analysis_has_stable_schema(self, miss_informative):
         analysis = miss_informative._empty_analysis(None, "No target")
         assert analysis.target is None

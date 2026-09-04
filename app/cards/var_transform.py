@@ -62,6 +62,51 @@ class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return self.scaler_.inverse_transform(standard)
 
 
+class VariableTransformStep(TransformerMixin, BaseEstimator):
+    """DataFrame-preserving learned transformations for selected variables."""
+
+    def __init__(self, columns: tuple[str, ...], transforms: tuple[str, ...]):
+        self.columns = columns
+        self.transforms = transforms
+
+    def fit(self, X: pd.DataFrame, y=None):
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("VariableTransformStep requires a pandas DataFrame")
+        self.pipelines_ = {}
+        self.failures_ = {}
+        for column in self.columns:
+            if column not in X.columns:
+                self.failures_[column] = "Variable is absent"
+                continue
+            pipeline = _build_pipeline(self.transforms)
+            if pipeline is None:
+                continue
+            try:
+                self.pipelines_[column] = pipeline.fit(X[[column]])
+            except (ValueError, TypeError, FloatingPointError) as error:
+                self.failures_[column] = str(error)
+        self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        self.n_features_in_ = len(X.columns)
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        if not hasattr(self, "pipelines_"):
+            raise RuntimeError("VariableTransformStep must be fitted before use")
+        result = X.copy()
+        for column, pipeline in self.pipelines_.items():
+            if column not in result.columns:
+                raise ValueError(f"Required variable {column!r} is absent")
+            transformed = pipeline.transform(result[[column]])
+            result[column] = np.asarray(transformed).reshape(-1)
+        return result
+
+    def get_feature_names_out(self, input_features=None):
+        return np.asarray(
+            self.feature_names_in_ if input_features is None else input_features,
+            dtype=object,
+        )
+
+
 @dataclass
 class DistributionAnalysis:
     frame: pd.DataFrame
@@ -71,6 +116,7 @@ class DistributionAnalysis:
     transforms: tuple[str, ...]
     pipelines: dict[str, Pipeline]
     target: str | None
+    transformer: VariableTransformStep | None
 
     def inverse_target(self, values) -> np.ndarray:
         """Return predictions in the target's original units."""
@@ -114,7 +160,7 @@ def _has_role_label(label: str, role: str) -> bool:
 
 def _continuous_target(data: proxy_data) -> str | None:
     """Return the sole transformable continuous target, if there is one."""
-    frame = data.to_native()
+    frame = data.frame
     targets = data.role_map.columns_with_role(Role.TARGET)
     candidates: list[str] = []
     for column in frame.columns:
@@ -138,7 +184,7 @@ def _eligible_columns(
     include_target: bool = False,
 ) -> tuple[list[str], dict[str, str]]:
     """Return transformable variables and reasons other columns are excluded."""
-    frame = data.to_native()
+    frame = data.frame
     predictors = data.role_map.columns_with_role(Role.PREDICTOR)
     targets = data.role_map.columns_with_role(Role.TARGET)
     target = _continuous_target(data)
@@ -230,37 +276,30 @@ def _analyse_distribution(
     include_target: bool = False,
 ) -> DistributionAnalysis:
     """Transform eligible columns from a fresh source frame and summarise them."""
-    source = data.to_native()
-    frame = source.copy()
+    source = data.frame
     eligible, excluded = _eligible_columns(data, include_target=include_target)
     target = _continuous_target(data) if include_target else None
     selected = list(transforms)
-    pipelines: dict[str, Pipeline] = {}
+    transformer = (
+        VariableTransformStep(tuple(eligible), tuple(selected)).fit(source)
+        if selected else None
+    )
+    frame = transformer.transform(source) if transformer is not None else source.copy()
+    pipelines = {} if transformer is None else transformer.pipelines_
+    failures = {} if transformer is None else transformer.failures_
     rows: list[dict[str, object]] = []
 
     for column in eligible:
         before = source[column]
-        after = before.copy()
+        after = frame[column]
         fitted_lambda = np.nan
         status = _transform_name(selected)
-        pipeline = _build_pipeline(selected)
-        if pipeline is not None:
-            try:
-                transformed = pipeline.fit_transform(before.to_frame())
-                after = pd.Series(
-                    transformed.iloc[:, 0].to_numpy(),
-                    index=before.index,
-                    name=before.name,
-                )
-                frame[column] = after
-                pipelines[column] = pipeline
-                if "deskew" in pipeline.named_steps:
-                    fitted_lambda = float(pipeline.named_steps["deskew"].lambdas_[0])
-            except (ValueError, TypeError, FloatingPointError) as error:
-                status = f"Not transformed: {error}"
-                excluded[column] = status
-                frame[column] = before
-                after = before
+        pipeline = pipelines.get(column)
+        if column in failures:
+            status = f"Not transformed: {failures[column]}"
+            excluded[column] = status
+        elif pipeline is not None and "deskew" in pipeline.named_steps:
+            fitted_lambda = float(pipeline.named_steps["deskew"].lambdas_[0])
 
         before_stats = _describe(before)
         after_stats = _describe(after)
@@ -308,6 +347,29 @@ def _analyse_distribution(
         ).reset_index(drop=True)
     return DistributionAnalysis(
         frame, statistics, eligible, excluded, tuple(selected), pipelines, target,
+        transformer,
+    )
+
+
+def _apply_analysis(
+    source: proxy_data,
+    analysis: DistributionAnalysis,
+    *,
+    step_name: str = "var_transform",
+    operation: str = "Variable Transform",
+) -> proxy_data:
+    """Register the selected transformations and their display preview."""
+    if not analysis.transforms:
+        return source.with_inactive_step(
+            stage="Learning",
+            card=step_name,
+            operation=operation,
+        )
+    return source.with_pipeline_step(
+        analysis.transformer,
+        name=step_name,
+        operation=operation,
+        preview_frame=analysis.frame,
     )
 
 
@@ -630,11 +692,12 @@ def instance():
         def TransformedData():
             source = incomingproxy_data()
             analysis = Analysis()
-            if not analysis.transforms:
-                return source
-            result = source.clone()
-            result.data = analysis.frame.copy()
-            return result
+            return _apply_analysis(
+                source,
+                analysis,
+                step_name=this.namespace,
+                operation=this.long_name,
+            )
 
         @this.suspendable(triggers=[TransformedData])
         def export():

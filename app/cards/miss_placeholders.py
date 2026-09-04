@@ -475,7 +475,7 @@ def instance():
 
         @this.record_code
         def _select_cols(df: pd.DataFrame | Pxy, bucket: str) -> list[str]:
-            native = df.to_native() if isinstance(df, Pxy) else df
+            native = df.frame if isinstance(df, Pxy) else df
             columns = _columns_by_placeholder_kind(native)
             if bucket in columns:
                 return columns[bucket]
@@ -630,7 +630,7 @@ def instance():
             codes_df = state["codes"]
             legend = state["legend"]
             fixed = state["fixed"]
-            cols = _select_cols(fixed.to_native(), "float")
+            cols = _select_cols(fixed.frame, "float")
             if len(cols) == 0:
                 return empty_plotly("No decimal data to display")
             else:
@@ -645,7 +645,7 @@ def instance():
             codes_df = state["codes"]
             legend = state["legend"]
             fixed = state["fixed"]
-            cols = _select_cols(fixed.to_native(), "str")
+            cols = _select_cols(fixed.frame, "str")
             if len(cols) == 0:
                 return empty_plotly("No character data to display")
             else:
@@ -660,7 +660,7 @@ def instance():
             codes_df = state["codes"]
             legend = state["legend"]
             fixed = state["fixed"]
-            cols = _select_cols(fixed.to_native(), "datetime")
+            cols = _select_cols(fixed.frame, "datetime")
             if len(cols) == 0:
                 return empty_plotly("No datetime data to display")
             else:
@@ -672,10 +672,23 @@ def instance():
         def TransformedData():
             full  = incomingproxy_data()
             sentinels = [s.removeprefix("Replace ") for s in Replace()]
+            if not sentinels:
+                return full.with_inactive_step(
+                    stage="Cleaning",
+                    card="miss_placeholders",
+                    operation="Replace missing-value placeholders",
+                )
             df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometry = False)
-            pxy = Pxy(_df=df, _roles=full.role_map, _name=full.name)
-            pxy.name = full.name
-            return pxy
+            return full.with_cleaned_data(
+                df,
+                card="miss_placeholders",
+                operation="Replace missing-value placeholders",
+                parameters={
+                    "sentinels": sentinels,
+                    "extrema_only": bool(input.NA_Extrema()),
+                    "case_sensitive": bool(input.NA_CaseSensitive()),
+                },
+            )
 
         @this.suspendable(triggers = [TransformedData])
         def export():
@@ -731,7 +744,7 @@ def instance():
             if isinstance(data, pd.DataFrame):
                 df = data
             elif isinstance(data, Pxy):
-                df = data.to_native()
+                df = data.frame
             else:
                 raise TypeError(f"Unknown dataset type supplied: {type(data)}")
             if isinstance(df, gpd.GeoDataFrame) and drop_geometry:
@@ -802,7 +815,7 @@ def instance():
             if isinstance(data, pd.DataFrame):
                 df = data
             elif isinstance(data, Pxy):
-                df = data._df
+                df = data.frame
             elif hasattr(data, "to_pandas"):      # polars -> pandas
                 df = data.to_pandas()
             else:

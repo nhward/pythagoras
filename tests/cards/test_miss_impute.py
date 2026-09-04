@@ -163,6 +163,57 @@ def test_analysis_supports_all_three_sklearn_imputers(card_module, method):
 
 
 @pytest.mark.unit
+def test_applied_imputation_is_registered_as_an_unfitted_pipeline_step(card_module):
+    from proxy_data import proxy_data
+
+    source_frame = mixed_frame()
+    source = proxy_data(_df=source_frame)
+    analysis = card_module._analyse(
+        source, "simple", 3, 3, 1, 0.25, 11, 1,
+    )
+
+    result = card_module._apply_analysis(
+        source,
+        analysis,
+        step_name="miss_impute_0",
+        operation="Learned Imputation",
+    )
+
+    assert result.pipeline_steps == ("miss_impute_0",)
+    pd.testing.assert_frame_equal(result.clean_frame, source_frame)
+    pd.testing.assert_frame_equal(result.frame, analysis.frame)
+    assert result.clean_frame.isna().sum().sum() == 4
+    assert result.frame.isna().sum().sum() == 0
+    step = result.pipeline.named_steps["miss_impute_0"]
+    assert isinstance(step, card_module.ImputationStep)
+    assert not hasattr(step, "simple_imputers_")
+    assert result.processing_records[-1].card == "miss_impute_0"
+    assert result.processing_records[-1].operation == "Learned Imputation"
+
+    fitted = result.pipeline_for_training().fit(result.clean_frame.iloc[:6])
+    transformed = fitted.transform(result.clean_frame.iloc[6:])
+    assert isinstance(transformed, pd.DataFrame)
+    assert list(transformed.columns) == list(source_frame.columns)
+
+
+@pytest.mark.unit
+def test_training_partition_never_borrows_a_mode_from_held_out_rows(card_module):
+    frame = pd.DataFrame({
+        "category": pd.Categorical([None, None, None, "held-out"]),
+    })
+    step = card_module.ImputationStep(
+        ("category",), ("category",), "simple",
+    ).fit(frame.iloc[:3])
+
+    transformed_train = step.transform(frame.iloc[:3])
+    transformed_test = step.transform(frame.iloc[3:])
+
+    assert transformed_train["category"].isna().all()
+    assert transformed_test["category"].iloc[0] == "held-out"
+    assert step.unlearnable_ == ["category"]
+
+
+@pytest.mark.unit
 def test_performance_is_classified_and_sorted_by_improvement(card_module):
     evaluation = pd.DataFrame({
         "Predictor": ["weak", "unknown", "strong"],

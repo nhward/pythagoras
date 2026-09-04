@@ -144,13 +144,13 @@ def instance():
         @this.suspendable(calc=True)
         @this.record_code
         def MissingVariables():
-            frame = PreparedData().to_native()
+            frame = PreparedData().frame
             return [column for column in frame.columns if frame[column].isna().any()]
 
         @this.suspendable(calc=True)
         @this.record_code
         def MissingTransactions():
-            frame = PreparedData().to_native()
+            frame = PreparedData().frame
             variables = MissingVariables()
             if not variables:
                 return pd.DataFrame(index=frame.index, dtype=bool)

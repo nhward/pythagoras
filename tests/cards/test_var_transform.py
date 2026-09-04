@@ -225,6 +225,50 @@ def test_no_selection_returns_same_values_and_reports_exclusions(card_module):
 
 
 @pytest.mark.unit
+def test_applied_transform_is_registered_as_an_unfitted_pipeline_step(card_module):
+    data, source = distribution_data()
+    analysis = card_module._analyse_distribution(data, ["Scale", "Center"])
+
+    result = card_module._apply_analysis(
+        data,
+        analysis,
+        step_name="var_transform_0",
+        operation="Variable Transform",
+    )
+
+    assert result.pipeline_steps == ("var_transform_0",)
+    pd.testing.assert_frame_equal(result.clean_frame, source)
+    pd.testing.assert_frame_equal(result.frame, analysis.frame)
+    step = result.pipeline.named_steps["var_transform_0"]
+    assert isinstance(step, card_module.VariableTransformStep)
+    assert not hasattr(step, "pipelines_")
+    assert result.processing_records[-1].card == "var_transform_0"
+    assert result.processing_records[-1].operation == "Variable Transform"
+
+    train = result.clean_frame.iloc[:60]
+    test = result.clean_frame.iloc[60:]
+    fitted = result.pipeline_for_training().fit(train)
+    transformed_test = fitted.transform(test)
+    assert isinstance(transformed_test, pd.DataFrame)
+    assert list(transformed_test.columns) == list(source.columns)
+    pd.testing.assert_series_equal(
+        transformed_test["category"], test["category"],
+    )
+
+
+@pytest.mark.unit
+def test_no_transform_does_not_start_pipeline(card_module):
+    data, _ = distribution_data()
+    analysis = card_module._analyse_distribution(data, [])
+
+    result = card_module._apply_analysis(data, analysis)
+
+    assert not result.has_pipeline
+    assert result.processing_records[-1].attempted is False
+    assert result.processing_records[-1].card == "var_transform"
+
+
+@pytest.mark.unit
 def test_describe_reports_ordinary_not_excess_kurtosis(card_module):
     values = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0])
 

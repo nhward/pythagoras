@@ -346,13 +346,13 @@ def instance():
         @this.suspendable(calc=True)
         @this.record_code
         def MissingVariables():
-            frame = PreparedData().to_native()
+            frame = PreparedData().frame
             return _missing_variables(frame)[:MaxVariables()]
 
         @this.suspendable(calc=True)
         @this.record_code
         def Intersections():
-            frame = PreparedData().to_native()
+            frame = PreparedData().frame
             counts = _intersection_counts(frame, MissingVariables())
             return _select_intersections(
                 counts,
@@ -371,7 +371,7 @@ def instance():
         @output
         @render_widget
         def Upset():
-            frame = PreparedData().to_native()
+            frame = PreparedData().frame
             full_screen = bool(this.isFullScreen())
             figure = _upset_figure(
                 frame,
@@ -409,7 +409,7 @@ def instance():
         @output
         @render.ui
         def Check():
-            all_missing = _missing_variables(PreparedData().to_native())
+            all_missing = _missing_variables(PreparedData().frame)
             shown = MissingVariables()
             if not all_missing:
                 return ui.span(

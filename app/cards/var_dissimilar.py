@@ -144,7 +144,7 @@ def instance():
         def CleanDf():
             pxd = PreparedData()
             predictors = pxd.role_map.columns_with_role(Role.PREDICTOR)
-            frame = pxd.to_native()
+            frame = pxd.frame
             if not isinstance(frame, pd.DataFrame):
                 raise TypeError("Variable dissimilarity requires tabular data")
             keep = [
@@ -367,7 +367,7 @@ def instance():
         def DissimilarityMatrix():
             pxd = PreparedData()
             predictors = pxd.role_map.columns_with_role(Role.PREDICTOR)
-            frame = pxd.to_native()
+            frame = pxd.frame
             if not isinstance(frame, pd.DataFrame):
                 raise TypeError("Variable dissimilarity requires tabular data")
             keep = [

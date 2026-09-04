@@ -85,7 +85,7 @@ def _sequence_candidates(data: proxy_data) -> dict[str, str]:
     arbitrary ties.  Complete unique columns precede unique columns containing
     missing values because missing sequence values must be placed last.
     """
-    frame = data.to_native()
+    frame = data.frame
     ordered: list[str] = []
     compatible = {
         column for column in frame.columns
@@ -122,7 +122,7 @@ def _eligible_columns(
     maximum_levels: int = 30,
 ) -> tuple[list[str], dict[str, str]]:
     """Return analysable columns and explicit reasons for exclusions."""
-    frame = data.to_native()
+    frame = data.frame
     eligible: list[str] = []
     excluded: dict[str, str] = {}
     for column in frame.columns:
@@ -369,7 +369,7 @@ def _analyse_homogeneity(
     permutations: int = CALIBRATION_PERMUTATIONS,
     random_state: int = CALIBRATION_SEED,
 ) -> HomogeneityAnalysis:
-    frame = _order_frame(data.to_native(), sequence)
+    frame = _order_frame(data.frame, sequence)
     eligible, exclusions = _eligible_columns(data, maximum_levels=maximum_levels)
     selected = [column for column in variables if column in eligible]
     groups = _assign_groups(len(frame), group_count)

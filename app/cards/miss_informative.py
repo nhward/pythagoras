@@ -402,6 +402,38 @@ def _importance_figure(
     )
     return figure
 
+
+def _add_shadow_variables(
+    data: proxy_data,
+    columns: list[str] | tuple[str, ...],
+) -> proxy_data:
+    """Add selected missingness indicators through ProxyData's mutation API."""
+    selected = list(dict.fromkeys(map(str, columns)))
+    if not selected:
+        return data.clone()
+
+    result = data.clone()
+    frame = result.frame.copy()
+    shadow_columns = []
+    for column in selected:
+        if column not in frame.columns:
+            raise KeyError(f"Cannot create a shadow for unknown variable {column!r}")
+        shadow = f"{Card.SHADOW_PREFIX}{column}"
+        frame[shadow] = frame[column].isna().to_numpy(dtype=np.int8)
+        result.role_map.set_roles(shadow, [Role.PREDICTOR])
+        shadow_columns.append(shadow)
+
+    return data.with_cleaned_data(
+        frame,
+        card="miss_informative",
+        operation="Add informative-missingness shadow variables",
+        parameters={
+            "source_variables": selected,
+            "shadow_variables": shadow_columns,
+        },
+        role_map=result.role_map,
+    )
+
 def instance():
     """Create the mutable missingness-type card."""
     this = Card(file=__file__, mutable=True)
@@ -530,7 +562,7 @@ def instance():
         def MissingVariables():
             minimum_missing_proportion = float(MinMissProp())
             proxy = PreparedData()
-            frame = proxy.to_native()
+            frame = proxy.frame
             predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
             return [
                 column
@@ -544,7 +576,7 @@ def instance():
         @this.suspendable(calc=True)
         def PredictorVariables():
             proxy = PreparedData()
-            frame = proxy.to_native()
+            frame = proxy.frame
             predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
             return [column for column in frame.columns if column in predictors]
 
@@ -591,7 +623,7 @@ def instance():
         @this.suspendable()
         def StartAnalysis():
             proxy = PreparedData()
-            frame = proxy.to_native().copy()
+            frame = proxy.frame.copy()
             weighting = _weighting_column(proxy)
             sample_weight = frame[weighting].copy() if weighting else None
             CalculateAnalysis.invoke(
@@ -612,16 +644,10 @@ def instance():
         @this.suspendable(calc=True)
         @this.record_code
         def TransformedData():
-            pxd = incomingproxy_data().clone()
-            if len(Shadow()) == 0:
-                return pxd
-            frame = pxd.to_native()
-            this.log.info(f"Adding shadow to predictors: {Shadow()}")
-            for column in Shadow():
-                shadow = f"{Card.SHADOW_PREFIX}{column}"
-                frame[shadow] = frame[column].isna().to_numpy(dtype=np.int8)
-                pxd.role_map.set_roles(shadow, [Role.PREDICTOR])
-            return pxd
+            selected = Shadow() or []
+            if selected:
+                this.log.info(f"Adding shadow to predictors: {selected}")
+            return _add_shadow_variables(incomingproxy_data(), selected)
 
         @this.suspendable(triggers=[TransformedData])
         def export():

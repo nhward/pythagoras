@@ -28,6 +28,7 @@ from proxy_data import proxy_data
 from roles import Role, RoleMap
 from shiny import reactive, render, req, ui
 from shinywidgets import render_widget
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
 from sklearn.impute import IterativeImputer, KNNImputer, SimpleImputer
 
@@ -42,13 +43,6 @@ IMPUTATION_ROW_CLASSES = {
     "Weak": "miss-impute-weak-row",
     "Too few observed values": "miss-impute-insufficient-row",
 }
-
-
-@dataclass
-class ImputationResult:
-    frame: pd.DataFrame
-    summary: pd.DataFrame
-    evaluation: pd.DataFrame
 
 
 def _kind(series: pd.Series) -> str:
@@ -161,6 +155,159 @@ def _restore_continuous(original: pd.Series, values: np.ndarray) -> pd.Series:
     else:
         result.loc[original.isna()] = values[missing]
     return result
+
+
+class ImputationStep(TransformerMixin, BaseEstimator):
+    """A DataFrame-preserving sklearn imputation step for Pythagoras."""
+
+    def __init__(
+        self,
+        eligible: tuple[str, ...],
+        predictors: tuple[str, ...],
+        method: str,
+        neighbours: int = 5,
+        iterations: int = 10,
+        seed: int = 2025,
+    ):
+        self.eligible = eligible
+        self.predictors = predictors
+        self.method = method
+        self.neighbours = neighbours
+        self.iterations = iterations
+        self.seed = seed
+
+    @staticmethod
+    def _fit_simple(series: pd.Series) -> SimpleImputer:
+        kind = _kind(series)
+        if kind in {"numeric", "datetime", "ordered"}:
+            values, _ = _encode_continuous(series)
+            return SimpleImputer(
+                strategy="median", keep_empty_features=True,
+            ).fit(values.reshape(-1, 1))
+        values = series.astype(object).where(series.notna(), np.nan).to_numpy()
+        return SimpleImputer(
+            strategy="most_frequent", keep_empty_features=True,
+        ).fit(values.reshape(-1, 1))
+
+    @staticmethod
+    def _apply_simple(series: pd.Series, imputer: SimpleImputer) -> pd.Series:
+        kind = _kind(series)
+        if kind in {"numeric", "datetime", "ordered"}:
+            values, _ = _encode_continuous(series)
+            filled = imputer.transform(values.reshape(-1, 1))[:, 0]
+            return _restore_continuous(series, filled)
+        values = series.astype(object).where(series.notna(), np.nan).to_numpy()
+        filled = imputer.transform(values.reshape(-1, 1))[:, 0]
+        result = series.copy()
+        missing = series.isna().to_numpy()
+        result.loc[series.isna()] = filled[missing]
+        return result
+
+    def fit(self, X: pd.DataFrame, y=None):
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("ImputationStep requires a pandas DataFrame")
+        missing = [column for column in self.predictors if column not in X.columns]
+        if missing:
+            raise ValueError(f"Required variables are absent: {missing}")
+
+        self.simple_imputers_ = {}
+        self.unlearnable_ = []
+        for column in self.eligible:
+            if column not in X.columns or not X[column].notna().any():
+                self.unlearnable_.append(column)
+                continue
+            self.simple_imputers_[column] = self._fit_simple(X[column])
+        self.continuous_ = [
+            column for column in self.predictors
+            if _kind(X[column]) in {"numeric", "datetime", "ordered"}
+            and X[column].notna().any()
+        ]
+        self.targets_ = [
+            column for column in self.eligible if column in self.continuous_
+        ]
+        self.methods_ = {
+            column: (
+                "Median" if _kind(X[column]) in {"numeric", "datetime", "ordered"}
+                else "Mode"
+            )
+            for column in self.eligible
+            if column in X.columns and column not in self.unlearnable_
+        }
+
+        self.continuous_imputer_ = None
+        if self.method in {"knn", "iterative"} and self.targets_ and len(X) >= 2:
+            matrix = np.column_stack([
+                _encode_continuous(X[column])[0] for column in self.continuous_
+            ])
+            self.centres_ = np.nanmedian(matrix, axis=0)
+            self.centres_[~np.isfinite(self.centres_)] = 0.0
+            self.scales_ = np.nanstd(matrix, axis=0)
+            self.scales_[~np.isfinite(self.scales_) | (self.scales_ == 0)] = 1.0
+            scaled = (matrix - self.centres_) / self.scales_
+            if self.method == "knn":
+                count = min(max(1, int(self.neighbours)), max(1, len(X) - 1))
+                self.continuous_imputer_ = KNNImputer(
+                    n_neighbors=count,
+                    weights="distance",
+                    keep_empty_features=True,
+                ).fit(scaled)
+                label = f"Nearest neighbours ({count})"
+            else:
+                count = max(1, int(self.iterations))
+                self.continuous_imputer_ = IterativeImputer(
+                    max_iter=count,
+                    random_state=int(self.seed),
+                    initial_strategy="median",
+                    skip_complete=False,
+                    keep_empty_features=True,
+                ).fit(scaled)
+                label = f"Iterative prediction ({count} iterations)"
+            for column in self.targets_:
+                self.methods_[column] = label
+
+        self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        self.n_features_in_ = len(X.columns)
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        if not hasattr(self, "simple_imputers_"):
+            raise RuntimeError("ImputationStep must be fitted before use")
+        result = X.copy()
+        for column, imputer in self.simple_imputers_.items():
+            if column not in result.columns:
+                raise ValueError(f"Required variable {column!r} is absent")
+            if column not in self.targets_ or self.continuous_imputer_ is None:
+                result[column] = self._apply_simple(result[column], imputer)
+
+        if self.continuous_imputer_ is not None:
+            matrix = np.column_stack([
+                _encode_continuous(X[column])[0] for column in self.continuous_
+            ])
+            scaled = (matrix - self.centres_) / self.scales_
+            restored = (
+                self.continuous_imputer_.transform(scaled) * self.scales_
+                + self.centres_
+            )
+            for position, column in enumerate(self.continuous_):
+                if column in self.targets_:
+                    result[column] = _restore_continuous(
+                        X[column], restored[:, position],
+                    )
+        return result
+
+    def get_feature_names_out(self, input_features=None):
+        return np.asarray(
+            self.feature_names_in_ if input_features is None else input_features,
+            dtype=object,
+        )
+
+
+@dataclass
+class ImputationResult:
+    frame: pd.DataFrame
+    summary: pd.DataFrame
+    evaluation: pd.DataFrame
+    transformer: ImputationStep
 
 
 def _simple_impute(frame: pd.DataFrame, eligible: list[str]) -> tuple[pd.DataFrame, dict[str, str]]:
@@ -295,10 +442,14 @@ def _evaluate_column(frame: pd.DataFrame, eligible: list[str], predictors: list[
 
 
 def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, repeats: int, holdout: float, seed: int, jobs: int) -> ImputationResult:
-    frame = data.to_native().copy()
+    frame = data.frame.copy()
     eligible, excluded = _eligible_columns(frame, data.role_map)
     predictors = _predictor_columns(frame, data.role_map)
-    imputed, methods = _impute_frame(frame, eligible, predictors, method, neighbours, iterations, seed)
+    transformer = ImputationStep(
+        tuple(eligible), tuple(predictors), method, neighbours, iterations, seed,
+    ).fit(frame)
+    imputed = transformer.transform(frame)
+    methods = transformer.methods_
     assessed = Parallel(n_jobs=max(1, int(jobs)), prefer="threads")(
         delayed(_evaluate_column)(frame, eligible, predictors, column, method, neighbours, iterations, repeats, holdout, seed)
         for column in eligible
@@ -320,7 +471,23 @@ def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, re
             "Predictor": str(column), "Before": int(before[column]), "After": int(after[column]),
             "Status": excluded.get(column, methods.get(column, "Imputed")),
         })
-    return ImputationResult(imputed, pd.DataFrame(rows), evaluation)
+    return ImputationResult(imputed, pd.DataFrame(rows), evaluation, transformer)
+
+
+def _apply_analysis(
+    source: proxy_data,
+    analysis: ImputationResult,
+    *,
+    step_name: str = "miss_impute",
+    operation: str = "Learned Imputation",
+) -> proxy_data:
+    """Register learned imputation and its full-data display preview."""
+    return source.with_pipeline_step(
+        analysis.transformer,
+        name=step_name,
+        operation=operation,
+        preview_frame=analysis.frame,
+    )
 
 
 def _performance_table(
@@ -496,10 +663,19 @@ def instance():
         def TransformedData():
             source = incomingproxy_data()
             if "Apply" not in (input.Apply() or []):
-                return source
-            result = source.clone()
-            result.data = Analysis().frame.copy()
-            return result
+                return source.with_inactive_step(
+                    stage="Learning",
+                    card=this.namespace,
+                    operation=this.long_name,
+                    parameters=Options(),
+                )
+            analysis = Analysis()
+            return _apply_analysis(
+                source,
+                analysis,
+                step_name=this.namespace,
+                operation=this.long_name,
+            )
 
         @this.suspendable(triggers=[TransformedData])
         def export():

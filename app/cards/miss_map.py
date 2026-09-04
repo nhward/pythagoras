@@ -81,10 +81,13 @@ def _remove_excessive_observations(
     data: proxy_data,
     threshold: float,
 ) -> proxy_data:
-    result = data.clone()
-    frame = result.to_native()
-    result.data = frame.loc[~_excessive_observation_mask(frame, threshold)].copy()
-    return result
+    frame = data.frame
+    return data.with_cleaned_data(
+        frame.loc[~_excessive_observation_mask(frame, threshold)].copy(),
+        card="miss_map",
+        operation="Remove excessively incomplete observations",
+        parameters={"threshold": float(threshold)},
+    )
 
 
 def _remove_excessive_variables(
@@ -92,17 +95,14 @@ def _remove_excessive_variables(
     threshold: float,
 ) -> proxy_data:
     """Remove columns whose missing proportion is above the threshold."""
-    result = data.clone()
-    frame = result.to_native()
+    frame = data.frame
     keep = list(frame.columns[frame.isna().mean(axis=0) <= threshold])
-    result.data = frame.loc[:, keep].copy()
-    filtered_roles = RoleMap()
-    for column in keep:
-        roles = result.role_map.roles_for(column)
-        if roles:
-            filtered_roles.set_roles(column, roles)
-    result.role_map = filtered_roles
-    return result
+    return data.with_cleaned_data(
+        frame.loc[:, keep].copy(),
+        card="miss_map",
+        operation="Remove excessively incomplete variables",
+        parameters={"threshold": float(threshold)},
+    )
 
 
 def _transform_data(
@@ -113,13 +113,48 @@ def _transform_data(
     variable_threshold: float,
     observation_threshold: float,
 ) -> proxy_data:
-    """Apply selected removals, always processing variables before rows."""
-    result = data
+    """Apply selected removals and record the card as one cleaning step.
+
+    Variable removal still precedes observation removal, but the two related
+    controls describe one card operation in the data journey.
+    """
+    parameters = {
+        "remove_variables": bool(remove_variables),
+        "variable_threshold": float(variable_threshold),
+        "remove_observations": bool(remove_observations),
+        "observation_threshold": float(observation_threshold),
+        "execution_order": "variables before observations",
+    }
+    operation = "Remove excessive missingness"
+    if not remove_variables and not remove_observations:
+        return data.with_inactive_step(
+            stage="Cleaning",
+            card="miss_map",
+            operation=operation,
+            parameters=parameters,
+        )
+
+    frame = data.frame.copy()
     if remove_variables:
-        result = _remove_excessive_variables(result, variable_threshold)
+        keep = list(
+            frame.columns[
+                frame.isna().mean(axis=0) <= float(variable_threshold)
+            ]
+        )
+        frame = frame.loc[:, keep].copy()
     if remove_observations:
-        result = _remove_excessive_observations(result, observation_threshold)
-    return result
+        excessive = _excessive_observation_mask(
+            frame,
+            float(observation_threshold),
+        )
+        frame = frame.loc[~excessive].copy()
+
+    return data.with_cleaned_data(
+        frame,
+        card="miss_map",
+        operation=operation,
+        parameters=parameters,
+    )
 
 
 def _issues_table(
@@ -379,7 +414,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def DisplayFrame():
-            return _display_frame(TransformedData().to_native(), 10 ** int(input.MaxObs()))
+            return _display_frame(TransformedData().frame, 10 ** int(input.MaxObs()))
 
         @output
         @render_widget
@@ -412,7 +447,7 @@ def instance():
         def Table2():
             proxy = TransformedData()
             return render.DataTable(
-                _issues_table(proxy.to_native(), proxy.role_map, VariableThreshold(), ObservationThreshold()),
+                _issues_table(proxy.frame, proxy.role_map, VariableThreshold(), ObservationThreshold()),
                 width="100%", height="98%",
             )
 
@@ -420,15 +455,15 @@ def instance():
         @render.ui
         def Check():
             source = incomingproxy_data()
-            original = source.to_native()
-            transformed = TransformedData().to_native()
+            original = source.frame
+            transformed = TransformedData().frame
             selected = Remove()
             after_variables = _remove_excessive_variables(source, VariableThreshold())
             removed_variables = original.shape[1] - transformed.shape[1]
             removed_observations = original.shape[0] - transformed.shape[0]
-            excessive_variables = original.shape[1] - after_variables.to_native().shape[1]
+            excessive_variables = original.shape[1] - after_variables.frame.shape[1]
             observation_basis = (
-                after_variables.to_native()
+                after_variables.frame
                 if "Variables" in selected
                 else original
             )

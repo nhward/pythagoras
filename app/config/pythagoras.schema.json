@@ -8,8 +8,13 @@
   "type": "object",
 
   "properties": {
+    "$schema": {
+      "type": "string"
+    },
+
     "version": {
-      "type": "integer"
+      "type": "integer",
+      "minimum": 1
     },
 
     "settings": {
@@ -43,6 +48,41 @@
         "max_card_height",
         "max_dupl_cards"
       ]
+    },
+
+    "layout": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "section": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$",
+            "description": "Section names may contain letters, numbers and single spaces only."
+          },
+
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "module": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                }
+              },
+              "required": ["module"]
+            }
+          }
+        },
+        "required": ["section", "cards"]
+      }
     }
-  }
+  },
+
+  "required": ["version", "settings", "layout"]
 }

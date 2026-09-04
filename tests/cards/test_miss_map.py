@@ -58,9 +58,15 @@ def test_removal_preserves_proxy_metadata(card_module):
     source = proxy_data(_df=frame(), _name="sample")
     result = card_module._remove_excessive_observations(source, 0.5)
     assert result.name == "sample"
-    assert list(result.to_native().index) == [1, 3]
+    assert list(result.frame.index) == [1, 3]
     assert result.role_map == source.role_map
-    assert len(source.to_native()) == 4
+    assert len(source.frame) == 4
+    assert len(result.cleaning_records) == 1
+    record = result.cleaning_records[0]
+    assert record.card == "miss_map"
+    assert record.parameters == {"threshold": 0.5}
+    assert record.input_shape == (4, 3)
+    assert record.output_shape == (2, 3)
 
 
 @pytest.mark.unit
@@ -71,10 +77,13 @@ def test_variable_removal_preserves_remaining_roles(card_module):
 
     result = card_module._remove_excessive_variables(source, 0.4)
 
-    assert list(result.to_native().columns) == ["C"]
+    assert list(result.frame.columns) == ["C"]
     assert result.name == "sample"
     assert result.role_map.roles_for("C") == {Role.PREDICTOR}
     assert not result.role_map.roles_for("A")
+    assert result.cleaning_records[-1].operation == (
+        "Remove excessively incomplete variables"
+    )
 
 
 @pytest.mark.unit
@@ -95,15 +104,47 @@ def test_combined_removal_processes_variables_before_observations(card_module):
         observation_threshold=0.5,
     )
 
-    assert list(result.to_native().columns) == ["kept", "complete"]
-    assert len(result.to_native()) == 4
+    assert list(result.frame.columns) == ["kept", "complete"]
+    assert len(result.frame) == 4
+    assert len(result.cleaning_records) == 1
+    assert len(result.processing_records) == 1
+    record = result.cleaning_records[0]
+    assert record.operation == "Remove excessive missingness"
+    assert dict(record.parameters) == {
+        "remove_variables": True,
+        "variable_threshold": 0.5,
+        "remove_observations": True,
+        "observation_threshold": 0.5,
+        "execution_order": "variables before observations",
+    }
+
+
+@pytest.mark.unit
+def test_disabled_removals_produce_one_inactive_card_step(card_module):
+    from proxy_data import proxy_data
+
+    source = proxy_data(_df=frame())
+    result = card_module._transform_data(
+        source,
+        remove_variables=False,
+        remove_observations=False,
+        variable_threshold=0.4,
+        observation_threshold=0.5,
+    )
+
+    assert result.cleaning_records == ()
+    assert len(result.processing_records) == 1
+    record = result.processing_records[0]
+    assert record.card == "miss_map"
+    assert record.operation == "Remove excessive missingness"
+    assert record.attempted is False
 
 
 @pytest.mark.unit
 def test_issues_include_variable_and_observation_problems(card_module):
     from proxy_data import proxy_data
     source = proxy_data(_df=frame())
-    result = card_module._issues_table(source.to_native(), source.role_map, 0.4, 0.5)
+    result = card_module._issues_table(source.frame, source.role_map, 0.4, 0.5)
     assert "Excessive variable missingness" in set(result["Issue"])
     assert "Excessive observation missingness" in set(result["Issue"])
 
