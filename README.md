@@ -176,7 +176,7 @@ Cards (available and planned)
 * [Data homogeneity](app/www/markdown/data_homogeneity.html)
 * [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
 
-∅ Missing Values
+∅ Missing values
 
 * [Missing Placeholders](app/www/markdown/miss_placeholders.html)
 * [Missingness types](app/www/markdown/miss_type.html)

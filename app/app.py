@@ -15,9 +15,9 @@ import logging
 import os
 import sys
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 #TODO: provide a guide button for the sections and buttons
 #TODO: provide a info button for the whole app               

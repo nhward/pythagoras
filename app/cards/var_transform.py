@@ -26,7 +26,7 @@ from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, req, ui
+from shiny import reactive, render, ui
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
