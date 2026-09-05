@@ -68,6 +68,7 @@ SECTION_NAME_PATTERN = re.compile(r"^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$")
 RESERVED_SECTION_NAMES = frozenset({"start"})
 SECTION_ID_PREFIX = "section_"
 TEST_SHOW_START_ENV = "PYTHAGORAS_TEST_SHOW_START"
+TEST_CONFIG_PATH_ENV = "PYTHAGORAS_TEST_CONFIG_PATH"
 START_SECTION_ID = "start"
 SECTIONS_NAV_ID = "sections"
 WELCOME_ICON_TAG_PATTERN = re.compile(
@@ -171,6 +172,58 @@ def configuration_from_card_state(
     return candidate
 
 
+def configuration_from_section_state(
+    base_config: Mapping[str, object],
+    *,
+    section_order: Sequence[str],
+    section_definitions: Mapping[str, Mapping[str, object]],
+    visited_sections: Sequence[str],
+    section_orders: Mapping[str, Sequence[str]],
+    card_modules: Mapping[str, str],
+    show_start: bool,
+) -> dict[str, object]:
+    """Serialize live ID-keyed sections, including their current names."""
+    candidate = deepcopy(dict(base_config))
+    visited = set(visited_sections)
+    saved_layout: list[dict[str, object]] = []
+
+    for section_id in section_order:
+        definition = section_definitions.get(section_id)
+        if definition is None:
+            raise ValueError(f"Unknown section ID {section_id!r}")
+        group = deepcopy(dict(definition))
+        name = group.get("section")
+        if not isinstance(name, str) or not name:
+            raise TypeError(f"Section {section_id!r} has no valid name")
+
+        if section_id in visited:
+            if section_id not in section_orders:
+                raise ValueError(f"Card order is not ready for section {name!r}")
+            group["cards"] = [
+                {"module": card_modules[namespace]}
+                for namespace in section_orders[section_id]
+                if namespace in card_modules
+            ]
+
+        cards_in_section = group.get("cards")
+        if not isinstance(cards_in_section, list):
+            raise TypeError(f"Cards for section {name!r} must be a list")
+        if cards_in_section:
+            saved_layout.append(group)
+
+    if not saved_layout:
+        raise ValueError("At least one non-empty section is required")
+    if not isinstance(show_start, bool):
+        raise TypeError("show_start must be a boolean")
+    settings = candidate.get("settings")
+    if not isinstance(settings, dict):
+        raise TypeError("Configuration settings must be an object")
+
+    settings["show_start"] = show_start
+    candidate["layout"] = saved_layout
+    return candidate
+
+
 def validated_section_name(
     value: object,
     existing_sections: Sequence[str],
@@ -249,6 +302,15 @@ def write_validated_configuration(
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
+
+
+def configuration_write_path() -> Path:
+    """Return the real config path, or an isolated path in Shiny test mode."""
+    if os.environ.get("SHINY_TESTMODE") == "1":
+        override = os.environ.get(TEST_CONFIG_PATH_ENV)
+        if override:
+            return Path(override)
+    return CONFIG_PATH
 
 
 def replace_welcome_icons(html: str) -> str:
@@ -1020,18 +1082,15 @@ def application():
                             "Card order is not ready for section "
                             f"{section_name(section_id)!r}"
                         )
-                    section_orders[section_name(section_id)] = tuple(
+                    section_orders[section_id] = tuple(
                         value.removesuffix("-Card") for value in raw_order
                     )
 
-                candidate = configuration_from_card_state(
+                candidate = configuration_from_section_state(
                     config,
-                    section_order=tuple(
-                        section_name(value) for value in SectionOrder()
-                    ),
-                    visited_sections=tuple(
-                        section_name(value) for value in visited
-                    ),
+                    section_order=SectionOrder(),
+                    section_definitions=section_definitions,
+                    visited_sections=visited,
                     section_orders=section_orders,
                     card_modules={
                         namespace: node.card.name
@@ -1039,8 +1098,15 @@ def application():
                     },
                     show_start=ShowStart(),
                 )
-                write_validated_configuration(candidate)
-            except (OSError, ValueError, SchemaError, ValidationError) as error:
+                destination = configuration_write_path()
+                write_validated_configuration(candidate, config_path=destination)
+            except (
+                OSError,
+                TypeError,
+                ValueError,
+                SchemaError,
+                ValidationError,
+            ) as error:
                 log.exception("Could not save Pythagoras configuration")
                 ui.notification_show(
                     f"Configuration was not saved: {error}",
@@ -1049,7 +1115,7 @@ def application():
                 )
                 return
 
-            log.info("💾 Configuration saved to %s", CONFIG_PATH)
+            log.info("💾 Configuration saved to %s", destination)
             ui.notification_show(
                 "Card layout saved. It will be used on the next app start.",
                 type="message",

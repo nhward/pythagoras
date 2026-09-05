@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-
 APP = Path(__file__).resolve().parent.parent / "app"
 if str(APP) not in sys.path:
     sys.path.insert(0, str(APP))

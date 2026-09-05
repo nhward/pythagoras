@@ -63,11 +63,6 @@ class Card(Module):
     max_height = Module.config.get("settings", {}).get("max_card_height")
     SHADOW_PREFIX = "shadow__"
 
-    async def _destroy_module_session(self, session) -> None:
-        """Destroy a removed module where the runtime supports it."""
-        if not self.IS_SHINYLIVE:
-            await session.destroy()
-
     def empty_figure(
         message: str,
         *,
@@ -514,14 +509,13 @@ class Card(Module):
                     on_remove(self.namespace)
                 self.reset()
                 ui.remove_ui(selector=f"#{id}")
-
                 _name = self.section
                 card_id = self.ns("Card")
                 container = f"{_name}-cards-container"
                 imp_id = f"{_name}_CardOrder"
                 async def after_flush(card_id=card_id, container = container, container_id = imp_id):
                     await session.send_custom_message("UpdateCardOrder", {"id": container, "input_id": container_id})
-                    await self._destroy_module_session(session)
+                    await session.destroy()
                 session.on_flushed(after_flush, once=True)
 
 

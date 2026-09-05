@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from shiny import reactive
 
-
 path = Path(__file__).resolve().parents[1] / "app"
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))

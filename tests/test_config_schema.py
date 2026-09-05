@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from jsonschema import ValidationError, validate
 
-
 CONFIG_ROOT = Path(__file__).resolve().parents[1] / "app" / "config"
 
 

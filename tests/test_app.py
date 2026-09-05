@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from types import ModuleType
 
@@ -14,6 +16,7 @@ from shiny.run import ShinyAppProc
 
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
 APP_FILE = APP_DIR / "app.py"
+CONFIG_FILE = APP_DIR / "config" / "pythagoras.json"
 MODULE_NAME = "pythagoras_app_under_test"
 
 if str(APP_DIR) not in sys.path:
@@ -28,6 +31,14 @@ START_PAGE_TEST_ENV = {
     "SHINY_TESTMODE": "1",
     "PYTHAGORAS_TEST_SHOW_START": "true",
 }
+SAVE_TEST_PATH = (
+    Path(tempfile.gettempdir()) / f"pythagoras-save-test-{os.getpid()}.json"
+)
+SAVE_TEST_ENV = {
+    "SHINY_TESTMODE": "1",
+    "PYTHAGORAS_TEST_SHOW_START": "false",
+    "PYTHAGORAS_TEST_CONFIG_PATH": str(SAVE_TEST_PATH),
+}
 
 app = create_app_fixture(
     app="../app/app.py",
@@ -38,6 +49,11 @@ start_app = create_app_fixture(
     app="../app/app.py",
     scope="function",
     env=START_PAGE_TEST_ENV,
+)
+save_app = create_app_fixture(
+    app="../app/app.py",
+    scope="function",
+    env=SAVE_TEST_ENV,
 )
 
 
@@ -300,28 +316,47 @@ class TestApplicationHelpers:
 
     @pytest.mark.unit
     def test_configuration_save_persists_a_renamed_section(
-        self, app_module, sample_config
+        self, app_module, sample_config, tmp_path
     ):
-        candidate = app_module.configuration_from_card_state(
+        section_definitions = {
+            "section_0": {
+                "section": "Input data",
+                "cards": sample_config["layout"][0]["cards"],
+            },
+            "section_1": sample_config["layout"][1],
+        }
+        candidate = app_module.configuration_from_section_state(
             sample_config,
-            section_order=("Input data", "Missing values"),
-            visited_sections=("Input data",),
+            section_order=("section_0", "section_1"),
+            section_definitions=section_definitions,
+            visited_sections=("section_0",),
             section_orders={
-                "Input data": ("data_import", "data_tabulation"),
+                "section_0": ("data_import", "data_tabulation"),
             },
             card_modules={
                 "data_import": "data_import",
                 "data_tabulation": "data_tabulation",
             },
+            show_start=False,
         )
 
-        assert candidate["layout"][0] == {
+        config_path = tmp_path / "pythagoras.json"
+        app_module.write_validated_configuration(
+            candidate,
+            config_path=config_path,
+            schema_path=app_module.SCHEMA_PATH,
+        )
+        written = json.loads(config_path.read_text(encoding="utf-8"))
+
+        assert written["layout"][0] == {
             "section": "Input data",
             "cards": [
                 {"module": "data_import"},
                 {"module": "data_tabulation"},
             ],
         }
+        assert written["layout"][1]["section"] == "Missing values"
+        assert sample_config["layout"][0]["section"] == "Data prep"
 
     @pytest.mark.unit
     def test_configuration_save_persists_show_start(
@@ -350,8 +385,11 @@ class TestApplicationBrowser:
         page.goto(app.url)
         expect(page.get_by_role("tab", name="Start", exact=True)).to_have_count(0)
         expect(page.locator("#welcome-to-pythagoras")).to_have_count(0)
-        expect(page.get_by_role("tab", name="Data prep")).to_be_visible()
-        expect(page.get_by_role("tab", name="Missing values")).to_be_visible()
+        configured = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        for group in configured["layout"]:
+            expect(page.get_by_role(
+                "tab", name=group["section"], exact=True
+            )).to_be_visible()
 
     @pytest.mark.ui
     def test_start_page_renders_welcome_and_defers_card_creation(
@@ -515,6 +553,41 @@ class TestApplicationBrowser:
         expect(page.locator("#var_modify-Name")).to_contain_text(
             "reactive-flow", timeout=20_000
         )
+
+    @pytest.mark.ui
+    def test_renamed_section_is_written_by_save_button(
+        self, page: Page, save_app: ShinyAppProc
+    ):
+        SAVE_TEST_PATH.unlink(missing_ok=True)
+        try:
+            page.goto(save_app.url)
+            expect(page.locator("#data_import-Card")).to_be_attached(
+                timeout=20_000
+            )
+            page.locator("#ManageCardSection").click()
+            dialog = page.get_by_role("dialog")
+            dialog.get_by_role("tab", name="Rename section", exact=True).click()
+            page.locator("#RenameSectionName").fill("Input data")
+            dialog.get_by_role(
+                "button", name="Rename section", exact=True
+            ).click()
+            expect(page.get_by_role(
+                "tab", name="Input data", exact=True
+            )).to_be_visible()
+
+            page.locator("#SaveConfiguration").click()
+            expect(page.get_by_text(
+                "Card layout saved. It will be used on the next app start."
+            )).to_be_visible()
+
+            written = json.loads(SAVE_TEST_PATH.read_text(encoding="utf-8"))
+            assert written["layout"][0]["section"] == "Input data"
+            assert all(
+                group["section"] != "Data prep"
+                for group in written["layout"]
+            )
+        finally:
+            SAVE_TEST_PATH.unlink(missing_ok=True)
 
     @pytest.mark.ui
     def test_committed_data_reacts_through_cards_and_section_boundary(

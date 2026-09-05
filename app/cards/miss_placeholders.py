@@ -449,28 +449,6 @@ def instance():
             ui.update_checkbox_group(id="Replace", choices=choices, selected=selected, )
 
 
-
-        def empty_plotly(message="No data to display", subtext=None):
-            this.log.debug("Empty chart drawn")
-            txt = f"<b>{message}</b>" + (f"<br><span style='font-size:0.9em;color:#6c757d'>{subtext}</span>" if subtext else "")
-            fig = go.Figure()
-            fig.add_annotation(
-                text=txt, x=0.5, y=0.5, xref="paper", yref="paper",
-                showarrow=False, align="center",
-                font={"size": 18, "color": "#6c757d"}
-            )
-            fig.update_layout(
-                xaxis={"visible": False}, 
-                yaxis={"visible": False},
-                paper_bgcolor="rgba(0,0,0,0)",
-                margin={"l": 0, "r": 0, "t": 0, "b": 0},
-                hovermode=False, 
-                showlegend=False
-            )
-            fw = go.FigureWidget(fig)
-            fw._config = (getattr(fw, "_config", {}) | {"displayModeBar": False, "displaylogo": False, "responsive": True})
-            return fw
-
         @this.record_code
         def _select_cols(df: pd.DataFrame | Pxy, bucket: str) -> list[str]:
             native = df.frame if isinstance(df, Pxy) else df
@@ -484,13 +462,13 @@ def instance():
         @this.record_code
         def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.Figure:
             if codes_df.empty:
-                return empty_plotly("No data to display")
+                return this.empty_figure(message="No data to display")
             y = codes_df.columns.astype(str).tolist()
             # Keep codes compact. No NaNs should exist: 0 = missing, 1 = not missing.
             z = codes_df.to_numpy(dtype=np.int16, copy=False).T
             present_codes = np.unique(z).astype(int).tolist()
             if len(present_codes) == 0:
-                return empty_plotly("No data to display")
+                return Card.empty_figure(message="No data to display")
             this.log.debug(f"Chart drawn: z shape={z.shape}, cells={z.size:,}")
             code_colours = _placeholder_colour_map(present_codes)
             zmin = min(present_codes)
@@ -615,7 +593,7 @@ def instance():
             fixed = state["fixed"]
             cols = _select_cols(fixed, "int")
             if len(cols) == 0:
-                return empty_plotly("No integer data to display")
+                return Card.empty_figure(message="No integer data to display")
             else:
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
@@ -630,7 +608,7 @@ def instance():
             fixed = state["fixed"]
             cols = _select_cols(fixed.frame, "float")
             if len(cols) == 0:
-                return empty_plotly("No decimal data to display")
+                return Card.empty_figure(message="No decimal data to display")
             else:
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
@@ -645,7 +623,7 @@ def instance():
             fixed = state["fixed"]
             cols = _select_cols(fixed.frame, "str")
             if len(cols) == 0:
-                return empty_plotly("No character data to display")
+                return Card.empty_figure(message="No character data to display")
             else:
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
@@ -660,7 +638,7 @@ def instance():
             fixed = state["fixed"]
             cols = _select_cols(fixed.frame, "datetime")
             if len(cols) == 0:
-                return empty_plotly("No datetime data to display")
+                return Card.empty_figure(message="No datetime data to display")
             else:
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 

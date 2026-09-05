@@ -16,7 +16,6 @@ from cards.data_provenance import instance
 from cards.var_transform import _analyse_distribution, _apply_analysis
 from proxy_data import proxy_data
 
-
 frame = pd.DataFrame({
     "value": [1.0, 2.0, 4.0, 8.0, 16.0, 32.0],
     "discard": [1, 1, 1, 1, 1, 1],

@@ -30,9 +30,26 @@ dependencies = [
   "cards>=2.0.0",
   "card>=0.0.1",
   "roles>=1.0.0",
+  "seaborn==0.13.2",
+  "statsmodels==0.15.0",
+  "vega-datasets==0.9.0",
+  "ucimlrepo==0.0.7",
+  "pytest-playwright==0.9.0",
+  "jinja2==3.1.6",
+  "pytest-asyncio==1.4.0",
+  "pytest==9.1.1",
+  "playwright==1.62.0",
+  "polars==1.44.1",
 ]
 
 [tool.hatch.build]
 include = [
   "app/**",
+]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.62.0",
+    "pytest>=9.1.1",
+    "pytest-playwright>=0.9.0",
 ]

@@ -5,7 +5,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-
 from cards import miss_impute, var_transform
 from proxy_data import proxy_data
 

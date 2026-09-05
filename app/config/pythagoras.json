@@ -41,7 +41,7 @@
       ]
     },
     {
-      "section": "Missing values",
+      "section": "Missing 1",
       "cards": [
         {
           "module": "miss_placeholders"
