@@ -6,7 +6,7 @@
 ## It provides:
 ##    Creating sections for cards (i.e. a grouping structure)
 ##    Dynamically creating the card instances for a current section
-##    Managing the cascade of results along the cards of a section 
+##    Reactively connecting card outputs to subsequent card inputs
 ##    Invoking the shiny app either in Positron or in Python via the last lines 
 
 
@@ -15,7 +15,9 @@ import logging
 import os
 import sys
 import threading
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 #TODO: provide a guide button for the sections and buttons
 #TODO: provide a info button for the whole app               
@@ -54,6 +56,28 @@ if Module.log_handler not in jslog.handlers:
     jslog.addHandler(Module.log_handler)
 
 config = Module.config
+
+
+@dataclass
+class CardNode:
+    card: Module
+    upstream: reactive.Value
+    output: Callable[[], object]
+
+
+def wire_card_nodes(
+    order: tuple[str, ...],
+    nodes: dict[str, CardNode],
+) -> None:
+    """Connect card outputs to subsequent inputs without reading any data."""
+    source = None
+    for namespace in order:
+        node = nodes.get(namespace)
+        if node is None:
+            continue
+        node.card.resume()
+        node.upstream.set(None if source is None else source.output)
+        source = node
 
 
 def welcome():
@@ -198,9 +222,16 @@ def application():
     # main server function for the app
     def server(input, output, session):
         Module.ModSession = session
-        
-        PreviousSection = reactive.value()
+
+        card_nodes: dict[str, CardNode] = {}
         SectionsVisited = reactive.value([])
+        TopologyVersion = reactive.value(0)
+
+        def unregister_card(namespace: str):
+            card_nodes.pop(namespace, None)
+            with reactive.isolate():
+                version = TopologyVersion.get()
+            TopologyVersion.set(version + 1)
 
         @reactive.effect
         async def startup():
@@ -243,15 +274,6 @@ def application():
         @reactive.effect
         def create_section_cards():
             current = currentSection()
-            with reactive.isolate():
-                if PreviousSection.is_set():
-                    #Suspend previous
-                    earlierCards = BeforeCurrentCardOrder()
-                    if earlierCards is not None:
-                        for cardns in earlierCards:
-                            card = Module.Instances.get(cardns)
-                            #TODO: temp       card.suspend()
-            PreviousSection.set(current)
             if current not in SectionsVisited.get():
                 model_group = next((group for group in config.get("layout", []) if group.get("section") == current), None)
                 req(model_group is not None)
@@ -260,7 +282,19 @@ def application():
                     if instance is None:
                         continue
                     ui.insert_ui(ui = instance.call_ui(), selector = f"#{Module.section_normalise(current)}-cards-container", where = "beforeEnd")
-                    instance.call_server(input, output, session)
+                    upstream = reactive.Value(None)
+                    card_output = instance.call_server(
+                        input,
+                        output,
+                        session,
+                        upstream=upstream,
+                        on_remove=unregister_card,
+                    )
+                    card_nodes[instance.namespace] = CardNode(
+                        card=instance,
+                        upstream=upstream,
+                        output=card_output,
+                    )
                     instance.resume()
                     card_id = instance.ns("Card")
                     instance.section = Module.section_normalise(current)
@@ -273,9 +307,10 @@ def application():
                     imp_id = f"{_name}_CardOrder"
                     await session.send_custom_message("MakeSortable", {"id": container, "input_id": imp_id})
                 session.on_flushed(after_flush2, once=True)
-                sv = SectionsVisited.get()
-                sv.append(current)
-                SectionsVisited.set([item for item in sections() if item in sv])  # always store in the order of the sections regardless of the visiting order
+                visited = [*SectionsVisited.get(), current]
+                SectionsVisited.set([
+                    item for item in sections() if item in visited
+                ])
 
 
         @reactive.calc
@@ -352,7 +387,19 @@ def application():
             _name = Module.section_normalise(current)
             instance = create_card(name)
             ui.insert_ui(ui = instance.call_ui(), selector = f"#{_name}-cards-container", where = "beforeEnd")
-            instance.call_server(input, output, session)
+            upstream = reactive.Value(None)
+            card_output = instance.call_server(
+                input,
+                output,
+                session,
+                upstream=upstream,
+                on_remove=unregister_card,
+            )
+            card_nodes[instance.namespace] = CardNode(
+                card=instance,
+                upstream=upstream,
+                output=card_output,
+            )
             instance.section = _name
             instance.resume()
             card_id = instance.ns("Card")
@@ -409,58 +456,25 @@ def application():
 
 
         @reactive.calc
-        def BeforeCurrentCardOrder() -> list[str]: #given in namespaces
-            section = currentSection()
-            with reactive.isolate():
-                OrdSections = SectionsVisited.get().copy()
-                if section not in OrdSections:
-                    OrdSections.append(section)
-                    OrdSections = [item for item in sections() if item in OrdSections]  # always store in the order of the sections regardless of the visiting order
-            try:
-                index = OrdSections.index(section)
-            except ValueError:
-                index = -1
-            if index > 0:
-                previous = OrdSections[index - 1]
-                order = req(input[f"{Module.section_normalise(previous)}_CardOrder"]())
-                order = [s.removesuffix("-Card") for s in order]
-                return order
-            else:
-                return None
-
-        @reactive.calc
-        def CurrentSectionCardOrder() -> list[str]: #given in namespaces
-            section = req(currentSection())
-            order = req(input[f"{Module.section_normalise(section)}_CardOrder"]())
-            order = [s.removesuffix("-Card") for s in order]
-            return order
+        def FlowOrder() -> tuple[str, ...]:
+            TopologyVersion.get()
+            visited = set(SectionsVisited.get())
+            order: list[str] = []
+            for section in sections():
+                if section not in visited:
+                    continue
+                input_id = f"{Module.section_normalise(section)}_CardOrder"
+                section_order = req(input[input_id]())
+                order.extend(
+                    value.removesuffix("-Card") for value in section_order
+                )
+            return tuple(order)
 
         @reactive.effect
-        def cascade():
-            order = req(CurrentSectionCardOrder())
-            log.debug(msg = "𑙬 Card flow cascade invoked")
-            # Link last card of before section to first card of currrent section
-            earlierCards = BeforeCurrentCardOrder()
-            if earlierCards is not None and len(earlierCards) > 0:
-                last = earlierCards[-1]
-                source = Module.Instances.get(last)
-                source.log.info(msg=f"➡️ The card ({source.namespace}) is data-source to section {currentSection()!r}")
-            else:
-                source = None
-            for cardns in order:
-                destination = Module.Instances.get(cardns)
-                if destination is None:
-                    continue
-                destination.resume()
-                if source is None:
-                    destination._imports.unset()
-                    destination.log.debug(msg=f"📭 The card ({destination.namespace}) has no data-source")
-                else:
-                    if source._exports.is_set():
-                        destination._imports.set(source._exports.get())
-                    else:
-                        destination._imports.unset()
-                source = destination
+        @reactive.event(FlowOrder)
+        def wire_flow():
+            log.debug(msg="𑙬 Card flow topology changed")
+            wire_card_nodes(FlowOrder(), card_nodes)
 
     return App(
         ui = app_ui, 

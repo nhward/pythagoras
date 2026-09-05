@@ -396,9 +396,7 @@ def instance():
 
         @this.suspendable(calc = True)
         def incomingproxy_data():
-            this._imports.get()
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc = True)
@@ -690,11 +688,6 @@ def instance():
                 },
             )
 
-        @this.suspendable(triggers = [TransformedData])
-        def export():
-            this._exports.set(TransformedData())
-
-
         @this.suspendable(calc = True)
         @this.record_code
         def build_summary_df():
@@ -902,6 +895,8 @@ def instance():
                 "codes": codes_df,
                 "legend": legend,
             }
+
+        return TransformedData
 
     this.server = server
 

@@ -286,8 +286,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc=True)
@@ -319,10 +318,6 @@ def instance():
             columns = _eligible_columns(proxy)
             frame = proxy.frame.loc[:, columns]
             return _round_significant(frame, SignificantFigures())
-
-        @this.suspendable(triggers=[TransformedData])
-        def export():
-            this._exports.set(TransformedData())
 
         @busy.track("Searching for (near) duplicate observations…")
         @reactive.extended_task
@@ -479,6 +474,8 @@ def instance():
             )
 
         session.on_ended(CalculateDuplicates.cancel)
+
+        return TransformedData
 
     this.server = server
     return this

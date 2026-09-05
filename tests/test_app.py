@@ -21,6 +21,16 @@ if str(APP_DIR) not in sys.path:
 app = create_app_fixture(app="../app/app.py", scope="function")
 
 
+@pytest.fixture
+def csv_file(tmp_path):
+    path = tmp_path / "reactive-flow.csv"
+    path.write_text(
+        "id,value,group\n1,10.25,A\n2,20.75,B\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 @pytest.fixture(scope="module")
 def app_module() -> ModuleType:
     """Load app/app.py explicitly, avoiding the app directory namespace package."""
@@ -136,3 +146,54 @@ class TestApplicationBrowser:
         expect(page.locator("#AddCard")).to_be_visible()
         expect(page.locator("#FullScreen")).to_be_visible()
         expect(page.locator("#Quit")).to_be_visible()
+
+    @pytest.mark.ui
+    def test_committed_data_reacts_through_cards_and_section_boundary(
+        self, page: Page, app: ShinyAppProc, csv_file,
+    ):
+        page.goto(app.url)
+        expect(page.locator("#data_import-ServerFile")).to_be_attached(
+            timeout=20_000,
+        )
+        page.locator("#data_import-ServerFile").set_input_files(str(csv_file))
+        expect(page.locator("#data_import-Commit")).to_be_enabled()
+        page.locator("#data_import-Commit").click()
+
+        for namespace in ("data_tabulation", "role_assignment", "var_modify"):
+            expect(page.locator(f"#{namespace}-Name")).to_contain_text(
+                "reactive-flow", timeout=20_000,
+            )
+
+        page.get_by_role("tab", name="Data cleaning", exact=True).click()
+        expect(page.locator("#obs_duplicates-Name")).to_contain_text(
+            "reactive-flow", timeout=20_000,
+        )
+
+    @pytest.mark.ui
+    def test_removing_a_module_reconnects_the_reactive_chain(
+        self, page: Page, app: ShinyAppProc, csv_file, tmp_path,
+    ):
+        page.goto(app.url)
+        page.locator("#data_import-ServerFile").set_input_files(str(csv_file))
+        expect(page.locator("#data_import-Commit")).to_be_enabled()
+        page.locator("#data_import-Commit").click()
+        expect(page.locator("#var_modify-Name")).to_contain_text(
+            "reactive-flow", timeout=20_000,
+        )
+
+        page.locator("#role_assignment-Card").hover()
+        page.locator("#role_assignment-CloseButton").click(force=True)
+        page.get_by_role("dialog").get_by_role(
+            "button", name="Yes, remove",
+        ).click()
+        expect(page.locator("#role_assignment-Card")).to_have_count(0)
+
+        replacement = tmp_path / "after-removal.csv"
+        replacement.write_text("id,value\n1,100\n2,200\n", encoding="utf-8")
+        page.locator("#data_import-ServerFile").set_input_files(str(replacement))
+        expect(page.locator("#data_import-Commit")).to_be_enabled()
+        page.locator("#data_import-Commit").click()
+
+        expect(page.locator("#var_modify-Name")).to_contain_text(
+            "after-removal", timeout=20_000,
+        )

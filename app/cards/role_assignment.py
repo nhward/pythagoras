@@ -18,7 +18,7 @@ from faicons import icon_svg as icon
 from module import Module
 from proxy_data import proxy_data as Pxy
 from roles import Role, RoleMap
-from shiny import render, req, ui
+from shiny import reactive, render, req, ui
 
 
 def instance():
@@ -122,11 +122,11 @@ def instance():
     
     def server(input, output, session):
 
+        OutputData = reactive.Value()
+
         @this.suspendable(calc = True)
         def incomingproxy_data():
-            this._imports.get()
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
  
         @this.settle(seconds=2)
         @this.suspendable(calc = True)
@@ -140,12 +140,11 @@ def instance():
 
         @this.suspendable()
         def PxdChange():
-            this._exports.set(incomingproxy_data())
+            OutputData.set(incomingproxy_data())
 
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
-            this._imports.get()
-            if not this._imports.is_set():
+            if not this.has_input_data():
                 rm = RoleMap().to_primitive()
                 await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
             else:
@@ -165,14 +164,13 @@ def instance():
         @render.table
         @this.record_code
         def Assignments():
-            orm = this._exports.get().role_map
+            orm = OutputData.get().role_map
             return orm.roles_to_frame()
 
         @this.suspendable(calc = True)
         @this.record_code
         def ValidateMap():
-            this._imports.get()
-            req(this._imports.is_set())
+            this.input_data()
             req(input.role_map())
             this.log.debug("☑️ Validating changes")
             # Convert the json to the RoleMap class
@@ -186,13 +184,43 @@ def instance():
         @this.suspendable(calc = True)
         def Committed():
             req(input.role_map())
-            return incomingproxy_data().with_roles(input.role_map())
+            data = incomingproxy_data()
+            role_map = RoleMap.from_primitive(input.role_map())
+            changes = []
+            for variable in data.frame.columns:
+                original_roles = sorted(
+                    role.value for role in data.role_map.roles_for(variable)
+                )
+                new_roles = sorted(
+                    role.value for role in role_map.roles_for(variable)
+                )
+                if original_roles != new_roles:
+                    changes.append({
+                        "variable": str(variable),
+                        "original_roles": original_roles,
+                        "new_roles": new_roles,
+                    })
+
+            if changes:
+                return data.with_cleaned_data(
+                    data.frame,
+                    card="role_assignment",
+                    operation="Assign variable roles",
+                    parameters={"changes": changes},
+                    role_map=role_map,
+                )
+            return data.with_inactive_step(
+                stage="Cleaning",
+                card="role_assignment",
+                operation="Assign variable roles",
+                parameters={"changes": changes},
+            )
             
 
         #### Commit event ----
         @this.suspendable(triggers = [input.Commit])
         def CommitEvent():
-            this._exports.set(Committed())
+            OutputData.set(Committed())
 
 
         @output
@@ -202,7 +230,11 @@ def instance():
             ok = len(messages) == 0
             ui.update_action_button(id = "Commit", disabled = not ok)
             if ok:
-                if (this._exports.is_set()) and (this._exports.get() == Committed()):
+                desired_roles = RoleMap.from_primitive(input.role_map())
+                if (
+                    OutputData.is_set()
+                    and OutputData.get().role_map == desired_roles
+                ):
                     return ui.span("Assignments applied", class_ = "text-success")
                 else:
                     await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
@@ -210,6 +242,8 @@ def instance():
             else:
                 i = len(messages)
                 return ui.span(i,": ", messages[i-1], class_ = "text-danger")
+
+        return OutputData
 
     this.server = server
 

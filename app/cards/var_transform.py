@@ -657,8 +657,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=1)
         @this.suspendable(calc=True)
@@ -698,10 +697,6 @@ def instance():
                 step_name=this.namespace,
                 operation=this.long_name,
             )
-
-        @this.suspendable(triggers=[TransformedData])
-        def export():
-            this._exports.set(TransformedData())
 
         @output
         @render.ui
@@ -763,6 +758,8 @@ def instance():
             )
 
         session.on_ended(Calculate.cancel)
+
+        return TransformedData
 
     this.server = server
     return this

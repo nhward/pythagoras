@@ -119,3 +119,29 @@ def test_namespace_exists(card):
     """Inherited from Module — but we can check basic existence."""
     assert hasattr(card, "namespace")
     assert isinstance(card.namespace, str)
+
+
+class FakeModuleSession:
+    def __init__(self):
+        self.destroy_count = 0
+
+    async def destroy(self):
+        self.destroy_count += 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_removed_module_session_destruction_respects_shinylive(
+    card, monkeypatch,
+):
+    session = FakeModuleSession()
+    monkeypatch.setattr(card, "IS_SHINYLIVE", False)
+
+    await card._destroy_module_session(session)
+
+    assert session.destroy_count == 1
+    monkeypatch.setattr(card, "IS_SHINYLIVE", True)
+
+    await card._destroy_module_session(session)
+
+    assert session.destroy_count == 1

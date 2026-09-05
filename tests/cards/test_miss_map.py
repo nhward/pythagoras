@@ -37,7 +37,7 @@ def frame():
 def test_card_is_mutable_and_uses_checkbox_group(card_module):
     card = card_module.instance()
     assert card.mutable is True
-    assert card.long_name == "Missingness map"
+    assert card.long_name == "Excessive missingness"
     assert 'id="Map"' in str(card.front)
     assert 'id="Table"' in str(card.back)
     assert 'id="Remove"' in str(card.footer)

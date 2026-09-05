@@ -476,8 +476,7 @@ def instance():
     def server(input, output, session):
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.suspendable(calc=True)
         @this.record_code

@@ -20,7 +20,7 @@ from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from shiny import render, req, ui
+from shiny import render, ui
 from shinywidgets import render_widget
 
 SPECIAL_ROLES = {
@@ -305,7 +305,7 @@ def _missingness_figure(
 def instance():
     """Create the mutable missingness-map card."""
     this = Card(file=__file__, mutable=True)
-    this.long_name = "Missingness map"
+    this.long_name = "Excessive missingness"
     this.description = "This card maps missing values across variables and observations and can remove excessive missingness from the dataset."
 
     def front():
@@ -377,8 +377,7 @@ def instance():
     def server(input, output, session):
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc=True)
@@ -407,10 +406,6 @@ def instance():
                 variable_threshold=VariableThreshold(),
                 observation_threshold=ObservationThreshold(),
             )
-
-        @this.suspendable(triggers=[TransformedData])
-        def export():
-            this._exports.set(TransformedData())
 
         @this.suspendable(calc=True)
         def DisplayFrame():
@@ -482,6 +477,8 @@ def instance():
             if not messages:
                 return ui.span("No variables or observations exceed their thresholds.", class_="text-success")
             return ui.span("; ".join(messages), class_="text-warning")
+
+        return TransformedData
 
     this.server = server
     return this

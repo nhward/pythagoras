@@ -208,10 +208,11 @@ def instance():
 
     def server(input, output, session):
 
+        OutputData = reactive.Value()
+
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc = True)
@@ -225,7 +226,7 @@ def instance():
 
         @this.suspendable()
         def PxdChange():
-            this._exports.set(incomingproxy_data())
+            OutputData.set(incomingproxy_data())
 
         @this.suspendable(calc = True)
         def Schema():
@@ -464,7 +465,7 @@ def instance():
         @render.ui
         def DFDiff():
             old_lines = _dataframe_structure_text(incomingproxy_data().frame)
-            new_lines = _dataframe_structure_text(this._exports.get().frame)
+            new_lines = _dataframe_structure_text(OutputData.get().frame)
             diff = "\n".join(
                 difflib.unified_diff(
                     old_lines,
@@ -521,7 +522,7 @@ def instance():
                 )
             )
             #set the output data
-            this._exports.set(data2)
+            OutputData.set(data2)
 
         @this.suspendable(triggers=[input.Reset])
         async def Reset():
@@ -532,7 +533,7 @@ def instance():
             df["New\norder"] = df["Orig\norder"]
             await Table.update_data(df)
             #reinstate the pass-through of the actual data
-            this._exports.set(incomingproxy_data())
+            OutputData.set(incomingproxy_data())
             row = selected_row()
             req(row is not None, not row.empty)
             ui.update_text(id = "NewName", value = row["Orig\nname"].iloc[0])
@@ -1106,6 +1107,7 @@ def instance():
                 return series.astype("string")
             raise ValueError(f"Unsupported conversion type: {new_type}")
 
+        return OutputData
 
     this.server = server
 

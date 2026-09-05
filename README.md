@@ -66,9 +66,10 @@ This is a key architectural choice.
 ### 🔀 Dynamic Reordering
 
 Cards can be:
-- Reordered via drag-and-drop (using Sortable.js)
-- Inserted from a library of available cards
-- Removed with confirmation
+- Cards are organized into sections
+- Reordered via drag-and-drop (using Sortable.js) within a section
+- Inserted into a section from a library of available cards
+- Removed from a section
 
 This enables:
 
@@ -80,11 +81,16 @@ This enables:
 
 ### 📦 Data Flow Model
 
-Each card imports and exports a structured data wrapper (e.g. `proxy_data`) that includes:
+Each card server consumes an upstream reactive source and returns its own reactive
+output. Reordering cards changes only those source connections; Shiny then propagates
+invalidations through the resulting graph. The values are structured data wrappers
+(e.g. `proxy_data`) that include:
 
-- The dataset (Pandas / GeoPandas)
+- The progressively cleaned dataset (Pandas / GeoPandas)
 - A **RoleMap** describing variable roles
 - A name
+- A list of cleaning tasks
+- A scikit pipeline (ready for a later resampling strategy)
 
 Available roles:
 
@@ -94,6 +100,7 @@ Available roles:
 - `partition`
 - `weighting`
 - `stratifier`
+- `treatment`,
 - `sensitive`
 - `geometry`
 - `sequence`
@@ -160,12 +167,14 @@ Cards (available and planned)
 * [Data importation](app/www/markdown/data_import.html) 
 * [Data tabulation](app/www/markdown/data_tabulation.html)
 * [Role assignment](app/www/markdown/role_assignment.html)
-* [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
+* [Variable modification](app/www/markdown/var_modify.html)
 
 
 🧹 Data cleaning
-* [Variable modification](app/www/markdown/var_modify.html)
+
 * [Duplicate Observations](app/www/markdown/obs_duplicates.html)
+* [Data homogeneity](app/www/markdown/data_homogeneity.html)
+* [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
 
 ∅ Missing Values
 
@@ -173,13 +182,14 @@ Cards (available and planned)
 * [Missingness types](app/www/markdown/miss_type.html)
 * [Informative Missingness](app/www/markdown/miss_informative.html)
 * [Missingness sets](app/www/markdown/miss_sets.html)
-* Excessive missingness
+* [Excessive missingness](app/www/markdown/miss_map.html)
 * [Missingness rules](app/www/markdown/miss_rules.html)
-* Imputation
+* [Learned imputation ](app/www/markdown/miss_impute.html)
 
 
-🧠 Modeling Preparation
+🧠 Preprocessing
 
+* [Variable transforms](app/www/markdown/var_transform.html)
 * Feature roles
 * Partitioning
 * Weighting
@@ -188,6 +198,7 @@ Cards (available and planned)
 Miscellaneous
 * [Configuration](app/www/markdown/sys_configuration.html)
 * [System log](app/www/markdown/system_log.html)
+* [Data journey](app/www/markdown/data_provenance.html)
 
 ⸻
 

@@ -281,6 +281,12 @@ def instance():
         CommittedData=reactive.Value(None)
 
         @this.suspendable(calc=True)
+        def ExportedData():
+            data = CommittedData()
+            req(data is not None)
+            return data
+
+        @this.suspendable(calc=True)
         def TempFilePath():
             files=input.ServerFile()
             if not files:
@@ -749,7 +755,8 @@ def instance():
             elif input.Navset() == "Dataset based":
                 pxd.name=input.DName()
             CommittedData.set(pxd.clone())
-            this._exports.set(CommittedData())
+
+        return ExportedData
 
 
     this.server=server

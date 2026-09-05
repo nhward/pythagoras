@@ -122,6 +122,22 @@ class TestInstance:
             assert f'id="{control}"' in settings
 
 
+class TestNavbarChanges:
+    @pytest.mark.unit
+    def test_unchanged_tabs_require_no_client_messages(self, miss_type):
+        tabs = ["POPULATION", "AGE25_PROPTN", "GDP"]
+        assert miss_type._navbar_changes(tabs, tabs) == ([], [])
+
+    @pytest.mark.unit
+    def test_only_stale_and_new_tabs_are_reconciled(self, miss_type):
+        removed, added = miss_type._navbar_changes(
+            ["POPULATION", "AGE25_PROPTN", "GDP"],
+            ["POPULATION", "GDP", "INFANT_MORT"],
+        )
+        assert removed == ["AGE25_PROPTN"]
+        assert added == ["INFANT_MORT"]
+
+
 class TestSmallHelpers:
     @pytest.mark.unit
     def test_benjamini_hochberg_preserves_index_and_missing_values(self, miss_type):
@@ -509,13 +525,6 @@ class TestWebKitUI:
         )
 
     @pytest.mark.ui
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "The dynamically inserted target tab becomes active in Bootstrap but "
-            "does not update Shiny input.Target; the summary remains Obs-count."
-        ),
-    )
     def test_selecting_variable_tab_changes_summary_to_classification(
         self, page: Page, app: ShinyAppProc
     ):
@@ -562,12 +571,16 @@ class TestWebKitUI:
         table.expect_cell("Patterned", row=0, col=11)
 
     @pytest.mark.ui
-    def test_missing_proportion_change_rebuilds_target_tabs(
+    def test_missing_proportion_change_reconciles_target_tabs_without_errors(
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
         expect(page.get_by_role("tab", name="target", exact=True)).to_be_visible(
             timeout=30_000
+        )
+        page.get_by_role("tab", name="target", exact=True).click()
+        expect(page.get_by_role("tab", name="target", exact=True)).to_have_attribute(
+            "aria-selected", "true"
         )
 
         set_shiny_input(page, "MinMissProp", 0.5)
@@ -576,8 +589,12 @@ class TestWebKitUI:
             timeout=30_000,
         )
         expect(page.get_by_role("tab", name="target", exact=True)).to_have_count(0)
+        expect(page.get_by_role("tab", name="Obs-count", exact=True)).to_have_attribute(
+            "aria-selected", "true"
+        )
 
         set_shiny_input(page, "MinMissProp", 0.49)
         expect(page.get_by_role("tab", name="target", exact=True)).to_be_visible(
             timeout=30_000
         )
+        expect(page.locator(".shiny-notification-error")).to_have_count(0)

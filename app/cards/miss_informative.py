@@ -516,8 +516,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc = True)
@@ -649,10 +648,6 @@ def instance():
                 this.log.info(f"Adding shadow to predictors: {selected}")
             return _add_shadow_variables(incomingproxy_data(), selected)
 
-        @this.suspendable(triggers=[TransformedData])
-        def export():
-            this._exports.set(TransformedData())
-
         @output
         @render_widget
         def Importance():
@@ -735,6 +730,7 @@ def instance():
                 class_="text-success",
             )
 
+        return TransformedData
 
     this.server = server
     return this

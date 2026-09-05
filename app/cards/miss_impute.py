@@ -626,8 +626,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc=True)
@@ -677,10 +676,6 @@ def instance():
                 operation=this.long_name,
             )
 
-        @this.suspendable(triggers=[TransformedData])
-        def export():
-            this._exports.set(TransformedData())
-
         @output
         @render.ui
         def Busy():
@@ -727,6 +722,8 @@ def instance():
             return ui.span(f"Ready to impute {eligible} predictors using {METHOD_LABELS.get(Options()['method'], Options()['method'])}.", class_="text-primary")
 
         session.on_ended(Calculate.cancel)
+
+        return TransformedData
 
     this.server = server
     return this

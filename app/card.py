@@ -18,7 +18,7 @@
 ##        Expand/contract card
 ##        Confirm and remove card
 ##    Namespaced UI via shiny.module.ui/server
-##    Basic import -> export passthrough for non-mutable cards
+##    Reactive input binding and pass-through outputs for non-mutable cards
 ##    Reactive helpers:
 ##        isFullScreen
 ##        isFront
@@ -28,7 +28,7 @@
 ##
 ## Implementations are expected to:
 ##    Set self.front, and optionally self.back, self.settings, self.footer
-##    Implement server(input, output, session)
+##    Implement server(input, output, session), returning a reactive data source
 
 import base64
 from pathlib import Path
@@ -37,6 +37,7 @@ import plotly.graph_objects as go
 from faicons import icon_svg as icon
 from module import Module
 from shiny import module, reactive, render, ui
+from shiny.types import SilentException
 
 # TODO: add a SibebarActive reactive
 
@@ -61,6 +62,11 @@ class Card(Module):
 
     max_height = Module.config.get("settings", {}).get("max_card_height")
     SHADOW_PREFIX = "shadow__"
+
+    async def _destroy_module_session(self, session) -> None:
+        """Destroy a removed module where the runtime supports it."""
+        if not self.IS_SHINYLIVE:
+            await session.destroy()
 
     def empty_figure(
         message: str,
@@ -376,10 +382,23 @@ class Card(Module):
         else:
             return f"<br>File {html_file} not found"
 
-    def call_server(self, input, output, session):
+    def call_server(
+        self,
+        input,
+        output,
+        session,
+        *,
+        upstream=None,
+        on_remove=None,
+    ):
+
+        if upstream is None:
+            upstream = reactive.Value(None)
 
         @module.server
-        def server_func(input, output, session):
+        def server_func(input, output, session, upstream, on_remove):
+
+            self._upstream = upstream
 
 
             # isFullScreen
@@ -487,10 +506,12 @@ class Card(Module):
                 )
 
             @self.suspendable(triggers=[input.ConfirmRemove])
-            def _remove_card():
+            async def _remove_card():
                 ui.modal_remove()
                 self.suspend()
                 id = self.ns('Card')
+                if on_remove is not None:
+                    on_remove(self.namespace)
                 self.reset()
                 ui.remove_ui(selector=f"#{id}")
 
@@ -500,6 +521,7 @@ class Card(Module):
                 imp_id = f"{_name}_CardOrder"
                 async def after_flush(card_id=card_id, container = container, container_id = imp_id):
                     await session.send_custom_message("UpdateCardOrder", {"id": container, "input_id": container_id})
+                    await self._destroy_module_session(session)
                 session.on_flushed(after_flush, once=True)
 
 
@@ -508,25 +530,39 @@ class Card(Module):
                 ui.modal_remove()
 
 
-            @reactive.effect
-            def passthrough():
-                if not self.mutable:
-                    if self._imports.is_set():
-                        self._exports.set(self._imports.get())
-                    else:
-                        self._exports.unset()
-
             @output
             @render.text
             def Name():
-                if self._imports.is_set():
-                    return f"of \"{self._imports.get().name}\""
-                elif self._exports.is_set():
-                    return f"of \"{self._exports.get().name}\""
-                else:
-                    return ""
+                try:
+                    data = self.input_data()
+                except SilentException:
+                    try:
+                        data = self.output_data() if self.output_data else None
+                    except SilentException:
+                        data = None
+                return f"of \"{data.name}\"" if data is not None else ""
             
 
-            return self.server(input, output, session)
+            card_output = self.server(input, output, session)
+            if card_output is None:
+                if self.mutable:
+                    raise RuntimeError(
+                        f"Mutable card {self.namespace!r} must return a reactive output"
+                    )
 
-        return server_func(self.namespace)
+                @reactive.calc
+                def card_output():
+                    return self.input_data()
+
+            if not callable(card_output):
+                raise TypeError(
+                    f"Card {self.namespace!r} returned a non-reactive output"
+                )
+            self.output_data = card_output
+            return card_output
+
+        return server_func(
+            self.namespace,
+            upstream=upstream,
+            on_remove=on_remove,
+        )

@@ -64,6 +64,7 @@ from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
 from shiny import App, reactive, req, ui
 from shiny import ui as _ui
+from shiny.types import SilentException
 
 _UNSET = object()
 
@@ -228,8 +229,9 @@ class Module(ABC):
         self.Instances[ns] = self
         self.namespace = ns
         # reactives
-        self._exports = reactive.Value()
         self._imports = reactive.Value()
+        self._upstream = None
+        self.output_data = None
         # Guide
         self._shepherd_steps = {}
         if not Module._ui_patched: # only patch once
@@ -259,11 +261,31 @@ class Module(ABC):
 
     def reset(self):
         self.log.debug(f"🧹 Cleaning up namespace {self.namespace}")
+        self._upstream = None
+        self.output_data = None
         reuse_cards = self.config.get("settings", {}).get("reuse_cards")
         if reuse_cards:
             self.Instances.pop(self.namespace)
         else:
             self.Instances[self.namespace] = None
+
+    def input_data(self):
+        """Read this module's connected reactive source or standalone input."""
+        if self._upstream is not None:
+            source = self._upstream()
+            if source is not None:
+                value = source()
+                req(value is not None)
+                return value
+        req(self._imports.is_set())
+        return self._imports.get()
+
+    def has_input_data(self) -> bool:
+        """Return whether the current source can provide a value."""
+        try:
+            return self.input_data() is not None
+        except SilentException:
+            return False
 
     Packet = namedtuple("Packet", "data name")
 

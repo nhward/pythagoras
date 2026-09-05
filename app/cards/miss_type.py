@@ -50,6 +50,21 @@ MISSINGNESS_ROW_CLASSES = {
     "Insufficient data": "miss-type-insufficient-row",
 }
 
+
+def _navbar_changes(
+    existing: tuple[str, ...] | list[str],
+    desired: tuple[str, ...] | list[str],
+) -> tuple[list[str], list[str]]:
+    """Return stale and new tabs while preserving their displayed order."""
+    existing_tabs = tuple(dict.fromkeys(map(str, existing)))
+    desired_tabs = tuple(dict.fromkeys(map(str, desired)))
+    existing_set = set(existing_tabs)
+    desired_set = set(desired_tabs)
+    removed = [tab for tab in existing_tabs if tab not in desired_set]
+    added = [tab for tab in desired_tabs if tab not in existing_set]
+    return removed, added
+
+
 @dataclass
 class TreeAnalysis:
     """The fitted tree and the quantities used to assess it."""
@@ -1272,8 +1287,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc=True)
@@ -1346,15 +1360,28 @@ def instance():
                 )
             ]
 
-        PastTabs = reactive.value([])
+        current_tabs: tuple[str, ...] = ()
+        registered_tree_outputs: set[str] = set()
 
-        @this.suspendable()
+        @this.suspendable(triggers=[MissingVariables])
         def UpdateChoices():
-            for var in PastTabs():
+            nonlocal current_tabs
+            desired_tabs = tuple(map(str, MissingVariables()))
+            removed_tabs, added_tabs = _navbar_changes(
+                current_tabs,
+                desired_tabs,
+            )
+
+            if input.Target() in removed_tabs:
+                ui.update_navset(id="Target", selected=OBS_COUNT)
+            for var in removed_tabs:
                 ui.remove_nav_panel(id = "Target", target=var)
-            for var in MissingVariables():
+            for var in added_tabs:
                 name = re.sub(r'[^A-Za-z0-9]+', '_', str(var)).strip('_')
-                register_tree(output_id=f"{name}__Tree")
+                output_id = f"{name}__Tree"
+                if output_id not in registered_tree_outputs:
+                    register_tree(output_id=output_id)
+                    registered_tree_outputs.add(output_id)
                 panel = ui.nav_panel(
                     var,
                     ui.span(f"Predicting missing values in {var}", class_="text-primary text-center d-block"),
@@ -1365,10 +1392,15 @@ def instance():
                         title="Decision tree",
                         text="A decision tree predicting the selected variable's missingness, or the number of missing values in each observation.",
                         position="left",
-                    )
+                    ),
+                    value=var,
                 )
-                ui.insert_nav_panel(id = "Target", nav_panel=panel)
-                PastTabs.set(MissingVariables())
+                ui.insert_nav_panel(
+                    id="Target",
+                    nav_panel=panel,
+                    select=False,
+                )
+            current_tabs = desired_tabs
 
 
         def _weighting_column(proxy: proxy_data) -> str | None:

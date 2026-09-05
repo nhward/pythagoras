@@ -111,7 +111,7 @@ def recorded_helpers(card_module, *, frame=None, role_map=None, max_obs=3):
     with reactive.isolate():
         card._imports.set(proxy)
     inputs = FakeInputs(role_map, max_obs=max_obs)
-    card.server(inputs, lambda function: function, None)
+    card.output_data = card.server(inputs, lambda function: function, None)
     return card, inputs, functions
 
 
@@ -256,18 +256,65 @@ class TestServerHelpers:
         assert result.role_map == RoleMap.from_primitive(VALID_ROLE_MAP)
 
     @pytest.mark.unit
+    def test_committed_proxy_records_changed_roles_in_data_journey(self, card_module):
+        _card, _, functions = recorded_helpers(card_module, role_map=VALID_ROLE_MAP)
+        with reactive.isolate():
+            result = functions["Committed"]()
+
+        record = result.processing_records[-1]
+        assert record.stage == "Cleaning"
+        assert record.card == "role_assignment"
+        assert record.operation == "Assign variable roles"
+        assert record.attempted is True
+        assert record.input_shape == result.shape
+        assert record.output_shape == result.shape
+        changes = {
+            change["variable"]: change
+            for change in record.parameters["changes"]
+        }
+        assert set(changes) == {"y", "id", "part"}
+        assert changes["y"] == {
+            "variable": "y",
+            "original_roles": ["predictor"],
+            "new_roles": ["target"],
+        }
+        journey = importlib.import_module("cards.data_provenance")._journey_table(result)
+        role_step = journey.loc[journey["Card"] == "role_assignment"].iloc[-1]
+        assert role_step["Operation"] == "Assign variable roles"
+        assert role_step["Attempted"] == "Yes"
+        assert role_step["Variables"] == "y, id, part"
+
+    @pytest.mark.unit
+    def test_unchanged_role_commit_records_an_inactive_journey_step(self, card_module):
+        source = proxy_data(_df=seeded_frame(), _name="Test")
+        _card, _, functions = recorded_helpers(
+            card_module,
+            frame=source,
+            role_map=source.role_map.to_primitive(),
+        )
+        with reactive.isolate():
+            result = functions["Committed"]()
+
+        record = result.processing_records[-1]
+        assert record.card == "role_assignment"
+        assert record.operation == "Assign variable roles"
+        assert record.attempted is False
+        assert record.parameters["changes"] == []
+        assert result.role_map == source.role_map
+
+    @pytest.mark.unit
     def test_commit_event_sets_export(self, card_module):
         _card, _, functions = recorded_helpers(card_module, role_map=VALID_ROLE_MAP)
         with reactive.isolate():
             functions["CommitEvent"]()
-            exported = _card._exports.get()
+            exported = _card.output_data()
         assert exported.role_map == RoleMap.from_primitive(VALID_ROLE_MAP)
 
     @pytest.mark.unit
     def test_assignments_output_has_one_row_per_role(self, card_module):
         card, _, functions = recorded_helpers(card_module, role_map=VALID_ROLE_MAP)
         with reactive.isolate():
-            card._exports.set(functions["Committed"]())
+            card.output_data.set(functions["Committed"]())
             result = functions["Assignments"]()
         assert result.columns.tolist() == ["Role", "Variable"]
         assert len(result) == len(Role)

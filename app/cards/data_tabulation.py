@@ -97,8 +97,7 @@ def instance():
 
         @this.suspendable(calc = True)
         def incomingproxy_data():
-            req(this._imports.is_set())
-            return this._imports.get()
+            return this.input_data()
 
         @this.settle(seconds=2)
         @this.suspendable(calc = True)
