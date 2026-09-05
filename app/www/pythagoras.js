@@ -319,9 +319,133 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn(`Sortable container not found: "${id}"`)
             return
         }
-        const ids = Array.from(container.children).map((x) => x.id).filter(Boolean);
+        const ids = Array.from(container.children)
+            .filter((element) => element.classList.contains("card"))
+            .map((element) => element.id)
+            .filter(Boolean);
         window.Shiny?.setInputValue?.(input_id, ids, { priority: "event" })
+        setSectionEmptyState(container.dataset.sectionId, ids.length === 0);
     };
+
+    function sectionElement(selector, section) {
+        return Array.from(document.querySelectorAll(selector)).find(
+            (element) => element.dataset.sectionId === section
+        );
+    }
+
+    function ensureSectionDeleteControl(section) {
+        if (!section) return null;
+
+        const existing = sectionElement(".delete-empty-section", section);
+        if (existing) return existing;
+
+        const tab = Array.from(
+            document.querySelectorAll("#Navbar .nav-link[data-value]")
+        ).find((element) => element.dataset.value === section);
+        const accordionItem = Array.from(
+            document.querySelectorAll("#Accordion .accordion-item[data-value]")
+        ).find((element) => element.dataset.value === section);
+        const host = tab?.closest(".nav-item")
+            || accordionItem?.querySelector(".accordion-header");
+        if (!host) return null;
+        const displayName = tab?.textContent.trim()
+            || accordionItem?.querySelector(".accordion-title")?.textContent.trim()
+            || section;
+
+        const control = document.createElement("button");
+        control.type = "button";
+        control.className = "delete-empty-section";
+        control.dataset.sectionId = section;
+        control.title = `Delete empty section ${displayName}`;
+        control.setAttribute(
+            "aria-label",
+            `Delete empty section ${displayName}`
+        );
+        control.textContent = "\u00d7";
+        host.classList.add(
+            tab ? "section-nav-item-with-delete" : "section-accordion-header-with-delete"
+        );
+        host.appendChild(control);
+        return control;
+    }
+
+    function setSectionEmptyState(section, empty) {
+        if (!section) return;
+        const emptyState = sectionElement(".section-empty-state", section);
+        if (emptyState) emptyState.hidden = !empty;
+        const control = ensureSectionDeleteControl(section);
+        if (control) control.hidden = !empty;
+    }
+
+    document.addEventListener("click", (event) => {
+        const deleteControl = event.target.closest(".delete-empty-section");
+        if (deleteControl) {
+            event.preventDefault();
+            event.stopPropagation();
+            window.Shiny?.setInputValue?.(
+                "DeleteSection",
+                {
+                    section: deleteControl.dataset.sectionId,
+                    nonce: Date.now()
+                },
+                { priority: "event" }
+            );
+            return;
+        }
+
+        const addControl = event.target.closest(".section-add-card");
+        if (addControl) {
+            window.Shiny?.setInputValue?.(
+                "AddCardToSection",
+                { section: addControl.dataset.sectionId, nonce: Date.now() },
+                { priority: "event" }
+            );
+        }
+    });
+
+    document.addEventListener("shown.bs.tab", (event) => {
+        if (!event.target.closest("#AddItemType")) return;
+        const action = event.target.dataset.value;
+        const button = event.target.closest(".modal")?.querySelector(
+            "#CardPicker_ok"
+        );
+        if (!button?.dataset.actionLabels) return;
+        try {
+            const labels = JSON.parse(button.dataset.actionLabels);
+            button.textContent = labels[action] || "Continue";
+        } catch (error) {
+            console.warn("Could not update modal action label", error);
+        }
+    });
+
+    Shiny.addCustomMessageHandler("RenameSection", (msg) => {
+        const sectionId = msg?.section_id;
+        const name = msg?.name;
+        if (!sectionId || !name) return;
+
+        const tab = Array.from(
+            document.querySelectorAll("#Navbar .nav-link[data-value]")
+        ).find((element) => element.dataset.value === sectionId);
+        if (tab) tab.textContent = name;
+
+        const accordionItem = Array.from(
+            document.querySelectorAll("#Accordion .accordion-item[data-value]")
+        ).find((element) => element.dataset.value === sectionId);
+        const accordionTitle = accordionItem?.querySelector(".accordion-title");
+        if (accordionTitle) accordionTitle.textContent = name;
+
+        const deleteControl = sectionElement(
+            ".delete-empty-section",
+            sectionId
+        );
+        if (deleteControl) {
+            deleteControl.title = `Delete empty section ${name}`;
+            deleteControl.setAttribute(
+                "aria-label",
+                `Delete empty section ${name}`
+            );
+        }
+    });
 
     Shiny.addCustomMessageHandler("MakeSortable", (msg) => {
         const container = document.getElementById(msg.id);
@@ -330,33 +454,36 @@ document.addEventListener("DOMContentLoaded", () => {
             return
         }
         console.info(`Sortable container found: "${msg.id}"`)
-        Sortable.create(container, {
-            animation: 150,
-            handle: ".drag-handle",
-            ghostClass: "drag-ghost",
-            forceFallback: true,
-            fallbackOnBody: true,
-            // make drag clone safe immediately
-            onClone: (evt) => {
-                // evt.clone is the element appended to <body>
-                markCloneNonBindable(evt.clone);
-            },
-            onStart: () => {
-                container.classList.add("dragging");
-            },
-            onEnd: () => {
-                // Remove any leftover ghost flags/clone
-                if (dragClone && dragClone.parentNode) {
-                    // defensive: ensure the clone can never be bound
-                    dragClone.setAttribute("data-shiny-ignore", "true");
-                    dragClone.remove();   // get it out of the DOM
+        if (container.dataset.sortableInitialized !== "true") {
+            Sortable.create(container, {
+                animation: 150,
+                handle: ".drag-handle",
+                ghostClass: "drag-ghost",
+                forceFallback: true,
+                fallbackOnBody: true,
+                // make drag clone safe immediately
+                onClone: (evt) => {
+                    // evt.clone is the element appended to <body>
+                    markCloneNonBindable(evt.clone);
+                },
+                onStart: () => {
+                    container.classList.add("dragging");
+                },
+                onEnd: () => {
+                    // Remove any leftover ghost flags/clone
+                    if (dragClone && dragClone.parentNode) {
+                        // defensive: ensure the clone can never be bound
+                        dragClone.setAttribute("data-shiny-ignore", "true");
+                        dragClone.remove();   // get it out of the DOM
+                    }
+                    dragClone = null;
+                    container.classList.remove("dragging");
+                    clearSelection();
+                    publishCardOrder(msg.id, msg.input_id);
                 }
-                dragClone = null;
-                container.classList.remove("dragging");
-                clearSelection();
-                publishCardOrder(msg.id, msg.input_id);
-            }
-        });
+            });
+            container.dataset.sortableInitialized = "true";
+        }
         publishCardOrder(msg.id, msg.input_id);
     });
 

@@ -112,6 +112,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 .card.fullscreen-active .drag-handle {
 display: none !important;
 }
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
 
 #shiny-modal-wrapper {
 position: absolute;
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -605,12 +659,12 @@ border: 0;
 <hr>
 <h3 id="what-you-need-to-get-started">What you need to get started:</h3>
 <ol type="1">
-<li>Buttons (far right)
+<li>Buttons (top, far right)
 <ul>
-<li>The app is can exited by pressing the ⏹ button.</li>
-<li>Add extra cards by using the + button</li>
-<li>You can request a full-screen mode using the [] button.</li>
-<li>TODO can save your configuration to disk</li>
+<li>Manage cards and sections using the <i class="fa-solid fa-wrench"></i> button.</li>
+<li>You can save the configuration using the <i class="fa-solid fa-bookmark"></i> button.</li>
+<li>You can request full-screen mode using the <i class="fa-solid fa-expand"></i> button.</li>
+<li>The app is can exited by pressing the <i class="fa-solid fa-stop"></i> button.</li>
 </ul></li>
 <li>Tabs - The top of the app holds a set of tabs. The first of these is called “Start”. By clicking on a tab you navigate to that section. Progress sequentially through each of the tabs from left to right. What appears are sets of “cards”. Each card is a data-related task that operate together as a workflow; the input of each is taken from the output of the preceding one. Workflows begin by reading-in a dataset.</li>
 </ol>

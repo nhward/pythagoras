@@ -601,6 +601,60 @@ span.btn.btn-default.btn-file:has(.shiny-input-file) {
 
 body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 
+/* Empty sections remain useful: offer creation in the body and deletion in
+   the section title without changing the title's tab/accordion semantics. */
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+  display: none !important;
+}
+
+.current-section-context {
+  padding: .65rem .8rem;
+  border-radius: var(--bs-border-radius, .375rem);
+  background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+  position: relative;
+}
+
+.section-nav-item-with-delete > .nav-link {
+  padding-right: 1.75rem;
+}
+
+.delete-empty-section {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: .35rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 1.15rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+  background: var(--bs-danger-bg-subtle, #f8d7da);
+  color: var(--bs-danger, #dc3545);
+  outline: none;
+}
+
+.section-accordion-header-with-delete > .accordion-button {
+  padding-right: 4rem;
+}
+
+.section-accordion-header-with-delete > .delete-empty-section {
+  right: 2.5rem;
+}
+
 /* When dragging, stop any text selection */
 .dragging, .dragging * {
   -webkit-user-select: none;

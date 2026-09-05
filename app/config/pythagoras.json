@@ -1,63 +1,96 @@
-       {
-
+{
   "$schema": "pythagoras.schema.json",
-
   "version": 1,
-
   "settings": {
     "section_style": "tab",
-    "show_start": false,
+    "show_start": true,
     "reuse_cards": true,
     "max_card_height": "450px",
     "max_dupl_cards": 10
   },
-
   "layout": [
     {
       "section": "Data prep",
       "cards": [
-        {"module": "data_import"},
-        {"module": "data_tabulation"},
-        {"module": "role_assignment"},
-        {"module": "var_modify"}
+        {
+          "module": "data_import"
+        },
+        {
+          "module": "data_tabulation"
+        },
+        {
+          "module": "role_assignment"
+        },
+        {
+          "module": "var_modify"
+        }
       ]
     },
-
     {
       "section": "Data cleaning",
       "cards": [
-        {"module": "obs_duplicates"},
-        {"module": "data_homogeneity"},
-        {"module": "var_dissimilar"}
+        {
+          "module": "obs_duplicates"
+        },
+        {
+          "module": "data_homogeneity"
+        },
+        {
+          "module": "var_dissimilar"
+        }
       ]
     },
-
     {
       "section": "Missing values",
       "cards": [
-        {"module": "miss_placeholders"},
-        {"module": "miss_map"},
-        {"module": "miss_sets"},
-        {"module": "miss_rules"},
-        {"module": "miss_type"},
-        {"module": "miss_informative"},
-        {"module": "miss_impute"}
+        {
+          "module": "miss_placeholders"
+        },
+        {
+          "module": "miss_map"
+        },
+        {
+          "module": "miss_sets"
+        },
+        {
+          "module": "miss_rules"
+        },
+        {
+          "module": "miss_type"
+        }
       ]
     },
-
+    {
+      "section": "Missing 2",
+      "cards": [
+        {
+          "module": "miss_informative"
+        },
+        {
+          "module": "miss_impute"
+        }
+      ]
+    },
     {
       "section": "Preprocessing",
       "cards": [
-        {"module": "var_transform"}
+        {
+          "module": "var_transform"
+        }
       ]
     },
-
     {
       "section": "System",
       "cards": [
-        {"module": "sys_configuration"},
-        {"module": "system_log"},
-        {"module": "data_provenance"}
+        {
+          "module": "sys_configuration"
+        },
+        {
+          "module": "system_log"
+        },
+        {
+          "module": "data_provenance"
+        }
       ]
     }
   ]

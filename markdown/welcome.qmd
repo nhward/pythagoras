@@ -10,15 +10,15 @@ backgroundcolor: rgba(63, 228, 243, 0.76)
 
 ### What you need to get started:
 
- 1. Buttons (far right)
-    - The app is can exited by pressing the ⏹ button.
-    - Add extra cards by using the + button
-    - You can request a full-screen mode using the [] button.
-    - TODO can save your configuration to disk
-
+ 1. Buttons (top, far right)
+    - Manage cards and sections using the <i class="fa-solid fa-wrench"></i> button.
+    - You can save the configuration using the <i class="fa-solid fa-bookmark"></i> button.
+    - You can request full-screen mode using the <i class="fa-solid fa-expand"></i> button.
+    - The app is can exited by pressing the <i class="fa-solid fa-stop"></i> button.
+   
  1. Tabs - The top of the app holds a set of tabs. The first of these is called "Start". By clicking on a tab you navigate to that section. Progress sequentially through each of the tabs from left to right. What appears are sets of "cards". Each card is a data-related task that operate together as a workflow; the input of each is taken from the output of the preceding one. Workflows begin by reading-in a dataset.
 
->_Pythagoras is the scaffold that holds the cards together._
+> _Pythagoras is the scaffold that holds the cards together._
 
 ### Some points of difference:
 
