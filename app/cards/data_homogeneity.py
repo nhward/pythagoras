@@ -134,7 +134,7 @@ def _eligible_columns(
         elif roles & {Role.SEQUENCE, Role.IDENTIFIER, Role.GEOMETRY}:
             excluded[name] = "Sequence, identifier, or geometry role"
         elif kind in {"cyclic", "list", "geometry", "unsupported"}:
-            excluded[name] = f"{kind.title()} variables are not analysed"
+            excluded[name] = f"{kind.title()} variables are not analyzed"
         elif frame[column].notna().sum() < 2:
             excluded[name] = "Too few observed values"
         elif kind == "categorical" and frame[column].nunique(dropna=True) > maximum_levels:

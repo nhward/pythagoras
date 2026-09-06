@@ -64,7 +64,7 @@ def test_card_is_mutable_with_transform_controls_and_statistics(card_module):
     footer = str(card.footer)
     assert 'id="Transform"' in footer
     assert "shiny-input-checkboxgroup" in footer
-    assert "Mean centre" in footer
+    assert "Mean center" in footer
     assert "Common spread" in footer
     assert "Reduce skew" in footer
     assert 'id="IncludeTarget"' in str(card.settings)
@@ -87,7 +87,7 @@ def test_pipeline_uses_sklearn_and_keeps_controls_independent(card_module):
     assert pipeline.named_steps["centre"].with_mean is True
     assert pipeline.named_steps["centre"].with_std is False
     assert card_module._transform_name(["Center", "Deskew", "Scale"]) == (
-        "Reduce skew → Common spread → Mean centre"
+        "Reduce skew → Common spread → Mean center"
     )
     assert card_module._build_pipeline([]) is None
 
@@ -382,7 +382,7 @@ class TestWebKitUI:
         by_id(page, "Transform").locator('input[value="Deskew"]').check(force=True)
         by_id(page, "Transform").locator('input[value="Center"]').check(force=True)
         expect(by_id(page, "Check")).to_contain_text(
-            "Transformed 3 predictors using Reduce skew → Mean centre",
+            "Transformed 3 predictors using Reduce skew → Mean center",
             timeout=20_000,
         )
 

@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>System configuration</title>
+<title>Configuration</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,41 +725,51 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">System configuration</h1>
+<h1 class="title">Configuration</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>This card analyses the environment in which Pythagoras is running. This can be useful in explaining differences in the reproduction of past results. If you refresh the card at a later time there may be additional packages loaded as many are loaded dynamically on-demand.</p>
-<ul>
-<li>The <strong>Summary</strong> tab provides a small set of high level property values.</li>
-<li>The <strong>URL</strong> tab provides evidence of the server in which the software is running. A host name of “localhost” or “127.0.0.1” means the software is running locally.</li>
-<li>The <strong>Packages</strong> tab provides a sorted list of packages that have been loaded, up to this point, along with their version numbers.</li>
-<li>The <strong>Folders</strong> tab counts the files that are in significant folders</li>
-</ul>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card documents:</p>
-<ul>
-<li>Pythagoras modules</li>
-<li>Important Python packages</li>
-<li>Number of logical CPU cores</li>
-</ul>
-<h4 id="settings">⚙️ Settings</h4>
-<p>There are no settings.</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Configuration card records the software and host environment in which Pythagoras is running. It helps explain why an analysis may behave differently on another machine or after packages have changed. The card is diagnostic and does not change data.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><em>Primary:</em> Document the package versions in use</li>
-<li><em>Secondary:</em> Provide evidence about changes</li>
+<li><strong>Primary:</strong> Capture the Python, platform, package, and application environment.</li>
+<li><strong>Secondary:</strong> Support diagnosis of reproducibility and deployment differences.</li>
 </ol>
-<h4 id="actions">🛠️ Actions</h4>
-<p>Keep a copy of this information when a crucial analysis has been completed. This might explain imperfect reproduction in future.</p>
-<p>If the python libraries can be restored to their original ones, the package infrastructure will be identical. Any remaining differences will be due to changes in the data and/or changes in the Pythagoras.</p>
-<p>The in-use package list can change during an analysis session as additional “cards” are loaded progressively.</p>
-<hr>
-<p>This card does not require a data set. This card does not change any dataset. Any cards downstream of this card will receive the upstream version of the data.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>The card reads properties from the current Python process, browser session, installed package metadata, and important application folders. Some packages are loaded only when a card first needs them, so the observed environment can grow during a session.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front has four tabs. <strong>Summary</strong> shows high-level host, Python, platform, pixel-ratio, and package counts. <strong>Url</strong> reports the browser location and helps distinguish local from hosted execution. <strong>Packages</strong> lists currently loaded distributions and versions. <strong>Folders</strong> reports significant application paths and file counts.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side contains a conventional session-information report. Full-screen mode includes more dependency, standard-library, and private-package detail than the normal card view.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p><strong>Refresh</strong> rereads the current environment. Use it after opening additional cards if the loaded-package list matters. Refreshing changes only the report.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>This card has no settings. The Tour Guide explains its tabs, report, and refresh action.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>When reproducing an analysis, compare the Python version, operating platform, and versions of libraries central to the affected card. A different package count alone is not proof of a problem, but a changed version can identify where to investigate.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>Loaded packages are a session snapshot and not a complete lock file.</li>
+<li>Matching versions does not guarantee identical hardware, external services, locale, or source data.</li>
+<li>Folder paths may reveal deployment structure and should be handled appropriately when sharing reports.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Refresh after all relevant cards have been opened.</li>
+<li>Save the report with important analytical results.</li>
+<li>Compare versions when behavior differs between environments.</li>
+<li>Recreate the original environment before attributing differences to the data or analysis.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> The running application and client-session environment.</li>
+<li><strong>Output:</strong> The upstream dataset unchanged.</li>
+<li><strong>Data journey:</strong> This system diagnostic does not add a journey step.</li>
+</ul>
 
 
 

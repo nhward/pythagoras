@@ -100,7 +100,7 @@ def instance():
                 style="border: 0px; box-shadow: none;",
                 guide=this,
                 title="Refresh button",
-                text="Refresh the application-log listing.",
+                text="Takes a fresh snapshot of retained application records. It updates the listing but does not clear the log or change application data.",
                 position="top",
             ),
             class_="text-center",
@@ -112,19 +112,19 @@ def instance():
         return ui.TagList(
             ui.input_checkbox_group(
                 id="Levels", label="Log levels", choices=LOG_LEVELS, selected=LOG_LEVELS, inline=True,
-                guide=this, text="Select the severity levels included in the table.", position="left",
+                guide=this, text="Includes only records at the selected DEBUG, INFO, WARNING, ERROR, or CRITICAL levels. Begin with severe levels and add lower levels when more context is needed.", position="left",
             ),
             ui.input_text(
                 id="Search", label="Search", placeholder="Logger, message, source, or thread", 
-                guide=this, title="Search log records", text="Case-insensitive plain-text search across the log fields.", position="left",
+                guide=this, title="Search log records", text="Applies a case-insensitive plain-text search across logger, message, source, and thread fields in the current snapshot.", position="left",
             ),
             ui.input_numeric(
                 id="Maximum", label="Maximum records", value=1_000, min=1, max=5_000, step=100,
-                guide=this, text="Limit the number of matching records shown, newest first.", position="left",
+                guide=this, text="Caps matching records after filters and search are applied, keeping the newest first. Raising it provides more history but increases browser-table size.", position="left",
             ),
             ui.input_checkbox(
                 id="AutoRefresh", label="Refresh automatically", value=False, 
-                guide=this, text="Refresh the table every five seconds while this card is active.", position="left",
+                guide=this, text="Requests a fresh in-memory log snapshot every five seconds while enabled. Use it when reproducing a live problem; disable it when a stable table is easier to inspect.", position="left",
             ),
         )
 

@@ -181,7 +181,7 @@ def instance():
                 "Dataset based",
                 ui.tags.br(),
                 ui.input_selectize(id="Dataset", label="Package dataset", multiple=False, width="80%", choices=DatasetChoices(), 
-                guide=this, text="The available package datasets are organised by package."),
+                guide=this, text="Lists example datasets grouped by their supplying Python package. Selecting one creates a preview; downstream data changes only after Commit Import is clicked."),
                 ui.input_text(id="DName", label="Short name", guide=this, position="bottom", 
                     text='This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the chosen dataset name. Each of the importation styles has this field.')
             ),
@@ -249,7 +249,7 @@ def instance():
                 id="Check",
                 guide=this, 
                 title="Card status",
-                text="This contains a line of colour coded information about the state of the card. Notice that it reveals when only a portion of the available data is being used. This limit can be changed in the settings.",
+                text="Reports whether the selected source was read successfully and is ready to commit. Errors here should be resolved before the provisional data is published downstream.",
                 position="top")
         )
 

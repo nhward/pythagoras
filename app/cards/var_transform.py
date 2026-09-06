@@ -33,7 +33,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PowerTransformer, StandardScaler
 
 TRANSFORM_LABELS = {
-    "Center": "Mean centre",
+    "Center": "Mean center",
     "Scale": "Common spread",
     "Deskew": "Reduce skew",
 }
@@ -622,7 +622,7 @@ def instance():
                 id="Transform", label="Transform variables",
                 choices=TRANSFORM_LABELS, selected=[], inline=True,
                 guide=this, title="Apply transformations", position="top",
-                text="Reduce skew with a fitted Yeo–Johnson power transform, give predictors a common standard deviation, or mean-centre them. Selected operations are always applied in that order, and clearing the choices restores the incoming data.",
+                text="Reduce skew with a fitted Yeo–Johnson power transform, give predictors a common standard deviation, or mean-center them. Selected operations are always applied in that order, and clearing the choices restores the incoming data.",
             ),
             class_="vertically-scrollable-footer",
         )
@@ -647,7 +647,7 @@ def instance():
             ui.input_slider(
                 id="Digits", label="Table decimal places", min=1, max=8,
                 value=3, step=1, guide=this, title="Decimal places",
-                position="left", text="Controls numeric rounding on the flip-side table.",
+                position="left", text="Rounds numeric values in the flip-side statistics table to this many decimal places. It changes presentation only and does not alter fitted transformations or exported values.",
             ),
         )
     this.settings = settings

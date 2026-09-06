@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Duplicate Observations</title>
+<title>Observation duplicates</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,30 +725,57 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Duplicate Observations</h1>
+<h1 class="title">Observation duplicates</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>Near duplicates are observations that differ (i.e. mismatch) by a low number of variables. A near duplicate is not one whose mismatches are close, rather, it relates to the number of mismatches regardless of their magnitude. A true duplicate is an observation that is an exact match to another observation. Its differences are zero. In contrast, a near duplicate may be an exact match to 8 out of 9 variables and be recorded against the “1 difference” tally.</p>
-<p>For this assessment all variables are examined <strong>except</strong> those with <em>no role</em>, <em>geometry role</em>, <em>weighting role</em>, and the <em>identifier role</em> (roles = None, Geometry, Weighting, Identifier).</p>
-<p>The advanced settings allow the decimal data to be compared at a lower accuracy. This enables close numeric values to be exact matches. Integer data is not affected. The process of rounding is performed to a fixed number of significant places, rather than decimal places, due to different scales that variables can have. This has the effect of increasing the tally of each of the chart’s bars.</p>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front shows a bar chart of the frequency of 0-differences, 1-difference, 2-differences etc. The important bar is the first one; the one that indicates the number of exact duplicates.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card gives this information in a table.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Observation duplicates card measures exact and near-duplicate rows and can remove redundant exact duplicates. It helps identify repeated records, unexpectedly low observation diversity, and rows that differ in only a few fields.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><em>Primary:</em> To detect, count and visualize the diversity of the observations</li>
-<li><em>Secondary:</em> To remove observations so that exact duplicates no longer exist</li>
+<li><strong>Primary:</strong> Detect and quantify exact and near-duplicate observations.</li>
+<li><strong>Secondary:</strong> Remove later redundant copies of exact duplicate rows.</li>
+<li><strong>Tertiary:</strong> Identify candidate records requiring source-level investigation.</li>
 </ol>
-<hr>
-<p>All cards downstream of this card will receive any changes enacted by this card.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>The card compares variables except those assigned <strong>None</strong>, <strong>Geometry</strong>, <strong>Weighting</strong>, or <strong>Identifier</strong> roles. Exact duplicates match on every eligible variable. A row first classified with one tolerated difference matches an earlier row on all but one eligible variable; later categories extend that principle. Counts are incremental, so a row appears at the smallest tolerance at which it becomes redundant rather than being counted repeatedly.</p>
+<p>Floating-point values may be rounded to a selected number of significant figures before comparison. This can make numerically close values equal across variables with different scales. Integers are not rounded.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front shows paired bars for each number of differences tolerated. <strong>Before</strong> describes the incoming data and <strong>After</strong> describes the data exported after the current exact-duplicate removal choice. The legend identifies the two series. The zero-difference pair is the most important for exact deduplication; later pairs describe near duplicates.</p>
+<p>When removal is inactive, the paired bars coincide. When it is active, the After exact-duplicate bar should fall to zero because only the first row in each exact group remains.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side lists the post-action results, including the tolerance, redundant count, and one-based row numbers classified at that minimum tolerance. Use it to locate candidate records in Data tabulation.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>When exact duplicates exist, the footer offers <strong>Remove duplicate observations</strong>. Selecting it keeps the first occurrence and removes later exact copies under the current significant-figures rule. Clearing it restores all incoming rows. Near duplicates are reported but are never removed automatically.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>An exact duplicate may be an accidental repeated import, but it can also be a legitimate repeated event whose distinguishing identifier was excluded from comparison. Near duplicates often reveal corrected entries, repeated measurements, or fields with inconsistent recording. Review source identifiers and business meaning before deletion.</p>
+<p>Reducing significant figures changes the operational definition of equality. Use it only when small floating-point differences are known to be irrelevant.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>Excluded roles do not participate in equality, which can merge records distinct for the intended analysis.</li>
+<li>Near-duplicate status counts mismatching variables, not the magnitude or importance of differences.</li>
+<li>Search cost grows rapidly with the number of eligible variables and tolerated differences.</li>
+<li>Keeping the first duplicate assumes current row order provides an acceptable representative.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Confirm which roles are excluded from comparison.</li>
+<li>Inspect the zero-difference Before bar.</li>
+<li>Review row identities for exact and low-difference matches.</li>
+<li>Adjust significant figures only with domain justification.</li>
+<li>Enable removal and confirm the After series and status.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> Upstream observations, eligible comparison variables, and roles.</li>
+<li><strong>Output:</strong> Either unchanged data or data with later exact duplicates removed.</li>
+<li><strong>Data journey:</strong> The removal choice creates a Cleaning step and records an inactive step when not enabled.</li>
+</ul>
 
 
 

@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>data_tabulation</title>
+<title>Data tabulation</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,41 +725,57 @@ border: 0;
 
 
 <header id="title-block-header">
-
+<h1 class="title">Data tabulation</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>Having direct access to the data is a vital part of data analysis. The small-card version is a head/tail abbreviated table. The full screen version gives access to all the observations. It also allows observation filtering.</p>
-<p>The raw data is minimally altered:</p>
-<ul>
-<li>Convert to Pandas if possible</li>
-<li>Geometries made displayable via <em>Well Known Text</em> (WKT) format</li>
-</ul>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front initially shows a short top/bottom listing. Going full-screen gives access to the entirety of the data.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card lists the variables of the dataset with summary statistics which vary by data type.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<ul>
-<li>Bounding boxes (Geometries) Converts each geometry to a bounding box representation.<br>
-</li>
-<li>Rounding (Decimal)<br>
-Rounds decimal data, primarily to fit more columns into the available width.<br>
-</li>
-<li>Limit the maximum number of observations to show (on the flip side)</li>
-</ul>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Data tabulation card provides direct access to the values and structure of the dataset reaching it. It is a diagnostic, read-only card: it helps verify the data and export a copy without changing what downstream cards receive.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><em>Primary:</em> Gives you direct access to the tables values. Columns are documented with their variable type since this is not always apparent.</li>
-<li><em>Secondary:</em> Provides an opportunity to export the data as a CSV file. The file’s name is based on the card’s unique namespace.</li>
+<li><strong>Primary:</strong> Inspect observations and variables in a searchable table.</li>
+<li><strong>Secondary:</strong> Review data types and variable summaries.</li>
+<li><strong>Tertiary:</strong> Export the current upstream dataset as CSV.</li>
 </ol>
-<hr>
-<p>All cards downstream of this card will receive the upstream data. This card does not change the data.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>The card creates display-safe copies of the incoming data. Numeric values may be rounded for readability, and geometry can be represented by bounding boxes or Well-Known Text. These are presentation changes only; they do not alter the exported proxy passed through the workflow.</p>
+<p>In normal card size, the observation table shows a compact head-and-tail sample. Full-screen mode makes the larger listing available. A maximum-observation limit prevents very large browser tables from becoming unresponsive.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front shows observations as rows and variables as columns. Column filters and table controls can be used to locate values. Full-screen mode provides more room and, subject to the display limit, access to the full listing.</p>
+<p>Displayed rounding should not be interpreted as loss of stored precision. Geometry text is also a representation of spatial objects rather than a conversion of the underlying data.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side summarizes the dataset structure. It reports each variable’s data type and type-appropriate descriptive information, making it useful for detecting unexpected types, missingness, unusual cardinality, and columns that may need closer inspection.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p><strong>Export</strong> downloads the incoming dataset as a CSV file named from the card’s unique namespace. CSV cannot preserve every specialized pandas or spatial data type, so the download is intended as a portable tabular copy rather than a lossless serialization.</p>
+<p>Filtering, sorting, rounding, and geometry display options do not change the data sent downstream.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Look for columns whose displayed values conflict with their recorded type, identifiers with unexpected duplicates, suspicious placeholder values, and categorical columns with implausible levels. Use the flip side to decide whether Role assignment, Variable modification, or missing-value cards should follow.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>Very large datasets may be sampled or limited for browser display.</li>
+<li>Rounded values and geometry representations are not suitable for checking exact equality.</li>
+<li>CSV export does not preserve roles, pipelines, category metadata, geometry metadata, or all extension data types.</li>
+<li>The card describes the current data but does not validate its meaning or provenance.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Check the dimensions and variable names.</li>
+<li>Scan the first and last observations for parsing or ordering problems.</li>
+<li>Filter columns containing surprising values.</li>
+<li>Review the flip-side structure and data types.</li>
+<li>Export a CSV only when a portable value-only copy is useful.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> The complete upstream dataset and its metadata.</li>
+<li><strong>Output:</strong> The upstream data unchanged; display formatting is not propagated.</li>
+<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
+</ul>
 
 
 

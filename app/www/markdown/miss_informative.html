@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Informative Missingness</title>
+<title>Informative missingness</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,40 +725,64 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Informative Missingness</h1>
+<h1 class="title">Informative missingness</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h1 id="introduction">🧭 Introduction</h1>
-<p>The presence of missing values can potentially assist in predicting the target. When this occurs we have “informative missingness”. It is advantageous to create extra binary predictors so that any relationship can be exploited during modeling. These extra features are called “shadow variables”. This is a form a feature extraction. Feature selection can later exclude shadow variables if they ultimately prove unimportant.</p>
-<p>Given a target exists for the dataset, shadow variables are created for certain variables. Only predictors that have more than a trivial proportion of missing values need be considered. A Random Forest model is trained (using cross validation) so as to determine variable importance. Whether any variable’s missingness is “informative” is judged by the shadow variable being amongst the important variables.</p>
-<p>This card focuses on differentiating between <strong>Informative</strong> and <strong>Uninformative</strong> natures of predictor missingness.</p>
-<p>Once imputed, a missing value would be indistinguishable from a non-missing value unless a shadow variable keeps this information available. Since only the predictor role can normally have missing values, only predictor variables will be considered for shadow variables.</p>
-<p>This creation of shadow variables is pointless when observations (with any missing values) are planned to be removed (i.e. partial deletion). This that case, all shadow variables will become constant variables.</p>
-<p>This assessment should follow after any Excess-observational-missing removal and Manual-imputation. It should precede any any learned-imputation</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Informative missingness card tests whether knowing that a predictor is missing helps predict the assigned target. When it does, the card can add a Boolean “shadow” predictor that preserves this information after imputation.</em></p>
+<p>For the broader framework, see <a href="../markdown/missing_values.html#informative">informative missingness</a> in <strong>Background on missing values</strong>.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Identify predictor missingness that contributes useful target information.</li>
+<li><strong>Secondary:</strong> Add justified missingness indicators for downstream modeling.</li>
+</ol>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>For each eligible predictor, the card creates a temporary Boolean shadow variable indicating whether its value is missing. A random-forest model is assessed with cross-validation, and held-out permutation importance estimates the contribution of ordinary and shadow predictors. Only predictors above the minimum missing proportion are considered.</p>
+<p>A shadow is interpreted as informative only when the model has adequate predictive performance and the shadow importance is sufficiently consistent. This guards against declaring a noisy importance meaningful merely because it is positive once.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front charts cross-validated permutation importance. Ordinary predictors and temporary shadow variables can be compared, with uncertainty showing variation across evaluations. The status explains when the analysis cannot proceed, such as when no target is assigned or eligible predictor missingness is absent.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side lists variable type, source variable, missing proportion, mean importance, importance variability, positive fraction, and interpretation. Use it for exact results and to distinguish an informative shadow from an important ordinary predictor.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>The footer offers confirmed shadow candidates. Selecting one permanently adds a Boolean predictor named from its source variable; clearing the selection restores the upstream structure. Added shadows should remain predictors so later feature selection can decide whether they improve a final model.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Informative missingness means that absence carries predictive information in this dataset. It does not explain why the value is absent, prove a causal relationship, or guarantee usefulness on future data. Investigate whether the signal reflects a legitimate process, a collection artifact, target leakage, or a difference between training and deployment.</p>
+<p>Create a shadow before learned imputation if the missingness signal should remain available after values are filled. Do not create shadows when incomplete observations will always be removed, because the indicators would then become constant.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>A valid target and sufficient observations in relevant classes are required.</li>
+<li>Importance is model- and sample-dependent and can be shared among correlated predictors.</li>
+<li>Sampling and cross-validation introduce uncertainty.</li>
+<li>Informative missingness can reflect leakage or unstable operational processes.</li>
+<li>Observation weights are not currently applied to the analysis.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Assign the target and predictors deliberately.</li>
+<li>Resolve obvious placeholders and excessive missingness first.</li>
+<li>Inspect model performance before interpreting importance.</li>
+<li>Investigate strong shadow variables in domain context.</li>
+<li>Add only justified shadows, then proceed to imputation and feature selection.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> The assigned target and predictors in the upstream data.</li>
+<li><strong>Output:</strong> Upstream data plus any selected Boolean shadow predictors.</li>
+<li><strong>Data journey:</strong> Adding shadows creates a materialized Cleaning step.</li>
+</ul>
 <details class="deep-dive">
 <summary>
 Click here for a fully expanded discussion of missing values.
 </summary>
-<iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy">
+<iframe src="markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy">
 </iframe>
 </details>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front shows a variable importance chart. Buttons allow the generation of any plausible shadow variables.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The card’s back shows a variable importance table.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<h4 id="goal">Goal</h4>
-<ol type="1">
-<li><em>Primary:</em> To identify predictors that plausibly have informative missingness.</li>
-<li><em>Secondary:</em> To facilitate the generation of the relevant shadow variables.</li>
-</ol>
-<hr>
-<p>All cards downstream of this card will receive any changes enacted by this card.</p>
 
 
 

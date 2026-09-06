@@ -1,45 +1,69 @@
 ---
-title: Informative Missingness
+title: Informative missingness
 ---
 
-# 🧭 Introduction
+#### 🧭 Purpose
 
-The presence of missing values can potentially assist in predicting the target. When this occurs we have "informative missingness". It is advantageous to create extra binary predictors so that any relationship can be exploited during modeling. These extra features are called "shadow variables". This is a form a feature extraction. Feature selection can later exclude shadow variables if they ultimately prove unimportant. 
+_The Informative missingness card tests whether knowing that a predictor is missing helps predict the assigned target. When it does, the card can add a Boolean “shadow” predictor that preserves this information after imputation._
 
-Given a target exists for the dataset, shadow variables are created for certain variables. Only predictors that have more than a trivial proportion of missing values need be considered. A Random Forest model is trained (using cross validation) so as to determine variable importance. Whether any variable's missingness is "informative" is judged by the shadow variable being amongst the important variables.
+For the broader framework, see [informative missingness](/markdown/missing_values.html#informative) in **Background on missing values**.
 
-This card focuses on differentiating between **Informative** and **Uninformative** natures of predictor missingness. 
+#### 🎯 Goals
 
-Once imputed, a missing value would be indistinguishable from a non-missing value unless a shadow variable keeps this information available. Since only the predictor role can normally have missing values, only predictor variables will be considered for shadow variables.
+1. **Primary:** Identify predictor missingness that contributes useful target information.
+1. **Secondary:** Add justified missingness indicators for downstream modeling.
 
-This creation of shadow variables is pointless when observations (with any missing values) are planned to be removed (i.e. partial deletion). This that case, all shadow variables will become constant variables.
+#### 🧠 How it works
 
-This assessment should follow after any Excess-observational-missing removal and Manual-imputation. It should precede any any learned-imputation
+For each eligible predictor, the card creates a temporary Boolean shadow variable indicating whether its value is missing. A random-forest model is assessed with cross-validation, and held-out permutation importance estimates the contribution of ordinary and shadow predictors. Only predictors above the minimum missing proportion are considered.
 
-<details class="deep-dive">
-  <summary>Click here for a fully expanded discussion of missing values.</summary>
-  <iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
-</details>
+A shadow is interpreted as informative only when the model has adequate predictive performance and the shadow importance is sufficiently consistent. This guards against declaring a noisy importance meaningful merely because it is positive once.
 
 #### 🏞️ Front
 
-The card's front shows a variable importance chart. Buttons allow the generation of any plausible shadow variables.
+The front charts cross-validated permutation importance. Ordinary predictors and temporary shadow variables can be compared, with uncertainty showing variation across evaluations. The status explains when the analysis cannot proceed, such as when no target is assigned or eligible predictor missingness is absent.
 
 #### 🔄 Flip side
 
-The card's back shows a variable importance table.
+The flip side lists variable type, source variable, missing proportion, mean importance, importance variability, positive fraction, and interpretation. Use it for exact results and to distinguish an informative shadow from an important ordinary predictor.
 
+#### 🛠️ Controls and actions
+
+The footer offers confirmed shadow candidates. Selecting one permanently adds a Boolean predictor named from its source variable; clearing the selection restores the upstream structure. Added shadows should remain predictors so later feature selection can decide whether they improve a final model.
 
 #### ⚙️ Settings
 
-Use the Tour Guide button to learn about the settings of this card.
+The card's Tour Guide gives a concise description of each setting.
 
-#### Goal
+#### 🔎 Interpretation and next steps
 
-1. _Primary:_ To identify predictors that plausibly have informative missingness. 
-1. _Secondary:_ To facilitate the generation of the relevant shadow variables.
+Informative missingness means that absence carries predictive information in this dataset. It does not explain why the value is absent, prove a causal relationship, or guarantee usefulness on future data. Investigate whether the signal reflects a legitimate process, a collection artifact, target leakage, or a difference between training and deployment.
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+Create a shadow before learned imputation if the missingness signal should remain available after values are filled. Do not create shadows when incomplete observations will always be removed, because the indicators would then become constant.
 
+#### ⛔️ Limitations
 
+* A valid target and sufficient observations in relevant classes are required.
+* Importance is model- and sample-dependent and can be shared among correlated predictors.
+* Sampling and cross-validation introduce uncertainty.
+* Informative missingness can reflect leakage or unstable operational processes.
+* Observation weights are not currently applied to the analysis.
+
+#### 📌 Suggested workflow
+
+1. Assign the target and predictors deliberately.
+1. Resolve obvious placeholders and excessive missingness first.
+1. Inspect model performance before interpreting importance.
+1. Investigate strong shadow variables in domain context.
+1. Add only justified shadows, then proceed to imputation and feature selection.
+
+#### 🔗 Data flow
+
+* **Input:** The assigned target and predictors in the upstream data.
+* **Output:** Upstream data plus any selected Boolean shadow predictors.
+* **Data journey:** Adding shadows creates a materialized Cleaning step.
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
+</details>

@@ -1,138 +1,73 @@
 ---
-title: Missing Values Rules
+title: Missingness rules
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-##### 🛒 What Is Association Rules Analysis?
+_The Missingness rules card searches for directional associations between variables being missing together. It asks whether one missingness pattern makes another variable’s missingness more likely. The result is exploratory and does not modify data._
 
-Association rules analysis is a data mining technique used to find interesting relationships or patterns between items in large datasets —
-especially transactional data.
-
-A classic use case is in market basket analysis, where the goal is to find rules like:
-
-> If a customer buys bread and butter, they are likely to also buy jam.
-
-These rules help businesses understand buying behavior, recommend products, or optimize store layouts.
-
-<details class="deep-dive">
-  <summary>Click here for a fully expanded discussion of missing values.</summary>
-  <iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
-</details>
-
-#### 🛒 How do Association Rules identify missing value patterns?
-
-While Association analysis is often used to analyze shopping basket patterns. To do this we need to make a mapping between a basket of shopping and missing data.
-An observation serves as a basket. The variables names are the the goods on sale. If a value is missing then that variable name appears in our basket.
-That way, if an observation is complete (i.e. nothing missing) then our basket is empty. An observation with 3 missing values might look like a basket of \["var1", "var3", "var5"\]. It may be the case over many observations that variable 5 is mainly missing when variable 3 is missing too.
-
-We shall ignore all empty baskets from our analysis. The analysis focuses solely on the missing values and does not consider the values of the non-missing data as explanatory.
-
-We are trying to answer the question: "How strong are any discovered associations?". Which indirectly answers: "Is missingness completely random for each variable?" 
-
-##### 🔗 What Is an Association Rule?
-
-An association rule has the form:
-
-`IF [Item A and Item B] THEN [Item C]`
-The bracketed terms are addressed as LHS and RHS. This is how they are labelled in the tabulated rules.
-
-Or more formally:
-
-`A, B → C`
-
-This means: if items A and B are purchased together, then item C is likely to be purchased as well.
-
-##### 📊 Three Key Metrics: Support, Confidence, and Lift
-
-To know whether a rule is meaningful, we measure it using **support** and **confidence**. Lift is the ratio of these.
-
-✅ 1. Support
-
-Support tells us how frequently the items in the rule appear together in the dataset.
-
-Definition: Support of A → C = (Number of transactions containing both A and C) / (Total number of transactions)
-
-Example: *There are 1,000 transactions. • 100 transactions contain both bread and jam.*
-
-So: *Support(bread → jam) = 100 / 1000 = 0.10 (or 10%)*
-
-Interpretation: *10% of all customers bought both bread and jam together.*
-
-✅ 2. Confidence
-
-Confidence tells us how often the consequent (right-hand side) appears when the antecedent (left-hand side) is present.
-
-Definition: *Confidence of A → C = (Number of transactions containing both A and C) / (Number of transactions containing A)*
-
-Example:*200 transactions contain bread, 100 of those also contain jam*
-
-So: *Confidence(bread → jam) = 100 / 200 = 0.50 (or 50%) 
-
-Interpretation: Among people who bought bread, 50% also bought jam*
-
-
-✅ 3. Lift
-
-Lift tells us how much more likely the right-hand side (consequent) of a rule is to occur when the left-hand side (antecedent) is present — compared to if the two were independent.
-
-Lift answers this question:
-
->Is the rule actually useful, or is it just describing something that happens frequently anyway?
-
-Definition: *Lift of A → C = Confidence(A → C) / Support(A → C)*
-
-Example: *Let’s say in a grocery store dataset...*
-
- - 10% of transactions include bread
- - 5% include butter
- - 4% include both bread and butter
-
-So:
-
- - Support(bread) = 0.10
- - Support(butter) = 0.05
- - Support(bread and butter) = 0.04
- - Confidence(bread → butter) = 0.04 / 0.10 = 0.40
- - Lift(bread → butter) = 0.40 / 0.05 = 8
-
-Interpretation: *Customers who buy bread are 8 times more likely to also buy butter than if the two items were bought independently. That’s a strong association, and this rule is likely interesting and useful.*
-
-#### 🏞️ Front
-
-The card's front charts a network connecting rules with their variables. Rules are drawn as circle shapes. Variables are drawn as square shapes. Hovering over a rule (circle) reveals the LHS and RHS basis.
-
-#### 🔄 Flip side
-
-The back of the card records, as a table, the Association Rules in descending "lift" order.
-
-The RHS column records names of variables whose missingness is not random - at the given "lift" value. A "lift" of zero represents independence from the LHS
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
+For the broader framework, see [patterns and associations](/markdown/missing_values.html#association) in **Background on missing values**.
 
 #### 🎯 Goals
 
- 1. _Primary:_ To judge whether each variable is missing at random or not (for a limited context)
- 1. _Secondary:_ Discover surprising associations that suggest further investigation. 
+1. **Primary:** Find strong, recurring conditional patterns of missingness.
+1. **Secondary:** Generate testable explanations for shared collection failures or eligibility rules.
 
-Note that this analysis neither considers the possibility that missingness is due to non-missing values nor considers whether sequence affects missingness. 
+#### 🧠 How it works
 
-The actions implied by the Association Rules (applied to missingness) are:
+Each observation is treated as a set containing the names of its missing variables. Complete observations contribute an empty set and are excluded from rule mining. A rule has a left-hand side (LHS) and right-hand side (RHS): when the LHS variables are missing, the RHS variables are also frequently missing.
 
--   Gain understanding of the dominant patterns of missing values.
--   Objectively assess the strength of the patterns.
--   Identify variables whose missingness is not random (perhaps common causes?).
--   Hypothesize causes for these patterns.
+| Metric | Meaning |
+|---|---|
+| **Support** | Proportion of all analyzed observations containing every variable in the rule. |
+| **Confidence** | Proportion of observations with the LHS missing that also have the RHS missing. |
+| **Lift** | Confidence divided by the unconditional frequency of the RHS. A lift of 1 indicates independence; above 1 indicates positive association. |
 
-#### Example
+Rules below the selected support or lift requirements are omitted. Optional redundancy pruning hides a specialized rule when a simpler rule reaches the same conclusion at least as confidently.
 
-> When variable A & B are missing together it is a virtual certainty that variables C, D, E are also missing. 
-> C,D are occasionally missing without A or B being missing.
-> E is rarely missing without A or B being missing.
->
-> This suggests that the cause of A & B being missing is the same cause of E being missing and probably of C & D.
+#### 🏞️ Front
 
-***
-All cards downstream of this card will receive the upstream data. This card does not change the data.  
+The front is a network. Square nodes are variables and circular nodes are rules. Paths from variables through a rule to other variables read as “if the former are missing, the latter are also likely to be missing.” Hover over nodes and connections for details.
+
+#### 🔄 Flip side
+
+The flip side lists rules, normally emphasizing stronger lift. Read LHS, RHS, support, confidence, and lift together: high lift based on very low support may describe an interesting but rare pattern, while high confidence can simply reflect an RHS that is missing frequently overall.
+
+#### 🛠️ Controls and actions
+
+This card has no data-changing action. Filtering and pruning determine which discovered rules are displayed, not which observations enter downstream cards.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Use rules to formulate explanations, then test them against source systems, forms, dates, sites, or eligibility conditions. A reciprocal-looking pattern may reflect one common cause rather than either variable causing the other. The analysis considers missingness indicators only; non-missing values and sequence effects require other cards.
+
+#### ⛔️ Limitations
+
+* Association rules do not establish causation or missingness mechanism.
+* Complete observations contribute no items and are not part of the mined baskets.
+* Low-frequency combinations can be unstable, especially after sampling.
+* Many related variables can generate a large family of repetitive rules.
+* Non-missing values, timing, weights, and external context are not modeled.
+
+#### 📌 Suggested workflow
+
+1. Begin with support and lift thresholds that produce a manageable rule set.
+1. Inspect large, connected structures in the network.
+1. Confirm support and confidence on the flip side.
+1. Compare results with Missingness sets and Missingness type.
+1. Investigate plausible causes in the underlying observations.
+
+#### 🔗 Data flow
+
+* **Input:** Missingness indicators derived from the upstream data.
+* **Output:** The upstream data unchanged.
+* **Data journey:** This diagnostic card does not add a journey step.
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
+</details>

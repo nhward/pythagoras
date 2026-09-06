@@ -1,37 +1,64 @@
 ---
-title: Duplicate Observations
+title: Observation duplicates
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-Near duplicates are observations that differ (i.e. mismatch) by a low number of variables. A near duplicate is not one whose mismatches are close, rather, it relates to the number of mismatches regardless of their magnitude.
-A true duplicate is an observation that is an exact match to another observation. Its differences are zero. In contrast, a near duplicate may be
-an exact match to 8 out of 9 variables and be recorded against the "1 difference" tally.
-
-For this assessment all variables are examined **except** those with _no role_, _geometry role_, _weighting role_, and the _identifier role_ (roles = None, Geometry, Weighting, Identifier).
-
-The advanced settings allow the decimal data to be compared at a lower accuracy. This enables close numeric values to be exact matches. Integer data is not affected.
-The process of rounding is performed to a fixed number of significant places, rather than decimal places, due to different scales that variables can have. 
-This has the effect of increasing the tally of each of the chart's bars.
-
-
-#### 🏞️ Front
-
-The card's front shows a bar chart of the frequency of 0-differences, 1-difference, 2-differences etc. The important bar is the first one; the one that indicates the number of exact duplicates.
-
-#### 🔄 Flip side
-
-The back of the card gives this information in a table.
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
-
+_The Observation duplicates card measures exact and near-duplicate rows and can remove redundant exact duplicates. It helps identify repeated records, unexpectedly low observation diversity, and rows that differ in only a few fields._
 
 #### 🎯 Goals
 
- 1. _Primary:_ To detect, count and visualize the diversity of the observations
- 1. _Secondary:_ To remove observations so that exact duplicates no longer exist  
+1. **Primary:** Detect and quantify exact and near-duplicate observations.
+1. **Secondary:** Remove later redundant copies of exact duplicate rows.
+1. **Tertiary:** Identify candidate records requiring source-level investigation.
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+#### 🧠 How it works
+
+The card compares variables except those assigned **None**, **Geometry**, **Weighting**, or **Identifier** roles. Exact duplicates match on every eligible variable. A row first classified with one tolerated difference matches an earlier row on all but one eligible variable; later categories extend that principle. Counts are incremental, so a row appears at the smallest tolerance at which it becomes redundant rather than being counted repeatedly.
+
+Floating-point values may be rounded to a selected number of significant figures before comparison. This can make numerically close values equal across variables with different scales. Integers are not rounded.
+
+#### 🏞️ Front
+
+The front shows paired bars for each number of differences tolerated. **Before** describes the incoming data and **After** describes the data exported after the current exact-duplicate removal choice. The legend identifies the two series. The zero-difference pair is the most important for exact deduplication; later pairs describe near duplicates.
+
+When removal is inactive, the paired bars coincide. When it is active, the After exact-duplicate bar should fall to zero because only the first row in each exact group remains.
+
+#### 🔄 Flip side
+
+The flip side lists the post-action results, including the tolerance, redundant count, and one-based row numbers classified at that minimum tolerance. Use it to locate candidate records in Data tabulation.
+
+#### 🛠️ Controls and actions
+
+When exact duplicates exist, the footer offers **Remove duplicate observations**. Selecting it keeps the first occurrence and removes later exact copies under the current significant-figures rule. Clearing it restores all incoming rows. Near duplicates are reported but are never removed automatically.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+An exact duplicate may be an accidental repeated import, but it can also be a legitimate repeated event whose distinguishing identifier was excluded from comparison. Near duplicates often reveal corrected entries, repeated measurements, or fields with inconsistent recording. Review source identifiers and business meaning before deletion.
+
+Reducing significant figures changes the operational definition of equality. Use it only when small floating-point differences are known to be irrelevant.
+
+#### ⛔️ Limitations
+
+* Excluded roles do not participate in equality, which can merge records distinct for the intended analysis.
+* Near-duplicate status counts mismatching variables, not the magnitude or importance of differences.
+* Search cost grows rapidly with the number of eligible variables and tolerated differences.
+* Keeping the first duplicate assumes current row order provides an acceptable representative.
+
+#### 📌 Suggested workflow
+
+1. Confirm which roles are excluded from comparison.
+1. Inspect the zero-difference Before bar.
+1. Review row identities for exact and low-difference matches.
+1. Adjust significant figures only with domain justification.
+1. Enable removal and confirm the After series and status.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream observations, eligible comparison variables, and roles.
+* **Output:** Either unchanged data or data with later exact duplicates removed.
+* **Data journey:** The removal choice creates a Cleaning step and records an inactive step when not enabled.

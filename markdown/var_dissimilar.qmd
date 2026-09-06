@@ -1,49 +1,63 @@
 ---
 title: Variable dissimilarity
 ---
-#### 🧭 Introduction
-This card is a dataset summary that explores the characteristics of each predictor variable and builds a dissimilarity matrix which is visualized through a hierarchy graph.
 
-The variable characteristics employed in assessing dissimilarity are:
+#### 🧭 Purpose
 
--   The relative cardinality
--   The centrality (if numeric), maximum scaled to 1 (mean or median depending on use of robust statistics)
--   The spread as a proportion of the centrality (standard deviation or Median Absolute Deviation (mad) depending on use of robust statistics)
--   The skew
--   The sequence of value (using correlation distance i.e. $1 - |corr|$)
--   The name (using q-grams and cosine distance)
--   The sequence of missing values (using Jaccard distance)
-
-The various dissimilarity matrices are unified using a weighted mean. Correlation has a five-fold weighting over the other characteristics. 
-
-#### 🔄 Flip side
-
-The back of the card documents:
-
- * the dissimilarity matrix. Zero means identical.
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
-
- * Employ robust statistics for correlation, central tendency and spread
- * Size of q-grams
- * Hierarchical clustering technique
- * Hierarchical chart layout
- * Limit the maximum number of observations to process
+_The Variable dissimilarity card compares predictors using their names, types, summaries, missingness patterns, and value sequences. It organizes similar variables into a hierarchy that can suggest shared preprocessing, redundancy, or fields requiring closer investigation. The card is diagnostic._
 
 #### 🎯 Goals
 
- 1. _Primary:_ Judge whether the variables form groups that suggest shared strategies for managing them. 
- 1. _Secondary:_ Discover surprises that suggest further investigation. 
+1. **Primary:** Discover groups of predictors with similar characteristics.
+1. **Secondary:** Identify surprising similarities or differences that merit investigation.
+1. **Tertiary:** Inform feature engineering and variable selection.
 
-The actions implied by the dissimilarity are:
+#### 🧠 How it works
 
- -   Investigate variables that have (almost) the same name. What makes them different otherwise?
- -   Apply similar preprocessing to variables that are similar.
- -   Feature engineer the data to have few similar variables.
- -   Change the names of variables that sound similar but are quite dissimilar.
- -   Drop variables that are effectively duplicates.
+Eligible predictor variables are described by relative cardinality, central tendency, spread, skew, value sequence, name and type text, and sequence of missingness. Numeric summaries can use robust median and median absolute deviation or conventional mean and standard deviation. Name similarity uses q-grams; missingness uses Jaccard distance; compatible value sequences use correlation distance.
 
-***
-All cards downstream of this card will receive the upstream data. This card does not change the data (only its appearance).  
+The component dissimilarities are scaled and combined, with correlation receiving greater weight. Hierarchical clustering then converts the resulting symmetric matrix into a tree. Nearby leaves are similar under this constructed measure; they are not necessarily substitutable.
+
+#### 🏞️ Front
+
+The front shows the hierarchy in rectangular or radial form. Leaves are variables, and branches join variables or groups at increasing dissimilarity. Interpret close joins first, then examine broader clusters. The layout changes presentation but not the underlying pairwise matrix.
+
+#### 🔄 Flip side
+
+The flip side displays the dissimilarity matrix. It is symmetric, the diagonal is zero, and larger values indicate greater constructed dissimilarity. Use exact matrix values to confirm impressions from the hierarchy.
+
+#### 🛠️ Controls and actions
+
+This card has no data-changing action. Layout, clustering method, robust statistics, and sampling affect only the diagnostic result.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Very similar variables may be duplicates, alternate measurements, repeated encodings, or strongly related features. Very different variables with similar names may reveal naming problems. Investigate the component data before dropping or combining anything: the composite distance does not state why a pair is close.
+
+Use clusters as a map for applying consistent preprocessing or designing more focused pairwise analyses, not as an automatic feature-selection rule.
+
+#### ⛔️ Limitations
+
+* The result depends on chosen summaries, scaling, weights, clustering method, and sample.
+* Correlation captures aligned sequences, not general nonlinear dependence or causation.
+* Predictor roles determine eligibility; geometry and shadow variables are excluded.
+* Different data types provide different available components, so comparisons are necessarily approximate.
+* Observation weights are not applied.
+
+#### 📌 Suggested workflow
+
+1. Confirm that intended variables have the Predictor role.
+1. Inspect the closest leaves or smallest matrix values.
+1. Compare robust and conventional summaries when outliers matter.
+1. Validate surprising groups against the raw variables.
+1. Use the result to plan feature engineering or specialized analysis.
+
+#### 🔗 Data flow
+
+* **Input:** Eligible upstream predictors and a sampled value/missingness sequence.
+* **Output:** The upstream data unchanged.
+* **Data journey:** This diagnostic card does not add a journey step.

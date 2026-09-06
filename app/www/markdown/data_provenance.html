@@ -112,6 +112,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 .card.fullscreen-active .drag-handle {
 display: none !important;
 }
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
 
 #shiny-modal-wrapper {
 position: absolute;
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -606,198 +732,81 @@ border: 0;
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>The <strong>Data journey</strong> card explains how the data reaching this point in the application was prepared. It presents the recorded operations as a left-to-right sequence beginning with the imported source and ending with the current materialized preview.</p>
-<p>The card answers questions such as:</p>
-<ul>
-<li>Which data-changing cards have participated in this path?</li>
-<li>Which operations were enabled, and which were left inactive?</li>
-<li>Which variables and settings were involved?</li>
-<li>Did an operation add or remove observations or variables?</li>
-<li>Which operations changed the data immediately, and which are retained as trainable steps?</li>
-</ul>
-<p>The journey belongs to the data arriving at this particular card. Moving the card, changing an upstream setting, or changing the upstream card order can therefore change the journey.</p>
-<h4 id="what-counts-as-a-step">🧱 What counts as a step?</h4>
-<p>Not every card produces a journey step. Immutable diagnostic cards inspect their input but pass it onwards unchanged, so they are normally absent. A mutable card contributes a step when it records a cleaning operation or adds a transformation to the learning pipeline.</p>
-<p>One journey step represents one card operation, rather than necessarily one individual control. For example, removing excessively incomplete variables and observations in the <strong>Missingness map</strong> card is recorded as one operation. Its parameters preserve which choices were enabled and the thresholds used.</p>
-<p>There are two main processing stages.</p>
-<h5 id="cleaning-steps">🧽 Cleaning steps</h5>
-<p>A <strong>Cleaning</strong> step is materialized immediately. Its result becomes the cleaned data available to subsequent processing. Cleaning operations do not estimate reusable parameters that must be learned independently within every training partition.</p>
-<p>Examples include:</p>
-<ul>
-<li>correcting values or variable definitions;</li>
-<li>adding deterministic variables, such as selected missingness indicators;</li>
-<li>removing observations or variables;</li>
-<li>removing exact duplicates; and</li>
-<li>applying other explicitly chosen data-quality corrections.</li>
-</ul>
-<p>Cleaning does not mean that the operation is harmless or statistically neutral. Removing observations can still change the population represented by the data. The term means only that the operation is recorded as a materialized, non-pipeline change.</p>
-<h5 id="learning-steps">🎓 Learning steps</h5>
-<p>A <strong>Learning</strong> step estimates something from data and is represented by a scikit-learn transformer in the accumulating pipeline. Examples currently include learned imputation and variable transformation.</p>
-<p>The card may calculate a fitted full-data result so the user can see an immediate preview. That fitted preview is not the estimator retained for formal model training. The stored pipeline step remains unfitted and should later be fitted separately inside each training partition, cross-validation fold, or resampling iteration. This distinction prevents information from held-out observations leaking into imputation or transformation parameters.</p>
-<p>The journey therefore distinguishes two related objects:</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Data journey card explains how the data reaching this point was prepared. It distinguishes immediately materialized cleaning from transformations that must be learned during model training. The card is diagnostic and describes the current reactive path, not every state previously explored.</em></p>
+<h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li>the <strong>current materialized preview</strong>, used by downstream cards for interactive display; and</li>
-<li>the <strong>unfitted learning pipeline</strong>, intended to be fitted during formal training.</li>
+<li><strong>Primary:</strong> Make the current sequence of cleaning and learning operations visible.</li>
+<li><strong>Secondary:</strong> Expose unexpected ordering, settings, row loss, variable loss, or inactive operations.</li>
+<li><strong>Tertiary:</strong> Support review and reproducibility without claiming to be a complete executable audit trail.</li>
 </ol>
-<h4 id="front">🏞️ Front</h4>
-<p>Read the chart from left to right. The number inside each box corresponds to the <strong>Step</strong> number on the flip-side table.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>A mutable card records an operation when it changes data or adds a trainable pipeline step. It may also record an inactive operation when its data-changing control is not enabled. Immutable diagnostic cards normally pass data through without adding a step.</p>
 <table class="caption-top">
 <colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
+<col style="width: 50%">
+<col style="width: 50%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Colour</th>
 <th>Stage</th>
 <th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Grey</td>
 <td><strong>Source</strong></td>
-<td>The imported starting data known to this journey.</td>
+<td>The imported starting dataset.</td>
 </tr>
 <tr class="even">
-<td>Green</td>
 <td><strong>Cleaning</strong></td>
-<td>A materialized, non-pipeline operation.</td>
+<td>A materialized correction, addition, removal, or role change.</td>
 </tr>
 <tr class="odd">
-<td>Orange</td>
 <td><strong>Learning</strong></td>
-<td>A trainable scikit-learn pipeline step.</td>
+<td>An unfitted scikit-learn step whose parameters must be learned from training data.</td>
 </tr>
 <tr class="even">
-<td>Blue</td>
 <td><strong>Preview</strong></td>
-<td>The current full-data preview after the recorded operations.</td>
+<td>The current full-data result used for interactive downstream displays.</td>
 </tr>
 </tbody>
 </table>
-<p>The source and preview boxes are bookends, not ordinary card operations. The arrows describe execution order. The current design is linear: it does not depict branches, merges, separate training and test paths, or a complete model graph.</p>
-<p>Hover over a box to see its corresponding table fields. Long hover values are abbreviated to keep the tooltip readable; use the flip-side table for more complete information. Operation labels beneath the boxes are also shortened when space is limited. Full-screen mode enlarges the nodes but does not change the journey.</p>
-<p>When several steps are present, look particularly for:</p>
-<ul>
-<li>an unexpected operation or card instance;</li>
-<li>a large row or variable reduction;</li>
-<li>settings that differ from those intended;</li>
-<li>a learning step occurring earlier or later than expected; and</li>
-<li>an inactive operation that was expected to be enabled.</li>
-</ul>
+<p>Learning cards maintain both an unfitted pipeline step and a fitted full-data preview. The preview is useful for exploration but is not leakage-safe model training. During formal validation, the pipeline must be fitted separately within each training partition or resampling fold.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front presents numbered boxes joined in execution order. Read the first row from left to right, the next from right to left, and continue in alternating directions. Curved connectors show where the journey turns. The number of boxes in a row responds to the available card width, so full-screen mode usually requires fewer turns. The chart sits in a vertically scrollable region as the journey grows.</p>
+<p>Gray identifies the source, green identifies cleaning, orange identifies learning, and blue identifies the current preview. Hover over a box for compact details. The number inside it corresponds to the <strong>Step</strong> column on the flip side.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip-side contains one row for every visible chart box. It supports column filtering and is the better view for investigating long variable lists and parameter values.</p>
-<table class="caption-top">
-<colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Column</th>
-<th>Interpretation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><strong>Step</strong></td>
-<td>The sequence number shown inside the corresponding chart box. Step 0 is the source.</td>
-</tr>
-<tr class="even">
-<td><strong>Stage</strong></td>
-<td>Source, Cleaning, Learning, or Preview. Row shading follows the chart colors.</td>
-</tr>
-<tr class="odd">
-<td><strong>Attempted</strong></td>
-<td><strong>Yes</strong> means the data-changing option was enabled. <strong>No</strong> means it was not enabled. Source and preview rows are blank.</td>
-</tr>
-<tr class="even">
-<td><strong>Card</strong></td>
-<td>The technical card or card-instance identity. Learning steps use the card namespace so repeated instances can be distinguished.</td>
-</tr>
-<tr class="odd">
-<td><strong>Operation</strong></td>
-<td>The human-readable operation. For learning steps this is normally the card’s long name.</td>
-</tr>
-<tr class="even">
-<td><strong>Method</strong></td>
-<td>How the operation was implemented, such as a materialized operation or the class of the scikit-learn transformer.</td>
-</tr>
-<tr class="odd">
-<td><strong>Variables</strong></td>
-<td>Variables associated with the operation. <strong>Dataset</strong> means that the record applies generally or has no more specific variable list.</td>
-</tr>
-<tr class="even">
-<td><strong>Parameters</strong></td>
-<td>Recorded choices such as thresholds, selected methods, iteration counts, or enabled sub-operations.</td>
-</tr>
-<tr class="odd">
-<td><strong>Input shape</strong></td>
-<td>Number of observations × number of variables entering the step.</td>
-</tr>
-<tr class="even">
-<td><strong>Output shape</strong></td>
-<td>Number of observations × number of variables leaving the step or appearing in its preview.</td>
-</tr>
-<tr class="odd">
-<td><strong>Row change</strong></td>
-<td>Output observations minus input observations. A negative value means observations were removed.</td>
-</tr>
-<tr class="even">
-<td><strong>Variable change</strong></td>
-<td>Output variables minus input variables. A negative value means variables were removed.</td>
-</tr>
-</tbody>
-</table>
-<p>A zero row or variable change does <strong>not</strong> necessarily mean that nothing happened. Imputation, recoding, scaling, centering, and de-skewing can alter values while preserving the shape. Likewise, an enabled removal operation remains an attempted step even when no observations satisfy its removal rule.</p>
-<p>The <strong>Card</strong> and <strong>Operation</strong> columns deliberately serve different purposes. The card namespace is a machine-oriented identity that distinguishes repeated instances; the operation is a user-oriented description. The <strong>Method</strong> identifies the underlying implementation and may therefore be more technical.</p>
-<h4 id="attempted-operations-versus-no-op-results">✅ Attempted operations versus no-op results</h4>
-<p>The card distinguishes an operation that was not enabled from one that was enabled but happened to make no change:</p>
-<ul>
-<li><strong>Attempted = No:</strong> the relevant data-changing control was not selected.</li>
-<li><strong>Attempted = Yes, shape change = 0:</strong> the operation was enabled. It may have changed values without changing shape, or it may have found nothing requiring action.</li>
-</ul>
-<p>This distinction is useful for reproducibility. “Duplicate removal was enabled but found no duplicates” conveys more information than omitting duplicate removal from the record altogether.</p>
+<p>The flip side provides one row per visible box. It records the stage, whether the operation was attempted, card identity, operation, method, variables, parameters, input and output shapes, and row and variable changes. A zero shape change does not prove that values were unchanged: recoding, imputation, centering, and scaling can preserve dimensions.</p>
+<p>The table is filterable and is the authoritative view for long parameter or variable descriptions.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>This card has no data-changing action. <strong>Hide steps that were not enabled</strong> affects only which recorded rows appear in the chart and table. It does not remove enabled operations that happened to make no change.</p>
 <h4 id="settings">⚙️ Settings</h4>
-<p><strong>Hide steps that were not enabled</strong> is selected by default. It removes intermediate rows whose <strong>Attempted</strong> value is <strong>No</strong> from both the chart and table. The source and current preview remain visible.</p>
-<p>Clear the setting when you want to audit configuration choices as well as executed operations. Inactive steps can reveal that a relevant card was present but its data-changing option was deliberately or accidentally left off.</p>
-<p>The setting does not hide an enabled operation merely because its row and variable changes are zero.</p>
-<h4 id="interpreting-the-preview-row">🧪 Interpreting the preview row</h4>
-<p>The final blue row reports the current materialized data seen by downstream cards. For a journey containing learning steps, this is a fitted full-data preview produced for interactive exploration. It should not be mistaken for a leakage-safe training result.</p>
-<p>During formal modeling, the unfitted pipeline should be cloned and fitted only on the appropriate training observations. Held-out observations should then be transformed using parameters learned from that training partition. The preview row confirms what the transformed data currently looks like; it does not claim that a final model has been trained.</p>
-<h4 id="suggested-review-workflow">📌 Suggested review workflow</h4>
-<ol type="1">
-<li>Confirm that the source name and shape are plausible.</li>
-<li>Read the green cleaning steps and check that important removals or corrections were intended.</li>
-<li>Inspect row and variable changes, especially unexpectedly large negative values.</li>
-<li>Read the orange learning steps in order and confirm that their variables and parameters are appropriate.</li>
-<li>Compare the cleaned-data shape entering learning with the final preview shape.</li>
-<li>Clear <strong>Hide steps that were not enabled</strong> and check whether expected operations were inactive.</li>
-<li>Use the flip-side filters to isolate a stage, card instance, operation, or affected variable.</li>
-<li>Investigate surprising steps in their originating cards rather than treating this summary as the place to alter them.</li>
-</ol>
-<h4 id="important-limitations">⛔️ Important limitations</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Check the sequence, affected variables, and shape changes against the intended workflow. An inactive step can reveal that a card was present but its action was never enabled. Large reductions deserve investigation in the originating card. An orange step in the wrong position can create leakage or apply transformations in an unintended order.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>This is a descriptive provenance summary, not an executable recipe. It records what cards report; it does not contain sufficient code to rebuild every cleaning operation independently.</li>
-<li>Operations performed before import are outside the journey unless the importing process records them separately.</li>
-<li>Immutable analytical cards generally do not appear because they do not change the data or pipeline.</li>
-<li>Direct, unrecorded mutation of a data frame cannot be reconstructed. Data-changing cards must use the application’s recording interfaces for their operations to appear reliably.</li>
-<li>This is not yet a complete regulatory audit trail: it does not systematically capture user identity, timestamps, software versions, source-file checksums, or every external dependency.</li>
-<li>Parameters describe the selected operation but may use compact representations for very large structures.</li>
-<li>The chart is linear. Future partitioning, parallel branches, ensembles, or merged data sources would require a richer graph representation.</li>
-<li>The journey describes the current reactive path. It is not a permanent history of every setting the user previously tried.</li>
+<li>The journey depends on what cards record and cannot reconstruct direct, unrecorded data-frame mutation.</li>
+<li>It is descriptive rather than a complete executable recipe or regulatory audit trail.</li>
+<li>It does not yet represent branches, merged sources, separate train/test paths, or ensembles.</li>
+<li>External preprocessing, user identity, timestamps, source checksums, and every dependency are not systematically recorded.</li>
+<li>The current journey changes reactively when upstream cards, settings, or ordering change.</li>
 </ul>
-<h4 id="goals">🎯 Goals</h4>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Make the current sequence of materialized cleaning and trainable learning operations visible and understandable.</li>
-<li><strong>Secondary:</strong> Help detect unexpected settings, ordering, row loss, variable loss, or inactive operations before modeling.</li>
-<li><strong>Tertiary:</strong> Provide a concise provenance summary that can later support a more reproducible, executable workflow.</li>
+<li>Confirm the source name and shape.</li>
+<li>Follow the alternating rows in step-number order.</li>
+<li>Investigate unexpected cleaning reductions or role changes.</li>
+<li>Confirm that learning steps occur in the intended sequence.</li>
+<li>Reveal inactive steps and check whether an expected operation was omitted.</li>
 </ol>
-<hr>
-<p>This is an immutable diagnostic card. It does not alter the data or pipeline passed to downstream cards.</p>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> The upstream data, role map, recorded cleaning history, and learning pipeline.</li>
+<li><strong>Output:</strong> The upstream object unchanged.</li>
+<li><strong>Data journey:</strong> The card displays the journey but does not add itself as a step.</li>
+</ul>
 
 
 

@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Data tabulation</title>
+<title>Data import</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,52 +725,60 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Data tabulation</h1>
+<h1 class="title">Data import</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>All analysis or modeling tasks begin with loading some raw data. The data is expected to be in a rows (observations) and columns (variables) table, or at least be able to be transformed into tabular data.</p>
-<p>Data can be imported through any of three importation styles. Each is implemented on a tab dialogue.</p>
-<ol type="1">
-<li>User’s local file system</li>
-<li>Dataset located within certain python packages</li>
-<li>URL resource</li>
-<li><a href="https://archive.ics.uci.edu/datasets">UC Irvine</a></li>
-</ol>
-<p>The UC Irvine webpage enable datasets to be searched and filtered as a prelude to their selection here.</p>
-<p>The importation of files and URLs supports a variety of file types. These include, but are not limited to, the following file extensions:</p>
-<ul>
-<li>CSV: A comma, semi-colon, or tab-delimited file.</li>
-<li>XLS: A spreadsheet worksheet.</li>
-<li>RDS: An R serialization file containing a data frame.</li>
-<li>GPKG: A spatial data file.</li>
-</ul>
-<p>If you have a different file extension, feel free to give it a try to see if it can be imported.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card documents:</p>
-<ul>
-<li>Dataset Info: Class and dimensions</li>
-<li>Memory usage: Bytes in use</li>
-<li>Variable listing: Column, Non-Null count, Null count, Data type</li>
-<li>Categories: Count, unique, top, frequency</li>
-</ul>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<ul>
-<li>The between-column separator character.</li>
-<li>The worksheet position (for multi-sheet spreadsheets).</li>
-</ul>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Data import card brings a tabular dataset into Pythagoras and establishes the source used by every downstream card. It can read local files, packaged example datasets, web resources, and—outside Shinylive — the UCI Machine Learning Repository. Data is previewed before it is committed.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><em>Primary:</em> Facilitate data importation</li>
-<li><em>Secondary:</em> Help verify whether you have the required dataset.</li>
+<li><strong>Primary:</strong> Import a usable dataset and give it a short, recognizable name.</li>
+<li><strong>Secondary:</strong> Check its dimensions, structure, missingness, and memory use before continuing.</li>
+<li><strong>Tertiary:</strong> Establish consistent initial roles and time-zone handling.</li>
 </ol>
-<hr>
-<p>All cards downstream of this card will receive the data imported by this card. All variables are assigned to the <strong>Predictor</strong> role. Dates and date-times that do not declare their time zones are assigned to UTC.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>The active tab determines the source. <strong>File based</strong> uploads a file from the local computer. <strong>Dataset based</strong> loads an example supplied by a supported Python package. <strong>Web based</strong> reads a file from a URL. <strong>UC Irvine</strong> retrieves a selected repository dataset and is unavailable in Shinylive because it requires server-side capabilities.</p>
+<p>File and web imports support CSV, TSV, Excel, Parquet, Feather, JSON, GeoJSON, GeoPackage, GML, KML, NetCDF, GRIB, HDF5, and related formats handled by the underlying readers. Spatial files become GeoPandas data when possible. Multidimensional sources are converted to a data frame when possible.</p>
+<p>The card first creates a provisional preview. <strong>Commit Import</strong> makes that preview the application’s current dataset. A new source selection does not replace the downstream dataset until it is committed.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front contains one tab for each available import method. Each method includes a short dataset name. Keep this name concise because it appears in card headings and in the Data journey.</p>
+<p>The status below the commit button reports whether a source has been recognized and whether it is ready to commit. Invalid paths, URLs, formats, or source choices prevent commitment and should be corrected before proceeding.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side previews a source-specific summary before commitment. For tabular data it includes the data class and dimensions, memory use, column names and types, non-missing and missing counts, and categorical summaries where applicable. Use it to catch an incorrect worksheet, separator, or source before it enters the workflow.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p><strong>Commit Import</strong> publishes the currently previewed source. Importing another source and committing it replaces the current starting dataset, so downstream cards recalculate from the new source.</p>
+<p>The commit does not clean or model the data. Variables initially receive the <strong>Predictor</strong> role unless the importer recognizes a geometry column. Date and datetime values without a declared time zone are treated as UTC.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Confirm that the observation and variable counts are plausible, names have not been mistaken for data, numeric columns have not become text, and missing values look credible. Unexpected types often indicate an incorrect separator, a header problem, or placeholder values that should be handled by later cards.</p>
+<p>After commitment, inspect the data directly and assign deliberate variable roles before relying on role-sensitive diagnostics.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>Format support depends on the installed Python readers and their optional dependencies.</li>
+<li>Automatic type inference cannot reliably distinguish identifiers, nominal text, dates, and numbers stored as text.</li>
+<li>Only one worksheet is imported from a multi-sheet workbook at a time.</li>
+<li>A successful read does not establish that the source is complete, current, or semantically correct.</li>
+<li>Any database joining, ordering, or filtering is performed in advance.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Select the appropriate source tab and choose or enter the source.</li>
+<li>Give the dataset a short name and inspect the provisional summary.</li>
+<li>Correct the separator or worksheet when the preview is implausible.</li>
+<li>Click <strong>Commit Import</strong> only when the source is correct.</li>
+<li>Continue with Data tabulation and Role assignment.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> An external file, URL, packaged dataset, or UCI dataset.</li>
+<li><strong>Output:</strong> A newly materialized dataset with all variables assigned as predictors.</li>
+<li><strong>Data journey:</strong> The committed import establishes the journey’s source rather than appearing as a later cleaning or learning operation.</li>
+</ul>
 
 
 

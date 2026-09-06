@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Type of missingness</title>
+<title>Missingness type</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,50 +725,65 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Type of missingness</h1>
+<h1 class="title">Missingness type</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>This card focuses on differentiating between <strong>Random</strong> and <strong>Patterned</strong> causes of missingness. The following possible assessments are calculated based upon a decision tree trying to predict missingness:</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Missingness type card asks whether missingness can be predicted from the other available predictors or from observation order. It uses cross-validated decision trees and permutation tests to distinguish detectable pattern from results that are weak, uncertain, or unsupported.</em></p>
+<p>For the broader framework, see <a href="../markdown/missing_values.html#predictability">predictability and missing-data mechanisms</a> in <strong>Background on missing values</strong>.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Identify variables whose missingness has reproducible structure.</li>
+<li><strong>Secondary:</strong> Reveal predictors and sequence effects that may explain that structure.</li>
+<li><strong>Tertiary:</strong> Inform the choice between investigation, imputation, and cautious deletion.</li>
+</ol>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>For each sufficiently incomplete predictor, a decision tree classifies values as missing or observed using the other eligible predictors. A separate <strong>Obs-count</strong> model predicts how many values are missing in each observation. Cross-validation compares held-out performance with a matched null model, while label permutations estimate how surprising the improvement is under independence.</p>
+<p>Classification uses balanced accuracy so that rare missing cases are not overwhelmed by the observed majority. The aggregate count model uses R-squared. A <strong>Patterned</strong> interpretation requires adequate sample counts, practical improvement, absolute performance, fold consistency, and the selected permutation evidence. Failure to meet all criteria may produce <strong>Random</strong>, <strong>Uncertain</strong>, or <strong>Insufficient data</strong> rather than proving a particular missing-data mechanism.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front contains the <strong>Obs-count</strong> tab and dynamically managed tabs for eligible incomplete variables. Each tab shows a fitted decision tree that illustrates the strongest splits found in the analysis. Read the tree as an explanation of the fitted pattern, not as an independent validation result.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side summarizes each model’s interpretation and supporting evidence, including missing proportion, score, null score, improvement, fold consistency, and raw or adjusted permutation p-values. Sort and filter the table to identify the strongest and least reliable results.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>This card has no data-changing action. Choosing tabs or changing diagnostic thresholds recalculates the assessment but leaves downstream data unchanged.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p><strong>Patterned</strong> means missingness is predictably associated with the supplied information; it does not distinguish missing at random from missing not at random in the formal causal sense. <strong>Random</strong> means the card did not find adequate predictive evidence under its current design, not that randomness has been proven. <strong>Uncertain</strong> and <strong>Insufficient data</strong> should prevent strong conclusions.</p>
+<p>Use prominent tree splits as hypotheses. A split on row number can indicate drift in collection practices, but only when current row order has real meaning. Check the relevant observations and source process before choosing deletion or imputation.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>Random - Non-Random hypothesis can be rejected</li>
-<li>Uncertain - The hypothesis test is ambiguous</li>
-<li>Patterned - Non-Random hypothesis cannot be rejected</li>
-<li>Insufficient data - Statistical test is meaningless</li>
+<li>Decision trees detect only patterns available in included predictors and optional row order.</li>
+<li>Multiple-testing adjustment reduces false discoveries but does not eliminate them.</li>
+<li>Sampling, rare missingness, and small folds reduce stability.</li>
+<li>The tree shown on the front is explanatory; cross-validated metrics support the interpretation.</li>
+<li>Observation weights are not currently used.</li>
 </ul>
-<p>The front face is a set of tabs that each show a decision-tree chart that predicts missingness.</p>
-<!-- See <a href="/markdown/MissingValues.html" target="_blank" rel="noopener noreferrer">here</a> for a background article on missing values. -->
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Ensure roles and observation ordering are meaningful.</li>
+<li>Review the aggregate missing-count result.</li>
+<li>Inspect variable tabs with Patterned or Uncertain interpretations.</li>
+<li>Compare tree splits with the metrics on the flip side.</li>
+<li>Test plausible explanations against the underlying data and collection process.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> Upstream predictor values, missingness indicators, roles, and optional row order.</li>
+<li><strong>Output:</strong> The upstream data unchanged.</li>
+<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
+</ul>
 <details class="deep-dive">
 <summary>
 Click here for a fully expanded discussion of missing values.
 </summary>
-<iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy">
+<iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy">
 </iframe>
 </details>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card reveals a table of predictors: those with missing values. Each row gives an assessment decision and the basis of that decision. The rows can be sorted into ascending p-value clicking the p-value header.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<h4 id="goal">🎯 Goal</h4>
-<ol type="1">
-<li><em>Primary:</em> To identify predictors that have <strong>patterned</strong> missingness. Their missing values should be imputed rather than removing the observations (partial deletion). Deleting observations with patterned missingness will produce non-random omissions that are a potential cause of data bias.</li>
-<li><em>Secondary:</em> To detect relationships that suggest an explanation and possibly a manual imputation for certain missing values. For example: <em>In a housing dataset, the category level of “house boat” might explain why the ratable-value variable is missing (manually set these to zero).</em></li>
-</ol>
-<p>The actions implied by the different missingness causes are:</p>
-<ul>
-<li><p><strong>Explainable:</strong> Design manual-imputation strategies for some variables. For example:<br>
-<em>Blood-test results can be missing because no diagnostic justification for the test has yet arisen. Were such tests undertaken unnecessarily they would usually yield results in the normal range (rather than in the extreme range). A possible manual imputation might involve substituting a typically “Normal” result for each missing test. Substituting a mean result would be a <strong>poor</strong> choice.</em></p></li>
-<li><p><strong>Patterned:</strong> Design statistical-imputation strategies. For example:<br>
-<em>The absence of clinical notes is often caused by periods of high workload and emergencies. This is not random and the missing notes might best be estimated by what the subsequent notes.</em></p></li>
-<li><p><strong>Random:</strong> Design partial-deletion or statistical-imputation strategies. For example:<br>
-<em>Instrument failures prevent the recording of routine blood pressure readings. These missed readings can be safely ignored as they appear to occur randomly.</em></p></li>
-</ul>
-<hr>
-<p>All cards downstream of this card will receive any changes enacted by this card.</p>
 
 
 

@@ -1,106 +1,63 @@
 ---
-title: Variable data-type modification
+title: Variable modification
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-Variables can have the wrong data type due their form of storage. For example, CSV files do not distinguish between Text and Nominal, or between Text and Date. Sometimes, missing value place-holders (e.g. "missing") can turn a column of numbers into a column of numbers-and-text. In this situation the data-type drops to the lowest common denominator which is "Text". 
-
-_Likert_ data consists of ordered responses—such as "strongly agree", "neutral", or "strongly disagree" — used in surveys to measure people's opinions, attitudes, or feelings.
-It is not uncommon for such raw data sets to assign the wrong data-type to _Likert_ variables. These variables need to be promoted to __Ordinal__. By default, order is simply alphabetical so they need to assigned an explicit ordering as well. 
-
-It is not uncommon for raw data sets to assign the wrong type to __Cyclic__ variables such as days-of-the-week, months-of-the-year, seasons, and hours-of-the-day. These variables need to be promoted to __Cyclic__ and have their explicit order given. 
-
-This dialogue allows the modification of variables. Variables can be renamed and have their data types changed. The "Alternatives values" settings controls the flexibility afforded to the data-type changes.
-
-Changes are made by choosing a data variable from the rows of the table. The changes must be manually entered into the fields at the foot of the card. If the field shakes, the entry is not currently valid. For example, if the new variable's name is already in use.
-
-Nothing is actioned until pressing the "Commit" button at which point the modified dataset is propagated downstream. This button bounces when it is ready and able to be used. Mistakes can be reversed, in bulk, by pressing the "reset" button.
-
-Strings can be flexibly converted to dates even if the date-format is not known. A list for possible formats will be attempted until a near-perfect translation is achieved.
-
-
-#### 🔄 Flip side
-
-The back of the card documents the differences between the original dataset and the propagated one. This is shown in the form of a differences dialogue. An example is shown below. "+" lines indicate additions to the structure, "-" indicate subtractions from the structure.
-
-```text
- --- incoming  
- +++ modified  
- @@ -1,7 +1,7 @@  
-  rows: 413  
-  columns: 16  
-  CODE: dtype=str, missing=0, unique=413  
- -POLITICS: dtype=str, missing=4, unique=5  
- +POLITICS: dtype=category, missing=4, unique=5  
-  POPULATION: dtype=float64, missing=96, unique=317  
-  AGE25_PROPTN: dtype=float64, missing=92, unique=315  
-  AGE_MEDIAN: dtype=float64, missing=230, unique=183  
-```
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
-
-##### Possible date formats
- 
-A comma delimited list of alternative date (and time) formats to try. Order is important since the first format that succeeds on at least 95% of data values is considered the correct format for that variable. If you know the date format should be American style, ensure this format is at the front. 
-
-__Date components__
-
-- %Y — four-digit year, such as 2026
-- %y — two-digit year, such as 26
-- %m — zero-padded month number: 01–12
-- %B — full month name, such as January
-- %b — abbreviated month name, such as Jan
-- %d — zero-padded day of the month: 01–31
-- %j — zero-padded day of the year: 001–366
-
-__Time components__
-
-- %H — zero-padded hour using the 24-hour clock: 00–23
-- %I — zero-padded hour using the 12-hour clock: 01–12
-- %M — zero-padded minute: 00–59
-- %S — zero-padded second: 00–59
-- %f — microseconds: 000000–999999
-- %p — locale-specific AM or PM
-
-__Weekday components__
-
-- %A — full weekday name, such as Thursday
-- %a — abbreviated weekday name, such as Thu
-- %w — weekday number, where Sunday is 0 and Saturday is 6
-- %u — ISO weekday number, where Monday is 1 and Sunday is 7
-- %W — week number with Monday as the first day
-- %U — week number with Sunday as the first day
-- %V — ISO 8601 week number
-
-__Time-zone components__
-
-- %z — UTC offset, such as +1200
-- %Z — time-zone name, such as NZST
-
-__Literal characters__
-
-- %% — a literal percent sign
-- /, -, :, spaces and commas are included literally
-
-##### Alternative types
-
-This setting defines how the data types choices are filtered based on the nature of the variable.
-
-* __Sensible:__ the feasible choices based on values and cardinality e.g. allowing low cardinality Text to Nominal. "Sensible" is the safest to use. It employs heuristic rules (involving data-values, data-type and cardinality) to identify type translations that should work correctly.
-* __Related:__ the type-related choices are offered e.g. allowing Integer to Decimal. "Related" only uses rules relating to data-type.
-* __All:__ all possible choices are offered. e.g. allowing Decimal to Text. "All" is not guaranteed to work, since all rules are disabled.
-
- ##### Max obs. to examine
- 
- Limit the maximum number of observations to test for alternative data types
+_The Variable modification card corrects variable names, data types, and the explicit order of ordinal or cyclic values. It addresses structural problems introduced by storage formats—for example, numbers imported as text, dates without recognized formats, or survey responses with an incorrect alphabetical order._
 
 #### 🎯 Goals
 
- 1. _Primary:_ To fix mis-typed variables such as numbers that are recorded as text e.g. "20.1","12.7","45.3".
- 1. _Secondary:_ Make it easy to change variable names and modify the order of __Ordinal__ and __Cyclic__ variables. 
+1. **Primary:** Correct misclassified variable types and misleading names.
+1. **Secondary:** Define meaningful orders for ordinal and cyclic variables.
+1. **Tertiary:** Preserve role assignments when variables are renamed.
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+#### 🧠 How it works
+
+The front table maintains original and proposed definitions. Select a row, then edit its proposed name, type, or order in the footer. Alternative type choices range from conservative value-aware suggestions to all supported conversions. Date conversion tries configured formats in order and accepts the first that parses nearly all examined values.
+
+Proposals remain local to the table until committed. Conversion is then applied to the complete upstream column, not only to the sample used to suggest alternatives. Renaming also updates the role map.
+
+#### 🏞️ Front
+
+The front lists original and proposed names, data types, orders, and the current role. Selecting a row populates the editing controls. A shaking field indicates that a proposal is invalid, such as a duplicate name or an incompatible conversion.
+
+#### 🔄 Flip side
+
+The flip side is a unified structural difference report comparing incoming and committed data. Lines beginning with minus describe the old definition and lines beginning with plus describe the new one. Unchanged variables provide context; the report says when no modifications are committed.
+
+#### 🛠️ Controls and actions
+
+**Commit modification** applies all valid proposals in the table and propagates the changed data. **Reset modifications** restores original names, types, and orders and returns the upstream data. A ready commit button animates, but the front proposals alone do not affect downstream cards.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Choose types according to meaning, not merely what conversion succeeds. A numeric identifier usually remains an identifier rather than a continuous measurement. Ordinal order must reflect increasing meaning, and cyclic order must wrap naturally from the last value to the first.
+
+After commitment, review the difference report and inspect converted values. Type changes can alter which downstream cards consider a variable eligible.
+
+#### ⛔️ Limitations
+
+* A successful conversion does not prove semantic correctness.
+* Alternative suggestions may use a sample, while commitment transforms the full column.
+* Flexible date parsing can choose the wrong interpretation for ambiguous dates.
+* Failed values may become missing depending on the conversion.
+* Bulk reset removes all modifications made by this card, not one selected edit.
+
+#### 📌 Suggested workflow
+
+1. Identify a variable with an incorrect name, type, or order.
+1. Select it and choose the most conservative valid correction.
+1. Verify ordinal, cyclic, or date interpretation explicitly.
+1. Commit all proposals and inspect the flip-side difference.
+1. Recheck the resulting values and downstream eligibility.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream values, variable definitions, and role map.
+* **Output:** Materialized renamed or converted data with roles preserved under renaming.
+* **Data journey:** Committed changes create a Cleaning step; a no-change commit is recorded as inactive.

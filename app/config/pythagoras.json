@@ -76,6 +76,9 @@
       "cards": [
         {
           "module": "var_transform"
+        },
+        {
+          "module": "data_parallel"
         }
       ]
     },

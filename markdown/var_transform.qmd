@@ -1,47 +1,63 @@
 ---
-title: Variable transforms
+title: Variable transform
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-This card explores the distributional shape of each continuous predictor. 
-
-The distributional analysis is achieved by charting each variable in 2D "distribution spaces", characterized by centrality, spread, skew and kurtosis.
-
-In the flip side of the card, the distributional parameters are tabulated for each relevant predictor. One of these parameters is the lambda value relating to [power transforms](https://en.wikipedia.org/wiki/Power_transform) which are used in the normalization of skew. Removing skew mainly helps in the detection of outliers in downstream processes that assume symmetrical outlier behaviour. It may also assist certain types of linear modeling tasks. In power transformations, lambda (λ) is the parameter used to determine the optimal transformation of numerical variables into a less skewed shape. A lambda of 1.00 means that an identity transform is recommended (i.e. no change). A lambda value of NA means that no optimal power transform could be found. 
-
-#### ⛔️ Important limitations
-
- * Only real-values predictors are explored (i.e. of type "double")
-   - Any integer variables, which are typically counts, are ignored. Integer data is often "count" data and often follows a binomial distribution that is definitely not symmetrical. Be on the look out for integer variables that have become real-values through previous normalization.
-   - Categorical variables are ignored. Power transforms do not apply to categorical data.
-   - Text, cyclic, geometry are ignored.
- * The power transform used in this card is the Yeo-Johnson transform as it allows for both positive and negative values. For variables that are entirely greater than zero. the Box-Cox transform is viable. However this variation is not currently implemented. 
-
- 
-#### 🏞️ Front
-
-The card's front initially shows a chart of location (mean) versus spread (standard deviation). In full-screen the chart enlarges into a 3 subplot charts.
-
- 1. Mean versus Standard Deviation
- 1. Standard Deviation versus Skew
- 1. Skew versus Kurtosis
-
-When the transform buttons are checked, the charts show before and after points - linked by a straight line.
-
-#### 🔄 Flip side
-
-The back of the card gives the before and after statistics for all the variables.
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
-
+_The Variable transform card explores and applies learned transformations to the location, spread, and skew of continuous numeric predictors. A continuous numeric target may be included explicitly. The card supplies both an interactive transformed preview and unfitted pipeline steps for later training._
 
 #### 🎯 Goals
 
- 1. _Primary:_ Whether sets of variables have similar distributional characteristics.
- 1. _Secondary:_ The transformation of the variables to manage centrality, spread and skew.
+1. **Primary:** Reduce problematic skew and place continuous predictors on useful common scales.
+1. **Secondary:** Compare distributions before and after transformation.
+1. **Tertiary:** Record leakage-safe learning steps for formal modeling.
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+#### 🧠 How it works
+
+Eligible predictors are continuous floating-point variables. Integer counts, categorical, text, cyclic, list, geometry, shadow, constant, and unsupported variables are excluded with reasons. When enabled and eligible, the target is handled separately and marked distinctly.
+
+Selected operations always run in this order: **De-skew** fits a Yeo–Johnson power transformation, **Scale** gives variables a common standard deviation, and **Center** shifts their means to zero. Yeo–Johnson accepts zero and negative values. A lambda near 1 indicates little need for a power transformation.
+
+#### 🏞️ Front
+
+Normal card size maps mean against standard deviation. Full-screen mode also shows standard deviation against skew and skew against kurtosis. When transformations are selected, each original point is linked to its transformed position using unchanged axes, allowing the movement to be interpreted directly. Optional labels supplement hover information.
+
+#### 🔄 Flip side
+
+The flip side reports roles, eligibility or exclusion reason, fitted lambda, and distribution statistics before and after transformation. Use it to identify variables driving extreme chart scales and to confirm that a requested operation had the intended numerical effect.
+
+#### 🛠️ Controls and actions
+
+The footer checkboxes apply **De-skew**, **Scale**, and **Center**. Selecting any operation propagates the fitted preview and adds the corresponding learned sequence to the pipeline. Clearing all selections restores the upstream preview and records the operation as inactive.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+De-skewing can make symmetric-distance and linear-model assumptions more plausible, but normality is not a universal requirement. Scaling is important for distance-based and penalized methods but usually unnecessary for tree models. Centering changes origin, not shape or spread.
+
+Judge transformations by downstream model requirements and validation, not by making every point look alike. The full-data preview is exploratory; formal training must fit transformation parameters inside each training partition.
+
+#### ⛔️ Limitations
+
+* Eligibility is intentionally restricted to continuous floating-point data.
+* Yeo–Johnson is the only power family currently fitted; Box–Cox is not offered.
+* Strong outliers can dominate moments and chart ranges.
+* Transforming a target changes interpretation and requires care when converting predictions back to original units.
+* Observation weights are not used in fitted transformations.
+
+#### 📌 Suggested workflow
+
+1. Inspect the original location, spread, skew, and kurtosis.
+1. Review excluded variables and confirm their types.
+1. Apply only transformations justified by the intended model.
+1. Compare linked before/after points and flip-side statistics.
+1. Confirm pipeline order in Data journey.
+
+#### 🔗 Data flow
+
+* **Input:** Continuous numeric predictors, optional target, roles, and existing pipeline.
+* **Output:** A fitted transformed preview and corresponding unfitted learning step.
+* **Data journey:** Selected transformations create a Learning step; no selection is recorded as inactive.

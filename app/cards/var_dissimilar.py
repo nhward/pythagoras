@@ -40,7 +40,7 @@ def instance():
     this.long_name = "Variable Dissimilarity"
     this.description = (
         "This card explores the characteristics of each variable and builds "
-        "a dissimilarity matrix visualised as a hierarchy chart."
+        "a dissimilarity matrix visualized as a hierarchy chart."
     )
 
     def front():
@@ -94,7 +94,7 @@ def instance():
         return ui.TagList(
             ui.input_checkbox(
                 id="Robust", label="Employ robust statistics for central tendency and spread", value=True, 
-                guide=this,  text="Robust uses the median and MAD; otherwise mean and standard deviation are used.", position="left",
+                guide=this,  text="Uses median and median absolute deviation instead of mean and standard deviation for numeric summaries. Enable it when outliers should have less influence on variable dissimilarity.", position="left",
             ),
             ui.input_slider(
                 id="Qgram", label="The size of q-grams", min=1, max=5, value=2,
@@ -102,15 +102,15 @@ def instance():
             ),
             ui.input_radio_buttons(
                 id="Which", label="Hierarchical clustering technique", choices=["Agglomerative", "Divisive"], selected="Agglomerative",
-                guide=this, text="Choose bottom-up agglomerative or top-down divisive clustering.", position="left",
+                guide=this, text="Chooses bottom-up agglomerative or top-down divisive construction. Both use the same dissimilarity matrix but can organize ambiguous groups differently.", position="left",
             ),
             ui.input_radio_buttons(
                 id="Style", label="Hierarchy chart layout", choices={"rectangular": "Rectangular", "radial": "Radial"}, selected="radial",
-                guide=this, text="Rectangular and radial chart layouts of the same hierarchy information.", position="left",
+                guide=this, text="Changes only presentation. Rectangular layout makes merge height easier to compare; radial layout can fit more variable labels in limited space.", position="left",
             ),
             ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to analyse", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position = "left"
+                id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+                guide = this, text = "Sets a logarithmic cap of 10^n randomly sampled observations used in value and missingness comparisons. Raising it improves coverage but increases calculation time.", position = "left"
             ),
         )
 

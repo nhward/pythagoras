@@ -348,7 +348,7 @@ def instance():
             ),
             ui.input_checkbox(
                 id = "NA_CaseSensitive", label = "Use a case-sensitive search", value = False,
-                guide = this, text = 'Whether "N/A" is different to "N/a", "n/a", "n/A".', position = "left"
+                guide = this, text = 'Treats capitalization variants such as "N/A" and "n/a" as different candidate string values. Leave this off when source capitalization is inconsistent.', position = "left"
             ),
             ui.input_selectize(
                 id = "NA_Integers", label = "Missing integer-value placeholders", choices =  [-9999,-999,-99, -1], selected = [-9999,-999,-99, -1],
@@ -381,8 +381,8 @@ def instance():
                 text = 'This comma-delimited list supplies placeholders for missing date/time-values. Date values that match any of these will be replaced with NaT.',
             ),
             ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to analyse", min = 3, max = 7, value = 3, ticks = True, pre = "10^",
-                guide = this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position = "left"
+                id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 3, ticks = True, pre = "10^",
+                guide = this, text = "Sets a logarithmic cap of 10^n observations used to detect candidate placeholders. Raising it improves the chance of finding rare candidates but increases calculation and chart size.", position = "left"
             ),
         )
 

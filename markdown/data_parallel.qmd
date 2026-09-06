@@ -1,0 +1,69 @@
+---
+title: Parallel coordinates
+---
+
+#### 🧭 Purpose
+
+_The Parallel coordinates card explores how individual observations behave across several variables at once. It is useful for finding clusters, unusual profiles, and relationships that are difficult to see in separate two-variable plots. The card is diagnostic and does not modify the data._
+
+#### 🎯 Goals
+
+1. **Primary:** Reveal groups of observations with similar multivariable profiles.
+1. **Secondary:** Identify unusual observations for focused investigation.
+1. **Tertiary:** Explore associations between adjacent variable axes.
+
+#### 🧠 How it works
+
+Each vertical axis represents one selected variable, and each observation is a line connecting its values across those axes. The card supports numeric, Boolean, date/time, and manageable categorical variables. Categorical values are encoded as labeled positions rather than treated as meaningful numeric distances.
+
+Only observations complete across every displayed variable and the optional color variable can be drawn. If there are more complete observations than the chart limit, a deterministic random sample is displayed. The footer reports omitted and sampled observations.
+
+Lines may be colored by another compatible variable. Color is descriptive: it can reveal separation or gradients, but it does not test a relationship.
+
+#### 🏞️ Front
+
+The front contains the parallel-coordinates chart. Hover near a line to identify it. When one or more variables have the **Identifier** role, their values form the line label; otherwise the label is the one-based row number.
+
+Click a line to pin a heavier comparison path. The selected identity also appears below the chart, and **Clear comparison** removes the pinned path. Drag vertically on an axis to filter its values, double-click to clear that filter, and drag an axis horizontally to change its position. Reordering can expose relationships by bringing variables next to one another.
+
+The color scale is shown in full-screen mode when a color variable is selected.
+
+#### 🔄 Flip side
+
+This card has no flip side. Its result is inherently interactive, and status information below the chart explains how many observations are represented.
+
+#### 🛠️ Controls and actions
+
+Line selection, filtering, axis reordering, and **Clear comparison** change only the current view. They do not filter or alter the dataset passed downstream.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Bundles of nearly parallel lines indicate observations with similar profiles. Repeated crossings between adjacent numeric axes can suggest weak or inverse ordering, while relatively uncrossed lines suggest similar ordering. A line separated from most others may be an anomaly, a valid rare case, or a data-quality problem; pin it and inspect the corresponding observation before deciding.
+
+Compare patterns under different axis orders and color variables. Treat visual separation as a reason to investigate, not as evidence of causation or a formal cluster.
+
+#### ⛔️ Limitations
+
+* Complete-case display can underrepresent observations when missingness is patterned.
+* Dense charts can suffer severe over-plotting even after sampling.
+* Categorical axis spacing and line slopes do not represent quantitative distance.
+* Apparent patterns depend strongly on axis order, selected variables, and sampling.
+* Observation weights are not applied.
+
+#### 📌 Suggested workflow
+
+1. Select a small set of variables with a clear analytical purpose.
+1. Reorder axes to place variables of interest next to one another.
+1. Use color to explore a target, group, or other meaningful variable.
+1. Hover and pin unusual lines, then locate those observations in Data tabulation.
+1. Check the footer before generalizing from the displayed observations.
+
+#### 🔗 Data flow
+
+* **Input:** Compatible upstream variables, roles, and observation identities.
+* **Output:** The upstream data unchanged.
+* **Data journey:** This diagnostic card does not add a journey step.

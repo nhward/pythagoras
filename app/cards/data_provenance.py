@@ -197,7 +197,7 @@ def _journey_table(data: proxy_data) -> pd.DataFrame:
                 "Attempted": "Yes",
                 "Card": record.card,
                 "Operation": record.operation,
-                "Method": "Materialised operation",
+                "Method": "Materialized operation",
                 "Variables": _cleaning_variables(record.parameters),
                 "Parameters": _parameters_text(record.parameters),
                 "Input shape": _shape_text(record.input_shape),
@@ -232,7 +232,7 @@ def _journey_table(data: proxy_data) -> pd.DataFrame:
         "Stage": "Preview",
         "Attempted": "",
         "Card": "",
-        "Operation": "Current materialised preview",
+        "Operation": "Current materialized preview",
         "Method": "Full-data preview only",
         "Variables": f"{data.shape[1]:,} variables",
         "Parameters": "The stored learning pipeline remains unfitted",
@@ -429,7 +429,7 @@ def instance():
                 shinywidgets.output_widget(
                     id="JourneyChart", width="100%", height="auto", fill=False,
                     guide=this, title="Data journey", position="left",
-                    text="Follow each row in alternating directions. Green boxes are materialised cleaning operations; orange boxes are learned sklearn steps."
+                    text="Follow step numbers across rows in alternating directions. Green boxes are materialized cleaning operations; orange boxes are unfitted scikit-learn steps; gray and blue boxes are the source and current preview. The chart scrolls vertically as it grows."
                 ),
                 class_="journey-chart-scroll html-fill-item",
             ),
@@ -457,7 +457,7 @@ def instance():
             ui.output_ui(
                 id="Status",
                 guide=this, title="Summary", position="left",
-                text="A summary of the data-journey steps"
+                text="Reports the number of visible materialized cleaning steps and trainable learning steps. Source and preview bookends are not included in these counts."
             ),
             class_="html-fill-container html-fill-item text-center",
         )

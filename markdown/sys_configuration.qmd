@@ -1,40 +1,55 @@
 ---
-title: System configuration
+title: Configuration
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-This card analyses the environment in which Pythagoras is running. This can be useful in explaining differences in the reproduction of past results. If you refresh the card at a later time there may be additional packages loaded as many are loaded dynamically on-demand.
-
- - The **Summary** tab provides a small set of high level property values.
- - The **URL** tab provides evidence of the server in which the software is running. A host name of "localhost" or "127.0.0.1" means the software is running locally.
- - The **Packages** tab provides a sorted list of packages that have been loaded, up to this point, along with their version numbers.
- - The **Folders** tab counts the files that are in significant folders
-
-
-#### 🔄 Flip side
-The back of the card documents:
-
-- Pythagoras modules
-- Important Python packages 
-- Number of logical CPU cores
-
-#### ⚙️ Settings
-There are no settings.
+_The Configuration card records the software and host environment in which Pythagoras is running. It helps explain why an analysis may behave differently on another machine or after packages have changed. The card is diagnostic and does not change data._
 
 #### 🎯 Goals
 
- 1. _Primary:_ Document the package versions in use
- 1. _Secondary:_ Provide evidence about changes
+1. **Primary:** Capture the Python, platform, package, and application environment.
+1. **Secondary:** Support diagnosis of reproducibility and deployment differences.
 
+#### 🧠 How it works
 
-#### 🛠️ Actions
-Keep a copy of this information when a crucial analysis has been completed. This might explain imperfect reproduction in future.
+The card reads properties from the current Python process, browser session, installed package metadata, and important application folders. Some packages are loaded only when a card first needs them, so the observed environment can grow during a session.
 
-If the python libraries can be restored to their original ones, the package infrastructure will be identical. Any remaining differences will be due to changes in the data and/or changes in the Pythagoras. 
+#### 🏞️ Front
 
-The in-use package list can change during an analysis session as additional "cards" are loaded progressively. 
+The front has four tabs. **Summary** shows high-level host, Python, platform, pixel-ratio, and package counts. **Url** reports the browser location and helps distinguish local from hosted execution. **Packages** lists currently loaded distributions and versions. **Folders** reports significant application paths and file counts.
 
-***
+#### 🔄 Flip side
 
-This card does not require a data set. This card does not change any dataset. Any cards downstream of this card will receive the upstream version of the data.
+The flip side contains a conventional session-information report. Full-screen mode includes more dependency, standard-library, and private-package detail than the normal card view.
+
+#### 🛠️ Controls and actions
+
+**Refresh** rereads the current environment. Use it after opening additional cards if the loaded-package list matters. Refreshing changes only the report.
+
+#### ⚙️ Settings
+
+This card has no settings. The Tour Guide explains its tabs, report, and refresh action.
+
+#### 🔎 Interpretation and next steps
+
+When reproducing an analysis, compare the Python version, operating platform, and versions of libraries central to the affected card. A different package count alone is not proof of a problem, but a changed version can identify where to investigate.
+
+#### ⛔️ Limitations
+
+* Loaded packages are a session snapshot and not a complete lock file.
+* Matching versions does not guarantee identical hardware, external services, locale, or source data.
+* Folder paths may reveal deployment structure and should be handled appropriately when sharing reports.
+
+#### 📌 Suggested workflow
+
+1. Refresh after all relevant cards have been opened.
+1. Save the report with important analytical results.
+1. Compare versions when behavior differs between environments.
+1. Recreate the original environment before attributing differences to the data or analysis.
+
+#### 🔗 Data flow
+
+* **Input:** The running application and client-session environment.
+* **Output:** The upstream dataset unchanged.
+* **Data journey:** This system diagnostic does not add a journey step.

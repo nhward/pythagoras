@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>???????</title>
+<title>quarto-input248e66779fb4a052</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,31 +725,86 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">???????</h1>
+<h1 class="title"><card title></card></h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<p><!-- 
- ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
- ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets 
---></p>
-<h4 id="introduction">🧭 Introduction</h4>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front …</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card …</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
+<!--
+CARD-DOCUMENT TEMPLATE
+
+Use the card's displayed long name as the title, in sentence case. Keep the
+headings below in this order so that readers can move consistently between
+card documents. If a card has no flip side, settings, or data-changing action,
+say so briefly rather than deleting the section.
+
+Write in plain American English and address the reader as "you" only when giving
+an instruction. Use the exact visible label when naming a control and bold it.
+Explain a technical term once, close to its first use. Prefer short paragraphs,
+tables for repeated field definitions, and three to six practical workflow
+steps. Describe current behavior, not planned features. A typical document
+will be 500–900 words; use more only when the method genuinely requires it.
+
+Delete these comments and all bracketed prompts when creating a card document.
+-->
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>[State the question this card answers and why that question matters. Make this italic to stand out. Identify where the card belongs in a typical workflow, which variable roles or data types it considers, and whether it is diagnostic or can change the data.]</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><em>Primary:</em> ?????</li>
-<li><em>Secondary:</em> ????</li>
+<li><strong>Primary:</strong> [The card’s principal analytical or data-preparation outcome.]</li>
+<li><strong>Secondary:</strong> [The principal supporting outcome.]</li>
+<li><strong>Tertiary:</strong> [Optional; omit if it adds no distinct purpose.]</li>
 </ol>
-<hr>
-<p>All cards downstream of this card will receive any changes enacted by this card.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>[Explain the method at the level needed to interpret the result. Define the important units, scores, thresholds, or comparisons. Distinguish what the card calculates from what it merely displays. Avoid repeating the Purpose section.]</p>
+<p>[If several concepts or output categories need definition, prefer a compact table such as:]</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Example term</strong></td>
+<td>A concise, card-specific interpretation.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="front">🏞️ Front</h4>
+<p>[Describe what is shown on the front and how to read it. Explain axes, colors, marks, labels, tabs, hover information, selection, filtering, and any meaningful difference between normal-card and full-screen views. Mention empty or warning states when they affect interpretation.]</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>[Describe the complementary information on the flip side. If it contains a table, explain the important columns and its ordering or filtering. Do not repeat the front description. If there is no flip side, state what the front already provides and why a second view is unnecessary.]</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>[Document controls on the card itself, especially <strong>Apply</strong>, <strong>Commit</strong>, <strong>Remove</strong>, <strong>Reset</strong>, selection, or download controls. State exactly when the exported data changes, whether clearing or resetting reverses the change, and whether the action adds a Data journey entry. If the card is diagnostic only, say that it has no data-changing action.]</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<p>[Setting-specific documentation belongs in the card’s Tour Guide. Mention a setting elsewhere only when it is necessary to explain interpretation, workflow, or a consequential tradeoff.]</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>[Explain the most important patterns or result categories and what each can—and cannot—support. Suggest the appropriate downstream investigation or action. Keep recommendations proportional: exploratory output is evidence to investigate, not proof of a cause.]</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>[State the most consequential statistical or operational limitation.]</li>
+<li>[State exclusions caused by roles, data types, missing values, or sampling.]</li>
+<li>[State any important performance, uncertainty, or generalization caveat.]</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>[Make the first concrete check or choice.]</li>
+<li>[Inspect the principal result.]</li>
+<li>[Use the complementary view or vary a meaningful setting.]</li>
+<li>[Validate surprising results against the underlying data or domain.]</li>
+<li>[Apply or record a decision, if the card supports one.]</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> [Which upstream data, roles, or pipeline state the card uses.]</li>
+<li><strong>Output:</strong> [Whether it passes data through unchanged, materializes a cleaning change, or adds a learned pipeline step.]</li>
+<li><strong>Data journey:</strong> [When and how the card appears in the journey, including the behavior when its action is not enabled.]</li>
+</ul>
 
 
 

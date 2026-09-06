@@ -501,11 +501,11 @@ def instance():
             ),
             ui.input_slider(
                 id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
-                guide=this, text="Minimum cross-validated balanced accuracy for a patterned classification.", position="left",
+                guide=this, text="Requires the target model to reach at least this held-out balanced accuracy before shadow importance is interpreted as informative. Raising it demands stronger overall predictive performance.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).", position="left",
+                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text="Sets a logarithmic cap of 10^n observations used for cross-validated importance. Raising it improves coverage but increases random-forest fitting and permutation time.", position="left",
             ),
         )
 

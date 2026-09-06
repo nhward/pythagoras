@@ -112,6 +112,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 .card.fullscreen-active .drag-handle {
 display: none !important;
 }
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
 
 #shiny-modal-wrapper {
 position: absolute;
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -606,96 +732,58 @@ border: 0;
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>The goal of this card is to explore learned imputation (i.e. statistical imputation) as a means of resolving any remaining or future missing values. Three types of imputation are explored in this card:</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Learned imputation card estimates missing predictor values and assesses how well the selected method reconstructs deliberately hidden observed values. When applied, it adds an unfitted learning step to the pipeline and supplies a fitted full-data preview downstream.</em></p>
+<p>For the broader framework, see <a href="../markdown/missing_values.html#imputation">learned imputation</a> in <strong>Background on missing values</strong>.</p>
+<h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Median or Mode</strong> Simple imputation (<em>Median</em> for numeric, datetime, and ordinal variables and <em>Mode</em> for categorical variables)</li>
-<li><strong>Nearest neighbors</strong> K-nearest neighbors imputation (<em>cannot process categorical variables</em>)</li>
-<li><strong>Iterative prediction</strong> Multiple imputation by chained equations (M.I.C.E) (<em>cannot process categorical variables</em>)</li>
+<li><strong>Primary:</strong> Resolve eligible predictor missingness through a reproducible learned transformation.</li>
+<li><strong>Secondary:</strong> Compare imputation performance with a random-draw baseline.</li>
+<li><strong>Tertiary:</strong> Avoid choosing a complex method when simple imputation performs as well.</li>
 </ol>
-<p>Notes:</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>Three methods are available. <strong>Median or mode</strong> treats each variable independently. <strong>Nearest neighbors</strong> estimates continuous values from similar observations. <strong>Iterative prediction</strong> repeatedly predicts each continuous variable from the others. Date-times and ordered categories use numeric encodings; nominal, string, and Boolean predictors fall back to their most frequent value when a multivariable method cannot handle them directly. Cyclic, list, geometry, and unsupported variables are excluded.</p>
+<p>Performance is estimated by repeatedly hiding a proportion of known values, fitting without those truths, and comparing imputations with the held-out values. Numeric-type variables use an appropriate error score; categorical-type variables use an agreement score. Improvement is measured against random draws from the variable’s observed distribution.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>Paired bars show missing counts before and after the selected imputation. Excluded variables can retain missing values, so an applied method does not necessarily reduce every bar to zero. The status summarizes eligibility and application.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The performance table reports predictor, data type, number missing, method used, metric, imputation score, random-baseline score, improvement, and interpretation. Read the metric direction and improvement together rather than comparing unlike variable types directly.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>Select <strong>Apply</strong> to propagate the imputed preview and add the learning step. Clearing it restores the upstream data and records the operation as inactive. Method and evaluation changes can update the preview, but they should be judged before application.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Prefer the simplest method whose held-out performance is adequate. Little improvement over random guessing suggests that predictor relationships are not reconstructing the missing values reliably. A strong average score does not guarantee accurate imputation for every subgroup or extreme value.</p>
+<p>The full-data preview is for interactive analysis. During formal validation, fit the stored imputer only on each training partition and transform held-out data with those learned parameters.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>The last two employ all the (other) predictors to predict the missing values.</li>
-<li>Only Predictors (variables of <code>role = predictor</code>) play any part in imputation.</li>
-<li>The first method (Median or Mode) only needs to consider a single variable at a time.</li>
+<li>Only variables assigned the <strong>Predictor</strong> role participate.</li>
+<li>Evaluation hides observed values and assumes they are representative of genuinely missing cases.</li>
+<li>Patterned missingness can make that assumption false.</li>
+<li>Categorical fallbacks do not exploit multivariable relationships.</li>
+<li>Observation weights are not used.</li>
 </ul>
-<table class="caption-top">
-<colgroup>
-<col style="width: 20%">
-<col style="width: 27%">
-<col style="width: 26%">
-<col style="width: 25%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Variable type</th>
-<th><strong>Median or Mode</strong></th>
-<th><strong>Nearest neighbors</strong></th>
-<th><strong>Iterative prediction</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><em>Numeric</em></td>
-<td>Median</td>
-<td>Native</td>
-<td>Native</td>
-</tr>
-<tr class="even">
-<td><em>Datetime</em></td>
-<td>Numeric timestamp representation</td>
-<td>Numeric representation</td>
-<td>Numeric representation</td>
-</tr>
-<tr class="odd">
-<td><em>Ordered category</em></td>
-<td>Median ordinal code</td>
-<td>Ordinal encoding and rounding</td>
-<td>Ordinal encoding and rounding</td>
-</tr>
-<tr class="even">
-<td><em>Nominal category</em></td>
-<td>Most frequent</td>
-<td><strong>Mode</strong> fallback</td>
-<td><strong>Mode</strong> fallback</td>
-</tr>
-<tr class="odd">
-<td><em>String/boolean</em></td>
-<td>Most frequent</td>
-<td><strong>Mode</strong> fallback</td>
-<td><strong>Mode</strong> fallback</td>
-</tr>
-<tr class="even">
-<td><em>Cyclic, List, Geometry</em></td>
-<td>N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table>
-<p>Ideally, the predictor variables are independent of each other and cannot assist in predicting a missing value. Any performance improvement over simple imputation intrinsically exploits predictor dependencies. If KNN and Iterative imputations are not significantly better than simple imputation, then stick with simple imputation.</p>
-<p>Observations weightings, if supplied, are not utilized in the imputations.</p>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Resolve placeholders and decide whether to create informative-missingness shadows.</li>
+<li>Compare simple, nearest-neighbor, and iterative performance.</li>
+<li>Inspect exclusions and variables with weak improvement.</li>
+<li>Apply the simplest defensible method.</li>
+<li>Confirm the remaining missing counts and pipeline position in Data journey.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> Eligible upstream predictors and existing pipeline state.</li>
+<li><strong>Output:</strong> A fitted imputed preview plus an unfitted imputation pipeline step.</li>
+<li><strong>Data journey:</strong> Applied imputation creates a Learning step; unapplied imputation is recorded as inactive.</li>
+</ul>
 <details class="deep-dive">
 <summary>
 Click here for a fully expanded discussion of missing values.
 </summary>
-<iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy">
+<iframe src="markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy">
 </iframe>
 </details>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front shows a bar chart of missing value counts before and after any imputation.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card gives an assessment of the quality of the imputation. Statistics are tabled for each variable imputed.</p>
-<p>The imputation performance table shows columns: <em>Predictor, Data type, Number missing, Method-used, Metric, Score, Random-baseline score, Improvement and Status</em> The random-baseline score is based on a metric assessed using only randomly guessed values. If the percentage improvement of the score exceeds the improvement-threshold, the imputation is deemed “Strong”. An improvement of zero means the imputation is no better than guessing.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<h4 id="goals">🎯 Goals</h4>
-<ol type="1">
-<li><em>Primary:</em> The elimination of most missing values through statistical imputation</li>
-<li><em>Secondary:</em> To assess the quality of imputation</li>
-</ol>
-<hr>
-<p>All cards downstream of this card will receive any changes enacted by this card.</p>
 
 
 

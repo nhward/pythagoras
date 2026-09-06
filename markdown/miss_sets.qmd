@@ -1,38 +1,66 @@
 ---
-title: Missing sets
+title: Missingness sets
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-Missing values are often missing as sets of variables. This implies that there is a common cause of missingness that tends to affect several variables simultaneously. This suggests that seeking to understand such a causal explanation may resolve many missing values.
+_The Missingness sets card reveals which variables are missing together in the same observations. Shared combinations can point to a common form, process, population, or cause. The card is diagnostic and does not change data._
 
-An UpSet plot is a data visualization method used to show overlapping relationships and intersections between multiple sets. Here the sets are observations and the members are the variables that are missing.
-
-![An upset chart](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTsuDkvm-P1BOnhxBw5h44WzdShKhhz-KNGnfRtOzZ23A&s=10)
-
-<details class="deep-dive">
-  <summary>Click here for a fully expanded discussion of missing values.</summary>
-  <iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
-</details>
-
-#### 🏞️ Front
-
-The card's front is an "upset" chart. 
-
-#### 🔄 Flip side
-
-The back of the card is similar information to the chart but in table form.
-
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
-
+For the broader framework, see [patterns and associations](/markdown/missing_values.html#association) in **Background on missing values**.
 
 #### 🎯 Goals
 
- 1. _Primary:_ Visualize missingness as sets and thereby discover and explore common causes of the major sets.
- 1. _Secondary:_ Discover surprising missingness sets that suggest further investigation. 
+1. **Primary:** Identify the most frequent exact combinations of missing variables.
+1. **Secondary:** Compare joint missingness with each variable’s overall missing count.
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+#### 🧠 How it works
+
+Each incomplete observation belongs to an exact intersection defined by the variables missing in that row. The card counts these intersections, restricts them by frequency and display limits, and visualizes them as an UpSet plot. This avoids the ambiguity of overlapping-area diagrams when many sets are involved.
+
+#### 🏞️ Front
+
+Bars on the left show the total missing count for each displayed variable. Bars across the top show counts for exact intersections. The dot matrix under a top bar identifies which variables belong to that combination; connected filled dots form one intersection.
+
+The footer reports how many intersections and variables are shown and whether less-frequently missing variables were omitted.
+
+#### 🔄 Flip side
+
+The flip side lists the same exact intersections as a table, including their count, proportion, and member variables. It is the better view for precise values and longer combinations.
+
+#### 🛠️ Controls and actions
+
+This card has no data-changing action. Chart and table limits affect only the diagnostic view.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+A large intersection can indicate a common collection route or eligibility condition. Compare it with the individual variable bars: two variables may often be missing but rarely in the same rows, or a smaller variable may almost always be missing as part of one dominant combination. Investigate exact groups in the source data before assigning a cause.
+
+#### ⛔️ Limitations
+
+* Only exact displayed combinations are counted; similar intersections remain separate.
+* Variable, intersection, count, and observation limits can hide rare patterns.
+* Sampling can change intersection frequencies.
+* Co-occurrence does not establish a common cause.
+
+#### 📌 Suggested workflow
+
+1. Compare individual missing counts on the left.
+1. Identify the largest top intersections.
+1. Read their variable membership from the dot matrix.
+1. Confirm exact counts on the flip side.
+1. Investigate the associated observations and collection process.
+
+#### 🔗 Data flow
+
+* **Input:** The upstream pattern of missing values.
+* **Output:** The upstream data unchanged.
+* **Data journey:** This diagnostic card does not add a journey step.
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
+</details>

@@ -641,7 +641,8 @@ class Module(ABC):
                     ui.TagList(ui.tags.img(src="favicon.ico", style="height:2em; margin-right:0.5em;"), ui.span("Pythagoras", class_ = "text-primary")),
                     '"All is number."',
                     placement = "bottom"
-                )
+                ),
+                fillable=True
             )
         )
 

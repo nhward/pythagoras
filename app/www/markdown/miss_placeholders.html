@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Missing Values Placeholders</title>
+<title>Missing value placeholders</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,39 +725,62 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Missing Values Placeholders</h1>
+<h1 class="title">Missing value placeholders</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>A Missingness Heat-map is a visual tool for exploring tabular data. It highlights missing values and also flags <strong>candidate</strong> missing-value placeholders (e.g. -99, –, N/A). These candidates are configured in the sidebar and are typically data-type specific.</p>
-<blockquote>
-<p>Placeholders = values used to stand in for “no data” when a value is required e.g. integers: -99, -999; floats: -99.0; strings: –, N/A; date-times: 0001-01-01.</p>
-</blockquote>
-<p>The any buttons in the footer allow any named placeholders to be converted to missing values throughout the dataset.</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Missing value placeholders card finds values that may have been used to mean “no data” such as -99, “N/A”, or an implausible sentinel date. It allows confirmed placeholders to be converted into unambiguous pandas missing values before other missingness analyses are performed.</em></p>
+<p>For the broader framework, see <a href="../markdown/missing_values.html#placeholders">identifying true missingness and placeholders</a> in <strong>Background on missing values</strong>.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Distinguish genuine values from candidate missing-value placeholders.</li>
+<li><strong>Secondary:</strong> Replace confirmed placeholders consistently across the dataset.</li>
+</ol>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>Candidate values are configured separately for strings, integers, decimals, and dates. String matching can ignore case. Numeric matching can be restricted to values at the observed minimum or maximum, reducing the risk that an ordinary interior value such as -1 is misclassified.</p>
+<p>Candidates are evidence, not proof. A value is a placeholder only when its meaning in the source domain supports that conclusion. Confirmed replacements become the appropriate missing marker for the variable type.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>Tabs show all variables or one broad type at a time. The heat maps compare existing missingness with occurrences of configured candidate placeholders. Use the type-specific tabs when a dense all-variable chart is difficult to read.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side summarizes candidate counts by variable after current replacements. It is useful for confirming that an action had the expected scope and for identifying candidates that remain.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>The footer offers a checkbox for each candidate currently detected. Selecting one replaces every qualifying occurrence in the exported data; clearing it restores the upstream values reactively. Replacements are therefore reversible while the card remains in the workflow.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Look for a candidate repeated across many variables, concentrated in one source period, or appearing at an extreme outside the plausible range. Confirm its meaning from a data dictionary or source owner before replacement. Afterward, use the map and summary to check that counts moved from the placeholder category into missingness.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>Frequency and extremeness cannot establish the semantic meaning of a value.</li>
+<li>Sampling can miss rare placeholders in very large data.</li>
+<li>An ordinary value may equal a configured sentinel.</li>
+<li>Placeholder strings embedded within longer text are not necessarily matched as whole values.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Review configured candidates against the source documentation.</li>
+<li>Inspect the all-variable and type-specific maps.</li>
+<li>Confirm suspicious values in Data tabulation.</li>
+<li>Select only placeholders whose meaning is established.</li>
+<li>Check the flip side and continue with missingness diagnostics.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> The upstream data and its variable types.</li>
+<li><strong>Output:</strong> Data in which selected placeholders are materialized as missing values.</li>
+<li><strong>Data journey:</strong> A selected replacement creates a Cleaning step; no selected replacement is recorded as inactive.</li>
+</ul>
 <details class="deep-dive">
 <summary>
 Click here for a fully expanded discussion of missing values.
 </summary>
-<iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy">
+<iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy">
 </iframe>
 </details>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front shows a heat-map chart of potential placeholders, as well as missingness. Buttons allow the substitution of each potential placeholder.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card tabulates the count of each placeholder per variable.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<h4 id="goals">🎯 Goals</h4>
-<ol type="1">
-<li><em>Primary:</em> Help you verify whether candidate placeholders truly represent missingness (a domain-aware judgment).</li>
-<li><em>Secondary:</em> Make it easy to fix the data. For each detected placeholder, the card provides a button to replace those values with an unambiguous missing value. The chart and table refresh to verify the efficacy of the operation.</li>
-</ol>
-<hr>
-<p>All cards downstream of this card will receive any changes enacted by this card. At most, these changes will produce additional missing values.</p>
 
 
 

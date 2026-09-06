@@ -347,28 +347,28 @@ def instance():
         return ui.TagList(
             ui.input_slider(
                 id="VariableThreshold", label="Excessive variable missingness (%)", min=0, max=100, value=50, step=1,
-                guide = this, text = "The excessive-missingness threshold of the <em>variables</em> as a percentage", position="left"
+                guide = this, text = "Flags a variable when its missing-value percentage exceeds this threshold. If variable removal is enabled, those columns are removed before observation missingness is evaluated.", position="left"
             ),
             ui.input_slider(
                 id="ObservationThreshold", label="Excessive observation missingness (%)", min=0, max=100, value=50, step=1,
-                guide = this, text = "The excessive-missingness threshold of the <em>observations</em> as a percentage", position="left"
+                guide = this, text = "Flags an observation when its percentage of missing values exceeds this threshold. If observation removal is enabled, the calculation uses the columns remaining after any variable removal.", position="left"
 
             ),
             ui.input_checkbox(
                 id="HideComplete", label="Hide variables without missing values", value=True,
-                guide = this, text = "Whether to hide variables that have zero missing values", position="left"
+                guide = this, text = "Hides complete variables from the heat map to focus attention on missingness. This changes only the display; complete variables remain in the exported data.", position="left"
             ),
             ui.input_checkbox(
                 id="SortVariables", label="Sort variables by missingness", value=True,
-                guide = this, text = "Sort the variables by descending degrees of missingness", position="left"
+                guide = this, text = "Orders heat-map columns from highest to lowest missing proportion. Turn this off when the original variable order carries useful structural meaning.", position="left"
             ),
             ui.input_checkbox(
                 id="ShowThresholds", label="Show thresholds in full screen", value=True,
-                guide = this, text = "Display the two thresholds on the chart (when in full-screen mode)", position="left"
+                guide = this, text = "Displays the variable and observation thresholds as reference lines in full-screen mode. It does not change classification or removal.", position="left"
             ),
             ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position="left",
+                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text = "Sets a logarithmic cap of 10^n observations for the diagnostic map. Larger values improve coverage but increase browser and calculation cost; this sampling limit does not itself remove rows downstream.", position="left",
             ),        
         )
 

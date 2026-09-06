@@ -291,19 +291,19 @@ def instance():
         return ui.TagList(
             ui.input_slider(
                 id="MaxIntersections", label="Maximum intersections to chart", min=5, max=100, value=40, step=1,
-                guide=this, text="Limits the top missingness combinations shown in the chart and table.", position="left",
+                guide=this, text="Caps the most frequent exact missingness combinations shown in both views. Raising it reveals more rare patterns but increases chart density.", position="left",
             ),
             ui.input_slider(
                 id="MaxVariables", label="Maximum variables to chart", min=2, max=30, value=15, step=1,
-                guide=this, text="Keeps the most frequently missing variables when the data has many incomplete columns.", position="left",
+                guide=this, text="Keeps this many variables with the largest missing counts when more columns are incomplete. Raising it broadens coverage but makes the dot matrix denser and can multiply intersections.", position="left",
             ),
             ui.input_numeric(
                 id="MinCount", label="Minimum observations per intersection", value=1, min=1, step=1,
-                guide=this, text="Hides exact missingness combinations occurring fewer times than this threshold.", position="left",
+                guide=this, text="Hides exact missingness combinations with fewer observations than this count. The filter changes only the diagnostic result, not the upstream data.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Limits observations by random sampling to ensure responsiveness.", position="left",
+                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text="Sets a logarithmic cap of 10^n observations and uses random sampling above it. Raising the limit improves coverage of rare intersections but increases calculation time.", position="left",
             ),
         )
 

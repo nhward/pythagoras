@@ -2,62 +2,69 @@
 title: Learned imputation
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-The goal of this card is to explore learned imputation (i.e. statistical imputation) as a means of resolving any remaining or future missing values. Three types of imputation are explored in this card:
+_The Learned imputation card estimates missing predictor values and assesses how well the selected method reconstructs deliberately hidden observed values. When applied, it adds an unfitted learning step to the pipeline and supplies a fitted full-data preview downstream._
 
- 1. **Median or Mode** Simple imputation (_Median_ for numeric, datetime, and ordinal variables and _Mode_ for categorical variables)
- 1. **Nearest neighbors** K-nearest neighbors imputation (_cannot process categorical variables_)
- 1. **Iterative prediction** Multiple imputation by chained equations (M.I.C.E) (_cannot process categorical variables_)
-
-Notes:
-
-* The last two employ all the (other) predictors to predict the missing values. 
-* Only Predictors (variables of `role = predictor`) play any part in imputation. 
-* The first method (Median or Mode) only needs to consider a single variable at a time.
-
-
-
-| Variable type	         | __Median or Mode__              | __Nearest neighbors__         | __Iterative prediction__     |
-|------------------------|---------------------------------|-------------------------------|------------------------------|
-| _Numeric_              | Median                          | Native                        | Native                       |
-| _Datetime_             | Numeric timestamp representation| Numeric representation        | Numeric representation       |
-| _Ordered category_     | Median ordinal code             | Ordinal encoding and rounding | Ordinal encoding and rounding|
-| _Nominal category_     | Most frequent                   | __Mode__ fallback             | __Mode__ fallback            |
-| _String/boolean_       | Most frequent                   | __Mode__ fallback             | __Mode__ fallback            |
-| _Cyclic, List, Geometry_ | N/A                           | N/A                           | N/A                          |
-
-
-Ideally, the predictor variables are independent of each other and cannot assist in predicting a missing value. 
-Any performance improvement over simple imputation intrinsically exploits predictor dependencies. If KNN and Iterative imputations are not significantly better than simple imputation, then stick with simple imputation.
-
-Observations weightings, if supplied, are not utilized in the imputations.
-
-
-<details class="deep-dive">
-  <summary>Click here for a fully expanded discussion of missing values.</summary>
-  <iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
-</details>
-
-#### 🏞️ Front
-
-The card's front shows a bar chart of missing value counts before and after any imputation.
-
-#### 🔄 Flip side
-
-The back of the card gives an assessment of the quality of the imputation. Statistics are tabled for each variable imputed.
-
-The imputation performance table shows columns: _Predictor, Data type, Number missing, Method-used, Metric, Score, Random-baseline score, Improvement and Status_
-The random-baseline score is based on a metric assessed using only randomly guessed values. If the percentage improvement of the score exceeds the improvement-threshold, the imputation is deemed "Strong". An improvement of zero means the imputation is no better than guessing.
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
+For the broader framework, see [learned imputation](/markdown/missing_values.html#imputation) in **Background on missing values**.
 
 #### 🎯 Goals
 
- 1. _Primary:_ The elimination of most missing values through statistical imputation
- 1. _Secondary:_ To assess the quality of imputation
+1. **Primary:** Resolve eligible predictor missingness through a reproducible learned transformation.
+1. **Secondary:** Compare imputation performance with a random-draw baseline.
+1. **Tertiary:** Avoid choosing a complex method when simple imputation performs as well.
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+#### 🧠 How it works
+
+Three methods are available. **Median or mode** treats each variable independently. **Nearest neighbors** estimates continuous values from similar observations. **Iterative prediction** repeatedly predicts each continuous variable from the others. Date-times and ordered categories use numeric encodings; nominal, string, and Boolean predictors fall back to their most frequent value when a multivariable method cannot handle them directly. Cyclic, list, geometry, and unsupported variables are excluded.
+
+Performance is estimated by repeatedly hiding a proportion of known values, fitting without those truths, and comparing imputations with the held-out values. Numeric-type variables use an appropriate error score; categorical-type variables use an agreement score. Improvement is measured against random draws from the variable’s observed distribution.
+
+#### 🏞️ Front
+
+Paired bars show missing counts before and after the selected imputation. Excluded variables can retain missing values, so an applied method does not necessarily reduce every bar to zero. The status summarizes eligibility and application.
+
+#### 🔄 Flip side
+
+The performance table reports predictor, data type, number missing, method used, metric, imputation score, random-baseline score, improvement, and interpretation. Read the metric direction and improvement together rather than comparing unlike variable types directly.
+
+#### 🛠️ Controls and actions
+
+Select **Apply** to propagate the imputed preview and add the learning step. Clearing it restores the upstream data and records the operation as inactive. Method and evaluation changes can update the preview, but they should be judged before application.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Prefer the simplest method whose held-out performance is adequate. Little improvement over random guessing suggests that predictor relationships are not reconstructing the missing values reliably. A strong average score does not guarantee accurate imputation for every subgroup or extreme value.
+
+The full-data preview is for interactive analysis. During formal validation, fit the stored imputer only on each training partition and transform held-out data with those learned parameters.
+
+#### ⛔️ Limitations
+
+* Only variables assigned the **Predictor** role participate.
+* Evaluation hides observed values and assumes they are representative of genuinely missing cases.
+* Patterned missingness can make that assumption false.
+* Categorical fallbacks do not exploit multivariable relationships.
+* Observation weights are not used.
+
+#### 📌 Suggested workflow
+
+1. Resolve placeholders and decide whether to create informative-missingness shadows.
+1. Compare simple, nearest-neighbor, and iterative performance.
+1. Inspect exclusions and variables with weak improvement.
+1. Apply the simplest defensible method.
+1. Confirm the remaining missing counts and pipeline position in Data journey.
+
+#### 🔗 Data flow
+
+* **Input:** Eligible upstream predictors and existing pipeline state.
+* **Output:** A fitted imputed preview plus an unfitted imputation pipeline step.
+* **Data journey:** Applied imputation creates a Learning step; unapplied imputation is recorded as inactive.
+
+<details class="deep-dive">
+  <summary>Click here for a fully expanded discussion of missing values.</summary>
+  <iframe src="markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
+</details>

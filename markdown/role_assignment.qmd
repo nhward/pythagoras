@@ -2,102 +2,77 @@
 title: Role assignment
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-The purpose of the **Role Assignment card**  is to make the dataset explicitly interpretable by defining how each variable is intended to be used.
-
-The card is a visual drag-and-drop interface used to define and validate the statistical role of each variable in the analysis. Move each variable name to the appropriate role slot.
-
-Subsequent analysis should begin again with a fresh role assignment as the assignments shape the analysis.
-
-> _"Every model makes assumptions. This card makes them explicit."_
-
-The following roles are supported:
-
- - **Target** — the variable being predicted (the outcome)
- - **Predictor** — variables used to predict the target
- - **Treatment** — variables with a potential causal effect on the target (distinct from purely predictive variables)
- - **Identifier** — variables that uniquely identify observations (optionally combined with Sequence)
- - **Weighting** — a numeric variable representing observation importance (case weights)
- - **Partition** — a categorical variable defining train/test splits
- - **Stratifier** — a low-cardinality grouping variable used for segmentation (e.g. faceting), but not intended to be predictive
- - **Sequence** — an ordered variable (typically time) defining observation order
- - **Sensitive** — a variable used for fairness auditing; should not drive predictions
- - **Geometry** — spatial data (points, lines, polygons) for mapping and spatial analysis
- - **None** — variables excluded from downstream analysis
-
-An easy to read introduction to variable roles is available [here](https://medium.com/@nhward60/a-murder-mystery-for-your-dataset-assigning-roles-to-variables-593983a43214).
-
-We operate under the following presumptions:
-
- * Each variable is assigned to, at most, one role.
- * Since we have a **None** role, all variables must be assigned to, at least, one role.
- * Although multiple spatial variables are theoretically possible, there are limitations in the handling of spatial data so only one **Geometry** variable is allowed.
- * Although multiple dependent variables are theoretically possible, most modeling techniques do not support this, so only one **Target** variable is allowed.
- * When multiple variables are assigned to the **Identifier** role their contents are merged using a separator character.
-
-#### 🔒 Constraints
-
-Role Requirements
-
- - Only the **Predictor** role is required to be filled
- - On initial load, Spatial imports automatically assign geometry variables to **Geometry**. All other variables are assigned to **Predictor**.
-
-Role cardinality:
- 
- - **Predictor**, **Identifier**, and **None** roles → may belong to multiple variables
- - All other roles → at most one variable
-
-Additional constraints (validated automatically):
- 
- - data type
- - missing values
- - cardinality
-
-Violations are indicated via validation messages.
-
-#### 🧪 Example Use-Cases
-
- - Regression → assign a numeric variable to Target
- - Classification → assign a categorical variable to Target
- - Clustering → leave Target unassigned
- - Predefined train/test split → assign to Partition e.g. [Kaggle](HTTPS://www.kaggle.com)
- - Fairness analysis → assign variables to Sensitive e.g. "Sex"
- - Spatial modeling → assign spatial variables to Geometry
- - Weighted models → assign a non-negative numeric variable to Weighting
- - Time series → assign a time variable to Sequence
- - Longitudinal analysis → assign Sequence + Identifier
-
-#### 🏞️ Front
-
-The card's front shows a drag & drop dialogue for assigning the variables to roles. The full-screen mode makes the process easier.
-
-#### 🔄 Flip side
-
-The back of the card documents:
- 
- * the most recently committed assignments
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.  
-
- * Separator character when combining multiple variables into a unique identifier. 
- * Limit the maximum number of observations to analyze for assessing cardinality and missing values.
+_The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Valid assignments are committed as metadata and therefore change how later cards interpret the same values._
 
 #### 🎯 Goals
 
- 1. _Primary:_ Identify which single roles should be assigned to each variable.
- 1. _Secondary:_ Validate that each variable's data-type, cardinality, and missing values are appropriate for the assigned role.
+1. **Primary:** Give every variable an explicit analytical role.
+1. **Secondary:** Validate that types, missingness, and cardinality are appropriate for those roles.
+1. **Tertiary:** Make downstream card behavior predictable and reviewable.
 
+#### 🧠 How it works
 
-#### 🛠️ Actions
+Drag each variable into one role container. The supported roles are:
 
- - If a variable does not fit any role, assign it to **None**
- - Understanding roles helps anticipate valid downstream analyses
- - Role constraints guide sensible assignments (e.g. singleton roles)
- - If no Predictors are defined, most analyses will not be meaningful
- - If a variable needs multiple roles, duplicate it and assign each copy separately
+| Role | Intended use |
+|---|---|
+| **Target** | Outcome to be predicted. |
+| **Predictor** | Input available to a model or analysis. |
+| **Treatment** | Exposure whose possible causal effect is of interest. |
+| **Identifier** | One or more fields that identify an observation. |
+| **Weighting** | Nonnegative numeric case weight. |
+| **Partition** | Predefined training or test membership. |
+| **Stratifier** | Low-cardinality grouping used for comparison rather than prediction. |
+| **Sequence** | Meaningful observation order, commonly time. |
+| **Sensitive** | Attribute retained for fairness assessment rather than prediction. |
+| **Geometry** | Spatial object used by geographic methods. |
+| **None** | Variable deliberately excluded from downstream analysis. |
 
- ***
- All cards downstream of this card will receive any changes enacted by this card. These changes will only relate to variable roles. 
+Every variable has one role at most, and the **None** role makes exclusion explicit. **Predictor**, **Identifier**, and **None** accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.
+
+#### 🏞️ Front
+
+The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.
+
+#### 🔄 Flip side
+
+The flip side lists the most recently committed role assignments. It does not show uncommitted dragging, so it provides a useful check on what downstream cards currently receive.
+
+#### 🛠️ Controls and actions
+
+**Commit Assignments** becomes available when the proposed role map is valid. Clicking it publishes the assignments downstream. Dragging alone does not change the exported role map.
+
+If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Changing roles can substantially alter downstream eligibility even though the data-frame values and shape remain unchanged.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Assign roles according to how variables may legitimately be used at prediction time. An identifier is not automatically a useful predictor; a sensitive attribute may be essential for auditing but inappropriate as a model input; and a sequence should represent a meaningful order rather than arbitrary row position.
+
+If a variable genuinely needs two analytical uses, create a deliberate duplicate rather than assigning multiple roles implicitly.
+
+#### ⛔️ Limitations
+
+* Validation can detect structural conflicts but cannot determine the correct scientific role.
+* Sampling may be used to assess cardinality and missingness on very large datasets.
+* Most singleton roles reflect current application and modeling constraints, not universal statistical rules.
+* Committing a plausible role map does not prevent leakage from conceptually invalid predictors.
+
+#### 📌 Suggested workflow
+
+1. Identify the target, if the analysis is supervised.
+1. Separate identifiers, sequence fields, partitions, weights, and geometry from predictors.
+1. Assign exclusion and auditing roles deliberately.
+1. Resolve every validation message.
+1. Commit and confirm the assignments on the flip side.
+
+#### 🔗 Data flow
+
+* **Input:** The upstream variables and current role map.
+* **Output:** The same values with a committed role map.
+* **Data journey:** A committed role change creates a Cleaning step; a committed no-change state is recorded as inactive.

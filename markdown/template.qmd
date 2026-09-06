@@ -1,31 +1,106 @@
 ---
-title: ???????
+title: <Card title>
 ---
 
- <!-- 
- ui.tags.script(src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"), # enables equations
- ui.include_js(self.ROOT / "www" / "markdown_tabsets.js", method="inline")   # enables tabsets 
+<!--
+CARD-DOCUMENT TEMPLATE
+
+Use the card's displayed long name as the title, in sentence case. Keep the
+headings below in this order so that readers can move consistently between
+card documents. If a card has no flip side, settings, or data-changing action,
+say so briefly rather than deleting the section.
+
+Write in plain American English and address the reader as "you" only when giving
+an instruction. Use the exact visible label when naming a control and bold it.
+Explain a technical term once, close to its first use. Prefer short paragraphs,
+tables for repeated field definitions, and three to six practical workflow
+steps. Describe current behavior, not planned features. A typical document
+will be 500–900 words; use more only when the method genuinely requires it.
+
+Delete these comments and all bracketed prompts when creating a card document.
 -->
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-#### 🏞️ Front
-
-The card's front ...
-
-#### 🔄 Flip side
-
-The back of the card ...
-
-#### ⚙️ Settings
-
-Use the Tour Guide button to learn about the settings of this card.
-
+_[State the question this card answers and why that question matters.
+ Make this italic to stand out. Identify where the card belongs in a
+ typical workflow, which variable roles or data types it considers,
+ and whether it is diagnostic or can change the data.]_
 
 #### 🎯 Goals
 
- 1. _Primary:_ ?????
- 1. _Secondary:_ ????
+1. **Primary:** [The card's principal analytical or data-preparation outcome.]
+1. **Secondary:** [The principal supporting outcome.]
+1. **Tertiary:** [Optional; omit if it adds no distinct purpose.]
 
-***
-All cards downstream of this card will receive any changes enacted by this card.
+#### 🧠 How it works
+
+[Explain the method at the level needed to interpret the result. Define the
+important units, scores, thresholds, or comparisons. Distinguish what the card
+calculates from what it merely displays. Avoid repeating the Purpose section.]
+
+[If several concepts or output categories need definition, prefer a compact
+table such as:]
+
+| Term | Meaning |
+|---|---|
+| **Example term** | A concise, card-specific interpretation. |
+
+#### 🏞️ Front
+
+[Describe what is shown on the front and how to read it. Explain axes, colors,
+marks, labels, tabs, hover information, selection, filtering, and any meaningful
+difference between normal-card and full-screen views. Mention empty or warning
+states when they affect interpretation.]
+
+#### 🔄 Flip side
+
+[Describe the complementary information on the flip side. If it contains a
+table, explain the important columns and its ordering or filtering. Do not
+repeat the front description. If there is no flip side, state what the front
+already provides and why a second view is unnecessary.]
+
+#### 🛠️ Controls and actions
+
+[Document controls on the card itself, especially **Apply**, **Commit**,
+**Remove**, **Reset**, selection, or download controls. State exactly when the
+exported data changes, whether clearing or resetting reverses the change, and
+whether the action adds a Data journey entry. If the card is diagnostic only,
+say that it has no data-changing action.]
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+[Setting-specific documentation belongs in the card’s Tour Guide.
+Mention a setting elsewhere only when it is necessary to explain
+interpretation, workflow, or a consequential tradeoff.]
+
+#### 🔎 Interpretation and next steps
+
+[Explain the most important patterns or result categories and what each can—and
+cannot—support. Suggest the appropriate downstream investigation or action.
+Keep recommendations proportional: exploratory output is evidence to
+investigate, not proof of a cause.]
+
+#### ⛔️ Limitations
+
+* [State the most consequential statistical or operational limitation.]
+* [State exclusions caused by roles, data types, missing values, or sampling.]
+* [State any important performance, uncertainty, or generalization caveat.]
+
+#### 📌 Suggested workflow
+
+1. [Make the first concrete check or choice.]
+1. [Inspect the principal result.]
+1. [Use the complementary view or vary a meaningful setting.]
+1. [Validate surprising results against the underlying data or domain.]
+1. [Apply or record a decision, if the card supports one.]
+
+#### 🔗 Data flow
+
+* **Input:** [Which upstream data, roles, or pipeline state the card uses.]
+* **Output:** [Whether it passes data through unchanged, materializes a cleaning
+  change, or adds a learned pipeline step.]
+* **Data journey:** [When and how the card appears in the journey, including the
+  behavior when its action is not enabled.]

@@ -721,3 +721,84 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
     margin-top: 1rem;
     border: 0;
 }
+.parallel-hover-host {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.parallel-hover-tooltip {
+    position: absolute;
+    z-index: 20;
+    max-width: min(28rem, calc(100% - 1rem));
+    padding: 0.3rem 0.5rem;
+    border: 1px solid rgba(21, 76, 121, 0.35);
+    border-radius: 0.3rem;
+    color: #212529;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+    font-size: 0.82rem;
+    line-height: 1.2;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.parallel-chart-controls {
+    position: absolute;
+    top: 0.15rem;
+    right: 0.25rem;
+    z-index: 30;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.parallel-chart-controls .btn {
+    padding: 0.15rem 0.4rem;
+    background-color: rgba(255, 255, 255, 0.92);
+    font-size: 0.72rem;
+    line-height: 1.2;
+}
+
+.parallel-comparison-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.parallel-comparison-overlay polyline {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.parallel-comparison-shadow {
+    stroke: rgba(255, 255, 255, 0.95);
+    stroke-width: 7;
+}
+
+.parallel-comparison-line {
+    stroke: #7b3f00;
+    stroke-width: 4;
+}
+
+.parallel-comparison-label {
+    position: absolute;
+    left: 0.35rem;
+    bottom: 0.25rem;
+    z-index: 25;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    color: #7b3f00;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 0.78rem;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.parallel-line-near .gl-canvas-pick {
+    cursor: pointer;
+}

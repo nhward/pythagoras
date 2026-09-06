@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Missing Values Rules</title>
+<title>Missingness rules</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -111,6 +111,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 .card.fullscreen-active .drag-handle {
 display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
 }
 
 #shiny-modal-wrapper {
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -599,101 +725,89 @@ border: 0;
 
 
 <header id="title-block-header">
-<h1 class="title">Missing Values Rules</h1>
+<h1 class="title">Missingness rules</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<h5 id="what-is-association-rules-analysis">🛒 What Is Association Rules Analysis?</h5>
-<p>Association rules analysis is a data mining technique used to find interesting relationships or patterns between items in large datasets — especially transactional data.</p>
-<p>A classic use case is in market basket analysis, where the goal is to find rules like:</p>
-<blockquote>
-<p>If a customer buys bread and butter, they are likely to also buy jam.</p>
-</blockquote>
-<p>These rules help businesses understand buying behavior, recommend products, or optimize store layouts.</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Missingness rules card searches for directional associations between variables being missing together. It asks whether one missingness pattern makes another variable’s missingness more likely. The result is exploratory and does not modify data.</em></p>
+<p>For the broader framework, see <a href="../markdown/missing_values.html#association">patterns and associations</a> in <strong>Background on missing values</strong>.</p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Find strong, recurring conditional patterns of missingness.</li>
+<li><strong>Secondary:</strong> Generate testable explanations for shared collection failures or eligibility rules.</li>
+</ol>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>Each observation is treated as a set containing the names of its missing variables. Complete observations contribute an empty set and are excluded from rule mining. A rule has a left-hand side (LHS) and right-hand side (RHS): when the LHS variables are missing, the RHS variables are also frequently missing.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Support</strong></td>
+<td>Proportion of all analyzed observations containing every variable in the rule.</td>
+</tr>
+<tr class="even">
+<td><strong>Confidence</strong></td>
+<td>Proportion of observations with the LHS missing that also have the RHS missing.</td>
+</tr>
+<tr class="odd">
+<td><strong>Lift</strong></td>
+<td>Confidence divided by the unconditional frequency of the RHS. A lift of 1 indicates independence; above 1 indicates positive association.</td>
+</tr>
+</tbody>
+</table>
+<p>Rules below the selected support or lift requirements are omitted. Optional redundancy pruning hides a specialized rule when a simpler rule reaches the same conclusion at least as confidently.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The front is a network. Square nodes are variables and circular nodes are rules. Paths from variables through a rule to other variables read as “if the former are missing, the latter are also likely to be missing.” Hover over nodes and connections for details.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The flip side lists rules, normally emphasizing stronger lift. Read LHS, RHS, support, confidence, and lift together: high lift based on very low support may describe an interesting but rare pattern, while high confidence can simply reflect an RHS that is missing frequently overall.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>This card has no data-changing action. Filtering and pruning determine which discovered rules are displayed, not which observations enter downstream cards.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Use rules to formulate explanations, then test them against source systems, forms, dates, sites, or eligibility conditions. A reciprocal-looking pattern may reflect one common cause rather than either variable causing the other. The analysis considers missingness indicators only; non-missing values and sequence effects require other cards.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
+<ul>
+<li>Association rules do not establish causation or missingness mechanism.</li>
+<li>Complete observations contribute no items and are not part of the mined baskets.</li>
+<li>Low-frequency combinations can be unstable, especially after sampling.</li>
+<li>Many related variables can generate a large family of repetitive rules.</li>
+<li>Non-missing values, timing, weights, and external context are not modeled.</li>
+</ul>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Begin with support and lift thresholds that produce a manageable rule set.</li>
+<li>Inspect large, connected structures in the network.</li>
+<li>Confirm support and confidence on the flip side.</li>
+<li>Compare results with Missingness sets and Missingness type.</li>
+<li>Investigate plausible causes in the underlying observations.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> Missingness indicators derived from the upstream data.</li>
+<li><strong>Output:</strong> The upstream data unchanged.</li>
+<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
+</ul>
 <details class="deep-dive">
 <summary>
 Click here for a fully expanded discussion of missing values.
 </summary>
-<iframe src="/markdown/aaa.html" title="Missing Values" data-external="1" loading="lazy">
+<iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy">
 </iframe>
 </details>
-<h4 id="how-do-association-rules-identify-missing-value-patterns">🛒 How do Association Rules identify missing value patterns?</h4>
-<p>While Association analysis is often used to analyze shopping basket patterns. To do this we need to make a mapping between a basket of shopping and missing data. An observation serves as a basket. The variables names are the the goods on sale. If a value is missing then that variable name appears in our basket. That way, if an observation is complete (i.e. nothing missing) then our basket is empty. An observation with 3 missing values might look like a basket of [“var1”, “var3”, “var5”]. It may be the case over many observations that variable 5 is mainly missing when variable 3 is missing too.</p>
-<p>We shall ignore all empty baskets from our analysis. The analysis focuses solely on the missing values and does not consider the values of the non-missing data as explanatory.</p>
-<p>We are trying to answer the question: “How strong are any discovered associations?”. Which indirectly answers: “Is missingness completely random for each variable?”</p>
-<h5 id="what-is-an-association-rule">🔗 What Is an Association Rule?</h5>
-<p>An association rule has the form:</p>
-<p><code>IF [Item A and Item B] THEN [Item C]</code> The bracketed terms are addressed as LHS and RHS. This is how they are labelled in the tabulated rules.</p>
-<p>Or more formally:</p>
-<p><code>A, B → C</code></p>
-<p>This means: if items A and B are purchased together, then item C is likely to be purchased as well.</p>
-<h5 id="three-key-metrics-support-confidence-and-lift">📊 Three Key Metrics: Support, Confidence, and Lift</h5>
-<p>To know whether a rule is meaningful, we measure it using <strong>support</strong> and <strong>confidence</strong>. Lift is the ratio of these.</p>
-<p>✅ 1. Support</p>
-<p>Support tells us how frequently the items in the rule appear together in the dataset.</p>
-<p>Definition: Support of A → C = (Number of transactions containing both A and C) / (Total number of transactions)</p>
-<p>Example: <em>There are 1,000 transactions. • 100 transactions contain both bread and jam.</em></p>
-<p>So: <em>Support(bread → jam) = 100 / 1000 = 0.10 (or 10%)</em></p>
-<p>Interpretation: <em>10% of all customers bought both bread and jam together.</em></p>
-<p>✅ 2. Confidence</p>
-<p>Confidence tells us how often the consequent (right-hand side) appears when the antecedent (left-hand side) is present.</p>
-<p>Definition: <em>Confidence of A → C = (Number of transactions containing both A and C) / (Number of transactions containing A)</em></p>
-<p>Example:<em>200 transactions contain bread, 100 of those also contain jam</em></p>
-<p>So: *Confidence(bread → jam) = 100 / 200 = 0.50 (or 50%)</p>
-<p>Interpretation: Among people who bought bread, 50% also bought jam*</p>
-<p>✅ 3. Lift</p>
-<p>Lift tells us how much more likely the right-hand side (consequent) of a rule is to occur when the left-hand side (antecedent) is present — compared to if the two were independent.</p>
-<p>Lift answers this question:</p>
-<blockquote>
-<p>Is the rule actually useful, or is it just describing something that happens frequently anyway?</p>
-</blockquote>
-<p>Definition: <em>Lift of A → C = Confidence(A → C) / Support(A → C)</em></p>
-<p>Example: <em>Let’s say in a grocery store dataset…</em></p>
-<ul>
-<li>10% of transactions include bread</li>
-<li>5% include butter</li>
-<li>4% include both bread and butter</li>
-</ul>
-<p>So:</p>
-<ul>
-<li>Support(bread) = 0.10</li>
-<li>Support(butter) = 0.05</li>
-<li>Support(bread and butter) = 0.04</li>
-<li>Confidence(bread → butter) = 0.04 / 0.10 = 0.40</li>
-<li>Lift(bread → butter) = 0.40 / 0.05 = 8</li>
-</ul>
-<p>Interpretation: <em>Customers who buy bread are 8 times more likely to also buy butter than if the two items were bought independently. That’s a strong association, and this rule is likely interesting and useful.</em></p>
-<h4 id="front">🏞️ Front</h4>
-<p>The card’s front charts a network connecting rules with their variables. Rules are drawn as circle shapes. Variables are drawn as square shapes. Hovering over a rule (circle) reveals the LHS and RHS basis.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The back of the card records, as a table, the Association Rules in descending “lift” order.</p>
-<p>The RHS column records names of variables whose missingness is not random - at the given “lift” value. A “lift” of zero represents independence from the LHS</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button to learn about the settings of this card.</p>
-<h4 id="goals">🎯 Goals</h4>
-<ol type="1">
-<li><em>Primary:</em> To judge whether each variable is missing at random or not (for a limited context)</li>
-<li><em>Secondary:</em> Discover surprising associations that suggest further investigation.</li>
-</ol>
-<p>Note that this analysis neither considers the possibility that missingness is due to non-missing values nor considers whether sequence affects missingness.</p>
-<p>The actions implied by the Association Rules (applied to missingness) are:</p>
-<ul>
-<li>Gain understanding of the dominant patterns of missing values.</li>
-<li>Objectively assess the strength of the patterns.</li>
-<li>Identify variables whose missingness is not random (perhaps common causes?).</li>
-<li>Hypothesize causes for these patterns.</li>
-</ul>
-<h4 id="example">Example</h4>
-<blockquote>
-<p>When variable A &amp; B are missing together it is a virtual certainty that variables C, D, E are also missing. C,D are occasionally missing without A or B being missing. E is rarely missing without A or B being missing.</p>
-<p>This suggests that the cause of A &amp; B being missing is the same cause of E being missing and probably of C &amp; D.</p>
-</blockquote>
-<hr>
-<p>All cards downstream of this card will receive the upstream data. This card does not change the data.</p>
 
 
 

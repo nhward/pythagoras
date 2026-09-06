@@ -582,7 +582,7 @@ def instance():
             ui.input_checkbox_group(
                 id="Apply", label="Imputation", choices=["Apply"],
                 inline=True, guide=this, title="Apply imputation", position="top",
-                text="The imputation is applied to any missing values when the button is checked.",
+                text="Applies the selected method to eligible predictor missingness, publishes the fitted preview downstream, and records an unfitted learning step. Clearing it restores the incoming data.",
             ),
             class_="vertically-scrollable-footer",
         )
@@ -600,11 +600,11 @@ def instance():
             ),
             ui.input_slider(
                 id="Iterations", label="Iterative-Imputer maximum iterations", min=2, max=30, value=10, step=1,
-                guide=this, text="The number of iterations to use with Iterative imputation.", position="left"
+                guide=this, text="Caps the repeated prediction cycles used by iterative imputation. More iterations may improve convergence but increase fitting time; this has no effect for other methods.", position="left"
             ),
             ui.input_slider(
                 id="Repeats", label="Validation repeats", min=1, max=10, value=3, step=1,
-                guide=this, text="The number validations repeats to fairly assess all forms of imputation.", position="left"
+                guide=this, text="Repeats artificial masking and held-out evaluation this many times. More repeats stabilize the estimate but increase calculation time.", position="left"
             ),
             ui.input_slider(
                 id="Holdout", label="Observed values hidden per repeat (%)", min=5, max=30, value=15, step=5,
@@ -616,7 +616,7 @@ def instance():
             ),
             ui.input_slider(
                 id="Jobs", label="Parallel evaluation workers", min=1, max=max(1, min(4, os.cpu_count() or 1)), value=max(1, min(2, os.cpu_count() or 1)), step=1,
-                guide=this, text="The number of cpu processes that can run concurrently.", position="left"
+                guide=this, text="Sets the number of CPU worker processes used for independent validation tasks. More workers can reduce elapsed time but use additional memory and processor capacity.", position="left"
             ),
         )
     this.settings = settings

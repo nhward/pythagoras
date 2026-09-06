@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Variable transform</title>
+<title>Parallel coordinates</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -725,7 +725,7 @@ cursor: pointer;
 
 
 <header id="title-block-header">
-<h1 class="title">Variable transform</h1>
+<h1 class="title">Parallel coordinates</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -733,48 +733,51 @@ cursor: pointer;
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Variable transform card explores and applies learned transformations to the location, spread, and skew of continuous numeric predictors. A continuous numeric target may be included explicitly. The card supplies both an interactive transformed preview and unfitted pipeline steps for later training.</em></p>
+<p><em>The Parallel coordinates card explores how individual observations behave across several variables at once. It is useful for finding clusters, unusual profiles, and relationships that are difficult to see in separate two-variable plots. The card is diagnostic and does not modify the data.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Reduce problematic skew and place continuous predictors on useful common scales.</li>
-<li><strong>Secondary:</strong> Compare distributions before and after transformation.</li>
-<li><strong>Tertiary:</strong> Record leakage-safe learning steps for formal modeling.</li>
+<li><strong>Primary:</strong> Reveal groups of observations with similar multivariable profiles.</li>
+<li><strong>Secondary:</strong> Identify unusual observations for focused investigation.</li>
+<li><strong>Tertiary:</strong> Explore associations between adjacent variable axes.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Eligible predictors are continuous floating-point variables. Integer counts, categorical, text, cyclic, list, geometry, shadow, constant, and unsupported variables are excluded with reasons. When enabled and eligible, the target is handled separately and marked distinctly.</p>
-<p>Selected operations always run in this order: <strong>De-skew</strong> fits a Yeo–Johnson power transformation, <strong>Scale</strong> gives variables a common standard deviation, and <strong>Center</strong> shifts their means to zero. Yeo–Johnson accepts zero and negative values. A lambda near 1 indicates little need for a power transformation.</p>
+<p>Each vertical axis represents one selected variable, and each observation is a line connecting its values across those axes. The card supports numeric, Boolean, date/time, and manageable categorical variables. Categorical values are encoded as labeled positions rather than treated as meaningful numeric distances.</p>
+<p>Only observations complete across every displayed variable and the optional color variable can be drawn. If there are more complete observations than the chart limit, a deterministic random sample is displayed. The footer reports omitted and sampled observations.</p>
+<p>Lines may be colored by another compatible variable. Color is descriptive: it can reveal separation or gradients, but it does not test a relationship.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>Normal card size maps mean against standard deviation. Full-screen mode also shows standard deviation against skew and skew against kurtosis. When transformations are selected, each original point is linked to its transformed position using unchanged axes, allowing the movement to be interpreted directly. Optional labels supplement hover information.</p>
+<p>The front contains the parallel-coordinates chart. Hover near a line to identify it. When one or more variables have the <strong>Identifier</strong> role, their values form the line label; otherwise the label is the one-based row number.</p>
+<p>Click a line to pin a heavier comparison path. The selected identity also appears below the chart, and <strong>Clear comparison</strong> removes the pinned path. Drag vertically on an axis to filter its values, double-click to clear that filter, and drag an axis horizontally to change its position. Reordering can expose relationships by bringing variables next to one another.</p>
+<p>The color scale is shown in full-screen mode when a color variable is selected.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side reports roles, eligibility or exclusion reason, fitted lambda, and distribution statistics before and after transformation. Use it to identify variables driving extreme chart scales and to confirm that a requested operation had the intended numerical effect.</p>
+<p>This card has no flip side. Its result is inherently interactive, and status information below the chart explains how many observations are represented.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p>The footer checkboxes apply <strong>De-skew</strong>, <strong>Scale</strong>, and <strong>Center</strong>. Selecting any operation propagates the fitted preview and adds the corresponding learned sequence to the pipeline. Clearing all selections restores the upstream preview and records the operation as inactive.</p>
+<p>Line selection, filtering, axis reordering, and <strong>Clear comparison</strong> change only the current view. They do not filter or alter the dataset passed downstream.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>De-skewing can make symmetric-distance and linear-model assumptions more plausible, but normality is not a universal requirement. Scaling is important for distance-based and penalized methods but usually unnecessary for tree models. Centering changes origin, not shape or spread.</p>
-<p>Judge transformations by downstream model requirements and validation, not by making every point look alike. The full-data preview is exploratory; formal training must fit transformation parameters inside each training partition.</p>
+<p>Bundles of nearly parallel lines indicate observations with similar profiles. Repeated crossings between adjacent numeric axes can suggest weak or inverse ordering, while relatively uncrossed lines suggest similar ordering. A line separated from most others may be an anomaly, a valid rare case, or a data-quality problem; pin it and inspect the corresponding observation before deciding.</p>
+<p>Compare patterns under different axis orders and color variables. Treat visual separation as a reason to investigate, not as evidence of causation or a formal cluster.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>Eligibility is intentionally restricted to continuous floating-point data.</li>
-<li>Yeo–Johnson is the only power family currently fitted; Box–Cox is not offered.</li>
-<li>Strong outliers can dominate moments and chart ranges.</li>
-<li>Transforming a target changes interpretation and requires care when converting predictions back to original units.</li>
-<li>Observation weights are not used in fitted transformations.</li>
+<li>Complete-case display can underrepresent observations when missingness is patterned.</li>
+<li>Dense charts can suffer severe over-plotting even after sampling.</li>
+<li>Categorical axis spacing and line slopes do not represent quantitative distance.</li>
+<li>Apparent patterns depend strongly on axis order, selected variables, and sampling.</li>
+<li>Observation weights are not applied.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Inspect the original location, spread, skew, and kurtosis.</li>
-<li>Review excluded variables and confirm their types.</li>
-<li>Apply only transformations justified by the intended model.</li>
-<li>Compare linked before/after points and flip-side statistics.</li>
-<li>Confirm pipeline order in Data journey.</li>
+<li>Select a small set of variables with a clear analytical purpose.</li>
+<li>Reorder axes to place variables of interest next to one another.</li>
+<li>Use color to explore a target, group, or other meaningful variable.</li>
+<li>Hover and pin unusual lines, then locate those observations in Data tabulation.</li>
+<li>Check the footer before generalizing from the displayed observations.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> Continuous numeric predictors, optional target, roles, and existing pipeline.</li>
-<li><strong>Output:</strong> A fitted transformed preview and corresponding unfitted learning step.</li>
-<li><strong>Data journey:</strong> Selected transformations create a Learning step; no selection is recorded as inactive.</li>
+<li><strong>Input:</strong> Compatible upstream variables, roles, and observation identities.</li>
+<li><strong>Output:</strong> The upstream data unchanged.</li>
+<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
 </ul>
 
 

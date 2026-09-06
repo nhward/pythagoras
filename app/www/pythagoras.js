@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Sortable roles (when applicable)
         initRolesCard(card);
         emitRoleMapFromCard(card);
+        initParallelCoordinatesHover(card);
         // Expanding
         const expandButton = card.querySelector(".expand-btn");
         expandButton?.addEventListener("click", () => {
@@ -53,6 +54,273 @@ document.addEventListener("DOMContentLoaded", () => {
         cardbody.scrollLeft = 0;
         cardbody.classList.toggle("flipped", Boolean(flipped));
         publishCardFace(card);
+    }
+
+    function initParallelCoordinatesHover(card) {
+        const host = card.querySelector("[data-parallel-hover='true']");
+        if (!host || host.dataset.hoverObserverInitialized === "true") return;
+        host.dataset.hoverObserverInitialized = "true";
+
+        const tooltip = host.querySelector(".parallel-hover-tooltip");
+        const comparisonLabel = host.querySelector(".parallel-comparison-label");
+        const clearComparisonButton = host.querySelector(
+            ".parallel-clear-comparison"
+        );
+        const svgNamespace = "http://www.w3.org/2000/svg";
+        const comparisonOverlay = document.createElementNS(svgNamespace, "svg");
+        comparisonOverlay.classList.add("parallel-comparison-overlay");
+        comparisonOverlay.setAttribute("aria-hidden", "true");
+        const comparisonShadow = document.createElementNS(svgNamespace, "polyline");
+        comparisonShadow.classList.add("parallel-comparison-shadow");
+        const comparisonLine = document.createElementNS(svgNamespace, "polyline");
+        comparisonLine.classList.add("parallel-comparison-line");
+        comparisonOverlay.append(comparisonShadow, comparisonLine);
+        comparisonOverlay.setAttribute("hidden", "");
+        host.appendChild(comparisonOverlay);
+
+        let attachedPlot = null;
+        let animationFrame = null;
+        let latestEvent = null;
+        let nearest = null;
+        let selectedIdentity = null;
+
+        const hideTooltip = () => {
+            if (!tooltip) return;
+            tooltip.hidden = true;
+            tooltip.textContent = "";
+        };
+
+        const includesConstraint = (value, constraint) => {
+            if (!Array.isArray(constraint) || constraint.length === 0) return true;
+            const ranges = Array.isArray(constraint[0]) ? constraint : [constraint];
+            return ranges.some((range) => (
+                Array.isArray(range)
+                && range.length >= 2
+                && value >= Math.min(range[0], range[1])
+                && value <= Math.max(range[0], range[1])
+            ));
+        };
+
+        const chartState = () => {
+            const plot = attachedPlot;
+            const trace = plot?.data?.find?.((item) => item.type === "parcoords");
+            const dimensions = trace?.dimensions || [];
+            const identities = trace?.customdata || [];
+            if (dimensions.length < 2 || identities.length === 0) return null;
+
+            const byLabel = new Map(
+                dimensions.map((dimension) => [String(dimension.label), dimension])
+            );
+            const axes = Array.from(
+                plot.querySelectorAll(".parcoords-control-view .y-axis")
+            ).map((axis) => {
+                const title = axis.querySelector(".axis-title");
+                const brush = axis.querySelector(".axis-brush .background");
+                const label = title?.getAttribute("data-unformatted")
+                    || title?.textContent;
+                const rectangle = brush?.getBoundingClientRect();
+                const dimension = byLabel.get(String(label));
+                if (!rectangle || !dimension) return null;
+                return {
+                    dimension,
+                    x: rectangle.left + rectangle.width / 2,
+                    top: rectangle.top,
+                    bottom: rectangle.bottom,
+                };
+            }).filter(Boolean).sort((left, right) => left.x - right.x);
+            if (axes.length < 2) return null;
+            const ordinate = (axis, value) => {
+                const values = axis.dimension.values || [];
+                const supplied = axis.dimension.range;
+                let low;
+                let high;
+                if (Array.isArray(supplied) && supplied.length >= 2) {
+                    [low, high] = supplied;
+                } else {
+                    const finite = Array.from(values).filter(Number.isFinite);
+                    low = Math.min(...finite);
+                    high = Math.max(...finite);
+                }
+                if (!Number.isFinite(value) || !Number.isFinite(low)
+                        || !Number.isFinite(high)) return null;
+                if (low === high) return (axis.top + axis.bottom) / 2;
+                const fraction = (value - low) / (high - low);
+                return axis.bottom - fraction * (axis.bottom - axis.top);
+            };
+            const rowVisible = (row) => dimensions.every((dimension) => (
+                includesConstraint(
+                    Number(dimension.values?.[row]),
+                    dimension.constraintrange,
+                )
+            ));
+            return { plot, trace, dimensions, identities, axes, ordinate, rowVisible };
+        };
+
+        const nearestLine = (event, state) => {
+            if (!event || !state || event.clientY < state.axes[0].top
+                    || event.clientY > state.axes[0].bottom) return null;
+            let left = null;
+            let right = null;
+            for (let index = 0; index < state.axes.length - 1; index += 1) {
+                if (event.clientX >= state.axes[index].x
+                        && event.clientX <= state.axes[index + 1].x) {
+                    left = state.axes[index];
+                    right = state.axes[index + 1];
+                    break;
+                }
+            }
+            if (!left || !right) return null;
+            const fraction = (event.clientX - left.x) / (right.x - left.x);
+            const rowCount = Math.min(
+                state.identities.length,
+                left.dimension.values?.length || 0,
+                right.dimension.values?.length || 0,
+            );
+            let closestRow = -1;
+            let closestY = null;
+            let closestDistance = Number.POSITIVE_INFINITY;
+            for (let row = 0; row < rowCount; row += 1) {
+                if (!state.rowVisible(row)) continue;
+                const leftY = state.ordinate(
+                    left, Number(left.dimension.values[row])
+                );
+                const rightY = state.ordinate(
+                    right, Number(right.dimension.values[row])
+                );
+                if (leftY === null || rightY === null) continue;
+                const lineY = leftY + fraction * (rightY - leftY);
+                const distance = Math.abs(event.clientY - lineY);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestRow = row;
+                    closestY = lineY;
+                }
+            }
+            const threshold = card.classList.contains("fullscreen-active") ? 8 : 6;
+            if (closestRow < 0 || closestDistance > threshold) return null;
+            return { row: closestRow, y: closestY, state };
+        };
+
+        const drawComparison = (state) => {
+            const row = selectedIdentity === null || !state
+                ? -1
+                : Array.from(state.identities).findIndex(
+                    (identity) => String(identity) === selectedIdentity
+                );
+            if (row < 0 || !state.rowVisible(row)) {
+                comparisonOverlay.setAttribute("hidden", "");
+                return;
+            }
+            const hostRectangle = host.getBoundingClientRect();
+            const points = state.axes.map((axis) => {
+                const y = state.ordinate(
+                    axis, Number(axis.dimension.values?.[row])
+                );
+                if (y === null) return null;
+                return `${axis.x - hostRectangle.left},${y - hostRectangle.top}`;
+            }).filter(Boolean);
+            if (points.length !== state.axes.length) {
+                comparisonOverlay.setAttribute("hidden", "");
+                return;
+            }
+            comparisonOverlay.setAttribute("viewBox", (
+                `0 0 ${hostRectangle.width} ${hostRectangle.height}`
+            ));
+            comparisonShadow.setAttribute("points", points.join(" "));
+            comparisonLine.setAttribute("points", points.join(" "));
+            comparisonOverlay.removeAttribute("hidden");
+        };
+
+        const identifyNearestLine = () => {
+            animationFrame = null;
+            const state = chartState();
+            drawComparison(state);
+            nearest = nearestLine(latestEvent, state);
+            if (!nearest || !tooltip) {
+                attachedPlot?.classList.remove("parallel-line-near");
+                hideTooltip();
+                return;
+            }
+            attachedPlot.classList.add("parallel-line-near");
+            const closestRow = nearest.row;
+            const closestY = nearest.y;
+            const hostRectangle = host.getBoundingClientRect();
+            tooltip.textContent = String(state.identities[closestRow]);
+            tooltip.hidden = false;
+            const preferredLeft = latestEvent.clientX - hostRectangle.left + 12;
+            const preferredTop = closestY - hostRectangle.top - 14;
+            const boundedLeft = Math.max(
+                4,
+                Math.min(preferredLeft, hostRectangle.width - tooltip.offsetWidth - 4),
+            );
+            const boundedTop = Math.max(
+                4,
+                Math.min(preferredTop, hostRectangle.height - tooltip.offsetHeight - 4),
+            );
+            tooltip.style.left = `${boundedLeft}px`;
+            tooltip.style.top = `${boundedTop}px`;
+        };
+
+        const selectComparison = (event) => {
+            const candidate = nearestLine(event, chartState());
+            if (!candidate) return;
+            nearest = candidate;
+            const identity = String(candidate.state.identities[candidate.row]);
+            selectedIdentity = selectedIdentity === identity ? null : identity;
+            if (comparisonLabel) {
+                comparisonLabel.textContent = selectedIdentity
+                    ? `Comparing: ${selectedIdentity}`
+                    : "";
+                comparisonLabel.hidden = selectedIdentity === null;
+            }
+            if (clearComparisonButton) {
+                clearComparisonButton.hidden = selectedIdentity === null;
+            }
+            drawComparison(candidate.state);
+        };
+
+        const clearComparison = (event) => {
+            event?.stopPropagation();
+            selectedIdentity = null;
+            comparisonOverlay.setAttribute("hidden", "");
+            if (comparisonLabel) {
+                comparisonLabel.textContent = "";
+                comparisonLabel.hidden = true;
+            }
+            if (clearComparisonButton) clearComparisonButton.hidden = true;
+        };
+
+        const attach = () => {
+            const plot = host.querySelector(".js-plotly-plot");
+            if (!plot || plot === attachedPlot) return;
+            if (attachedPlot) {
+                attachedPlot.removeEventListener("mousemove", onMouseMove);
+                attachedPlot.removeEventListener("mouseleave", hideTooltip);
+                attachedPlot.removeEventListener("click", selectComparison);
+            }
+            attachedPlot = plot;
+            plot.addEventListener("mousemove", onMouseMove);
+            plot.addEventListener("mouseleave", hideTooltip);
+            plot.addEventListener("click", selectComparison);
+            requestAnimationFrame(() => drawComparison(chartState()));
+        };
+
+        function onMouseMove(event) {
+            if (event.buttons) {
+                hideTooltip();
+                return;
+            }
+            latestEvent = event;
+            if (animationFrame === null) {
+                animationFrame = requestAnimationFrame(identifyNearestLine);
+            }
+        }
+
+        clearComparisonButton?.addEventListener("click", clearComparison);
+
+        const observer = new MutationObserver(attach);
+        observer.observe(host, { childList: true, subtree: true });
+        attach();
     }
 
     function flipToggle(card) {

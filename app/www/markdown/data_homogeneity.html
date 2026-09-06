@@ -112,6 +112,15 @@ border-top: 1px solid rgba(0, 0, 0, 0.1);
 .card.fullscreen-active .drag-handle {
 display: none !important;
 }
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
 
 #shiny-modal-wrapper {
 position: absolute;
@@ -537,6 +546,51 @@ padding-right: 40px !important;
 }
 body.fullscreen-mode { overflow: hidden; } 
 
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
 .dragging, .dragging * {
 -webkit-user-select: none;
 -moz-user-select: none;
@@ -592,6 +646,78 @@ height: 80vh;
 margin-top: 1rem;
 border: 0;
 }
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
 </style>
 </head>
 
@@ -606,110 +732,18 @@ border: 0;
 </header>
 
 
-<h4 id="introduction">🧭 Introduction</h4>
-<p>This card explores whether each variable behaves consistently throughout a meaningful ordering of the observations. A variable is <strong>homogeneous</strong> when its distribution remains broadly similar from one part of the sequence to another. <strong>Heterogeneity</strong> means that the distribution, or the frequency of missing values, changes along that sequence.</p>
-<p>When the sequence is time, this is commonly called <strong>data-drift analysis</strong>. The same approach can also reveal structure in non-temporal orders, such as customer number, production batch, collection order, treatment date, geographic progression, or the current row order.</p>
-<p>The choice of sequence is central to the interpretation:</p>
-<ul>
-<li>A time sequence asks whether the data-generating process has changed over time.</li>
-<li>A batch or site sequence may reveal operational or geographical differences.</li>
-<li>An identifier may be useful if its ordering has real-world meaning.</li>
-<li>Current row order is useful only when that order has deliberately been preserved.</li>
-<li>A genuinely random order should normally produce no sustained pattern. It can be a useful informal comparison, but a quiet heat-map does not prove that the data is homogeneous under every meaningful ordering.</li>
-</ul>
-<p>Variables assigned the <strong>Sequence</strong> or <strong>Identifier</strong> role are offered first. Such variables may contain repeated values, as can occur in longitudinal data. If those roles have not been assigned, scalar variables whose observed values are all unique are offered as possible sequences. Complete unique variables are preferred because observations with a missing sequence value must otherwise be placed at the end.</p>
-<h4 id="how-the-comparison-is-constructed">👷🏽‍♂️ How the comparison is constructed</h4>
-<p>The observations are first sorted by the selected sequence. They are then divided into consecutive, approximately equal-sized groups. The requested number of groups is automatically reduced when necessary so that every group contains at least five observations.</p>
-<p>For each selected variable and sequence group, the card makes two comparisons:</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>The Data homogeneity card examines whether variable distributions and missingness remain stable through a meaningful observation sequence. With “time” as the sequence this is data-drift analysis; batch, site, collection order, or another ordered field can reveal other forms of changing population or process. The card is diagnostic.</em></p>
+<h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Distribution drift</strong> asks whether the observed values in the group differ from the chosen reference distribution.</li>
-<li><strong>Missingness drift</strong> asks whether the group’s proportion of missing values differs from the reference proportion.</li>
+<li><strong>Primary:</strong> Identify variables that change materially through an ordered sequence.</li>
+<li><strong>Secondary:</strong> Locate changes and distinguish distribution drift from missingness drift.</li>
+<li><strong>Tertiary:</strong> Generate operational or data-quality explanations for investigation.</li>
 </ol>
-<p>The <strong>raw drift</strong> for a cell is the larger of these two discrepancies. This prevents a strong change in completeness from being hidden by stable observed values, and vice versa.</p>
-<p>For numeric and datetime variables, distribution drift is based on a robustly scaled distance between the two empirical distributions. It is sensitive to changes in location, spread, and distribution shape—not only to changes in the mean. For Boolean, string, and categorical variables, the score measures how much the proportions of their levels have changed. Missing values are excluded from the distribution comparison because they are assessed separately by the missingness score.</p>
-<p>Raw discrepancies are necessarily positive when a small empirical group is compared with a larger reference, even if the ordering is random. The card therefore calibrates each variable against 100 deterministic random permutations of the observation order. For every permutation it records the largest raw discrepancy across all groups. The 95th percentile of these random maxima becomes that variable’s <strong>random boundary</strong>.</p>
-<p>Only raw drift above this boundary is displayed. The excess is scaled by the variable’s own random variability—the distance between its median random maximum and its 95th-percentile random maximum—and constrained to zero through one. This calibration accounts for group size, missingness, distribution shape, outliers, and the number of groups without pretending that the same raw cutoff is suitable for every variable.</p>
-<p>The resulting <strong>excess-drift</strong> scores have the following interpretation:</p>
-<ul>
-<li><strong>0</strong> means the raw discrepancy did not exceed what random ordering commonly produced.</li>
-<li>Values above <strong>0</strong> indicate discrepancy beyond the random 95% maximum boundary.</li>
-<li>Values nearer <strong>1</strong> indicate increasingly strong excess relative to the variable’s random variation.</li>
-<li>A score is not a probability, percentage, hypothesis-test result, or estimate of the proportion of incorrect observations.</li>
-</ul>
-<p>The raw scores and random boundary remain available in the cell hover information and on the flip-side. A very high random boundary is itself informative: it can indicate that small groups are unstable or that extreme values and unresolved placeholders are dominating the comparison.</p>
-<h4 id="choosing-the-reference-distribution">💼 Choosing the reference distribution</h4>
-<p>The reference setting changes the question being asked.</p>
-<table class="caption-top">
-<colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Reference</th>
-<th>Question answered</th>
-<th>Particularly useful for</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><strong>All observations</strong></td>
-<td>How unusual is this group relative to the dataset as a whole?</td>
-<td>General exploration and locating locally unusual regions</td>
-</tr>
-<tr class="even">
-<td><strong>First sequence group</strong></td>
-<td>How far has each group moved from the starting population?</td>
-<td>Long-term drift, ageing processes, and before-versus-after comparisons</td>
-</tr>
-<tr class="odd">
-<td><strong>Previous sequence group</strong></td>
-<td>How different is this group from the group immediately before it?</td>
-<td>Sudden changes, process breaks, and change-point investigation</td>
-</tr>
-</tbody>
-</table>
-<p>With <strong>All observations</strong>, each group is itself part of the reference distribution, so its score is slightly moderated. With <strong>First sequence group</strong>, the first group necessarily has zero drift relative to itself. With <strong>Previous sequence group</strong>, the first group also has zero drift, and a gradual change may appear as several modest steps rather than one large score.</p>
-<h4 id="front-reading-the-heat-map">🏞️ Front: reading the heat-map</h4>
-<p>The front shows variables on the vertical axis and consecutive sequence groups on the horizontal axis. Group 1 is the earliest or lowest part of the selected sequence; later groups proceed from left to right.</p>
-<p>Each cell describes one variable in one group:</p>
-<ul>
-<li>Pale cells indicate no drift beyond the random-order allowance.</li>
-<li>Darker blue cells indicate increasing excess drift.</li>
-<li>Brown cells are at or beyond the upper end of the chance-corrected scale.</li>
-</ul>
-<p>The color scale is shared across the heat-map, allowing cells to be compared visually. Very strong values can saturate at the top color, so hover over a cell when the precise value matters.</p>
-<p>Useful visual patterns include:</p>
-<ul>
-<li><strong>A vertical band across many variables</strong> suggests a dataset-wide event, such as a source-system change, policy change, altered sampling process, or different population entering the data.</li>
-<li><strong>A dark run within one variable</strong> suggests a variable-specific change, such as recalibration, recoding, a revised question, or changing completeness.</li>
-<li><strong>Gradual strengthening from left to right</strong> can indicate progressive drift. It is clearest when the first group is the reference.</li>
-<li><strong>A single isolated cell</strong> may indicate a temporary event, unusual batch, small-group instability, or data-quality problem.</li>
-<li><strong>Similar patterns across several variables</strong> may indicate a shared cause or correlated change.</li>
-<li><strong>Strong cells at the end of a sequence</strong> deserve special attention when recent observations are incomplete or still being processed.</li>
-<li><strong>A uniformly quiet heat-map</strong> means no material changes were found at the current group size, reference, sequence, and variable selection. It does not prove permanent homogeneity.</li>
-</ul>
-<p>Hovering over a cell gives:</p>
-<ul>
-<li>the variable and sequence interval;</li>
-<li>the excess-drift score shown by the color;</li>
-<li>the uncalibrated raw drift;</li>
-<li>the variable’s random maximum boundary;</li>
-<li>raw distribution drift;</li>
-<li>raw missingness difference;</li>
-<li>a compact summary of the group; and</li>
-<li>the equivalent summary of the reference data.</li>
-</ul>
-<p>For numeric variables, the compact summary reports the median. For categorical variables, it reports the most common observed level and its proportion. These summaries help explain the direction of a change, but the drift calculation uses more of the distribution than the displayed summary alone.</p>
-<p>When interpreting a dark cell, first compare the raw <strong>Distribution drift</strong> with the raw <strong>Missingness difference</strong>:</p>
-<ul>
-<li>If distribution drift is larger, the recorded values themselves have changed.</li>
-<li>If missingness drift is larger, data completeness is the main issue.</li>
-<li>If both are large, the observed population and its recording process may both have changed.</li>
-</ul>
-<h4 id="flip-side-reading-the-summary-table">🔄 Flip side: reading the summary table</h4>
-<p>The flip-side presents one row per analyzed variable, ordered from the strongest evidence of heterogeneity to the weakest. Unsupported variables are listed after the analyzed variables with an explanation.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>Observations are sorted by the selected sequence and divided into consecutive, approximately equal groups. The requested number of groups is reduced when necessary so that each group has enough observations.</p>
+<p>For every selected variable and group, the card compares both the observed-value distribution and missing-value proportion with a reference. The raw discrepancy is the larger of these components. Numeric and datetime distributions are compared using robustly scaled empirical distance; Boolean and manageable categorical distributions are compared through changing level proportions.</p>
+<p>Small groups produce positive discrepancies even under random order. The card therefore repeats the analysis under 100 deterministic random permutations and records each permutation’s maximum discrepancy. The 95th percentile becomes a variable-specific random boundary. Only excess above that boundary is displayed, scaled by the variable’s random variation and constrained from zero to one.</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 50%">
@@ -717,110 +751,65 @@ border: 0;
 </colgroup>
 <thead>
 <tr class="header">
-<th>Column</th>
+<th>Score</th>
 <th>Interpretation</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Variable</strong></td>
-<td>The variable being assessed.</td>
+<td><strong>0</strong></td>
+<td>The discrepancy did not exceed the random-order boundary.</td>
 </tr>
 <tr class="even">
-<td><strong>Type</strong></td>
-<td>The broad data type used to choose the comparison method.</td>
+<td><strong>Above 0</strong></td>
+<td>More drift than the variable usually produced under random ordering.</td>
 </tr>
 <tr class="odd">
-<td><strong>Overall drift</strong></td>
-<td>The mean heat-map score across all sequence groups. A high value indicates sustained or repeated heterogeneity.</td>
-</tr>
-<tr class="even">
-<td><strong>Maximum drift</strong></td>
-<td>The strongest single heat-map cell for the variable. The status classification is based on this value.</td>
-</tr>
-<tr class="odd">
-<td><strong>Raw maximum</strong></td>
-<td>The largest uncalibrated discrepancy found in the actual sequence. It should not be interpreted without the random boundary.</td>
-</tr>
-<tr class="even">
-<td><strong>Random boundary</strong></td>
-<td>The 95th percentile of the maximum raw discrepancy found under random orderings. Raw values below this boundary are calibrated to zero.</td>
-</tr>
-<tr class="odd">
-<td><strong>Peak location</strong></td>
-<td>The sequence interval containing the maximum drift score. Use this to locate the observations requiring investigation.</td>
-</tr>
-<tr class="even">
-<td><strong>First-to-last drift</strong></td>
-<td>A separately chance-corrected comparison of the first and last groups, regardless of the selected reference setting. It is useful for detecting net movement from the beginning to the end.</td>
-</tr>
-<tr class="odd">
-<td><strong>Trend</strong></td>
-<td>For numeric and datetime variables, the direction and strength of the relationship between group order and group medians. Values nearer 1 indicate a more consistently increasing or decreasing sequence. This is not calculated for categorical variables.</td>
-</tr>
-<tr class="even">
-<td><strong>Maximum missingness difference</strong></td>
-<td>The largest raw absolute change in missing-value proportion between a group and its selected reference.</td>
-</tr>
-<tr class="odd">
-<td><strong>Status</strong></td>
-<td>A practical classification based on the variable’s maximum drift.</td>
-</tr>
-<tr class="even">
-<td><strong>Reason</strong></td>
-<td>Explains why an excluded variable was not analyzed.</td>
+<td><strong>Near 1</strong></td>
+<td>Strong excess relative to that variable’s simulated random variation.</td>
 </tr>
 </tbody>
 </table>
-<p>The row colors correspond to the status:</p>
-<ul>
-<li><strong>Strong:</strong> maximum drift is at least the selected strong-drift threshold.</li>
-<li><strong>Moderate:</strong> maximum drift is at least half the threshold but below the full threshold.</li>
-<li><strong>Weak:</strong> maximum drift is above 0.02 but below the moderate boundary.</li>
-<li><strong>Stable:</strong> maximum drift is no greater than 0.02.</li>
-<li><strong>Excluded:</strong> the variable could not be compared defensibly.</li>
-</ul>
-<p>The default strong-drift threshold is 0.25. Lowering it makes the classification more sensitive; raising it restricts <strong>Strong</strong> to larger excess effects. The threshold changes the labels and heat-map color gradient, not the raw or chance-corrected scores.</p>
-<p><strong>Overall drift</strong> and <strong>Maximum drift</strong> should be considered together. A high maximum with a low overall score suggests a localized event. High values for both suggest sustained heterogeneity. A high first-to-last score with an increasing or decreasing trend suggests systematic movement through the sequence.</p>
+<p>This score is not a probability, percentage, or formal hypothesis-test p-value.</p>
+<p>The reference changes the question. <strong>All observations</strong> finds locally unusual groups. <strong>First sequence group</strong> measures cumulative departure from the starting population. <strong>Previous sequence group</strong> emphasizes transitions between adjacent groups.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The heat map places variables on rows and sequence groups on columns. Pale cells show no excess drift; darker blue indicates increasing drift; brown reaches the strongest end of the scale. Hover information reports the sequence interval, excess score, raw discrepancy, random boundary, distribution component, missingness component, and compact group and reference summaries.</p>
+<p>Vertical bands across variables suggest a broad event such as a source-system or population change. A horizontal run suggests a variable-specific process. Gradual strengthening is clearest against the first group, while isolated cells may indicate a temporary event, unusual batch, or unstable small group.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>The summary table orders analyzed variables from strongest to weakest and lists excluded variables with reasons. Important fields include overall and maximum drift, raw maximum, random boundary, peak location, first-to-last drift, trend, maximum missingness difference, and status.</p>
+<p>High maximum but low overall drift suggests a localized event. High values for both suggest sustained change. First-to-last drift captures net movement but can miss a temporary change that reverses.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>This card has no data-changing action. Changing sequence, variables, reference, groups, or classification threshold recalculates only the diagnostic result.</p>
 <h4 id="settings">⚙️ Settings</h4>
-<p>Use the Tour Guide button for a concise description of each control.</p>
-<h4 id="variables-not-analyzed">🚫 Variables not analyzed</h4>
-<p>Cyclic, list, geometry, free-text-like high-cardinality categorical, shadow, and unsupported variables are excluded because their values require specialized notions of distance. Variables assigned the Sequence or Identifier role are used to organize the observations rather than treated as measurements to assess. Variables with fewer than two observed values also cannot provide a meaningful distribution comparison.</p>
-<p>An excluded variable is not necessarily unimportant. It means only that this card cannot currently measure its heterogeneity defensibly. For example, geographic drift should normally be investigated with spatial methods, while cyclic variables may require circular statistics.</p>
-<h4 id="important-limitations">⛔️ Important limitations</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>Begin with the strongest cells and compare distribution drift with missingness drift. Then inspect the raw values around the peak interval. A detected change can reflect a real population shift, improved collection, altered coding, unresolved placeholders, changing instrumentation, or sampling variation. The chart locates evidence but does not determine cause.</p>
+<p>Repeat the assessment using meaningful alternative references and group counts. Stable conclusions across reasonable choices are more persuasive than one isolated configuration.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
 <ul>
 <li>This is exploratory effect-size analysis, not a formal significance test.</li>
-<li>A detected change does not establish its cause.</li>
-<li>Several correlated variables can respond to the same underlying event.</li>
-<li>Groups contain approximately equal numbers of observations, not necessarily equal spans of time. Sparse periods can therefore cover longer intervals than dense periods.</li>
-<li>Small groups naturally produce more variable distribution estimates.</li>
-<li>Calibration estimates a random-order boundary from 100 permutations. Repeating the calculation is deterministic, but the boundary remains a finite simulation estimate.</li>
-<li>Extreme values and unresolved numeric placeholders can raise the random boundary substantially. Calibration prevents them from producing automatic false drift, but it can also reduce sensitivity to genuine changes. Such values should still be corrected upstream.</li>
-<li>The first-to-last comparison can miss a temporary change that later reverses.</li>
-<li>Trend describes group medians only; a variable can have changing spread or shape without a median trend.</li>
-<li>Observation weighting is not currently applied.</li>
-<li>Results depend on sequence, group count, reference choice, and selected variables. Sensitivity to these settings is informative and should be explored.</li>
+<li>Approximately equal observation groups may cover unequal spans of time.</li>
+<li>Extreme values and unresolved placeholders can raise the random boundary and reduce sensitivity.</li>
+<li>Trend describes group medians and can miss changes in spread or shape.</li>
+<li>Cyclic, list, geometry, shadow, high-cardinality text-like, constant, and unsupported variables are excluded.</li>
+<li>Results depend on sequence, reference, group count, variable selection, and finite permutation calibration.</li>
+<li>Observation weights are not applied.</li>
 </ul>
-<h4 id="suggested-investigation-workflow">📌 Suggested investigation workflow</h4>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Choose the sequence with the strongest real-world interpretation.</li>
-<li>Begin with <strong>All observations</strong> as the reference and look for broad patterns.</li>
-<li>Hover over the strongest cells to distinguish distribution drift from missingness drift.</li>
-<li>Use the flip-side to identify the variables and sequence intervals with the largest effects.</li>
-<li>Switch to <strong>First sequence group</strong> to assess cumulative departure from the starting population.</li>
-<li>Switch to <strong>Previous sequence group</strong> to locate abrupt transitions.</li>
-<li>Change the number of groups to determine whether the pattern is persistent or an artifact of one binning choice.</li>
-<li>Inspect the underlying observations around peak locations and relate them to known collection, operational, policy, or system events.</li>
-<li>Decide whether the appropriate response is correction, stratification, time-aware validation, recalibration, monitoring, or a model that explicitly accommodates drift.</li>
+<li>Choose a sequence with a defensible real-world interpretation.</li>
+<li>Start with <strong>All observations</strong> and inspect broad patterns.</li>
+<li>Hover over strong cells to separate distribution and missingness effects.</li>
+<li>Locate peak variables and intervals on the flip side.</li>
+<li>Compare first-group, previous-group, and alternative group-count results.</li>
+<li>Investigate source or operational events before choosing a response.</li>
 </ol>
-<h4 id="goals">🎯 Goals</h4>
-<ol type="1">
-<li><strong>Primary:</strong> Identify variables whose distributions or missingness rates change materially through a relevant sequence.</li>
-<li><strong>Secondary:</strong> Locate where those changes occur and distinguish sustained drift, abrupt change, and localized heterogeneity.</li>
-<li><strong>Tertiary:</strong> Identify plausible operational or data-quality explanations and guide more specialized analysis.</li>
-</ol>
-<hr>
-<p>This is an immutable diagnostic card. It does not alter the data passed to downstream cards.</p>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> Selected upstream variables ordered by a sequence field or preserved row order.</li>
+<li><strong>Output:</strong> The upstream data unchanged.</li>
+<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
+</ul>
 
 
 

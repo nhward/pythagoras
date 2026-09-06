@@ -68,7 +68,7 @@ def instance():
                 style = "border: 0px; box-shadow: none;",
                 guide = this, 
                 title = "Export button",
-                text = "This button writes the data to a CSV file.",
+                text = "Downloads the complete incoming data as CSV. Display filters and rounding are not applied, but CSV cannot preserve roles, pipeline metadata, geometry metadata, or every pandas extension type.",
                 position = "top"
             )
 
@@ -78,15 +78,15 @@ def instance():
         return ui.TagList(
             ui.input_slider(
                 id = "Decimals", label = "Number of decimal places to show", min = -2, max = 10, value = 2, 
-                guide = this, text = 'The numeric variables in the data table will be rounded to this number of decimal places.', position = "left"
+                guide = this, text = "Rounds numeric values in the browser table to this many decimal places. Negative values round to tens or hundreds. Stored and exported values retain their original precision.", position = "left"
             ),
             ui.input_checkbox(
-                    id = "Bounded", label = "Each Geometry variable summarised as a bounding box", value = True,
-                    guide = this, text = 'Any geometery columns are individually summarised as bounding boxes.', position = "left"
+                    id = "Bounded", label = "Summarize each geometry variable as a bounding box", value = True,
+                    guide = this, text = "Shows each geometry as its minimum bounding rectangle instead of Well-Known Text. This changes only the browser table and never alters the spatial data passed downstream.", position = "left"
             ),
             ui.input_slider(
                 id = "MaxObs", label = "Maximum observations to list", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, text = 'Limit to number of observations to list to ensure responsiveness (logarithmic scale).', position = "left"
+                guide = this, text = "Sets a logarithmic cap of 10^n observations in the full-screen browser listing. It limits display size only; exported and downstream data remain complete.", position = "left"
             )
         )
 

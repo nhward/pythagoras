@@ -40,24 +40,24 @@ def instance():
                 position = "left"),
             ui.input_slider(
                 id = "CardinalityThreshold", 
-                label = "Maximum cardinality of of \"Low Cardinality\" roles", 
+                label = "Maximum cardinality of low-cardinality roles",
                 min = 3,
                 max = 50,
                 value = 4,
                 ticks = True,
                 guide = this,
-                text = 'Limit the cardinality of certain roles to be less than this - specificially: Sensitive, Stratifier and Treatment roles. This setting is used in role validation.',
+                text = "Sets the maximum number of distinct observed values permitted when validating Sensitive, Stratifier, and Treatment roles. Raise it only when a larger grouping remains analytically meaningful.",
                 position = "left"),
             ui.input_slider(
                 id = "MaxObs", 
-                label = "Maximum observations to analyse", 
+                label = "Maximum observations to analyze",
                 min = 3,
                 max = 7,
                 value = 4,
                 ticks = True,
                 pre = "10^",
                 guide = this,
-                text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).',
+                text = "Sets a logarithmic cap of 10^n observations used to assess cardinality and missingness during validation. It does not remove observations from committed data.",
                 position = "left")
         )
 
@@ -82,7 +82,7 @@ def instance():
             class_ = "roles-layout",
             guide = this, 
             title = "Role assignments",
-            text = "This drag-and-drop dialogue allows the variables to be placed in the appropriate role boxes. You can scroll to the right to access all the roles. This dialogue is best in full screen.",
+            text = "Drag each variable into one role container and scroll horizontally to reach every role. Full-screen mode provides more room. Assignments remain provisional until validation succeeds and Commit Assignments is clicked.",
             position = "top",
             priority = 0
         )
@@ -113,7 +113,7 @@ def instance():
                 id = "Check",
                 guide = this, 
                 title = "Card status",
-                text = "This contains a single line of colour coded information about the role validation.",
+                text = "Reports the most immediate role-validation problem, or confirms whether valid assignments are ready to commit or already applied.",
                 position = "top")
         )
 

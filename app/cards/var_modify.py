@@ -135,9 +135,9 @@ def instance():
         return ui.TagList(
             this.guidedDiv(
                 ui.input_text(id="NewName", label="New Name", value=None, 
-                guide = this, title = "Change the current variable's name by using this field", position="top"),
+                guide = this, title = "Proposed variable name", text="Changes the proposed name for the selected row. Names must remain unique; the role map is updated when a valid rename is committed.", position="top"),
                 ui.input_selectize(id="NewDataType", label="New Data Type", choices=list(set(TYPE_CHOICES)), selected=False, options={"dropdownParent": "body"}, 
-                guide = this, title = "Change the current variable's data-type by using this field", position="top"
+                guide = this, title = "Proposed variable data type", text="Changes the proposed type for the selected variable. Available choices depend on Alternative types; conversion affects downstream data only after commitment.", position="top"
                 ),
                 ui.input_selectize(id="NewOrder", label="New order", choices=[], selected=None, multiple=True, remove_button=False, width = "100%",
                 options={
@@ -145,7 +145,7 @@ def instance():
                     "plugins": ["drag_drop"],
                     "onDelete": ui.js_eval("function(values) { return false; }"),
                 },
-                guide = this, title = "Change the current variable's order by using this field - provided the data-type is 'ordered' or 'cyclic'", position="top"),
+                guide = this, title = "Proposed category or cycle order", text="Drag values into their intended order for an ordered-category or cyclic variable. The order is ignored for other types and applied only on commitment.", position="top"),
                 id="Row",
                 title="New attributes for the choosen variable.",
                 text="The fields shown here can be modified. The available choices are controlled by the 'Alternatives' settings.",
@@ -164,7 +164,7 @@ def instance():
                     style="border: 0px; box-shadow: none;",
                     guide=this,
                     title="Commit button",
-                    text="This button modifies the data and feeds the next card with these changes.",
+                    text="Applies every valid proposed rename, type conversion, and order change in the table to the full incoming data and records one Cleaning operation.",
                     position="top",
                 ),
                 ui.input_action_button(
@@ -177,7 +177,7 @@ def instance():
                     style="border: 0px; box-shadow: none;",
                     guide=this,
                     title="Reset button",
-                    text="This button reverts all modifications and lets you start again.",
+                    text="Discards every proposal and committed modification made by this card, restores the incoming data, and resets the table to its original definitions.",
                     position="top",
                 ),
                 id="Reset-Commit",
@@ -200,8 +200,8 @@ def instance():
                 <b>Sensible:</b> the choices based on data-type, values and cardinality""",
             ),
             ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to analyse", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position = "left")
+                id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+                guide = this, text = "Sets a logarithmic cap of 10^n observations used to assess cardinality and suggest feasible conversions. Commitment still transforms the complete incoming column.", position = "left")
         )
 
     this.settings = settings

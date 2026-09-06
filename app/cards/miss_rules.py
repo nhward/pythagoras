@@ -22,7 +22,7 @@ from card import Card
 from mlxtend.frequent_patterns import apriori, association_rules
 from module import Module
 from proxy_data import proxy_data
-from shiny import render, req, ui
+from shiny import render, ui
 from shinywidgets import render_widget
 
 
@@ -87,23 +87,23 @@ def instance():
         return ui.TagList(
             ui.input_slider(
                 id="MinSupport", label="Minimum permitted rule support", min=0.1, max=0.95, value=0.1, step=0.01,
-                guide=this, text="Rules whose support is below this threshold are dropped.", position="left",
+                guide=this, text="Keeps only rules whose complete LHS-and-RHS combination occurs in at least this proportion of analyzed observations. Lower values reveal rarer patterns but can produce many unstable rules.", position="left",
             ),
             ui.input_slider(
                 id="MinLift", label="Minimum permitted rule lift", min=0.1, max=5, value=2, step=0.1,
-                guide=this, text="Rules whose lift is below this threshold are dropped.", position="left",
+                guide=this, text="Keeps only rules meeting this lift. Lift is confidence divided by the RHS base frequency: 1 indicates independence and values above 1 indicate positive association.", position="left",
             ),
             ui.input_slider(
                 id="MaxLength", label="Maximum variables per rule", min=2, max=15, value=10, step=1,
-                guide=this, text="Limits the total number of LHS and RHS variables in a rule.", position="left",
+                guide=this, text="Caps the combined number of LHS and RHS variables in a rule. Larger rules can represent complex patterns but greatly increase search cost and are harder to interpret.", position="left",
             ),
             ui.input_checkbox(
                 id="RemoveRedundant", label="Prune redundant rules", value=False,
                 guide=this, text="Hide specialised rules when a simpler rule with the same conclusion has at least as much confidence.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text = 'Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).', position="left",
+                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text = "Sets a logarithmic cap of 10^n observations used for rule mining. Raising it improves coverage of uncommon combinations but can substantially increase runtime and rule count.", position="left",
             ),
         )
 

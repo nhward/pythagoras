@@ -1198,7 +1198,7 @@ def instance():
             ),
             ui.input_select(
                 id="Permutations", label="Permutation repetitions", selected="99", choices={"99": "100", "199": "200", "499": "500", "999": "1000"},  # because the logic requires reps+1
-                guide=this, text="More permutations give a more precise empirical p-value but take longer.", position="left",
+                guide=this, text="Sets the number of shuffled-label evaluations used for the empirical p-value. More repetitions improve p-value resolution and stability but increase model-fitting time.", position="left",
             ),
             ui.input_slider(
                 id="Alpha", label="Maximum p-value", min=0.01, max=0.10, value=0.05, step=0.01,
@@ -1227,15 +1227,15 @@ def instance():
             ),
             ui.input_slider(
                 id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
-                guide=this, text="Minimum cross-validated balanced accuracy for a patterned classification.", position="left",
+                guide=this, text="Requires at least this held-out balanced accuracy before a variable can be classified as Patterned. This prevents improvement over a weak null model from being treated as useful prediction.", position="left",
             ),
             ui.input_slider(
                 id="MinRSquared", label="Minimum R-squared", min=0, max=0.50, value=0.10, step=0.01,
-                guide=this, text="Minimum cross-validated R-squared for a patterned missing-count regression.", position="left",
+                guide=this, text="Requires at least this held-out R-squared before the aggregate missing-count result can be Patterned. Negative or small values indicate poor prediction beyond the mean count.", position="left",
             ),
             ui.input_slider(
                 id="MinFoldFraction", label="Minimum fold consistency", min=0.50, max=1, value=0.80, step=0.05,
-                guide=this, text="Minimum fraction of held-out folds in which the tree must beat its null model.", position="left",
+                guide=this, text="Requires the tree to outperform its matched null model in at least this fraction of held-out folds. Higher values demand more consistent evidence across splits.", position="left",
             ),
             ui.input_numeric(
                 id="MinClassCount", label="Minimum missing and observed cases", value=20, min=2, step=1,
@@ -1243,15 +1243,15 @@ def instance():
             ),
             ui.input_slider(
                 id="MaxTreeDepth", label="Maximum Tree depth parameter", min=1, max=5, value=3, step=1,
-                guide=this, text="Pre-pruning (for speed) by limiting the depth of the tree hierarchy.", position="left",
+                guide=this, text="Caps tree depth to control complexity and runtime. Deeper trees can represent more interactions but are harder to interpret and more prone to overfitting.", position="left",
             ),
             ui.input_slider(
                 id="MinLeafSamples", label="Minimum leaf samples (as a proportion)", min=0.001, max=0.05, value=0.02, step=0.001,
-                guide=this, text="Minimum number of samples to justify a leaf node of the tree hierarchy.", position="left",
+                guide=this, text="Sets the minimum proportion of training observations allowed in a terminal leaf. Larger values create simpler, more stable trees but can miss small subgroups.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyse", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Limit to number of observations to analyse to ensure responsiveness (logarithmic scale).", position="left",
+                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+                guide=this, text="Sets a logarithmic cap of 10^n observations used for cross-validation and permutations. Raising it improves coverage but can substantially increase fitting time.", position="left",
             ),
         )
 

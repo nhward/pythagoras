@@ -38,7 +38,7 @@ def instance():
         return ui.navset_bar(
             ui.nav_panel("Summary",  ui.output_table(id = "Summary",  guide = this, title = "Summary",  position = "top", text = "This table briefly lists the host, URL, Python executable/version, Platform, and packages (installed/Loaded).")),
             ui.nav_panel("Url",      ui.output_table(id = "Url",      guide = this, title = "URL",      position = "top", text = "This table lists the components of the URL for the current web page.")),
-            ui.nav_panel("Packages", ui.output_table(id = "Packages", guide = this, title = "Packages", position = "top", text = "This table lists the loaded package names, and versions, that have been loaded upto now.")),
+            ui.nav_panel("Packages", ui.output_table(id = "Packages", guide = this, title = "Packages", position = "top", text = "Lists distributions currently loaded by the Python process and their available versions. Refresh after opening more cards because packages are loaded on demand.")),
             ui.nav_panel("Folders",  ui.output_table(id = "Folders",  guide = this, title = "Folders",  position = "top", text = "This table lists the Pythagoras directory paths and the file count of each.")),
             title = None,
             id = "Navset", 
@@ -48,20 +48,20 @@ def instance():
     this.front = front
 
     def back():
-        return ui.output_text_verbatim(id = "Session", guide = this, title = "Session", priority = -10, position = "bottom", text = "This listing on the flip-side shows the traditional system configuration output")
+        return ui.output_text_verbatim(id = "Session", guide = this, title = "Session", priority = -10, position = "bottom", text = "Shows conventional Python session information. Full-screen mode includes additional dependency, standard-library, and private-package detail.")
     this.back = back
   
     def footer():
         return ui.input_action_button(
             id = "Refresh", 
             label = 'Refresh', 
-            icon = icon("arrows-rotate", title = "Refesh the information", a11y = "sem"),
+            icon = icon("arrows-rotate", title = "Refresh the information", a11y = "sem"),
             width = "250px", 
             class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
             style = "border: 0px; box-shadow: none;",
             guide = this, 
             title = "Refresh button",
-            text = "This button refreshes the list of currently loaded modules.",
+            text = "Rereads the host, client, package, folder, and session information. Use it after opening additional cards because some packages are loaded only on demand.",
             position = "top"
         )
     this.footer = footer

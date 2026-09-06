@@ -1,49 +1,69 @@
 ---
-title: Data tabulation
+title: Data import
 ---
 
-#### 🧭 Introduction
+#### 🧭 Purpose
 
-All analysis or modeling tasks begin with loading some raw data. The data is expected to be in a rows (observations) and columns (variables) table, or at least be able to be transformed into tabular data.
-
-Data can be imported through any of three importation styles. Each is implemented on a tab dialogue.
-
-  1. User's local file system
-  1. Dataset located within certain python packages
-  1. URL resource
-  1. [UC Irvine](https://archive.ics.uci.edu/datasets) 
-  
-The UC Irvine webpage enable datasets to be searched and filtered as a prelude to their selection here.
-
-The importation of files and URLs supports a variety of file types. These include, but are not limited to, the following file extensions:
-
-- CSV: A comma, semi-colon, or tab-delimited file.
-- XLS: A spreadsheet worksheet.
-- RDS: An R serialization file containing a data frame.
-- GPKG: A spatial data file.
-
-If you have a different file extension, feel free to give it a try to see if it can be imported.
-
-#### 🔄 Flip side
-
-The back of the card documents:
-
-- Dataset Info: Class and dimensions
-- Memory usage: Bytes in use
-- Variable listing: Column, Non-Null count, Null count, Data type
-- Categories: Count, unique, top, frequency
-
-#### ⚙️ Settings
-Use the Tour Guide button to learn about the settings of this card. 
-
-* The between-column separator character.
-* The worksheet position (for multi-sheet spreadsheets). 
+_The Data import card brings a tabular dataset into Pythagoras and establishes the source used by every downstream card. It can read local files, packaged example datasets, web resources, and—outside Shinylive — the UCI Machine Learning Repository. Data is previewed before it is committed._
 
 #### 🎯 Goals
 
-1. _Primary:_ Facilitate data importation
-1. _Secondary:_ Help verify whether you have the required dataset.
+1. **Primary:** Import a usable dataset and give it a short, recognizable name.
+1. **Secondary:** Check its dimensions, structure, missingness, and memory use before continuing.
+1. **Tertiary:** Establish consistent initial roles and time-zone handling.
 
-***
-All cards downstream of this card will receive the data imported by this card. All variables are assigned to the __Predictor__ role. Dates and date-times that do not declare their time zones are assigned to UTC.
+#### 🧠 How it works
 
+The active tab determines the source. **File based** uploads a file from the local computer. **Dataset based** loads an example supplied by a supported Python package. **Web based** reads a file from a URL. **UC Irvine** retrieves a selected repository dataset and is unavailable in Shinylive because it requires server-side capabilities.
+
+File and web imports support CSV, TSV, Excel, Parquet, Feather, JSON, GeoJSON, GeoPackage, GML, KML, NetCDF, GRIB, HDF5, and related formats handled by the underlying readers. Spatial files become GeoPandas data when possible. Multidimensional sources are converted to a data frame when possible.
+
+The card first creates a provisional preview. **Commit Import** makes that preview the application’s current dataset. A new source selection does not replace the downstream dataset until it is committed.
+
+#### 🏞️ Front
+
+The front contains one tab for each available import method. Each method includes a short dataset name. Keep this name concise because it appears in card headings and in the Data journey.
+
+The status below the commit button reports whether a source has been recognized and whether it is ready to commit. Invalid paths, URLs, formats, or source choices prevent commitment and should be corrected before proceeding.
+
+#### 🔄 Flip side
+
+The flip side previews a source-specific summary before commitment. For tabular data it includes the data class and dimensions, memory use, column names and types, non-missing and missing counts, and categorical summaries where applicable. Use it to catch an incorrect worksheet, separator, or source before it enters the workflow.
+
+#### 🛠️ Controls and actions
+
+**Commit Import** publishes the currently previewed source. Importing another source and committing it replaces the current starting dataset, so downstream cards recalculate from the new source.
+
+The commit does not clean or model the data. Variables initially receive the **Predictor** role unless the importer recognizes a geometry column. Date and datetime values without a declared time zone are treated as UTC.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Confirm that the observation and variable counts are plausible, names have not been mistaken for data, numeric columns have not become text, and missing values look credible. Unexpected types often indicate an incorrect separator, a header problem, or placeholder values that should be handled by later cards.
+
+After commitment, inspect the data directly and assign deliberate variable roles before relying on role-sensitive diagnostics.
+
+#### ⛔️ Limitations
+
+* Format support depends on the installed Python readers and their optional dependencies.
+* Automatic type inference cannot reliably distinguish identifiers, nominal text, dates, and numbers stored as text.
+* Only one worksheet is imported from a multi-sheet workbook at a time.
+* A successful read does not establish that the source is complete, current, or semantically correct.
+* Any database joining, ordering, or filtering is performed in advance.
+
+#### 📌 Suggested workflow
+
+1. Select the appropriate source tab and choose or enter the source.
+1. Give the dataset a short name and inspect the provisional summary.
+1. Correct the separator or worksheet when the preview is implausible.
+1. Click **Commit Import** only when the source is correct.
+1. Continue with Data tabulation and Role assignment.
+
+#### 🔗 Data flow
+
+* **Input:** An external file, URL, packaged dataset, or UCI dataset.
+* **Output:** A newly materialized dataset with all variables assigned as predictors.
+* **Data journey:** The committed import establishes the journey’s source rather than appearing as a later cleaning or learning operation.
