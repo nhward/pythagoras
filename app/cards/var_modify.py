@@ -312,7 +312,7 @@ def instance():
             elif input.Alternatives() == "Related":
                 if origType == "cyclic":
                     possible = ["text", "nominal", "ordered", "cyclic"]
-                elif origType == "list":
+                elif origType == "basket":
                     possible = ["nominal", "text"]
                 elif origType == "geometry":
                     possible = ["geometry", "text", "decimal"]
@@ -344,7 +344,7 @@ def instance():
                 if is_cyclic_like(series):
                     sensible.append("cyclic")
                 if is_list_like(series):
-                    sensible.append("list")
+                    sensible.append("basket")
                 if is_geometry_like(series):
                     sensible.append("geometry")
                 if is_date_like(series, formats = DATE_FORMATS):
@@ -1099,7 +1099,7 @@ def instance():
                 if series.dtype.ordered:
                     return as_cyclic(series)
                 return as_cyclic(series)
-            if new_type == "list":
+            if new_type == "basket":
                 return as_list(series)
             if new_type == "geometry":
                 return as_geometry(series)

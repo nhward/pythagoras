@@ -348,6 +348,31 @@ shiny-data-frame .shiny-data-grid > table
     background-color: #e2e3e5 !important;
 }
 
+/* Variable-cardinality rows use the same palette as the chart bars. */
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+    background-color: #d95f02 !important;
+    color: #000 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-review-row {
+    background-color: #e6ab02 !important;
+    color: #000 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+    background-color: #3978a8 !important;
+    color: #fff !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+    background-color: #9aa7b2 !important;
+    color: #000 !important;
+}
+
 /* Row hover overrides striping. */
 :is(
     table.table,
@@ -355,6 +380,17 @@ shiny-data-frame .shiny-data-grid > table
     shiny-data-frame .shiny-data-grid > table
 ) > tbody > tr:hover > * {
     background-color: var(--py-table-row-hover) !important;
+}
+
+/* Cardinality foregrounds return to the standard text color on hover. */
+shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
+> :is(
+    .var-cardinality-strong-review-row,
+    .var-cardinality-review-row,
+    .var-cardinality-expected-row,
+    .var-cardinality-not-assessed-row
+) {
+    color: var(--bs-body-color, #212529) !important;
 }
 
 /* Reveal a truncated cell when it is hovered. */

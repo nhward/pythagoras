@@ -19,10 +19,13 @@
           "module": "data_tabulation"
         },
         {
+          "module": "var_modify"
+        },
+        {
           "module": "role_assignment"
         },
         {
-          "module": "var_modify"
+          "module": "var_cardinality"
         }
       ]
     },

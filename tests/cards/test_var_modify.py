@@ -373,7 +373,7 @@ class TestConversions:
 
     @pytest.mark.unit
     def test_list_geometry_and_cyclic_conversion(self, convert):
-        basket = convert(pd.Series(["a,b", "c,d"]), "list", order=None, formats=[])
+        basket = convert(pd.Series(["a,b", "c,d"]), "basket", order=None, formats=[])
         assert is_list(basket)
         geometry = convert(
             pd.Series(["POINT (1 2)", "POINT (3 4)"]),

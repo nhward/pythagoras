@@ -1,0 +1,88 @@
+---
+title: Variable cardinality
+---
+
+#### 🧭 Purpose
+
+_The Variable cardinality card examines whether each variable's number of distinct observed values is plausible for its data type and current role. It can expose unsuitable types, possible identifiers, constants, or categories needing reconsideration. The card is diagnostic._
+
+#### 🎯 Goals
+
+1. **Primary:** Compare variable cardinality across the dataset.
+1. **Secondary:** Highlight combinations of data type and cardinality that deserve review.
+1. **Tertiary:** Provide evidence for subsequent type and role decisions.
+
+#### 🧠 How it works
+
+Cardinality is the number of distinct non-missing values in a variable. Its interpretation depends on context: three values may suit a nominal category but generate surprise in a decimal measurement, while near-uniqueness may suit text or an identifier but trouble a categorical predictor.
+
+The card compares each variable with configurable low- and high-cardinality thresholds and assigns one of four findings:
+
+| Finding | Meaning |
+|---|---|
+| **Strong review** | The combination is sufficiently unusual that its type, meaning, or usefulness should be checked. |
+| **Review** | The combination is plausible but merits attention. |
+| **Expected** | The cardinality is broadly consistent with the variable's data type or Identifier role. |
+| **Not assessed** | Scalar cardinality is unavailable or not informative for the variable. |
+
+Constants receive **Strong review**, while variables without observed values are **Not assessed**. Low-cardinality decimal or text variables, high-cardinality nominal or ordered variables, low-cardinality codes, and unique integers commonly trigger review. Complete uniqueness is expected for decimal measurements and text. For nominal, ordered, or code variables it is expected only with the **Identifier** role; otherwise it prompts an identifier check.
+
+For large datasets, the card draws a deterministic random sample. It scans each full column only until the high-cardinality boundary is exceeded, preserving exact low-cardinality results without retaining an unlimited set of values. A displayed `≥` identifies a lower bound. Suspected complete uniqueness is verified against the full column.
+
+#### 🏞️ Front
+
+The horizontal bars show distinct observed values by variable. Their colors identify the four findings and match the flip-side rows. Optional reference lines show the low- and high-cardinality boundaries.
+
+A logarithmic scale keeps variables with few values visible beside variables with thousands; equal distances then represent multiplicative differences. The axis title states whether all observations or a deterministic sample were analyzed.
+
+Hover for the distinct count, analysis uniqueness, full-data observed and missing counts, role, types, finding, abbreviated explanation, and analysis basis. Full-screen mode provides more room for names and threshold labels.
+
+#### 🔄 Flip side
+
+The flip-side table is ordered by finding severity and then decreasing cardinality. In addition to the hover information, it provides the full explanation and role consideration, together with:
+
+* **Rows analyzed**, which distinguishes the analysis sample size from the full observation count.
+* **Unique %**, the proportion of analyzed non-missing observations represented by distinct values.
+* **Most frequent %**, the proportion occupied by the most common analyzed value.
+* **Singleton levels**, the number of analyzed values occurring once.
+* **Unused levels**, declared categorical levels not present in the full column.
+
+The role column reports all current roles or **Unassigned** but does not assign or comprehensively validate them.
+
+#### 🛠️ Controls and actions
+
+This card has no data-changing action. Changing its settings recalculates or redisplays the diagnostic result only; the incoming dataset, types, roles, and pipeline are passed downstream unchanged.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Start with **Strong review** rather than treating every long bar as problematic. Ask whether the stored type expresses the variable's meaning. A low-cardinality decimal might be a category code, ordered score, or rounded measurement. A high-cardinality nominal variable might contain spelling variants, excessive detail, or many rare categories—or actually be an identifier or text feature.
+
+Use concentration and singleton counts to distinguish a broadly populated vocabulary from many scarcely used values. Check suspicious variables against Data tabulation and domain knowledge before changing a type or role. Thresholds are screening aids, not universal rules.
+
+#### ⛔️ Limitations
+
+* Findings are heuristic and depend on the selected thresholds and the correctness of existing data types.
+* Sample-based cardinality is a lower bound; uniqueness and frequency percentages describe the analyzed rows unless all rows were used.
+* Rare values can be missed by sampling, although low-cardinality checks and suspected complete uniqueness receive full-data safeguards.
+* Object, basket, geometry, complex, unknown, and all-missing variables do not receive ordinary scalar-cardinality interpretations.
+* Shadow variables are excluded, and observation weights are not applied.
+* Current roles affect only limited interpretations; the card is not a substitute for Role Assignment validation.
+
+#### 📌 Suggested workflow
+
+1. Place the Variable Cardinality card ahead of the Role Assignment card; other copies of the card can follow.
+1. Review the chart for **Strong review** and **Review** variables.
+1. Hover to compare cardinality with type, role, missingness, and analysis basis.
+1. Use the flip-side concentration and singleton fields to investigate unusual categorical variables.
+1. Confirm suspicious values and declared levels in Data tabulation.
+1. Correct inappropriate types in Variable modify, then make or revise roles in Role Assignment.
+
+#### 🔗 Data flow
+
+* **Input:** All non-shadow upstream variables, their current data types and roles, and the materialized data preview.
+* **Output:** The upstream data, roles, and pipeline unchanged.
+* **Data journey:** This diagnostic card does not add a journey step.
