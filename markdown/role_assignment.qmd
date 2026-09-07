@@ -4,7 +4,7 @@ title: Role assignment
 
 #### 🧭 Purpose
 
-_The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Valid assignments are committed as metadata and therefore change how later cards interpret the same values._
+_The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Committed assignments change how later cards interpret retained values, while the **None** role removes a variable from downstream data._
 
 #### 🎯 Goals
 
@@ -28,7 +28,7 @@ Drag each variable into one role container. The supported roles are:
 | **Sequence** | Meaningful observation order, commonly time. |
 | **Sensitive** | Attribute retained for fairness assessment rather than prediction. |
 | **Geometry** | Spatial object used by geographic methods. |
-| **None** | Variable deliberately excluded from downstream analysis. |
+| **None** | Variable removed from the data passed to downstream cards. |
 
 Every variable has one role at most, and the **None** role makes exclusion explicit. **Predictor**, **Identifier**, and **None** accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.
 
@@ -38,13 +38,13 @@ The front is a horizontally scrollable set of role containers. Drag variables be
 
 #### 🔄 Flip side
 
-The flip side lists the most recently committed role assignments. It does not show uncommitted dragging, so it provides a useful check on what downstream cards currently receive.
+The flip side lists roles in the most recently committed output. Variables committed to **None** are absent because they are no longer part of that output. Uncommitted dragging is not shown.
 
 #### 🛠️ Controls and actions
 
-**Commit Assignments** becomes available when the proposed role map is valid. Clicking it publishes the assignments downstream. Dragging alone does not change the exported role map.
+**Commit Assignments** becomes available when the proposed role map is valid. Clicking it publishes the assignments and removes **None** variables from the data passed downstream. Dragging alone changes neither the exported roles nor columns. A removed variable remains available within this card and can be restored by assigning another role and committing again.
 
-If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Changing roles can substantially alter downstream eligibility even though the data-frame values and shape remain unchanged.
+If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Other role changes alter downstream eligibility; assigning **None** also reduces the data-frame width.
 
 #### ⚙️ Settings
 
@@ -62,6 +62,7 @@ If a variable genuinely needs two analytical uses, create a deliberate duplicate
 * Sampling may be used to assess cardinality and missingness on very large datasets.
 * Most singleton roles reflect current application and modeling constraints, not universal statistical rules.
 * Committing a plausible role map does not prevent leakage from conceptually invalid predictors.
+* **None** removes a variable only from this card's output; it does not alter the upstream dataset.
 
 #### 📌 Suggested workflow
 
@@ -74,5 +75,5 @@ If a variable genuinely needs two analytical uses, create a deliberate duplicate
 #### 🔗 Data flow
 
 * **Input:** The upstream variables and current role map.
-* **Output:** The same values with a committed role map.
-* **Data journey:** A committed role change creates a Cleaning step; a committed no-change state is recorded as inactive.
+* **Output:** Retained values with the committed role map; variables assigned **None** are omitted.
+* **Data journey:** A committed role change or **None** removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.

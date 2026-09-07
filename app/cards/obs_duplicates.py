@@ -20,10 +20,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, req, ui
+from shiny import reactive, render, ui
 from shinywidgets import render_widget
 
 RESULT_COLUMNS = [
@@ -86,8 +87,18 @@ def _freeze(value):
 def _comparison_frame(frame: pd.DataFrame) -> pd.DataFrame:
     result = frame.copy()
     for column in result.columns:
-        if pd.api.types.is_object_dtype(result[column].dtype):
-            result[column] = result[column].map(_freeze)
+        series = result[column]
+        if pd.api.types.is_object_dtype(series.dtype) or is_list(series):
+            # Mapping a ListArray directly preserves its extension dtype, which
+            # normalizes the tuples produced by _freeze() back into lists.  An
+            # explicit object Series keeps those values hashable for pandas'
+            # duplicated/factorization machinery.
+            result[column] = pd.Series(
+                (_freeze(value) for value in series.array),
+                index=series.index,
+                name=series.name,
+                dtype=object,
+            )
     return result
 
 

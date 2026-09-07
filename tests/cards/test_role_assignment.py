@@ -256,6 +256,58 @@ class TestServerHelpers:
         assert result.role_map == RoleMap.from_primitive(VALID_ROLE_MAP)
 
     @pytest.mark.unit
+    def test_none_role_columns_are_removed_from_committed_output(self, card_module):
+        role_map = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        role_map["predictor"] = ["x1"]
+        role_map["none"] = ["x2"]
+        source = proxy_data(_df=seeded_frame(), _name="Test")
+        _card, _, functions = recorded_helpers(
+            card_module,
+            frame=source,
+            role_map=role_map,
+        )
+
+        with reactive.isolate():
+            result = functions["Committed"]()
+
+        assert result.frame.columns.tolist() == ["y", "x1", "id", "part"]
+        assert "x2" not in result.role_map.column_roles
+        assert source.frame.columns.tolist() == ["y", "x1", "x2", "id", "part"]
+        record = result.processing_records[-1]
+        assert record.input_shape == (4, 5)
+        assert record.output_shape == (4, 4)
+        assert record.parameters["removed_variables"] == ["x2"]
+        removed = next(
+            change for change in record.parameters["changes"]
+            if change["variable"] == "x2"
+        )
+        assert removed["new_roles"] == ["none"]
+        assert removed["removed_downstream"] is True
+
+    @pytest.mark.unit
+    def test_existing_none_role_still_removes_column_on_commit(self, card_module):
+        role_map = RoleMap.from_primitive(VALID_ROLE_MAP)
+        role_map.set_roles("x2", [Role.NONE])
+        role_map.set_roles("x1", [Role.PREDICTOR])
+        source = proxy_data(
+            _df=seeded_frame(),
+            _roles=role_map,
+            _name="Test",
+        )
+        _card, _, functions = recorded_helpers(
+            card_module,
+            frame=source,
+            role_map=role_map.to_primitive(),
+        )
+
+        with reactive.isolate():
+            result = functions["Committed"]()
+
+        assert "x2" not in result.frame.columns
+        assert result.processing_records[-1].attempted is True
+        assert result.processing_records[-1].parameters["removed_variables"] == ["x2"]
+
+    @pytest.mark.unit
     def test_committed_proxy_records_changed_roles_in_data_journey(self, card_module):
         _card, _, functions = recorded_helpers(card_module, role_map=VALID_ROLE_MAP)
         with reactive.isolate():
@@ -382,6 +434,27 @@ class TestWebKitRoles:
         expect(commit).to_be_enabled()
         commit.click()
         expect(by_id(page, "Check")).to_contain_text("Assignments applied")
+
+    @pytest.mark.ui
+    def test_commit_with_none_role_is_applied_and_excludes_assignment(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        role_map = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        role_map["predictor"] = ["x1"]
+        role_map["none"] = ["x2"]
+        populate_roles(page, role_map)
+
+        by_id(page, "Commit").click()
+        expect(by_id(page, "Check")).to_contain_text("Assignments applied")
+
+        get_card(page).hover()
+        by_id(page, "FlipButton").click(force=True)
+        assignment_table = by_id(page, "Assignments")
+        expect(assignment_table).to_be_visible()
+        none_row = assignment_table.locator("tbody tr").filter(has_text="None")
+        expect(none_row).to_have_count(1)
+        expect(none_row).not_to_contain_text("x2")
 
     @pytest.mark.ui
     def test_back_table_shows_committed_assignments(self, page: Page, app: ShinyAppProc):

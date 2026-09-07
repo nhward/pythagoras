@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Role assignment</title>
+<title>Variable cardinality</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -756,7 +756,7 @@ cursor: pointer;
 
 
 <header id="title-block-header">
-<h1 class="title">Role assignment</h1>
+<h1 class="title">Variable cardinality</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -764,15 +764,16 @@ cursor: pointer;
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Committed assignments change how later cards interpret retained values, while the <strong>None</strong> role removes a variable from downstream data.</em></p>
+<p><em>The Variable cardinality card examines whether each variable’s number of distinct observed values is plausible for its data type and current role. It can expose unsuitable types, possible identifiers, constants, or categories needing reconsideration. The card is diagnostic.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Give every variable an explicit analytical role.</li>
-<li><strong>Secondary:</strong> Validate that types, missingness, and cardinality are appropriate for those roles.</li>
-<li><strong>Tertiary:</strong> Make downstream card behavior predictable and reviewable.</li>
+<li><strong>Primary:</strong> Compare variable cardinality across the dataset.</li>
+<li><strong>Secondary:</strong> Highlight combinations of data type and cardinality that deserve review.</li>
+<li><strong>Tertiary:</strong> Provide evidence for subsequent type and role decisions.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Drag each variable into one role container. The supported roles are:</p>
+<p>Cardinality is the number of distinct non-missing values in a variable. Its interpretation depends on context: three values may suit a nominal category but generate surprise in a decimal measurement, while near-uniqueness may suit text or an identifier but trouble a categorical predictor.</p>
+<p>The card compares each variable with configurable low- and high-cardinality thresholds and assigns one of four findings:</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 50%">
@@ -780,91 +781,75 @@ cursor: pointer;
 </colgroup>
 <thead>
 <tr class="header">
-<th>Role</th>
-<th>Intended use</th>
+<th>Finding</th>
+<th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Target</strong></td>
-<td>Outcome to be predicted.</td>
+<td><strong>Strong review</strong></td>
+<td>The combination is sufficiently unusual that its type, meaning, or usefulness should be checked.</td>
 </tr>
 <tr class="even">
-<td><strong>Predictor</strong></td>
-<td>Input available to a model or analysis.</td>
+<td><strong>Review</strong></td>
+<td>The combination is plausible but merits attention.</td>
 </tr>
 <tr class="odd">
-<td><strong>Treatment</strong></td>
-<td>Exposure whose possible causal effect is of interest.</td>
+<td><strong>Expected</strong></td>
+<td>The cardinality is broadly consistent with the variable’s data type or Identifier role.</td>
 </tr>
 <tr class="even">
-<td><strong>Identifier</strong></td>
-<td>One or more fields that identify an observation.</td>
-</tr>
-<tr class="odd">
-<td><strong>Weighting</strong></td>
-<td>Nonnegative numeric case weight.</td>
-</tr>
-<tr class="even">
-<td><strong>Partition</strong></td>
-<td>Predefined training or test membership.</td>
-</tr>
-<tr class="odd">
-<td><strong>Stratifier</strong></td>
-<td>Low-cardinality grouping used for comparison rather than prediction.</td>
-</tr>
-<tr class="even">
-<td><strong>Sequence</strong></td>
-<td>Meaningful observation order, commonly time.</td>
-</tr>
-<tr class="odd">
-<td><strong>Sensitive</strong></td>
-<td>Attribute retained for fairness assessment rather than prediction.</td>
-</tr>
-<tr class="even">
-<td><strong>Geometry</strong></td>
-<td>Spatial object used by geographic methods.</td>
-</tr>
-<tr class="odd">
-<td><strong>None</strong></td>
-<td>Variable removed from the data passed to downstream cards.</td>
+<td><strong>Not assessed</strong></td>
+<td>Scalar cardinality is unavailable or not informative for the variable.</td>
 </tr>
 </tbody>
 </table>
-<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.</p>
+<p>Constants receive <strong>Strong review</strong>, while variables without observed values are <strong>Not assessed</strong>. Low-cardinality decimal or text variables, high-cardinality nominal or ordered variables, low-cardinality codes, and unique integers commonly trigger review. Complete uniqueness is expected for decimal measurements and text. For nominal, ordered, or code variables it is expected only with the <strong>Identifier</strong> role; otherwise it prompts an identifier check.</p>
+<p>For large datasets, the card draws a deterministic random sample. It scans each full column only until the high-cardinality boundary is exceeded, preserving exact low-cardinality results without retaining an unlimited set of values. A displayed <code>≥</code> identifies a lower bound. Suspected complete uniqueness is verified against the full column.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.</p>
+<p>The horizontal bars show distinct observed values by variable. Their colors identify the four findings and match the flip-side rows. Optional reference lines show the low- and high-cardinality boundaries.</p>
+<p>A logarithmic scale keeps variables with few values visible beside variables with thousands; equal distances then represent multiplicative differences. The axis title states whether all observations or a deterministic sample were analyzed.</p>
+<p>Hover for the distinct count, analysis uniqueness, full-data observed and missing counts, role, types, finding, abbreviated explanation, and analysis basis. Full-screen mode provides more room for names and threshold labels.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side lists roles in the most recently committed output. Variables committed to <strong>None</strong> are absent because they are no longer part of that output. Uncommitted dragging is not shown.</p>
+<p>The flip-side table is ordered by finding severity and then decreasing cardinality. In addition to the hover information, it provides the full explanation and role consideration, together with:</p>
+<ul>
+<li><strong>Rows analyzed</strong>, which distinguishes the analysis sample size from the full observation count.</li>
+<li><strong>Unique %</strong>, the proportion of analyzed non-missing observations represented by distinct values.</li>
+<li><strong>Most frequent %</strong>, the proportion occupied by the most common analyzed value.</li>
+<li><strong>Singleton levels</strong>, the number of analyzed values occurring once.</li>
+<li><strong>Unused levels</strong>, declared categorical levels not present in the full column.</li>
+</ul>
+<p>The role column reports all current roles or <strong>Unassigned</strong> but does not assign or comprehensively validate them.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p><strong>Commit Assignments</strong> becomes available when the proposed role map is valid. Clicking it publishes the assignments and removes <strong>None</strong> variables from the data passed downstream. Dragging alone changes neither the exported roles nor columns. A removed variable remains available within this card and can be restored by assigning another role and committing again.</p>
-<p>If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Other role changes alter downstream eligibility; assigning <strong>None</strong> also reduces the data-frame width.</p>
+<p>This card has no data-changing action. Changing its settings recalculates or redisplays the diagnostic result only; the incoming dataset, types, roles, and pipeline are passed downstream unchanged.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Assign roles according to how variables may legitimately be used at prediction time. An identifier is not automatically a useful predictor; a sensitive attribute may be essential for auditing but inappropriate as a model input; and a sequence should represent a meaningful order rather than arbitrary row position.</p>
-<p>If a variable genuinely needs two analytical uses, create a deliberate duplicate rather than assigning multiple roles implicitly.</p>
+<p>Start with <strong>Strong review</strong> rather than treating every long bar as problematic. Ask whether the stored type expresses the variable’s meaning. A low-cardinality decimal might be a category code, ordered score, or rounded measurement. A high-cardinality nominal variable might contain spelling variants, excessive detail, or many rare categories—or actually be an identifier or text feature.</p>
+<p>Use concentration and singleton counts to distinguish a broadly populated vocabulary from many scarcely used values. Check suspicious variables against Data tabulation and domain knowledge before changing a type or role. Thresholds are screening aids, not universal rules.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>Validation can detect structural conflicts but cannot determine the correct scientific role.</li>
-<li>Sampling may be used to assess cardinality and missingness on very large datasets.</li>
-<li>Most singleton roles reflect current application and modeling constraints, not universal statistical rules.</li>
-<li>Committing a plausible role map does not prevent leakage from conceptually invalid predictors.</li>
-<li><strong>None</strong> removes a variable only from this card’s output; it does not alter the upstream dataset.</li>
+<li>Findings are heuristic and depend on the selected thresholds and the correctness of existing data types.</li>
+<li>Sample-based cardinality is a lower bound; uniqueness and frequency percentages describe the analyzed rows unless all rows were used.</li>
+<li>Rare values can be missed by sampling, although low-cardinality checks and suspected complete uniqueness receive full-data safeguards.</li>
+<li>Object, basket, geometry, complex, unknown, and all-missing variables do not receive ordinary scalar-cardinality interpretations.</li>
+<li>Shadow variables are excluded, and observation weights are not applied.</li>
+<li>Current roles affect only limited interpretations; the card is not a substitute for Role Assignment validation.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Identify the target, if the analysis is supervised.</li>
-<li>Separate identifiers, sequence fields, partitions, weights, and geometry from predictors.</li>
-<li>Assign exclusion and auditing roles deliberately.</li>
-<li>Resolve every validation message.</li>
-<li>Commit and confirm the assignments on the flip side.</li>
+<li>Place the Variable Cardinality card ahead of the Role Assignment card; other copies of the card can follow.</li>
+<li>Review the chart for <strong>Strong review</strong> and <strong>Review</strong> variables.</li>
+<li>Hover to compare cardinality with type, role, missingness, and analysis basis.</li>
+<li>Use the flip-side concentration and singleton fields to investigate unusual categorical variables.</li>
+<li>Confirm suspicious values and declared levels in Data tabulation.</li>
+<li>Correct inappropriate types in Variable modify, then make or revise roles in Role Assignment.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> The upstream variables and current role map.</li>
-<li><strong>Output:</strong> Retained values with the committed role map; variables assigned <strong>None</strong> are omitted.</li>
-<li><strong>Data journey:</strong> A committed role change or <strong>None</strong> removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.</li>
+<li><strong>Input:</strong> All non-shadow upstream variables, their current data types and roles, and the materialized data preview.</li>
+<li><strong>Output:</strong> The upstream data, roles, and pipeline unchanged.</li>
+<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
 </ul>
 
 

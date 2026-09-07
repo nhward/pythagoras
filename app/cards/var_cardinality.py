@@ -629,8 +629,14 @@ def _cardinality_figure(
             "fixedrange": not full_screen,
         },
         yaxis={"autorange": "reversed", "fixedrange": not full_screen},
-        showlegend=False,
+        showlegend=False,  # shows an unwanted entry for "trace 0"
+        modebar={"orientation": "v"},
+        modebar_remove=[
+            "select2d", "lasso2d", "toggleHover", "toggleSpikelines",
+            "hoverClosestCartesian", "hoverCompareCartesian",
+        ]
     )
+
     for status, colour in STATUS_COLOURS.items():
         figure.add_trace(go.Bar(
             x=[None], y=[None], name=status, marker_color=colour,
@@ -640,7 +646,7 @@ def _cardinality_figure(
         legend={
             "orientation": "h", "x": 0.5, "xanchor": "center",
             "y": -0.22, "yanchor": "top",
-        },
+        }
     )
     return figure
 

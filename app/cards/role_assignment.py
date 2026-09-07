@@ -21,13 +21,31 @@ from roles import Role, RoleMap
 from shiny import reactive, render, req, ui
 
 
+def _retained_role_state(
+    columns,
+    role_map: RoleMap,
+) -> tuple[list[object], RoleMap, list[object]]:
+    """Return the columns and roles exported after applying the None role."""
+    retained: list[object] = []
+    removed: list[object] = []
+    retained_roles = RoleMap()
+    for column in columns:
+        roles = role_map.roles_for(column)
+        if Role.NONE in roles:
+            removed.append(column)
+            continue
+        retained.append(column)
+        retained_roles.set_roles(column, roles)
+    return retained, retained_roles, removed
+
+
 def instance():
     """
     Creates an instance of Card configured as "roleAssign".
     """
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Role Assignment"
-    this.description = "This card enables the variables to be assigned to roles."
+    this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data."
 
     def settings():
         return ui.TagList(
@@ -82,7 +100,7 @@ def instance():
             class_ = "roles-layout",
             guide = this, 
             title = "Role assignments",
-            text = "Drag each variable into one role container and scroll horizontally to reach every role. Full-screen mode provides more room. Assignments remain provisional until validation succeeds and Commit Assignments is clicked.",
+            text = "Drag each variable into one role container and scroll horizontally to reach every role. Full-screen mode provides more room. Assignments remain provisional until validation succeeds and Commit Assignments is clicked. Variables committed to None are omitted from this card's downstream output.",
             position = "top",
             priority = 0
         )
@@ -106,7 +124,7 @@ def instance():
                 style = "border: 0px; box-shadow: none;",
                 guide = this, 
                 title = "Commit button",
-                text = "This button commits the role assignments. It bounces momentarily when it is ready to be clicked.",
+                text = "This button commits the role assignments. Variables assigned to None are removed from the data passed downstream, but remain available here for later reassignment. The button bounces momentarily when it is ready to be clicked.",
                 position = "top"
             ),
             ui.output_ui(
@@ -186,6 +204,10 @@ def instance():
             req(input.role_map())
             data = incomingproxy_data()
             role_map = RoleMap.from_primitive(input.role_map())
+            retained, retained_roles, removed = _retained_role_state(
+                data.frame.columns,
+                role_map,
+            )
             changes = []
             for variable in data.frame.columns:
                 original_roles = sorted(
@@ -194,20 +216,27 @@ def instance():
                 new_roles = sorted(
                     role.value for role in role_map.roles_for(variable)
                 )
-                if original_roles != new_roles:
-                    changes.append({
+                is_removed = variable in removed
+                if original_roles != new_roles or is_removed:
+                    change = {
                         "variable": str(variable),
                         "original_roles": original_roles,
                         "new_roles": new_roles,
-                    })
+                    }
+                    if is_removed:
+                        change["removed_downstream"] = True
+                    changes.append(change)
 
             if changes:
                 return data.with_cleaned_data(
-                    data.frame,
+                    data.frame.loc[:, retained],
                     card="role_assignment",
                     operation="Assign variable roles",
-                    parameters={"changes": changes},
-                    role_map=role_map,
+                    parameters={
+                        "changes": changes,
+                        "removed_variables": [str(variable) for variable in removed],
+                    },
+                    role_map=retained_roles,
                 )
             return data.with_inactive_step(
                 stage="Cleaning",
@@ -231,9 +260,14 @@ def instance():
             ui.update_action_button(id = "Commit", disabled = not ok)
             if ok:
                 desired_roles = RoleMap.from_primitive(input.role_map())
+                desired_columns, desired_output_roles, _ = _retained_role_state(
+                    incomingproxy_data().frame.columns,
+                    desired_roles,
+                )
                 if (
                     OutputData.is_set()
-                    and OutputData.get().role_map == desired_roles
+                    and list(OutputData.get().frame.columns) == desired_columns
+                    and OutputData.get().role_map == desired_output_roles
                 ):
                     return ui.span("Assignments applied", class_ = "text-success")
                 else:

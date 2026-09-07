@@ -17,6 +17,7 @@ os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
+from list_pandas import as_list
 from proxy_data import proxy_data
 from roles import Role, RoleMap
 
@@ -183,6 +184,29 @@ def test_container_values_can_be_compared(card_module):
 
     result = card_module._duplicate_results(frame, maximum_differences=0)
 
+    assert result.iloc[0]["Count"] == 1
+    assert result.iloc[0]["Redundant row numbers"] == "2"
+
+
+@pytest.mark.unit
+def test_basket_values_can_be_compared_and_deduplicated(card_module):
+    frame = pd.DataFrame({
+        "items": as_list([["apple", "milk"], ["apple", "milk"], ["bread"]]),
+        "group": ["A", "A", "B"],
+    })
+    proxy = proxy_data(_df=frame)
+
+    comparison = card_module._comparison_frame(frame)
+    duplicate = card_module._exact_duplicate_mask(proxy, significant_figures=16)
+    result = card_module._duplicate_results(frame, maximum_differences=0)
+
+    assert comparison["items"].dtype == object
+    assert comparison["items"].tolist() == [
+        ("apple", "milk"),
+        ("apple", "milk"),
+        ("bread",),
+    ]
+    assert duplicate.tolist() == [False, True, False]
     assert result.iloc[0]["Count"] == 1
     assert result.iloc[0]["Redundant row numbers"] == "2"
 

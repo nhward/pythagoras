@@ -20,6 +20,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from joblib import parallel_config
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -266,16 +267,19 @@ def _fit_forest_importance(
         else:
             score = r2_score(y.iloc[test], prediction, sample_weight=test_weight)
         fold_scores.append(float(score))
-        importance = permutation_importance(
-            model,
-            features.iloc[test],
-            y.iloc[test],
-            scoring=scoring,
-            n_repeats=5,
-            n_jobs=Module.N_JOBS,
-            random_state=random_state + fold,
-            sample_weight=test_weight,
-        )
+        # Threads avoid leaving loky processes, semaphores, and memory-mapped
+        # temporary folders behind when the Shiny server is interrupted.
+        with parallel_config(backend="threading"):
+            importance = permutation_importance(
+                model,
+                features.iloc[test],
+                y.iloc[test],
+                scoring=scoring,
+                n_repeats=5,
+                n_jobs=Module.N_JOBS,
+                random_state=random_state + fold,
+                sample_weight=test_weight,
+            )
         fold_importances.append(np.asarray(importance.importances, dtype=float))
     importance_values = np.concatenate(fold_importances, axis=1)
     importance_mean = np.mean(importance_values, axis=1)
