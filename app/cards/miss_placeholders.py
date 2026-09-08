@@ -20,12 +20,12 @@ import plotly.graph_objects as go
 import shinywidgets
 from card import Card
 from cyclic_pandas import is_cyclic
-from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data as Pxy
 from shiny import reactive, render, req, ui
 from shinywidgets import render_widget
 from text_pandas import is_text
+from var_types import key_from_dtype
 
 # Converts missing value placeholders to Na/NaN/NaT
 # Ideally this follows the correct conversion of strings to their real datatype esp. Datetime
@@ -52,36 +52,17 @@ def _placeholder_colour_map(present_codes: list[int]) -> dict[int, str]:
     return colours
 
 
-def _placeholder_kind(series: pd.Series) -> str | None:
-    """Return the semantic placeholder-matching family for a Series."""
-    dtype = series.dtype
-    if getattr(dtype, "name", None) == "geometry":
-        return None
-    if is_list(dtype):
-        return "list"
-    if is_cyclic(dtype):
-        return "str" if dtype.is_categorical else "float"
-    if isinstance(dtype, pd.CategoricalDtype):
-        return "str"
-    if is_text(dtype):
-        return "str"
-    if pd.api.types.is_datetime64_any_dtype(dtype):
-        return "datetime"
-    if pd.api.types.is_integer_dtype(dtype) and not pd.api.types.is_bool_dtype(dtype):
-        return "int"
-    if pd.api.types.is_float_dtype(dtype):
-        return "float"
-    if pd.api.types.is_string_dtype(dtype) or pd.api.types.is_object_dtype(dtype):
-        return "str"
-    return None
-
-
 def _columns_by_placeholder_kind(df: pd.DataFrame) -> dict[str, list[str]]:
-    columns = {"int": [], "float": [], "str": [], "datetime": [], "list": []}
+    columns = {"int": [], "dec": [], "str": [], "dte": [], "bkt": []}
     for column in df.columns:
-        kind = _placeholder_kind(df[column])
-        if kind is not None:
-            columns[kind].append(column)
+        kind = key_from_dtype(df[column].dtype)
+        if kind in ["geo", "cpx", "dur", "obj", "unk", "log"]:
+            continue
+        if kind == "cyc":
+            kind="str" if df[column].dtype.is_categorical else "dec"
+        if kind in ["cde", "nom", "ord", "txt"]:
+            kind="str"
+        columns[kind].append(column)
     return columns
 
 
@@ -109,7 +90,7 @@ def _scalar_placeholder_mask(
         if not case_sensitive:
             values = values.str.casefold()
         return values.eq(target).to_numpy(dtype=bool, na_value=False)
-    if kind == "datetime":
+    if kind == "dte":
         target = pd.to_datetime(placeholder, errors="coerce")
         if pd.isna(target):
             return np.zeros(len(series), dtype=bool)
@@ -124,7 +105,7 @@ def _scalar_placeholder_mask(
             if target != minimum and target != maximum:
                 return np.zeros(len(series), dtype=bool)
         return series.eq(target).to_numpy(dtype=bool, na_value=False)
-    if kind == "float":
+    if kind == "dec":
         try:
             target = float(placeholder)
         except (TypeError, ValueError):
@@ -418,10 +399,10 @@ def instance():
         @this.record_code
         def Sentinels():
             return {
-                "int":      input.NA_Integers(),
-                "float":    input.NA_Floats(),
-                "str":      input.NA_Strings(),
-                "datetime": input.NA_DateTime(),
+                "int":    input.NA_Integers(),
+                "dec":    input.NA_Floats(),
+                "str":    input.NA_Strings(),
+                "dte":    input.NA_DateTime(),
             }
 
 
@@ -606,7 +587,7 @@ def instance():
             codes_df = state["codes"]
             legend = state["legend"]
             fixed = state["fixed"]
-            cols = _select_cols(fixed.frame, "float")
+            cols = _select_cols(fixed.frame, "dec")
             if len(cols) == 0:
                 return Card.empty_figure(message="No decimal data to display")
             else:
@@ -636,7 +617,7 @@ def instance():
             codes_df = state["codes"]
             legend = state["legend"]
             fixed = state["fixed"]
-            cols = _select_cols(fixed.frame, "datetime")
+            cols = _select_cols(fixed.frame, "dte")
             if len(cols) == 0:
                 return Card.empty_figure(message="No datetime data to display")
             else:
@@ -759,7 +740,7 @@ def instance():
                     k += 1
             _apply_list_placeholder_codes(
                 df,
-                type_to_cols["list"],
+                type_to_cols["bkt"],
                 list_string_codes,
                 codes_arr,
                 col_pos,
@@ -775,7 +756,7 @@ def instance():
             Builds a Pandas data frame with the specified sentinels converted to the relevant missing value indictor.
             
             data : Something convertable to a Pandas dataframe 
-            sentinels: "int", "float", "str", "datetime" e.g. {"int":[-999,-99,-9], "float":[-9999.0,-999.0], "str":["", "NA","N/A"], "datetime":["0000-00-00","0001-01-01","1900-01-01","0"]}
+            sentinels: "int", "dec", "str", "dte" e.g. {"int":[-999,-99,-9], "dec":[-9999.0,-999.0], "str":["", "NA","N/A"], "dte":["0000-00-00","0001-01-01","1900-01-01","0"]}
             float_eps: when two floats are equal
             drop_geometry: whether to reduce to tabular columns only
             extrema: whether to only identify extreme placeholders
@@ -796,7 +777,7 @@ def instance():
             df = pd.DataFrame(df).copy()
             type_to_cols = _columns_by_placeholder_kind(df)
             parsed: dict[str, list[str]] = {
-                "int": [], "float": [], "str": [], "datetime": []
+                "int": [], "dec": [], "str": [], "dte": []
             }
             for sent in sentinels:
                 vtype, placeholder = sent.split(sep=": ", maxsplit=1)
@@ -827,7 +808,7 @@ def instance():
                 )
                 for placeholder in parsed["str"]
             }
-            for col in type_to_cols["list"]:
+            for col in type_to_cols["bkt"]:
                 df[col] = _remove_list_placeholders(
                     df[col],
                     list_placeholders,

@@ -272,7 +272,7 @@ def instance():
                     return ui.span("Assignments applied", class_ = "text-success")
                 else:
                     await session.send_custom_message("animate", {"id" : session.ns("Commit"), "animation" : "bounce", "delay" : 500})
-                    return ui.span("Assignments ready to commit", class_ = "text-primary")
+                    return ui.span("Assignments are ready to commit", class_ = "text-primary")
             else:
                 i = len(messages)
                 return ui.span(i,": ", messages[i-1], class_ = "text-danger")

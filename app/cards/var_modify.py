@@ -26,6 +26,7 @@ from module import Module
 from proxy_data import proxy_data as pxd
 from shiny import reactive, render, req, ui
 from text_pandas import as_text, is_text_like
+from var_types import TYPES, var_kind
 
 #TODO: Improve Script output
 #TODO: Expose more setting used in _Like functions
@@ -44,25 +45,6 @@ def instance():
     this.long_name = "Modification"
     this.description = "This card allows the basic modification of variables such as name, data-type, and cyclic-order ."
 
-    TYPE_CHOICES = {
-        "float64": "decimal",
-        "int64": "integer",
-        "float32": "decimal",
-        "int32": "integer",
-        "integer": "integer",
-        "boolean": "boolean",
-        "date": "date",
-        "datetime": "datetime",
-        "time": "time",
-        "text": "text",
-        "category": "nominal",
-        "ordered": "ordered",
-        "cyclic": "cyclic",
-        "basket": "basket",
-        "str": "code",
-        "object": "object"
-    }
-
     DATE_FORMATS = [
         "%Y-%m-%d",  # 2026-05-16
         "%d/%m/%Y",  # 16/05/2026
@@ -74,32 +56,6 @@ def instance():
         "%d/%m/%Y %H:%M:%S",
     ]
 
-    def _dtype_choice(dtype) -> str:
-        """Return the card's friendly type name for a pandas dtype."""
-        name = getattr(dtype, "name", str(dtype))
-        if name == "cyclic":
-            return "cyclic"
-        if name == "text":
-            return "text"
-        if name == "basket":
-            return "basket"
-        if name == "geometry":
-            return "geometry"
-        if isinstance(dtype, pd.CategoricalDtype):
-            return "ordered" if dtype.ordered else "nominal"
-        if pd.api.types.is_bool_dtype(dtype):
-            return "boolean"
-        if pd.api.types.is_integer_dtype(dtype):
-            return "integer"
-        if pd.api.types.is_float_dtype(dtype):
-            return "decimal"
-        if pd.api.types.is_datetime64_any_dtype(dtype):
-            return "datetime"
-        if isinstance(dtype, pd.StringDtype):
-            return "code"
-        if pd.api.types.is_object_dtype(dtype):
-            return "code"
-        return TYPE_CHOICES.get(str(dtype), str(dtype))
 
     def front():
         return ui.div(
@@ -121,7 +77,6 @@ def instance():
             this.guidedDiv(
                 ui.output_ui(id="DFDiff"),
                 id="X-DFDiff",
-                class_="html-fill-container html-fill-item",
                 guide=this,
                 title="Change report",
                 text="This report lists structural changes to the dataset by this card.",
@@ -136,7 +91,7 @@ def instance():
             this.guidedDiv(
                 ui.input_text(id="NewName", label="New Name", value=None, 
                 guide = this, title = "Proposed variable name", text="Changes the proposed name for the selected row. Names must remain unique; the role map is updated when a valid rename is committed.", position="top"),
-                ui.input_selectize(id="NewDataType", label="New Data Type", choices=list(set(TYPE_CHOICES)), selected=False, options={"dropdownParent": "body"}, 
+                ui.input_selectize(id="NewDataType", label="New Data Type", choices=list(set(TYPES.values())), selected=False, options={"dropdownParent": "body"}, 
                 guide = this, title = "Proposed variable data type", text="Changes the proposed type for the selected variable. Available choices depend on Alternative types; conversion affects downstream data only after commitment.", position="top"
                 ),
                 ui.input_selectize(id="NewOrder", label="New order", choices=[], selected=None, multiple=True, remove_button=False, width = "100%",
@@ -158,7 +113,6 @@ def instance():
                     id="Commit",
                     label="Commit modification",
                     icon=icon("gavel", title="Commit modification", a11y="sem"),
-                    # disabled=True,
                     width="220px",
                     class_="btn rounded-pill btn-sm btn-primary",
                     style="border: 0px; box-shadow: none;",
@@ -170,9 +124,7 @@ def instance():
                 ui.input_action_button(
                     id="Reset",
                     label=None,
-                    icon=icon(
-                        "arrow-rotate-left", title="Reset modifications", a11y="sem"
-                    ),
+                    icon=icon("arrow-rotate-left", title="Reset modifications", a11y="sem"),
                     class_="btn rounded-pill btn-sm btn-primary",
                     style="border: 0px; box-shadow: none;",
                     guide=this,
@@ -238,7 +190,7 @@ def instance():
             req(px is not None)
 
             def levels(series):
-                if _dtype_choice(series.dtype) == "ordered":
+                if var_kind(series.dtype) == "ordered":
                     if not isinstance(series.dtype, pd.CategoricalDtype):
                         series = series.astype("category")
                     order = series.cat.categories.tolist()
@@ -250,8 +202,8 @@ def instance():
                 {
                     "Orig\nname": px.columns,
                     "New\nname": px.columns,
-                    "Orig\nd-type": [_dtype_choice(px.frame[c].dtype) for c in px.columns],
-                    "New\nd-type": [_dtype_choice(px.frame[c].dtype) for c in px.columns],
+                    "Orig\nd-type": [var_kind(px.frame[c].dtype) for c in px.columns],
+                    "New\nd-type": [var_kind(px.frame[c].dtype) for c in px.columns],
                     "Orig\norder": [levels(px.frame[c]) for c in px.columns],
                     "New\norder": [levels(px.frame[c]) for c in px.columns],
                     "Role": [first_role(c) for c in px.columns],
@@ -308,7 +260,7 @@ def instance():
             req(row is not None, not row.empty)
             origType = row["Orig\nd-type"].iloc[0]
             if input.Alternatives() == "All":
-                return list(set(TYPE_CHOICES.values()))
+                return list(set(TYPES.values()))
             elif input.Alternatives() == "Related":
                 if origType == "cyclic":
                     possible = ["text", "nominal", "ordered", "cyclic"]
@@ -451,13 +403,9 @@ def instance():
             for col in df.columns:
                 s = df[col]
                 if is_list(s):
-                    lines.append(
-                        f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique=NA"
-                    )
+                    lines.append(f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique=NA")
                 else:
-                    lines.append(
-                        f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique={s.nunique(dropna=True)}"
-                    )
+                    lines.append(f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique={s.nunique(dropna=True)}")
             return lines
 
         @output
@@ -1105,6 +1053,8 @@ def instance():
                 return as_geometry(series)
             if new_type == "code":
                 return series.astype("string")
+            if new_type == "logical":
+                return series.astype("boolean")
             raise ValueError(f"Unsupported conversion type: {new_type}")
 
         return OutputData

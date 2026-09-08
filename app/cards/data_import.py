@@ -333,6 +333,9 @@ def instance():
                         sep=sep or ("\t" if ext == ".tsv" else ","),
                         **kwargs
                     )
+                    # It is safe to assume any "object" dtypes are really "string" dtypes (since we are reading a CSV)
+                    object_cols = df.select_dtypes(include="object").columns
+                    df[object_cols] = df[object_cols].astype("string")
                     # Promote to GeoDataFrame if "geometry" column exists
                     if "geometry" in df.columns:
                         try:

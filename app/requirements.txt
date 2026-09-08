@@ -1,3 +1,11 @@
+# Reqired for shinylive
+#
+# Packages listed in this file will be installed by micropip just before the app
+# is started. This means that each time someone visits the app, the packages
+# will be downloaded and installed into the browser's Pyodide environment.
+#
+# Each line must contain either a requirements specification or the URL for a
+# wheel file.
 scipy==1.14.1
 mlxtend==0.23.4
 joblib
