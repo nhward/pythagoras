@@ -412,7 +412,7 @@ class TestWebKitRoles:
         page.goto(app.url)
         populate_roles(page, VALID_ROLE_MAP)
         expect(by_id(page, "Commit")).to_be_enabled()
-        expect(by_id(page, "Check")).to_contain_text("Assignments ready to commit")
+        expect(by_id(page, "Check")).to_contain_text("Assignments are ready to commit")
 
     @pytest.mark.ui
     def test_invalid_role_map_disables_commit_and_shows_error(

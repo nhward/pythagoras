@@ -244,7 +244,7 @@ class TestSchema:
             "code": "code",
             "nominal": "nominal",
             "ordered": "ordered",
-            "when": "datetime",
+            "when": "date-time",
         }
 
     @pytest.mark.unit

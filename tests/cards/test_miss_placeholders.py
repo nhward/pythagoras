@@ -230,9 +230,9 @@ class TestServerInputs:
         _, functions = recorded_helpers(card_module, inputs=inputs)
         assert functions["Sentinels"]() == {
             "int": [-1],
-            "float": [-1.5],
+            "dec": [-1.5],
             "str": ["missing"],
-            "datetime": ["2000-01-01"],
+            "dte": ["2000-01-01"],
         }
 
     @pytest.mark.unit
@@ -256,14 +256,14 @@ class TestPlaceholderCodes:
     def test_codes_missing_and_each_sentinel(self, helpers):
         codes, legend = helpers["PlaceholderCodes"](
             sample_frame(),
-            {"int": [-999], "float": [-99.99], "str": ["NA"], "datetime": ["1900-01-01"]},
+            {"int": [-999], "dec": [-99.99], "str": ["NA"], "dte": ["1900-01-01"]},
         )
         assert codes.iloc[2].eq(0).all()
         assert codes.iloc[0].tolist() == [2, 3, 4, 5]
         assert codes.iloc[1].eq(1).all()
         assert legend == {
             0: "Missing", 1: "Not Missing", 2: "int: -999",
-            3: "float: -99.99", 4: "str: NA", 5: "datetime: 1900-01-01",
+            3: "dec: -99.99", 4: "str: NA", 5: "dte: 1900-01-01",
         }
 
     @pytest.mark.unit
@@ -317,7 +317,7 @@ class TestPlaceholderCodes:
         cycle = as_cyclic(pd.Series([0, 90, 180]), period=360)
         codes, _ = helpers["PlaceholderCodes"](
             pd.DataFrame({"cycle": cycle}),
-            {"float": [90]},
+            {"dec": [90]},
             extrema=False,
         )
         assert codes["cycle"].tolist() == [1, 2, 1]
@@ -404,7 +404,7 @@ class TestResolutionAndCharts:
         original = as_cyclic(pd.Series([0, 90, 180]), period=360)
         result = helpers["ResolvePlaceholders"](
             pd.DataFrame({"cycle": original}),
-            ["float: 90"],
+            ["dec: 90"],
             extrema=False,
         )
         assert result["cycle"].isna().tolist() == [False, True, False]
@@ -431,7 +431,7 @@ class TestResolutionAndCharts:
     @pytest.mark.unit
     def test_resolve_float_placeholder(self, helpers):
         frame = pd.DataFrame({"value": [-99.99, 1.5, 2.5]})
-        result = helpers["ResolvePlaceholders"](frame, ["float: -99.99"])
+        result = helpers["ResolvePlaceholders"](frame, ["dec: -99.99"])
         assert result["value"].isna().tolist() == [True, False, False]
 
     @pytest.mark.unit
@@ -469,7 +469,7 @@ class TestResolutionAndCharts:
         })
         proxy = proxy_data(_df=frame, _name="Semantic types")
         assert helpers["_select_cols"](proxy, "str") == ["category", "code"]
-        assert helpers["_select_cols"](proxy, "list") == ["items"]
+        assert helpers["_select_cols"](proxy, "bkt") == ["items"]
 
     @pytest.mark.unit
     def test_placeholder_chart_contains_transposed_heatmap(
