@@ -82,6 +82,9 @@
         },
         {
           "module": "data_parallel"
+        },
+        {
+          "module": "var_correlation"
         }
       ]
     },

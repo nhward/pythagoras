@@ -214,7 +214,7 @@ def instance():
             title=None,
             id="Navset", 
             padding=0, 
-            fillable=True
+            fillable=False
         )
     
     this.front=front

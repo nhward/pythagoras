@@ -1,0 +1,83 @@
+---
+title: Variable correlation
+---
+
+#### 🧭 Purpose
+
+_The Variable correlation card compares numeric predictors and treatment variables using several complementary measures of association. It helps you distinguish linear, monotonic, nonlinear, predictive, and directional relationships before feature selection or modeling. The card is diagnostic and does not change the data._
+
+#### 🎯 Goals
+
+1. **Primary:** Reveal strong relationships between eligible numeric variables.
+1. **Secondary:** Compare how different association measures describe the same variables.
+1. **Tertiary:** Identify redundancy, nonlinear structure, and directional predictive relationships requiring further investigation.
+
+#### 🧠 How it works
+
+The card includes numeric, non-Boolean, nonconstant variables with the Predictor or Treatment role. Numeric targets can be added with **Include target variables**. Weighting, shadow, text, Boolean, constant, and otherwise ineligible variables are excluded from the displayed matrix.
+
+Each tab applies a different measure:
+
+| Measure | Range | Directional? | Interpretation |
+|---|---:|---|---|
+| **Pearson** | −1 to 1 | No | Strength of a linear relationship. |
+| **Spearman** | −1 to 1 | No | Strength of a monotonic relationship after ranking values. |
+| **Kendall** | −1 to 1 | No | Rank concordance between pairs of observations. |
+| **Mutual info** | 0 to 1 | No | General dependence estimated with nearest neighbors and normalized to a correlation-like scale. |
+| **Distance** | 0 to 1 | No | Linear or nonlinear dependence measured from pairwise distances. |
+| **PPS** | 0 to 1 | Yes | Improvement of a decision-tree prediction over a naive baseline. |
+| **Latent** | −1 to 1 | No | Pearson correlation after empirical ranks are mapped to normal scores. |
+| **Xi** | 0 to 1 | Yes | Dependence of a destination variable on a source variable using Chatterjee's rank statistic. |
+
+For symmetric measures, reversing the variables gives the same value. PPS and Xi are directional: `A → B` can differ from `B → A`. The card retains those two values independently throughout calculation, visualization, and tabulation.
+
+Missing observations are removed separately for each variable pair. If exactly one suitable numeric Weighting variable is assigned, it is applied to Pearson and Spearman. Other measures are unweighted.
+
+#### 🏞️ Front
+
+Tabs select the association measure. The heat map displays source variables by row and destination variables by column. Signed measures use a red-to-blue scale unless **Show absolute values** is selected; nonnegative and absolute values use a blue gradation. The colorbar appears in full-screen mode.
+
+The chord chart places variables around a circle. Ribbon width at each endpoint represents the magnitude in that direction, so a directional ribbon can be wide at one end and narrow at the other. Without absolute values, blue ribbons indicate positive associations and red ribbons indicate negative associations; the two-item legend appears in full-screen mode. With absolute values, signs are removed, ribbons use one color, and no chord legend is needed. Hover reports both directions for a pair.
+
+The association threshold hides small magnitudes. Variable ordering changes presentation only. For directional results, the matrix and its transpose are combined solely to derive a shared display order; the displayed scores are never symmetrized.
+
+#### 🔄 Flip side
+
+The flip-side table lists **Source**, **Destination**, and **Value**, ordered by decreasing absolute magnitude and filtered by the current threshold. Symmetric measures appear once per unordered pair. PPS and Xi include both ordered directions. Values remain signed in this table even when **Show absolute values** changes the charts.
+
+#### 🛠️ Controls and actions
+
+This card has no data-changing action. Tabs, thresholds, chart style, absolute values, ordering, target inclusion, and sampling affect only the diagnostic outputs. The incoming data, roles, and pipeline pass downstream unchanged.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Begin with Pearson, Spearman, and Kendall to distinguish linear relationships from broader monotonic patterns. Compare Mutual info, Distance, and Xi when a scatterplot suggests curved, discontinuous, or otherwise nonlinear structure. Use PPS to ask a predictive question: whether one variable improves out-of-sample prediction of another beyond a naive baseline.
+
+Strong symmetric associations can indicate redundant measurements, derived variables, duplicated information, or genuine domain relationships. A strong directional value in only one direction is not contradictory: one variable may determine another while losing information needed to reverse that mapping. Inspect the underlying distributions and scatterplots before removing variables or assigning causal meaning.
+
+#### ⛔️ Limitations
+
+* Association does not establish causation, and thresholds are visual screening choices rather than significance tests.
+* Pairwise removal of missing values means different cells may use different observations; the resulting matrix need not behave like a single complete-data correlation matrix.
+* Only eligible numeric variables are analyzed. The Latent measure is a rank-Gaussian approximation, not a complete mixed-type latent-correlation model.
+* PPS depends on a particular decision-tree model and cross-validation split; it is an exploratory predictive score rather than a final model assessment.
+* Large data is deterministically sampled. Distance correlation is capped at 2,000 observations and PPS at 10,000 because their calculations are comparatively expensive.
+* Observation weights apply only to Pearson and Spearman and require exactly one suitable Weighting variable.
+
+#### 📌 Suggested workflow
+
+1. Confirm Predictor, Treatment, Target, and Weighting roles before interpreting the matrix.
+1. Inspect signed Pearson or rank correlations, then compare nonlinear measures.
+1. Use full-screen legends, hover, and the flip-side values to verify visual impressions.
+1. Compare both directions for PPS and Xi.
+1. Investigate strong or surprising pairs with plots, domain knowledge, and downstream validation.
+
+#### 🔗 Data flow
+
+* **Input:** Numeric, nonconstant Predictor and Treatment variables, an optional numeric Target, and an optional Weighting variable.
+* **Output:** The upstream data, roles, and pipeline unchanged.
+* **Data journey:** This diagnostic card does not add a journey step.

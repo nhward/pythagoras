@@ -713,7 +713,7 @@ def instance():
         return ui.TagList(
             ui.input_checkbox(
                 id="ShowThresholds", label="Show cardinality thresholds", value=True,
-                guide=this, title="Show thresholds", position="left",
+                guide=this, position="left",
                 text=(
                     "Draws the low- and high-cardinality reference lines. These "
                     "are screening guides rather than universal statistical limits."
@@ -721,7 +721,7 @@ def instance():
             ),
             ui.input_checkbox(
                 id="Logarithmic", label="Logarithmic cardinality axis", value=True,
-                guide=this, title="Logarithmic axis", position="left",
+                guide=this, position="left",
                 text=(
                     "Uses a logarithmic horizontal axis so variables with a few "
                     "levels remain visible beside variables with thousands of values."
@@ -730,7 +730,7 @@ def instance():
             ui.input_slider(
                 id="Thresholds", label="Cardinality thresholds", min=2, max=100,
                 value=(DEFAULT_LOW_CARDINALITY, DEFAULT_HIGH_CARDINALITY), step=1,
-                guide=this, title="Cardinality thresholds", position="left",
+                guide=this, position="left",
                 text=(
                     "The lower value matches Role Assignment's default maximum "
                     "cardinality for low-cardinality specialized roles. The upper "
@@ -740,7 +740,7 @@ def instance():
             ),
             ui.input_slider(
                 id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=5, ticks=True, pre="10^",
-                guide=this, title="Maximum observations", position="left",
+                guide=this, position="left",
                 text=(
                     "Above 10^n rows the chart uses a deterministic random sample. "
                     "Low-cardinality conclusions use bounded full-data checks, and "
@@ -754,11 +754,8 @@ def instance():
                     "finding": "Finding",
                     "original": "Original column order",
                 },
-                guide=this, title="Variable ordering", position="left",
-                text=(
-                    "Orders bars by distinct values, by review priority, or by the "
-                    "incoming data's column order. This changes presentation only."
-                ),
+                guide=this, position="left",
+                text="Orders bars by distinct values, by review priority, or by the incoming data's column order. This changes presentation only."
             ),
         )
 
