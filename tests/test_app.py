@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
+import re
+import shutil
 import sys
 import tempfile
+import time
+from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 
@@ -16,7 +19,7 @@ from shiny.run import ShinyAppProc
 
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
 APP_FILE = APP_DIR / "app.py"
-CONFIG_FILE = APP_DIR / "config" / "pythagoras.json"
+CONFIG_FILE = APP_DIR / "default.pythagoras.json"
 MODULE_NAME = "pythagoras_app_under_test"
 
 if str(APP_DIR) not in sys.path:
@@ -31,13 +34,24 @@ START_PAGE_TEST_ENV = {
     "SHINY_TESTMODE": "1",
     "PYTHAGORAS_TEST_SHOW_START": "true",
 }
-SAVE_TEST_PATH = (
-    Path(tempfile.gettempdir()) / f"pythagoras-save-test-{os.getpid()}.json"
+TEST_STATE_ROOT = Path(tempfile.mkdtemp(prefix="pythagoras-app-tests-"))
+BOOKMARK_TEST_DIR = TEST_STATE_ROOT / "saved-bookmarks"
+BOOKMARK_RESTORE_DIR = TEST_STATE_ROOT / "restored-bookmarks"
+WEB_TEST_ENV["PYTHAGORAS_TEST_BOOKMARK_DIR"] = str(
+    TEST_STATE_ROOT / "ordinary-bookmarks"
+)
+START_PAGE_TEST_ENV["PYTHAGORAS_TEST_BOOKMARK_DIR"] = str(
+    TEST_STATE_ROOT / "start-page-bookmarks"
 )
 SAVE_TEST_ENV = {
     "SHINY_TESTMODE": "1",
     "PYTHAGORAS_TEST_SHOW_START": "false",
-    "PYTHAGORAS_TEST_CONFIG_PATH": str(SAVE_TEST_PATH),
+    "PYTHAGORAS_TEST_BOOKMARK_DIR": str(BOOKMARK_TEST_DIR),
+}
+BOOKMARK_RESTORE_ENV = {
+    "SHINY_TESTMODE": "1",
+    "PYTHAGORAS_TEST_SHOW_START": "false",
+    "PYTHAGORAS_TEST_BOOKMARK_DIR": str(BOOKMARK_RESTORE_DIR),
 }
 
 app = create_app_fixture(
@@ -55,6 +69,23 @@ save_app = create_app_fixture(
     scope="function",
     env=SAVE_TEST_ENV,
 )
+bookmark_restore_app = create_app_fixture(
+    app="../app/app.py",
+    scope="function",
+    env=BOOKMARK_RESTORE_ENV,
+)
+server_bookmark_app = create_app_fixture(
+    app="scenarios/bookmark_server.py",
+    scope="function",
+    env=WEB_TEST_ENV,
+)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_test_state_root():
+    """Remove the unique filesystem state allocated for this test run."""
+    yield
+    shutil.rmtree(TEST_STATE_ROOT, ignore_errors=True)
 
 
 @pytest.fixture
@@ -65,6 +96,23 @@ def csv_file(tmp_path):
         encoding="utf-8",
     )
     return path
+
+
+def wait_for_shiny_ready(page: Page) -> None:
+    """Wait until bookmark startup has completed and Shiny is idle."""
+    page.wait_for_function(
+        """
+        () => Boolean(
+            window.Shiny?.shinyapp?.$inputValues
+            && Object.prototype.hasOwnProperty.call(
+                window.Shiny.shinyapp.$inputValues,
+                "BookmarkStartup",
+            )
+            && !document.documentElement.classList.contains("shiny-busy")
+        )
+        """,
+        timeout=20_000,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -128,11 +176,32 @@ class TestApplicationHelpers:
         monkeypatch.setenv("PYTHAGORAS_TEST_SHOW_START", "false")
         monkeypatch.delenv("SHINY_TESTMODE", raising=False)
         assert app_module.show_start_enabled() is True
-
         monkeypatch.setenv("SHINY_TESTMODE", "1")
         assert app_module.show_start_enabled() is False
         monkeypatch.setenv("PYTHAGORAS_TEST_SHOW_START", "true")
         assert app_module.show_start_enabled() is True
+
+    @pytest.mark.unit
+    def test_default_configuration_is_reread_from_disk(
+        self, app_module, monkeypatch, tmp_path
+    ):
+        configuration = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        path = tmp_path / "default.pythagoras.json"
+        path.write_text(json.dumps(configuration), encoding="utf-8")
+        monkeypatch.setattr(app_module, "CONFIG_PATH", path)
+
+        assert app_module.load_default_configuration()["settings"][
+            "show_start"
+        ] is configuration["settings"]["show_start"]
+
+        configuration["settings"]["show_start"] = not configuration[
+            "settings"
+        ]["show_start"]
+        path.write_text(json.dumps(configuration), encoding="utf-8")
+
+        assert app_module.load_default_configuration()["settings"][
+            "show_start"
+        ] is configuration["settings"]["show_start"]
 
     @pytest.mark.unit
     def test_welcome_document_is_embedded(self, app_module):
@@ -299,6 +368,48 @@ class TestApplicationHelpers:
         ]
 
     @pytest.mark.unit
+    def test_bookmark_restore_applies_settings_and_data_import_state(
+        self, app_module, sample_config
+    ):
+        saved = {
+            **sample_config,
+            "settings": {
+                **sample_config["settings"],
+                "section_style": "accordion",
+                "reuse_cards": False,
+                "max_card_height": "725px",
+                "max_dupl_cards": 4,
+            },
+            "layout": [
+                {
+                    "section": "Different saved layout",
+                    "cards": [
+                        {
+                            "module": "data_import",
+                            "state": {
+                                "inputs": {"Dataset": "sklearn::iris"},
+                                "last_committed_tab": "Dataset based",
+                            },
+                        },
+                        {
+                            "module": "miss_map",
+                            "state": {"ignored": True},
+                        },
+                    ],
+                }
+            ],
+        }
+
+        restored = app_module.restore_data_import_only(sample_config, saved)
+
+        assert restored["layout"][0]["section"] == "Data prep"
+        assert restored["layout"][0]["cards"][0]["state"] == (
+            saved["layout"][0]["cards"][0]["state"]
+        )
+        assert restored["layout"][1] == sample_config["layout"][1]
+        assert restored["settings"] == saved["settings"]
+
+    @pytest.mark.unit
     def test_configuration_writer_validates_before_atomic_replacement(
         self, app_module, sample_config, tmp_path
     ):
@@ -377,6 +488,7 @@ class TestApplicationHelpers:
                 "data_tabulation": "data_tabulation",
             },
             show_start=False,
+            section_style="accordion",
         )
 
         config_path = tmp_path / "pythagoras.json"
@@ -395,6 +507,7 @@ class TestApplicationHelpers:
             ],
         }
         assert written["layout"][1]["section"] == "Missing values"
+        assert written["settings"]["section_style"] == "accordion"
         assert sample_config["layout"][0]["section"] == "Data prep"
 
     @pytest.mark.unit
@@ -417,11 +530,13 @@ class TestApplicationBrowser:
     @pytest.mark.ui
     def test_shell_loads(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         expect(page.get_by_text("Pythagoras", exact=True)).to_be_visible()
 
     @pytest.mark.ui
     def test_configured_tabs_are_visible(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         expect(page.get_by_role("tab", name="Start", exact=True)).to_have_count(0)
         expect(page.locator("#welcome-to-pythagoras")).to_have_count(0)
         configured = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
@@ -435,6 +550,7 @@ class TestApplicationBrowser:
         self, page: Page, start_app: ShinyAppProc
     ):
         page.goto(start_app.url)
+        wait_for_shiny_ready(page)
 
         start_tab = page.get_by_role("tab", name="Start", exact=True)
         expect(start_tab).to_be_visible()
@@ -473,6 +589,7 @@ class TestApplicationBrowser:
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         page.locator("#ManageCardSection").click()
 
         checkbox = page.locator("#ShowStartSection")
@@ -497,6 +614,7 @@ class TestApplicationBrowser:
     @pytest.mark.ui
     def test_navigation_actions_are_available(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         expect(page.locator("#ManageCardSection")).to_be_visible()
         expect(page.locator("#SaveConfiguration")).to_be_visible()
         expect(page.locator("#FullScreen")).to_be_visible()
@@ -511,10 +629,238 @@ class TestApplicationBrowser:
         ]
 
     @pytest.mark.ui
+    def test_bookmark_button_opens_fixed_manager_card(self, page: Page, app: ShinyAppProc):
+        page.goto(app.url)
+        wait_for_shiny_ready(page)
+        page.locator("#SaveConfiguration").click()
+        dialog = page.get_by_role("dialog")
+        bookmark_card = dialog.locator("[id$='-Card']")
+        expect(bookmark_card).to_be_visible()
+        expect(bookmark_card).to_contain_text("Bookmarks")
+        expect(bookmark_card.locator(".drag-handle")).to_have_count(0)
+        expect(bookmark_card.locator(".close-btn")).to_have_count(0)
+        expect(dialog.locator("[id$='-SaveBookmark']")).to_be_visible()
+
+    @pytest.mark.ui
+    def test_local_bookmarks_are_selected_by_data_name_then_time(
+        self, page: Page, bookmark_restore_app: ShinyAppProc
+    ):
+        shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+        BOOKMARK_RESTORE_DIR.mkdir(parents=True)
+
+        def write_bookmark(filename, data_label, *, section_style="tab"):
+            candidate = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            candidate["settings"]["section_style"] = section_style
+            if section_style == "accordion":
+                candidate["settings"]["max_card_height"] = "725px"
+            imported = next(
+                card
+                for group in candidate["layout"]
+                for card in group["cards"]
+                if card["module"] == "data_import"
+            )
+            state = imported["state"]
+            state["last_committed_tab"] = "Dataset based"
+            state["inputs"]["Dataset"] = "sklearn::iris"
+            state["inputs"]["DName"] = data_label
+            candidate["bookmark"] = {
+                "filename": filename,
+                "created_at": datetime.now().astimezone().isoformat(),
+            }
+            (BOOKMARK_RESTORE_DIR / filename).write_text(
+                json.dumps(candidate), encoding="utf-8"
+            )
+            time.sleep(0.05)
+
+        try:
+            write_bookmark(
+                "Other--20260910T090000+1200.pythagoras.json",
+                "older configuration",
+                section_style="accordion",
+            )
+            write_bookmark(
+                "Assmnt--20260911T140000+1200.pythagoras.json",
+                "earlier Assmnt",
+            )
+            write_bookmark(
+                "Assmnt--20260911T154501+1200.pythagoras.json",
+                "latest Assmnt",
+            )
+
+            page.goto(bookmark_restore_app.url)
+            wait_for_shiny_ready(page)
+            expect(page.locator(
+                "[id^='data_import'][id$='-Name']"
+            ).first).to_contain_text("latest Assmnt", timeout=20_000)
+            page.locator("#SaveConfiguration").click()
+            dialog = page.get_by_role("dialog")
+            data_names = dialog.locator("[id$='-SelectedDataName']")
+            saved_times = dialog.locator("[id$='-SelectedBookmarkTime']")
+
+            expect(data_names).to_have_value("Assmnt")
+            assert data_names.locator("option").all_text_contents() == [
+                "Assmnt",
+                "Other",
+            ]
+            expect(saved_times).to_have_value("20260911T154501+1200")
+            assert saved_times.locator("option").all_text_contents()[0] != (
+                "20260911T154501+1200"
+            )
+
+            data_names.select_option("Other")
+            expect(saved_times).to_have_value("20260910T090000+1200")
+            dialog.locator("[id$='-LoadBookmark']").click()
+            expect(page.locator(
+                "[id^='data_import'][id$='-Name']"
+            ).first).to_contain_text(
+                "older configuration", timeout=20_000
+            )
+            expect(page.locator("#Accordion")).to_be_visible()
+            expect(page.locator(
+                "[id^='data_import'][id$='-Card']"
+            ).first).to_have_attribute("style", re.compile(r"725px"))
+        finally:
+            shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+
+    @pytest.mark.ui
+    def test_refresh_reads_newest_local_bookmark_by_creation_time(
+        self, page: Page, bookmark_restore_app: ShinyAppProc
+    ):
+        shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+        BOOKMARK_RESTORE_DIR.mkdir(parents=True)
+
+        def write_bookmark(dataset, name, filename, *, section_style="tab"):
+            candidate = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            candidate["settings"]["section_style"] = section_style
+            imported = next(
+                card
+                for group in candidate["layout"]
+                for card in group["cards"]
+                if card["module"] == "data_import"
+            )
+            state = imported["state"]
+            state["last_committed_tab"] = "Dataset based"
+            state["inputs"]["Dataset"] = f"sklearn::{dataset}"
+            state["inputs"]["DName"] = name
+            candidate["bookmark"] = {
+                "filename": filename,
+                "created_at": datetime.now().astimezone().isoformat(),
+            }
+            (BOOKMARK_RESTORE_DIR / filename).write_text(
+                json.dumps(candidate), encoding="utf-8"
+            )
+
+        try:
+            write_bookmark(
+                "iris", "first iris", "iris--first.pythagoras.json"
+            )
+            page.goto(bookmark_restore_app.url)
+            wait_for_shiny_ready(page)
+            expect(page.locator(
+                "[id^='data_import'][id$='-Name']"
+            ).first).to_contain_text(
+                "first iris", timeout=20_000
+            )
+
+            time.sleep(0.05)
+            write_bookmark(
+                "wine",
+                "newer wine",
+                "wine--newer.pythagoras.json",
+                section_style="accordion",
+            )
+            page.reload()
+            wait_for_shiny_ready(page)
+            expect(page.locator(
+                "[id^='data_import'][id$='-Name']"
+            ).first).to_contain_text(
+                "newer wine", timeout=20_000
+            )
+            expect(page.locator("#Accordion")).to_be_visible()
+        finally:
+            shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+
+    @pytest.mark.ui
+    def test_server_bookmark_is_restored_from_browser_after_refresh(
+        self, page: Page, server_bookmark_app: ShinyAppProc
+    ):
+        page.goto(server_bookmark_app.url)
+        wait_for_shiny_ready(page)
+        page.get_by_role("tab", name="Dataset based", exact=True).click()
+        page.evaluate(
+            """
+            Shiny.setInputValue(
+                "data_import-Dataset",
+                "sklearn::iris",
+                {priority: "event"},
+            );
+            """
+        )
+        expect(page.locator("#data_import-DName")).to_have_value("iris")
+        page.locator("#data_import-DName").fill("browser iris")
+        expect(page.locator("#data_import-Commit")).to_be_enabled()
+        page.locator("#data_import-Commit").click()
+        expect(page.locator("#data_import-Name")).to_contain_text(
+            "browser iris", timeout=20_000
+        )
+
+        page.locator("#SaveConfiguration").click()
+        dialog = page.get_by_role("dialog")
+        dialog.get_by_role(
+            "button", name="Save bookmark", exact=False
+        ).click()
+        expect(page.get_by_text("Bookmark saved as", exact=False)).to_be_visible()
+        data_names = dialog.locator("[id$='-SelectedDataName']")
+        saved_times = dialog.locator("[id$='-SelectedBookmarkTime']")
+        expect(data_names).to_have_value("browser-iris")
+        expect(saved_times).to_have_value(
+            re.compile(r"^\d{8}T\d{6}[+-]\d{4}$")
+        )
+        assert saved_times.locator("option").first.text_content() != (
+            saved_times.input_value()
+        )
+
+        page.evaluate(
+            """
+            async () => {
+                const database = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open("pythagoras-bookmarks", 1);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                const records = await new Promise((resolve, reject) => {
+                    const request = database.transaction(
+                        "bookmarks", "readonly",
+                    ).objectStore("bookmarks").getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                records[0].configuration.settings.section_style = "accordion";
+                await new Promise((resolve, reject) => {
+                    const request = database.transaction(
+                        "bookmarks", "readwrite",
+                    ).objectStore("bookmarks").put(records[0]);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+                database.close();
+            }
+            """
+        )
+
+        page.reload()
+        wait_for_shiny_ready(page)
+        expect(page.locator(
+            "[id^='data_import'][id$='-Name']"
+        ).first).to_contain_text("browser iris", timeout=20_000)
+        expect(page.locator("#Accordion")).to_be_visible(timeout=20_000)
+
+    @pytest.mark.ui
     def test_empty_section_can_add_a_card_and_then_be_deleted(
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         page.get_by_role("tab", name="Data prep", exact=True).click()
         page.locator("#ManageCardSection").click()
 
@@ -568,6 +914,7 @@ class TestApplicationBrowser:
         self, page: Page, app: ShinyAppProc, csv_file
     ):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         original_container = page.locator("#section_0-cards-container")
         expect(original_container.locator("#data_import-Card")).to_be_attached(timeout=20_000)
         page.locator("#ManageCardSection").click()
@@ -588,9 +935,10 @@ class TestApplicationBrowser:
     def test_renamed_section_is_written_by_save_button(
         self, page: Page, save_app: ShinyAppProc
     ):
-        SAVE_TEST_PATH.unlink(missing_ok=True)
+        shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
         try:
             page.goto(save_app.url)
+            wait_for_shiny_ready(page)
             expect(page.locator("#data_import-Card")).to_be_attached(
                 timeout=20_000
             )
@@ -605,27 +953,44 @@ class TestApplicationBrowser:
                 "tab", name="Input data", exact=True
             )).to_be_visible()
 
-            page.locator("#SaveConfiguration").click()
-            expect(page.get_by_text(
-                "Card layout saved. It will be used on the next app start."
+            page.locator("#ManageCardSection").click()
+            dialog = page.get_by_role("dialog")
+            dialog.get_by_label("Accordion", exact=True).check()
+            expect(dialog.get_by_label(
+                "Accordion", exact=True
+            )).to_be_checked()
+            dialog.get_by_role("button", name="Cancel", exact=True).click()
+            expect(page.get_by_role(
+                "tab", name="Input data", exact=True
             )).to_be_visible()
 
-            written = json.loads(SAVE_TEST_PATH.read_text(encoding="utf-8"))
+            page.locator("#SaveConfiguration").click()
+            dialog = page.get_by_role("dialog")
+            dialog.locator("[id$='-SaveBookmark']").click()
+            expect(page.get_by_text(
+                "Bookmark saved as", exact=False
+            )).to_be_visible()
+
+            saved = list(BOOKMARK_TEST_DIR.glob("*.pythagoras.json"))
+            assert len(saved) == 1
+            written = json.loads(saved[0].read_text(encoding="utf-8"))
             assert written["layout"][0]["section"] == "Input data"
             assert all(
                 group["section"] != "Data prep"
                 for group in written["layout"]
             )
+            assert written["settings"]["section_style"] == "accordion"
         finally:
-            SAVE_TEST_PATH.unlink(missing_ok=True)
+            shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
 
     @pytest.mark.ui
     def test_save_button_writes_data_import_inputs_and_committed_tab(
         self, page: Page, save_app: ShinyAppProc, csv_file
     ):
-        SAVE_TEST_PATH.unlink(missing_ok=True)
+        shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
         try:
             page.goto(save_app.url)
+            wait_for_shiny_ready(page)
             # expect(page.locator("#data_import-ServerFile")).to_be_attached(
             #     timeout=20_000
             # )
@@ -641,11 +1006,15 @@ class TestApplicationBrowser:
             page.get_by_role("tab", name="Web based", exact=True).click()
             page.locator("#data_import-UName").fill("uncommitted web draft")
             page.locator("#SaveConfiguration").click()
+            dialog = page.get_by_role("dialog")
+            dialog.locator("[id$='-SaveBookmark']").click()
             expect(page.get_by_text(
-                "Card layout saved. It will be used on the next app start."
+                "Bookmark saved as", exact=False
             )).to_be_visible()
 
-            written = json.loads(SAVE_TEST_PATH.read_text(encoding="utf-8"))
+            saved = list(BOOKMARK_TEST_DIR.glob("*.pythagoras.json"))
+            assert len(saved) == 1
+            written = json.loads(saved[0].read_text(encoding="utf-8"))
             data_import = next(
                 card
                 for group in written["layout"]
@@ -659,13 +1028,14 @@ class TestApplicationBrowser:
             assert state["inputs"]["UName"] == "uncommitted web draft"
             assert state["inputs"]["ServerFile"][0]["name"] == ("Assmnt.csv")
         finally:
-            SAVE_TEST_PATH.unlink(missing_ok=True)
+            shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
 
     @pytest.mark.ui
     def test_committed_data_reacts_through_cards_and_section_boundary(
         self, page: Page, app: ShinyAppProc, csv_file,
     ):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         # expect(page.locator("#data_import-ServerFile")).to_be_attached(timeout=20_000)
         # page.locator("#data_import-ServerFile").set_input_files(str(csv_file))
         # expect(page.locator("#data_import-Commit")).to_be_enabled()
@@ -680,6 +1050,7 @@ class TestApplicationBrowser:
         self, page: Page, app: ShinyAppProc, csv_file, tmp_path,
     ):
         page.goto(app.url)
+        wait_for_shiny_ready(page)
         # page.locator("#data_import-ServerFile").set_input_files(str(csv_file))
         expect(page.locator("#data_import-Commit")).to_be_enabled()
         page.locator("#data_import-Commit").click()

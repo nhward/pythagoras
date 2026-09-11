@@ -130,6 +130,16 @@ def test_reset_removes_instance_from_registry():
     assert m.namespace not in keys
 
 
+@pytest.mark.unit
+def test_reset_honours_instance_reuse_setting():
+    module = DummyModule(name="card")
+    module._reuse_cards = False
+
+    module.reset()
+
+    assert Module.Instances[module.namespace] is None
+
+
 @pytest.fixture
 def test_close_swallows_reset_errors(monkeypatch, capsys):
     m = DummyModule(name = "card")

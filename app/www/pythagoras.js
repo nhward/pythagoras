@@ -777,4 +777,321 @@ document.addEventListener("DOMContentLoaded", () => {
         clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
     };
 
+    const bookmarkDatabaseName = "pythagoras-bookmarks";
+    const bookmarkStoreName = "bookmarks";
+    const stagedBookmarkKey = "pythagoras-bookmark-once";
+    const settingsQueryParameter = "_pythagoras_settings";
+    const systemSettingNames = [
+        "section_style",
+        "show_start",
+        "reuse_cards",
+        "max_card_height",
+        "max_dupl_cards",
+    ];
+
+    const systemSettings = (configuration) => Object.fromEntries(
+        systemSettingNames.map((name) => [
+            name,
+            configuration?.settings?.[name],
+        ]),
+    );
+
+    const renderedSystemSettings = () => {
+        const content = document.querySelector(
+            'meta[name="pythagoras-settings"]',
+        )?.content;
+        return content ? systemSettings({ settings: JSON.parse(content) }) : {};
+    };
+
+    const clearSettingsQuery = () => {
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has(settingsQueryParameter)) return;
+        url.searchParams.delete(settingsQueryParameter);
+        window.history.replaceState(null, "", url);
+    };
+
+    const openBookmarkDatabase = () => new Promise((resolve, reject) => {
+        const request = indexedDB.open(bookmarkDatabaseName, 1);
+        request.onupgradeneeded = () => {
+            if (!request.result.objectStoreNames.contains(bookmarkStoreName)) {
+                request.result.createObjectStore(
+                    bookmarkStoreName,
+                    { keyPath: "filename" },
+                );
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    const bookmarkRecords = async () => {
+        const database = await openBookmarkDatabase();
+        try {
+            return await new Promise((resolve, reject) => {
+                const request = database.transaction(
+                    bookmarkStoreName,
+                    "readonly",
+                ).objectStore(bookmarkStoreName).getAll();
+                request.onsuccess = () => resolve(
+                    request.result.sort(
+                        (left, right) => right.createdAt - left.createdAt,
+                    ),
+                );
+                request.onerror = () => reject(request.error);
+            });
+        } finally {
+            database.close();
+        }
+    };
+
+    const addBookmarkRecord = async (record) => {
+        const database = await openBookmarkDatabase();
+        try {
+            await new Promise((resolve, reject) => {
+                const request = database.transaction(
+                    bookmarkStoreName,
+                    "readwrite",
+                ).objectStore(bookmarkStoreName).add(record);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        } finally {
+            database.close();
+        }
+    };
+
+    const bookmarkRecord = async (filename) => {
+        const database = await openBookmarkDatabase();
+        try {
+            return await new Promise((resolve, reject) => {
+                const request = database.transaction(
+                    bookmarkStoreName,
+                    "readonly",
+                ).objectStore(bookmarkStoreName).get(filename);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        } finally {
+            database.close();
+        }
+    };
+
+    const bookmarkFilenameParts = (filename) => {
+        const suffix = ".pythagoras.json";
+        if (!filename.endsWith(suffix)) return null;
+        const stem = filename.slice(0, -suffix.length);
+        const separator = stem.lastIndexOf("--");
+        if (separator <= 0 || separator === stem.length - 2) return null;
+        return {
+            dataName: stem.slice(0, separator),
+            timestamp: stem.slice(separator + 2),
+        };
+    };
+
+    const bookmarkDisplayTime = (timestamp, createdAt) => {
+        const match = timestamp.match(
+            /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})([+-])(\d{2})(\d{2})$/,
+        );
+        const value = match
+            ? new Date(
+                `${match[1]}-${match[2]}-${match[3]}`
+                + `T${match[4]}:${match[5]}:${match[6]}`
+                + `${match[7]}${match[8]}:${match[9]}`,
+            )
+            : new Date(createdAt * 1000);
+        return value.toLocaleString();
+    };
+
+    const publishBookmarkList = async (inputId) => {
+        if (!inputId) return;
+        const records = await bookmarkRecords();
+        Shiny.setInputValue(
+            inputId,
+            records.flatMap(({ filename, createdAt }) => {
+                const parts = bookmarkFilenameParts(filename);
+                if (!parts) return [];
+                return [{
+                    filename,
+                    createdAt,
+                    ...parts,
+                    displayTime: bookmarkDisplayTime(
+                        parts.timestamp,
+                        createdAt,
+                    ),
+                }];
+            }),
+            { priority: "event" },
+        );
+    };
+
+    const reportBookmarkOperation = (inputId, ok, message) => {
+        if (!inputId) return;
+        Shiny.setInputValue(
+            inputId,
+            { ok, message, nonce: Date.now() },
+            { priority: "event" },
+        );
+    };
+
+    const downloadBookmark = (filename, configuration) => {
+        const blob = new Blob(
+            [`${JSON.stringify(configuration, null, 2)}\n`],
+            { type: "application/json" },
+        );
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const stageBookmarkAndReload = (configuration) => {
+        sessionStorage.setItem(
+            stagedBookmarkKey,
+            JSON.stringify(configuration),
+        );
+        const url = new URL(window.location.href);
+        url.searchParams.set(
+            settingsQueryParameter,
+            JSON.stringify(systemSettings(configuration)),
+        );
+        // Let the Shiny flush that delivered this message finish before closing
+        // its WebSocket. Reloading synchronously can leave the server attempting
+        // to complete work against a session that the browser has just closed.
+        window.setTimeout(() => window.location.replace(url), 250);
+    };
+
+    let bookmarkStartupPublished = false;
+    const publishBookmarkStartup = async () => {
+        if (bookmarkStartupPublished) return;
+        bookmarkStartupPublished = true;
+        try {
+            const staged = sessionStorage.getItem(stagedBookmarkKey);
+            if (staged) {
+                sessionStorage.removeItem(stagedBookmarkKey);
+                clearSettingsQuery();
+                Shiny.setInputValue(
+                    "BookmarkStartup",
+                    {
+                        ready: true,
+                        source: "staged",
+                        configuration: JSON.parse(staged),
+                    },
+                    { priority: "event" },
+                );
+                return;
+            }
+            const records = await bookmarkRecords();
+            const latest = records[0];
+            if (
+                latest
+                && JSON.stringify(systemSettings(latest.configuration))
+                    !== JSON.stringify(renderedSystemSettings())
+            ) {
+                stageBookmarkAndReload(latest.configuration);
+                return;
+            }
+            Shiny.setInputValue(
+                "BookmarkStartup",
+                {
+                    ready: true,
+                    source: latest ? "indexeddb" : "none",
+                    configuration: latest?.configuration || null,
+                },
+                { priority: "event" },
+            );
+        } catch (error) {
+            console.warn("Could not read browser bookmarks", error);
+            Shiny.setInputValue(
+                "BookmarkStartup",
+                { ready: true, source: "none", configuration: null },
+                { priority: "event" },
+            );
+        }
+    };
+
+    // `shiny:connected` fires before Shiny sends its `init` message. Publishing
+    // an input from that event can therefore make the server receive `update`
+    // while the session is still in its Start state. The first idle event is
+    // emitted only after the initial server flush, when updates are valid.
+    window.jQuery(document).one("shiny:idle", publishBookmarkStartup);
+
+    Shiny.addCustomMessageHandler("bookmark_list", async (message) => {
+        try {
+            await publishBookmarkList(message.inputId);
+        } catch (error) {
+            reportBookmarkOperation(
+                message.operationInputId,
+                false,
+                `Could not list browser bookmarks: ${error.message}`,
+            );
+        }
+    });
+
+    Shiny.addCustomMessageHandler("bookmark_save", async (message) => {
+        try {
+            await addBookmarkRecord({
+                filename: message.filename,
+                createdAt: message.createdAt,
+                configuration: message.configuration,
+            });
+            downloadBookmark(message.filename, message.configuration);
+            await publishBookmarkList(message.listInputId);
+            reportBookmarkOperation(
+                message.operationInputId,
+                true,
+                `Bookmark saved as ${message.filename}.`,
+            );
+        } catch (error) {
+            reportBookmarkOperation(
+                message.operationInputId,
+                false,
+                error?.name === "ConstraintError"
+                    ? `Bookmark ${message.filename} already exists.`
+                    : `Bookmark was not saved: ${error.message}`,
+            );
+        }
+    });
+
+    Shiny.addCustomMessageHandler("bookmark_load", async (message) => {
+        try {
+            const record = await bookmarkRecord(message.filename);
+            if (!record) throw new Error("The selected bookmark was not found");
+            stageBookmarkAndReload(record.configuration);
+        } catch (error) {
+            reportBookmarkOperation(
+                message.operationInputId,
+                false,
+                `Bookmark could not be loaded: ${error.message}`,
+            );
+        }
+    });
+
+    Shiny.addCustomMessageHandler("bookmark_import", async (message) => {
+        try {
+            await addBookmarkRecord({
+                filename: message.filename,
+                createdAt: message.createdAt,
+                configuration: message.configuration,
+            });
+            stageBookmarkAndReload(message.configuration);
+        } catch (error) {
+            reportBookmarkOperation(
+                message.operationInputId,
+                false,
+                error?.name === "ConstraintError"
+                    ? `Bookmark ${message.filename} already exists.`
+                    : `Bookmark could not be imported: ${error.message}`,
+            );
+        }
+    });
+
+    Shiny.addCustomMessageHandler(
+        "bookmark_reload_configuration",
+        (message) => stageBookmarkAndReload(message.configuration),
+    );
+
 });

@@ -33,8 +33,9 @@ if str(ROOT) not in sys.path:
 os.chdir(ROOT)
 
 import cards  # noqa: F401
+from cards import sys_bookmark
 from faicons import icon_svg as icon
-from jsonschema import SchemaError, ValidationError, validate
+from jsonschema import validate
 from module import Module
 from shiny import App, reactive, req, ui
 
@@ -61,8 +62,8 @@ if Module.log_handler not in jslog.handlers:
     jslog.addHandler(Module.log_handler)
 
 config = Module.config
-CONFIG_PATH = ROOT / "config" / "pythagoras.json"
-SCHEMA_PATH = ROOT / "config" / "pythagoras.schema.json"
+CONFIG_PATH = ROOT / "default.pythagoras.json"
+SCHEMA_PATH = ROOT / "pythagoras.schema.json"
 CONFIG_WRITE_LOCK = threading.Lock()
 SECTION_NAME_PATTERN = re.compile(r"^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$")
 RESERVED_SECTION_NAMES = frozenset({"start"})
@@ -71,6 +72,7 @@ TEST_SHOW_START_ENV = "PYTHAGORAS_TEST_SHOW_START"
 TEST_CONFIG_PATH_ENV = "PYTHAGORAS_TEST_CONFIG_PATH"
 START_SECTION_ID = "start"
 SECTIONS_NAV_ID = "sections"
+SETTINGS_QUERY_PARAMETER = "_pythagoras_settings"
 WELCOME_ICON_TAG_PATTERN = re.compile(
     r"<i\b(?P<attributes>[^>]*)>\s*</i>",
     flags=re.IGNORECASE,
@@ -187,6 +189,7 @@ def configuration_from_section_state(
     card_modules: Mapping[str, str],
     card_states: Mapping[str, Mapping[str, object]] | None = None,
     show_start: bool,
+    section_style: str | None = None,
 ) -> dict[str, object]:
     """Serialize live ID-keyed sections, including their current names."""
     candidate = deepcopy(dict(base_config))
@@ -228,6 +231,10 @@ def configuration_from_section_state(
     settings = candidate.get("settings")
     if not isinstance(settings, dict):
         raise TypeError("Configuration settings must be an object")
+    if section_style is not None:
+        if section_style not in {"tab", "accordion"}:
+            raise ValueError("Unknown section style")
+        settings["section_style"] = section_style
 
     settings["show_start"] = show_start
     candidate["layout"] = saved_layout
@@ -314,6 +321,63 @@ def write_validated_configuration(
                 temporary_path.unlink(missing_ok=True)
 
 
+def validate_configuration(candidate: Mapping[str, object]) -> None:
+    """Validate a complete configuration without writing it."""
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    validate(instance=candidate, schema=schema)
+
+
+def load_default_configuration() -> dict[str, object]:
+    """Read and validate the default configuration afresh."""
+    candidate = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    if not isinstance(candidate, dict):
+        raise TypeError("The default configuration must be an object")
+    validate_configuration(candidate)
+    return candidate
+
+
+def data_import_state(
+    candidate: Mapping[str, object],
+) -> Mapping[str, object] | None:
+    """Return the first saved data-import state in a configuration."""
+    for group in candidate.get("layout", []):
+        if not isinstance(group, Mapping):
+            continue
+        for card in group.get("cards", []):
+            if not isinstance(card, Mapping):
+                continue
+            if card.get("module") != "data_import":
+                continue
+            state = card.get("state")
+            return state if isinstance(state, Mapping) else None
+    return None
+
+
+def restore_data_import_only(
+    base: Mapping[str, object],
+    saved: Mapping[str, object],
+) -> dict[str, object]:
+    """Apply bookmarked system settings and data-import state to the app."""
+    candidate = deepcopy(dict(base))
+    settings = saved.get("settings")
+    if isinstance(settings, Mapping):
+        candidate["settings"] = deepcopy(dict(settings))
+    state = data_import_state(saved)
+    if state is not None:
+        for group in candidate.get("layout", []):
+            for card in group.get("cards", []):
+                if card.get("module") == "data_import":
+                    card["state"] = deepcopy(dict(state))
+                    break
+            else:
+                continue
+            break
+    metadata = saved.get("bookmark")
+    if isinstance(metadata, Mapping):
+        candidate["bookmark"] = deepcopy(dict(metadata))
+    return candidate
+
+
 def configuration_write_path() -> Path:
     """Return the real config path, or an isolated path in Shiny test mode."""
     if os.environ.get("SHINY_TESTMODE") == "1":
@@ -383,9 +447,12 @@ def welcome():
         return ""
 
 
-def show_start_enabled() -> bool:
+def show_start_enabled(configuration: Mapping[str, object] | None = None) -> bool:
     """Return the configured Start-page state, with a test-only override."""
-    configured = bool(config.get("settings", {}).get("show_start", False))
+    configuration = configuration or config
+    configured = bool(
+        configuration.get("settings", {}).get("show_start", False)
+    )
     if os.environ.get("SHINY_TESTMODE") != "1":
         return configured
 
@@ -484,13 +551,14 @@ def start_panel():
     )
 
 
-def create_sections():
-    group_style = config.get("settings", {}).get("section_style")
+def create_sections(configuration: Mapping[str, object] | None = None):
+    configuration = configuration or config
+    group_style = configuration.get("settings", {}).get("section_style")
     panels = []
-    if show_start_enabled():
+    if show_start_enabled(configuration):
         panels.append(start_panel())
     if group_style == "tab":
-        for index, group in enumerate(config["layout"]):
+        for index, group in enumerate(configuration["layout"]):
             panels.append(section_panel(
                 configured_section_id(index),
                 group["section"],
@@ -509,7 +577,7 @@ def create_sections():
                             group_style=group_style,
                             empty=not group["cards"],
                         )
-                        for index, group in enumerate(config["layout"])
+                        for index, group in enumerate(configuration["layout"])
                     ],
                     multiple=False,
                     id="Accordion",
@@ -519,76 +587,97 @@ def create_sections():
         )
     return panels
 
+
+def configuration_for_ui_request(request) -> dict[str, object]:
+    """Resolve system settings before constructing session navigation UI."""
+    try:
+        candidate = load_default_configuration()
+        encoded_settings = request.query_params.get(SETTINGS_QUERY_PARAMETER)
+        if encoded_settings:
+            settings = json.loads(encoded_settings)
+            if not isinstance(settings, dict):
+                raise TypeError("System settings must be an object")
+            candidate["settings"] = settings
+            validate_configuration(candidate)
+            return candidate
+
+        if request.url.hostname in {"localhost", "127.0.0.1", "::1"}:
+            saved = sys_bookmark.latest_local_bookmark(validator=validate_configuration)
+            if isinstance(saved, Mapping) and isinstance(saved.get("settings"), Mapping):
+                candidate["settings"] = deepcopy(dict(saved["settings"]))
+    except Exception:
+        log.exception("Could not apply bookmarked settings to the initial UI")
+        return deepcopy(config)
+    return candidate
+
+
+def application_ui(configuration: Mapping[str, object]):
+    """Build the page using the resolved per-request system settings."""
+    settings_json = json.dumps(configuration.get("settings", {}))
+    return ui.page_fillable(
+        ui.head_content(
+            ui.tags.meta(
+                name="pythagoras-settings",
+                content=settings_json,
+            ),
+            ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
+            [ui.include_js(script, method="inline") for script in dict.fromkeys(Module.script_list)],
+            [ui.include_css(css, method="inline") for css in dict.fromkeys(Module.css_list)],
+            [ui.tags.script(type="module", src=script) for script in dict.fromkeys(Module.mjs_list)],
+        ),
+        ui.busy_indicators.options(spinner_type="bars2"),
+        ui.busy_indicators.use(),
+        ui.page_navbar(
+            *create_sections(configuration),
+            ui.nav_spacer(),
+            ui.nav_control(ui.input_action_button(
+                id="ManageCardSection", label=None, icon=icon("wrench", title="Manage card or section", a11y="sem"),
+                class_="btn rounded-pill btn-sm fa-xl",
+                style="border: 0px; box-shadow: none; display: block;",
+            )),
+            ui.nav_control(ui.input_action_button(
+                id="SaveConfiguration", label=None, icon=icon("bookmark", title="Manage bookmarks", a11y="sem"),
+                class_="btn rounded-pill btn-sm fa-xl",
+                style="border: 0px; box-shadow: none; display: block;",
+            )),
+            ui.nav_control(ui.input_action_button(
+                id="FullScreen", label=None, icon=icon("expand", title="Toggle full screen", a11y="sem"),
+                class_="btn rounded-pill btn-sm fa-xl",
+                style="border: 0px; box-shadow: none; display: block;",
+            )),
+            ui.nav_control(ui.input_action_button(
+                id="Quit", label=None, icon=icon("stop", title="Quit session", a11y="sem"),
+                class_="btn rounded-pill btn-sm fa-xl",
+                style="border: 0px; box-shadow: none; display: block;",
+            )),
+            id="Navbar",
+            title=ui.tooltip(
+                ui.TagList(
+                    ui.tags.img(src="favicon.ico", style="height:2em; margin-right:0.5em;"),
+                    ui.span("Pythagoras", class_="text-primary"),
+                ),
+                '"All is number."',
+                placement="bottom",
+            ),
+            fillable=False,
+        ),
+    )
+
 def application():
     """
     Create a shiny app.
     This involves creating UI (app_ui) and SERVER (server) functions and
     passing these to shiny.app.
     """
-    # main ui object for the app
-    app_ui = ui.page_fillable(
-        ui.head_content(
-            ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
-            [ui.include_js(script, method="inline") for script in dict.fromkeys(Module.script_list)], # iterate through unique js scripts
-            [ui.include_css(css, method="inline") for css in dict.fromkeys(Module.css_list)], # iterate through unique CSS documents
-            [ui.tags.script(type = "module", src=script) for script in dict.fromkeys(Module.mjs_list)] # iterate through unique mjs modules
-        ),
-        ui.busy_indicators.options(spinner_type = "bars2"),
-        ui.busy_indicators.use(),
-        ui.page_navbar(
-            *create_sections(),  # << This is the important call here
-            ui.nav_spacer(),
-            ui.nav_control(
-                ui.input_action_button(
-                    id = "ManageCardSection",
-                    label= None, 
-                    icon = icon("wrench", title = "Manage card or section", a11y = "sem"),
-                    class_ = "btn rounded-pill btn-sm fa-xl",
-                    style = "border: 0px; box-shadow: none; display: block;"
-                )
-            ),
-            ui.nav_control(
-                ui.input_action_button(
-                    id = "SaveConfiguration",
-                    label = None,
-                    icon = icon("bookmark", title = "Save card and section layout", a11y = "sem"),
-                    class_ = "btn rounded-pill btn-sm fa-xl",
-                    style = "border: 0px; box-shadow: none; display: block;"
-                )
-            ),
-            ui.nav_control(
-                ui.input_action_button(
-                    id = "FullScreen",  
-                    label= None, 
-                    icon = icon("expand", title = "Toggle full screen", a11y = "sem"),
-                    class_ = "btn rounded-pill btn-sm fa-xl",
-                    style = "border: 0px; box-shadow: none; display: block;"
-                )
-            ),
-            ui.nav_control(
-                ui.input_action_button(
-                    id = "Quit",  
-                    label = None, 
-                    icon = icon("stop", title = "Quit session", a11y = "sem"),
-                    class_ = "btn rounded-pill btn-sm fa-xl",
-                    style = "border: 0px; box-shadow: none; display: block;"
-                )
-            ),
-
-            id = "Navbar",
-            title = ui.tooltip(
-                ui.TagList(ui.tags.img(src="favicon.ico", style="height:2em; margin-right:0.5em;"), ui.span("Pythagoras", class_ = "text-primary")),
-                '"All is number."',
-                placement = "bottom"
-            ),
-            fillable=False
-        )
+    app_ui = lambda request: application_ui(
+        configuration_for_ui_request(request)
     )
 
     # main server function for the app
     def server(input, output, session):
         Module.ModSession = session
 
+        ActiveConfiguration = reactive.Value(None)
         card_nodes: dict[str, CardNode] = {}
         section_definitions = {
             configured_section_id(index): deepcopy(group)
@@ -598,6 +687,9 @@ def application():
         SectionsVisited = reactive.value(())
         TopologyVersion = reactive.value(0)
         ShowStart = reactive.value(show_start_enabled())
+        PendingSectionStyle = reactive.value(
+            str(config.get("settings", {}).get("section_style", "tab"))
+        )
         next_section_number = len(section_definitions)
 
         def section_name(section_id: str) -> str:
@@ -626,6 +718,63 @@ def application():
             card_nodes.pop(namespace, None)
             bump_topology()
 
+        def active_settings() -> Mapping[str, object]:
+            active = ActiveConfiguration()
+            req(isinstance(active, Mapping))
+            settings = active.get("settings")
+            req(isinstance(settings, Mapping))
+            return settings
+
+        def section_style() -> str:
+            value = active_settings().get("section_style")
+            req(value in {"tab", "accordion"})
+            return str(value)
+
+        @reactive.effect
+        def initialise_configuration():
+            """Resolve the startup bookmark before any analysis card is built."""
+            startup_value = input.BookmarkStartup()
+            req(isinstance(startup_value, Mapping))
+            req(startup_value.get("ready") is True)
+            mode = Module.runtime_mode(session)
+            selected = None
+            try:
+                base_configuration = load_default_configuration()
+                if startup_value.get("source") == "staged":
+                    selected = startup_value.get("configuration")
+                elif mode == "local":
+                    selected = sys_bookmark.latest_local_bookmark(validator=validate_configuration)
+                elif startup_value.get("source") == "indexeddb":
+                    selected = startup_value.get("configuration")
+                if selected is not None:
+                    if not isinstance(selected, Mapping):
+                        raise TypeError("The saved configuration is not an object")
+                    # Shiny represents browser arrays as tuples when a custom input value reaches Python.
+                    # Round-trip through JSON to recover the list-based configuration representation.
+                    selected = json.loads(json.dumps(selected))
+                    validate_configuration(selected)
+                    restored = restore_data_import_only(base_configuration, selected)
+                    ShowStart.set(show_start_enabled(restored))
+                    PendingSectionStyle.set(str(restored["settings"].get("section_style", "tab")))
+                    ActiveConfiguration.set(restored)
+                    log.info("🔖 Restored bookmarked settings and data import")
+                    return
+            except Exception as error:
+                log.exception("Could not restore the startup bookmark")
+                ui.notification_show(
+                    f"The saved bookmark could not be restored: {error}",
+                    type="warning",
+                    duration=None,
+                )
+            try:
+                fallback = load_default_configuration()
+            except Exception:
+                log.exception("Could not reread the default configuration")
+                fallback = deepcopy(config)
+            ShowStart.set(show_start_enabled(fallback))
+            PendingSectionStyle.set(str(fallback.get("settings", {}).get("section_style", "tab")))
+            ActiveConfiguration.set(fallback)
+
         @reactive.effect
         async def startup():
             if ShowStart():
@@ -637,8 +786,8 @@ def application():
             Uses the group_style to determine how to assess the current group name.
             The name is tested in case it is not a valid group name (i.e. a nav_bar button)
             """
-            section_style = config.get("settings", {}).get("section_style")
-            if section_style == "tab":
+            style = section_style()
+            if style == "tab":
                 current = input.Navbar()
             else:
                 current = input.Accordion()
@@ -648,12 +797,7 @@ def application():
             valid = SectionOrder()
             #Check that the current tab-item is not a button etc
             req(current in valid)
-            log.debug(
-                "🔀 Section switched to %r (%s) using %s style",
-                section_name(current),
-                current,
-                section_style,
-            )
+            log.debug("🔀 Section switched to %r (%s) using %s style", section_name(current), current, style)
             return current
 
         def create_card(
@@ -661,11 +805,16 @@ def application():
             state: Mapping[str, object] | None = None,
         ):
             module_name = f"cards.{name}"
+            settings = active_settings()
+            previous_limit = Module.MaxInstances
             try:
+                Module.MaxInstances = int(settings["max_dupl_cards"])
                 module = importlib.import_module(module_name)
                 if not hasattr(module, "instance"):
                     raise AttributeError(f"{module_name} does not define instance()")
                 module = module.instance()
+                module.max_height = str(settings["max_card_height"])
+                module._reuse_cards = bool(settings["reuse_cards"])
                 restore = getattr(module, "restore_configuration_state", None)
                 if state is not None and callable(restore):
                     restore(state)
@@ -674,18 +823,22 @@ def application():
             except Exception:
                 log.exception(f"⚠️ Failed to instantiate card {module_name}")
                 return None
+            finally:
+                Module.MaxInstances = previous_limit
 
         @reactive.effect
         def create_section_cards():
+            active_configuration = ActiveConfiguration()
+            req(isinstance(active_configuration, Mapping))
             current = currentSection()
             if current not in SectionsVisited.get():
                 model_group = section_definitions.get(current)
                 req(model_group is not None)
                 for card in model_group["cards"]:
-                    instance = create_card(
-                        card["module"],
-                        state=card.get("state"),
-                    )
+                    state = card.get("state")
+                    if card["module"] == "data_import":
+                        state = data_import_state(active_configuration)
+                    instance = create_card( card["module"], state=state )
                     if instance is None:
                         continue
                     ui.insert_ui(ui = instance.call_ui(), selector = f"#{current}-cards-container", where = "beforeEnd")
@@ -727,7 +880,7 @@ def application():
             cardDict = {}
             cards_dir = Module.ROOT / "cards"
             for path in sorted(cards_dir.glob("*.py")):
-                if path.name == "__init__.py":
+                if path.name in {"__init__.py", "sys_bookmark.py"}:
                     continue
                 cardDict[path.stem] = path
             # re-evaluate every hour
@@ -741,6 +894,7 @@ def application():
             *,
             current_name: str,
             show_start: bool,
+            selected_section_style: str,
             selected="card",
         ):
             """Build the card and section management modal."""
@@ -759,6 +913,13 @@ def application():
                     id="ShowStartSection",
                     label='Show "Start" section',
                     value=show_start,
+                ),
+                ui.input_radio_buttons(
+                    id="SectionStyleSetting",
+                    label="Section style (applies after save & restart)",
+                    choices={"tab": "Tab", "accordion": "Accordion"},
+                    selected=selected_section_style,
+                    inline=True,
                 ),
                 ui.navset_tab(
                     ui.nav_panel(
@@ -837,6 +998,7 @@ def application():
                 available_cards(),
                 current_name=section_name(section),
                 show_start=ShowStart(),
+                selected_section_style=PendingSectionStyle(),
                 selected=selected,
             ))
 
@@ -844,10 +1006,16 @@ def application():
         @reactive.event(input.ManageCardSection)
         def showPicker():
             """Open the combined creation modal at its card tab."""
-            if input.Navbar() == START_SECTION_ID:
-                section = SectionOrder()[0]
+            if section_style() == "tab":
+                if input.Navbar() == START_SECTION_ID:
+                    section = SectionOrder()[0]
+                else:
+                    section = currentSection()
             else:
-                section = currentSection()
+                if input.Accordion() == START_SECTION_ID:
+                    section = SectionOrder()[0]
+                else:
+                    section = currentSection()
             show_add_modal(section=section, selected="card")
 
         @reactive.effect
@@ -858,7 +1026,7 @@ def application():
             if desired == ShowStart():
                 return
 
-            group_style = config.get("settings", {}).get("section_style")
+            group_style = section_style()
             sections_target = (
                 SectionOrder()[0]
                 if group_style == "tab"
@@ -877,6 +1045,14 @@ def application():
                     ui.update_navset(id="Navbar", selected=sections_target)
                 ui.remove_nav_panel(id="Navbar", target=START_SECTION_ID)
             ShowStart.set(desired)
+
+        @reactive.effect
+        @reactive.event(input.SectionStyleSetting)
+        def remember_section_style():
+            """Retain the requested style for the next saved configuration."""
+            requested = input.SectionStyleSetting()
+            if requested in {"tab", "accordion"}:
+                PendingSectionStyle.set(requested)
 
         @reactive.effect
         @reactive.event(input.AddCardToSection)
@@ -934,7 +1110,7 @@ def application():
                 SectionsVisited.set(ordered_visited(
                     (*SectionsVisited.get(), created)
                 ))
-                group_style = config.get("settings", {}).get("section_style")
+                group_style = section_style()
                 panel = section_panel(
                     created,
                     name,
@@ -1063,7 +1239,7 @@ def application():
 
             index = order.index(section)
             neighbor = order[index - 1] if index > 0 else order[index + 1]
-            group_style = config.get("settings", {}).get("section_style")
+            group_style = section_style()
             if group_style == "tab":
                 ui.update_navset(id="Navbar", selected=neighbor)
                 ui.remove_nav_panel(id="Navbar", target=section)
@@ -1079,79 +1255,95 @@ def application():
             section_definitions.pop(section, None)
             bump_topology()
 
+        def snapshot_configuration() -> dict[str, object]:
+            """Capture the current session for the bookmark manager."""
+            visited = tuple(SectionsVisited.get())
+            section_orders: dict[str, tuple[str, ...]] = {}
+            for section_id in visited:
+                input_id = f"{section_id}_CardOrder"
+                raw_order = input[input_id]()
+                if raw_order is None:
+                    raise ValueError(
+                        "Card order is not ready for section "
+                        f"{section_name(section_id)!r}"
+                    )
+                section_orders[section_id] = tuple(
+                    value.removesuffix("-Card") for value in raw_order
+                )
+
+            base = ActiveConfiguration()
+            req(isinstance(base, Mapping))
+            return configuration_from_section_state(
+                base,
+                section_order=SectionOrder(),
+                section_definitions=section_definitions,
+                visited_sections=visited,
+                section_orders=section_orders,
+                card_modules={
+                    namespace: node.card.name
+                    for namespace, node in card_nodes.items()
+                },
+                card_states={
+                    namespace: snapshot()
+                    for namespace, node in card_nodes.items()
+                    if callable(
+                        snapshot := getattr(
+                            node.card,
+                            "configuration_state",
+                            None,
+                        )
+                    )
+                },
+                show_start=ShowStart(),
+                section_style=PendingSectionStyle(),
+            )
+
+        bookmark_manager = sys_bookmark.instance(
+            configuration_provider=snapshot_configuration,
+            configuration_validator=validate_configuration,
+        )
+        bookmark_manager.call_server(
+            input,
+            output,
+            session,
+            upstream=reactive.Value(None),
+        )
+
         @reactive.effect
         @reactive.event(input.SaveConfiguration)
-        def SaveConfiguration():
-            """Persist the current card order for every instantiated section."""
-            if Module.runtime_mode(session) == "shinylive":
-                ui.notification_show(
-                    "Configuration cannot be persisted from Shinylive.",
-                    type="error",
-                    duration=8,
+        def ShowBookmarkManager():
+            """Open the fixed bookmark card from the navbar."""
+            mode = Module.runtime_mode(session)
+            bookmark_manager.max_height = str(
+                active_settings()["max_card_height"]
+            )
+            ui.modal_show(
+                ui.modal(
+                    bookmark_manager.call_ui(),
+                    footer=None,
+                    easy_close=True,
+                    size="xl",
                 )
-                return
+            )
 
-            try:
-                visited = tuple(SectionsVisited.get())
-                section_orders: dict[str, tuple[str, ...]] = {}
-                for section_id in visited:
-                    input_id = f"{section_id}_CardOrder"
-                    raw_order = input[input_id]()
-                    if raw_order is None:
-                        raise ValueError(
-                            "Card order is not ready for section "
-                            f"{section_name(section_id)!r}"
-                        )
-                    section_orders[section_id] = tuple(
-                        value.removesuffix("-Card") for value in raw_order
+            async def after_flush():
+                await session.send_custom_message(
+                    "init_card", {"id": bookmark_manager.ns("Card")}
+                )
+                if mode != "local":
+                    await session.send_custom_message(
+                        "bookmark_list",
+                        {
+                            "inputId": bookmark_manager.ns(
+                                "BrowserBookmarks"
+                            ),
+                            "operationInputId": bookmark_manager.ns(
+                                "BrowserOperation"
+                            ),
+                        },
                     )
 
-                candidate = configuration_from_section_state(
-                    config,
-                    section_order=SectionOrder(),
-                    section_definitions=section_definitions,
-                    visited_sections=visited,
-                    section_orders=section_orders,
-                    card_modules={
-                        namespace: node.card.name
-                        for namespace, node in card_nodes.items()
-                    },
-                    card_states={
-                        namespace: snapshot()
-                        for namespace, node in card_nodes.items()
-                        if callable(
-                            snapshot := getattr(
-                                node.card,
-                                "configuration_state",
-                                None,
-                            )
-                        )
-                    },
-                    show_start=ShowStart(),
-                )
-                destination = configuration_write_path()
-                write_validated_configuration(candidate, config_path=destination)
-            except (
-                OSError,
-                TypeError,
-                ValueError,
-                SchemaError,
-                ValidationError,
-            ) as error:
-                log.exception("Could not save Pythagoras configuration")
-                ui.notification_show(
-                    f"Configuration was not saved: {error}",
-                    type="error",
-                    duration=None,
-                )
-                return
-
-            log.info("💾 Configuration saved to %s", destination)
-            ui.notification_show(
-                "Card layout saved. It will be used on the next app start.",
-                type="message",
-                duration=6,
-            )
+            session.on_flushed(after_flush, once=True)
         
 
         @reactive.effect

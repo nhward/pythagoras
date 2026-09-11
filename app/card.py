@@ -43,13 +43,25 @@ from shiny.types import SilentException
 
 class Card(Module):
     
-    def __init__(self, file, long_name = None, allow_full_screen = True, mutable = False, *args, **kwargs): # will be inherited by child classes
+    def __init__(
+        self,
+        file,
+        long_name=None,
+        allow_full_screen=True,
+        allow_remove=True,
+        allow_drag=True,
+        mutable=False,
+        *args,
+        **kwargs,
+    ):  # will be inherited by child classes
         if file is None:
             raise ValueError("Filename is required — stopping.")
         name = Path(file).resolve().stem
         super().__init__(name, *args, **kwargs)
         self.file = file
         self.allow_full_screen = allow_full_screen
+        self.allow_remove = allow_remove
+        self.allow_drag = allow_drag
         self.mutable = mutable
         self.initially_hidden = False
         self.description = None
@@ -252,24 +264,32 @@ class Card(Module):
                     expand_button = None
                     contract_button = None
 
-                close_button = ui.input_action_button(
-                    id = "CloseButton",  
-                    label = None, 
-                    icon = icon("xmark", title = "Close this card", a11y = "sem"),
-                    class_ = "btn rounded-pill hover-btn btn-sm close-btn",
-                    style = "border: 0px; box-shadow: none;",
-                    guide = self, priority = 10, title = "Close button", position = "bottom",
-                    text = "The close button removes the card."
-                )
+                close_button = None
+                if self.allow_remove:
+                    close_button = ui.input_action_button(
+                        id = "CloseButton",
+                        label = None,
+                        icon = icon(
+                            "xmark", title = "Close this card", a11y = "sem"
+                        ),
+                        class_ = "btn rounded-pill hover-btn btn-sm close-btn",
+                        style = "border: 0px; box-shadow: none;",
+                        guide = self, priority = 10, title = "Close button", position = "bottom",
+                        text = "The close button removes the card."
+                    )
 
-                return ui.card_header(
-                    ui.div(
+                drag_handle = None
+                if self.allow_drag:
+                    drag_handle = ui.div(
                         class_="drag-tab drag-handle hover-btn shadow",
                         title="Drag",
                         role="button",
                         aria_label="Drag card",
                         tabindex="0"
-                    ),
+                    )
+
+                return ui.card_header(
+                    drag_handle,
                     ui.div(
                         ui.tags.img(src="favicon.ico", style="height:2em; margin-right:0.5em;"), #attrs = str({"title": "Tetractys", "a11y": "sem"})),  #Tetractys
                         self.long_name,

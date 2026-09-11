@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from jsonschema import ValidationError, validate
 
-CONFIG_ROOT = Path(__file__).resolve().parents[1] / "app" / "config"
+CONFIG_ROOT = Path(__file__).resolve().parents[1] / "app"
 
 
 @pytest.fixture(scope="module")
@@ -19,7 +19,7 @@ def schema() -> dict[str, object]:
 
 @pytest.fixture(scope="module")
 def configuration() -> dict[str, object]:
-    return json.loads((CONFIG_ROOT / "pythagoras.json").read_text())
+    return json.loads((CONFIG_ROOT / "default.pythagoras.json").read_text())
 
 
 @pytest.mark.unit
@@ -88,6 +88,17 @@ def test_data_import_state_is_accepted(schema, configuration):
             "Sheet": 1,
         },
         "last_committed_tab": "Web based",
+    }
+
+    validate(instance=candidate, schema=schema)
+
+
+@pytest.mark.unit
+def test_bookmark_metadata_is_accepted(schema, configuration):
+    candidate = deepcopy(configuration)
+    candidate["bookmark"] = {
+        "filename": "iris--20260911T120000+1200.pythagoras.json",
+        "created_at": "2026-09-11T12:00:00+12:00",
     }
 
     validate(instance=candidate, schema=schema)

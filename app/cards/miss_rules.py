@@ -39,17 +39,12 @@ def instance():
                 class_="text-primary text-center d-block",
             ),
             shinywidgets.output_widget(
-                id="Network",
-                fill=True,
-                guide=this,
-                title="Missingness association network",
-                text=(
-                    "Variables are square nodes and association rules are "
-                    "circular nodes. A path from variables through a rule to "
-                    "other variables reads: if the former are missing, the "
-                    "latter are also likely to be missing."
-                ),
-                position="left",
+                id="Network", fill=True, 
+                guide=this, title="Missingness association network", position="left",
+                text="""
+                    Variables are square nodes and association rules are circular nodes. A path from variables through a rule to 
+                    other variables reads: if the former are missing, the latter are also likely to be missing.
+                """
             )
         )
 
@@ -63,13 +58,8 @@ def instance():
             ),
             ui.output_ui(
                 id="Table",
-                guide=this,
-                title="Missingness association rules",
-                text=(
-                    "Each row reads: if the LHS variables are missing, the RHS "
-                    "variables are missing with the reported confidence."
-                ),
-                position="left",
+                guide=this, title="Missingness association rules", position="left",
+                text="Each row reads: if the LHS variables are missing, the RHS variables are missing with the reported confidence."
             ),
         )
 

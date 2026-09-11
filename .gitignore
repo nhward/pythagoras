@@ -21,3 +21,4 @@ site
 /.make/test-passed
 /old_data
 /markdown/old
+/bookmarks/

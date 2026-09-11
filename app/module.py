@@ -195,10 +195,10 @@ class Module(ABC):
         log.setLevel(min_log_level)
 
         # Load schema
-        with open(ROOT / "config" / "pythagoras.schema.json") as f:
+        with open(ROOT / "pythagoras.schema.json") as f:
             schema = json.load(f)
         # Load config
-        with open(ROOT / "config" / "pythagoras.json") as f:
+        with open(ROOT / "default.pythagoras.json") as f:
             config = json.load(f)
         try:
             validate(instance=config, schema=schema)
@@ -276,7 +276,11 @@ class Module(ABC):
         self.log.debug(f"🧹 Cleaning up namespace {self.namespace}")
         self._upstream = None
         self.output_data = None
-        reuse_cards = self.config.get("settings", {}).get("reuse_cards")
+        reuse_cards = getattr(
+            self,
+            "_reuse_cards",
+            self.config.get("settings", {}).get("reuse_cards"),
+        )
         if reuse_cards:
             self.Instances.pop(self.namespace)
         else:

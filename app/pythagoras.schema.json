@@ -17,6 +17,22 @@
       "minimum": 1
     },
 
+    "bookmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "filename": {
+          "type": "string",
+          "pattern": "^[^/\\\\]+\\.pythagoras\\.json$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["filename", "created_at"]
+    },
+
     "settings": {
       "type": "object",
       "properties": {
