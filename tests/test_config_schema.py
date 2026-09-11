@@ -67,3 +67,39 @@ def test_layout_is_required(schema, configuration):
 
     with pytest.raises(ValidationError, match="'layout' is a required property"):
         validate(instance=candidate, schema=schema)
+
+
+@pytest.mark.unit
+def test_data_import_state_is_accepted(schema, configuration):
+    candidate = deepcopy(configuration)
+    candidate["layout"][0]["cards"][0]["state"] = {
+        "inputs": {
+            "Navset": "Web based",
+            "ServerFile": None,
+            "LocalFilePath": "",
+            "FName": "file draft",
+            "Dataset": "sklearn::iris",
+            "DName": "package draft",
+            "Url": "https://example.test/data.csv",
+            "UName": "committed web data",
+            "UciDataset": "Iris",
+            "IName": "uci draft",
+            "Separator": ",",
+            "Sheet": 1,
+        },
+        "last_committed_tab": "Web based",
+    }
+
+    validate(instance=candidate, schema=schema)
+
+
+@pytest.mark.unit
+def test_unknown_data_import_state_input_is_rejected(schema, configuration):
+    candidate = deepcopy(configuration)
+    candidate["layout"][0]["cards"][0]["state"] = {
+        "inputs": {"Unknown": "value"},
+        "last_committed_tab": None,
+    }
+
+    with pytest.raises(ValidationError, match="Additional properties"):
+        validate(instance=candidate, schema=schema)

@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 path = str(Path(__file__).resolve().parent.parent / "app")
 if path not in sys.path:
@@ -57,6 +58,44 @@ def test_module_initialises_and_registers_instance():
     # script/css lists populated
     assert (m.ROOT / "www" / "console.js") in m.script_list
     assert Path(m.ROOT / "www" / "shepherd-15.3.0.css") in  m.css_list
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("hostname", "expected"),
+    [
+        ("localhost", "local"),
+        ("127.0.0.1", "local"),
+        ("::1", "local"),
+        ("pythagoras.example", "server"),
+    ],
+)
+def test_runtime_mode_uses_client_hostname(
+    monkeypatch, hostname, expected
+):
+    monkeypatch.setattr(Module, "IS_SHINYLIVE", False)
+    session = SimpleNamespace(
+        clientdata=SimpleNamespace(url_hostname=lambda: hostname)
+    )
+
+    assert Module.runtime_mode(session) == expected
+
+
+@pytest.mark.unit
+def test_runtime_mode_prefers_shinylive(monkeypatch):
+    monkeypatch.setattr(Module, "IS_SHINYLIVE", True)
+
+    assert Module.runtime_mode(SimpleNamespace()) == "shinylive"
+
+
+@pytest.mark.unit
+def test_runtime_mode_supports_legacy_client_data(monkeypatch):
+    monkeypatch.setattr(Module, "IS_SHINYLIVE", False)
+    session = SimpleNamespace(
+        client_data=SimpleNamespace(url_hostname=lambda: "localhost")
+    )
+
+    assert Module.runtime_mode(session) == "local"
 
 
 @pytest.mark.unit

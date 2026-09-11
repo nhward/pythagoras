@@ -119,6 +119,7 @@ def configuration_from_card_state(
     visited_sections: Sequence[str],
     section_orders: Mapping[str, Sequence[str]],
     card_modules: Mapping[str, str],
+    card_states: Mapping[str, Mapping[str, object]] | None = None,
     show_start: bool | None = None,
 ) -> dict[str, object]:
     """Return a configuration containing the current non-empty section layout."""
@@ -148,11 +149,15 @@ def configuration_from_card_state(
         if section in visited:
             if section not in section_orders:
                 raise ValueError(f"Card order is not ready for section {section!r}")
-            group["cards"] = [
-                {"module": card_modules[namespace]}
-                for namespace in section_orders[section]
-                if namespace in card_modules
-            ]
+            group["cards"] = []
+            for namespace in section_orders[section]:
+                if namespace not in card_modules:
+                    continue
+                card_definition = {"module": card_modules[namespace]}
+                state = (card_states or {}).get(namespace)
+                if state is not None:
+                    card_definition["state"] = deepcopy(dict(state))
+                group["cards"].append(card_definition)
         cards_in_section = group.get("cards")
         if not isinstance(cards_in_section, list):
             raise TypeError(f"Cards for section {section!r} must be a list")
@@ -180,6 +185,7 @@ def configuration_from_section_state(
     visited_sections: Sequence[str],
     section_orders: Mapping[str, Sequence[str]],
     card_modules: Mapping[str, str],
+    card_states: Mapping[str, Mapping[str, object]] | None = None,
     show_start: bool,
 ) -> dict[str, object]:
     """Serialize live ID-keyed sections, including their current names."""
@@ -199,11 +205,15 @@ def configuration_from_section_state(
         if section_id in visited:
             if section_id not in section_orders:
                 raise ValueError(f"Card order is not ready for section {name!r}")
-            group["cards"] = [
-                {"module": card_modules[namespace]}
-                for namespace in section_orders[section_id]
-                if namespace in card_modules
-            ]
+            group["cards"] = []
+            for namespace in section_orders[section_id]:
+                if namespace not in card_modules:
+                    continue
+                card_definition = {"module": card_modules[namespace]}
+                state = (card_states or {}).get(namespace)
+                if state is not None:
+                    card_definition["state"] = deepcopy(dict(state))
+                group["cards"].append(card_definition)
 
         cards_in_section = group.get("cards")
         if not isinstance(cards_in_section, list):
@@ -646,13 +656,19 @@ def application():
             )
             return current
 
-        def create_card(name: str):
+        def create_card(
+            name: str,
+            state: Mapping[str, object] | None = None,
+        ):
             module_name = f"cards.{name}"
             try:
                 module = importlib.import_module(module_name)
                 if not hasattr(module, "instance"):
                     raise AttributeError(f"{module_name} does not define instance()")
                 module = module.instance()
+                restore = getattr(module, "restore_configuration_state", None)
+                if state is not None and callable(restore):
+                    restore(state)
                 module.log.info(msg=f"✅ Card instantiated ({module.namespace})")
                 return module
             except Exception:
@@ -666,7 +682,10 @@ def application():
                 model_group = section_definitions.get(current)
                 req(model_group is not None)
                 for card in model_group["cards"]:
-                    instance = create_card(card["module"])
+                    instance = create_card(
+                        card["module"],
+                        state=card.get("state"),
+                    )
                     if instance is None:
                         continue
                     ui.insert_ui(ui = instance.call_ui(), selector = f"#{current}-cards-container", where = "beforeEnd")
@@ -1064,7 +1083,7 @@ def application():
         @reactive.event(input.SaveConfiguration)
         def SaveConfiguration():
             """Persist the current card order for every instantiated section."""
-            if Module.IS_SHINYLIVE:
+            if Module.runtime_mode(session) == "shinylive":
                 ui.notification_show(
                     "Configuration cannot be persisted from Shinylive.",
                     type="error",
@@ -1096,6 +1115,17 @@ def application():
                     card_modules={
                         namespace: node.card.name
                         for namespace, node in card_nodes.items()
+                    },
+                    card_states={
+                        namespace: snapshot()
+                        for namespace, node in card_nodes.items()
+                        if callable(
+                            snapshot := getattr(
+                                node.card,
+                                "configuration_state",
+                                None,
+                            )
+                        )
                     },
                     show_start=ShowStart(),
                 )

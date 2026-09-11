@@ -13,7 +13,31 @@
       "section": "Data prep",
       "cards": [
         {
-          "module": "data_import"
+          "module": "data_import",
+          "state": {
+            "inputs": {
+              "Navset": "File based",
+              "ServerFile": [
+                {
+                  "name": "Assmnt.csv",
+                  "size": 96310,
+                  "type": "text/csv",
+                  "datapath": "/var/folders/09/p6ybz_f52tddlbms7qn04z8r0000gn/T/fileupload-uqyxk8ia/tmptwt1m3ty/0.csv"
+                }
+              ],
+              "LocalFilePath": "/Users/nickward/Documents/pythagoras/app/data/Assmnt.csv",
+              "FName": "Assmnt",
+              "Dataset": "seaborn::attention",
+              "DName": "attention",
+              "Url": "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/titanic.csv",
+              "UName": "titanic",
+              "UciDataset": "Annealing",
+              "IName": "Annealing",
+              "Separator": ",",
+              "Sheet": 1
+            },
+            "last_committed_tab": "File based"
+          }
         },
         {
           "module": "data_tabulation"

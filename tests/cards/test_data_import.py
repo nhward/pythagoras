@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import os
 import sys
@@ -15,10 +16,19 @@ import pytest
 from playwright.sync_api import Page, expect
 from proxy_data import proxy_data
 from shapely.geometry import Point
+from shiny import reactive
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
 app = create_app_fixture(app="../scenarios/data_import.py", scope="function")
+server_app = create_app_fixture(
+    app="../scenarios/data_import_server.py",
+    scope="function",
+)
+restore_app = create_app_fixture(
+    app="../scenarios/data_import_restore.py",
+    scope="function",
+)
 _HELPER_CARDS = {}
 
 
@@ -96,6 +106,11 @@ def set_shiny_input(page: Page, local_id: str, value):
     )
 
 
+class InputNamespace(SimpleNamespace):
+    def __getitem__(self, name):
+        return getattr(self, name)
+
+
 def recorded_helpers(
     card_module,
     *,
@@ -106,6 +121,7 @@ def recorded_helpers(
     dataset=None,
     url="",
     uci_dataset=None,
+    local_file_path="",
 ):
     """Expose the server's pure helpers through inert reactive decorators."""
     card = _HELPER_CARDS.get(card_module)
@@ -130,6 +146,8 @@ def recorded_helpers(
     }]
     inputs = SimpleNamespace(
         ServerFile=lambda: uploaded,
+        NativeFilePicker=lambda: 0,
+        LocalFilePath=lambda: local_file_path,
         Navset=lambda: navset,
         Separator=lambda: separator,
         Sheet=lambda: sheet,
@@ -143,6 +161,7 @@ def recorded_helpers(
         Commit=lambda: 0,
     )
     session = SimpleNamespace(
+        client_data=SimpleNamespace(url_hostname=lambda: "example.test"),
         ns=lambda value: value,
         send_custom_message=lambda *args, **kwargs: None,
     )
@@ -165,6 +184,115 @@ class TestCaptureOutput:
             print(label)
 
         assert card_module.capture_output(function, label="ready") == "ready\n"
+
+
+class TestNativeFilePicker:
+    @pytest.mark.unit
+    def test_macos_uses_system_osascript(self, card_module, monkeypatch):
+        monkeypatch.setattr(card_module.sys, "platform", "darwin")
+        monkeypatch.setattr(card_module.os.path, "isfile", lambda path: True)
+        monkeypatch.setattr(card_module.os, "access", lambda path, mode: True)
+
+        assert card_module.native_file_picker_backend() == (
+            "osascript",
+            "/usr/bin/osascript",
+        )
+
+    @pytest.mark.unit
+    def test_windows_uses_available_powershell(
+        self, card_module, monkeypatch
+    ):
+        monkeypatch.setattr(card_module.sys, "platform", "win32")
+        monkeypatch.setattr(
+            card_module.shutil,
+            "which",
+            lambda name: "C:/PowerShell/pwsh.exe" if name == "pwsh.exe" else None,
+        )
+
+        assert card_module.native_file_picker_backend() == (
+            "powershell",
+            "C:/PowerShell/pwsh.exe",
+        )
+
+    @pytest.mark.unit
+    def test_linux_needs_a_display_and_supported_dialog(
+        self, card_module, monkeypatch
+    ):
+        monkeypatch.setattr(card_module.sys, "platform", "linux")
+        monkeypatch.delenv("DISPLAY", raising=False)
+        monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+        monkeypatch.setattr(
+            card_module.shutil,
+            "which",
+            lambda name: f"/usr/bin/{name}",
+        )
+        assert card_module.native_file_picker_backend() is None
+
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        assert card_module.native_file_picker_backend() == (
+            "zenity",
+            "/usr/bin/zenity",
+        )
+
+    @pytest.mark.unit
+    def test_chooser_runs_asynchronously_and_returns_full_path(
+        self, card_module, monkeypatch, tmp_path
+    ):
+        selected = tmp_path / "observations.csv"
+        calls = []
+
+        class Process:
+            returncode = 0
+
+            async def communicate(self):
+                return str(selected).encode(), b""
+
+        async def create_process(*command, **kwargs):
+            calls.append(command)
+            return Process()
+
+        monkeypatch.setattr(
+            card_module,
+            "native_file_picker_backend",
+            lambda: ("zenity", "/usr/bin/zenity"),
+        )
+        monkeypatch.setattr(
+            card_module.asyncio,
+            "create_subprocess_exec",
+            create_process,
+        )
+
+        result = asyncio.run(card_module.choose_local_file(tmp_path))
+
+        assert result == str(selected.resolve())
+        assert calls[0][0] == "/usr/bin/zenity"
+        assert f"--filename={tmp_path.resolve()}{os.sep}" in calls[0]
+
+    @pytest.mark.unit
+    def test_chooser_cancellation_returns_empty_string(
+        self, card_module, monkeypatch, tmp_path
+    ):
+        class Process:
+            returncode = 1
+
+            async def communicate(self):
+                return b"", b"User cancelled"
+
+        async def create_process(*command, **kwargs):
+            return Process()
+
+        monkeypatch.setattr(
+            card_module,
+            "native_file_picker_backend",
+            lambda: ("kdialog", "/usr/bin/kdialog"),
+        )
+        monkeypatch.setattr(
+            card_module.asyncio,
+            "create_subprocess_exec",
+            create_process,
+        )
+
+        assert asyncio.run(card_module.choose_local_file(tmp_path)) == ""
 
 
 class TestInstance:
@@ -191,8 +319,9 @@ class TestInstance:
         html = str(card.front.tagify())
         for label in ("File based", "Dataset based", "Web based", "UC Irvine"):
             assert label in html
-        for input_id in ("ServerFile", "Dataset", "Url", "UciDataset"):
+        for input_id in ("Dataset", "Url", "UciDataset"):
             assert f'id="{input_id}"' in html
+        assert 'id="FilePickerUI"' in html
 
     @pytest.mark.unit
     def test_footer_contains_disabled_commit_and_status(self, card):
@@ -210,6 +339,111 @@ class TestInstance:
         assert 'id="Sheet"' in html
         assert 'value="1"' in html
 
+    @pytest.mark.unit
+    def test_restored_inputs_are_used_as_ui_defaults(self, card_module):
+        card = card_module.instance()
+        card.restore_configuration_state({
+            "inputs": {
+                "Navset": "Dataset based",
+                "ServerFile": None,
+                "LocalFilePath": "",
+                "FName": "file draft",
+                "Dataset": "sklearn::iris",
+                "DName": "saved package name",
+                "Url": "https://example.test/saved.csv",
+                "UName": "saved web name",
+                "UciDataset": "Iris",
+                "IName": "saved UCI name",
+                "Separator": ";",
+                "Sheet": 3,
+            },
+            "last_committed_tab": "Web based",
+        })
+
+        front = str(card.front.tagify())
+        settings = str(card.settings.tagify())
+
+        assert 'value="file draft"' in front
+        assert 'value="saved package name"' in front
+        assert 'value="https://example.test/saved.csv"' in front
+        assert 'value="saved web name"' in front
+        assert 'value="saved UCI name"' in front
+        assert 'value=";"' in settings
+        assert 'value="3"' in settings
+
+    @pytest.mark.unit
+    def test_last_committed_dataset_is_reloaded_after_flush(self, card_module):
+        card = card_module.instance()
+        state = {
+            "inputs": {
+                "Navset": "Web based",
+                "ServerFile": None,
+                "LocalFilePath": "",
+                "FName": "",
+                "Dataset": "sklearn::iris",
+                "DName": "restored iris",
+                "Url": "https://example.test/draft.csv",
+                "UName": "web draft",
+                "UciDataset": None,
+                "IName": "",
+                "Separator": ",",
+                "Sheet": 1,
+            },
+            "last_committed_tab": "Dataset based",
+        }
+        card.restore_configuration_state(state)
+        functions = {}
+
+        def record(function):
+            functions[function.__name__] = function
+            return function
+
+        card.record_code = record
+        card.suspendable = lambda **kwargs: record
+        card.isFullScreen = lambda: False
+        dataset_value = reactive.Value(None)
+        inputs = InputNamespace(
+            ServerFile=lambda: None,
+            NativeFilePicker=lambda: 0,
+            LocalFilePath=lambda: "",
+            Navset=lambda: "Web based",
+            Separator=lambda: ",",
+            Sheet=lambda: 1,
+            Dataset=dataset_value,
+            UciDataset=lambda: None,
+            Url=lambda: "https://example.test/draft.csv",
+            FName=lambda: "",
+            DName=lambda: "restored iris",
+            UName=lambda: "web draft",
+            IName=lambda: "",
+            Commit=lambda: 0,
+        )
+        callbacks = []
+
+        async def send_custom_message(*args, **kwargs):
+            return None
+
+        session = SimpleNamespace(
+            client_data=SimpleNamespace(url_hostname=lambda: "example.test"),
+            ns=lambda value: value,
+            send_custom_message=send_custom_message,
+            on_flushed=lambda callback, once: callbacks.append(callback),
+        )
+
+        exported = card.server(inputs, lambda function: function, session)
+        for callback in callbacks:
+            asyncio.run(callback())
+
+        asyncio.run(reactive.flush())
+        dataset_value.set("sklearn::iris")
+        asyncio.run(reactive.flush())
+
+        with reactive.isolate():
+            restored = exported()
+        assert restored.name == "restored iris"
+        assert restored.shape == (150, 5)
+        assert card.configuration_state()["last_committed_tab"] == "Dataset based"
+
 
 class TestFileHelpers:
     @pytest.mark.unit
@@ -225,6 +459,45 @@ class TestFileHelpers:
         _, functions = recorded_helpers(card_module, file_path=path)
         path.unlink()
         assert functions["TempFilePath"]() is None
+
+    @pytest.mark.unit
+    def test_local_mode_prefers_native_file_path(
+        self, card_module, csv_file
+    ):
+        card = card_module.instance()
+        functions = {}
+        card.record_code = lambda function: functions.setdefault(
+            function.__name__, function
+        )
+        card.suspendable = lambda **kwargs: lambda function: functions.setdefault(
+            function.__name__, function
+        )
+        card.isFullScreen = lambda: False
+        inputs = SimpleNamespace(
+            ServerFile=lambda: None,
+            NativeFilePicker=lambda: 0,
+            LocalFilePath=lambda: str(csv_file),
+            Navset=lambda: "File based",
+            Separator=lambda: ",",
+            Sheet=lambda: 1,
+            Dataset=lambda: None,
+            UciDataset=lambda: None,
+            Url=lambda: "",
+            FName=lambda: "local-data",
+            DName=lambda: "",
+            UName=lambda: "",
+            IName=lambda: "",
+            Commit=lambda: 0,
+        )
+        session = SimpleNamespace(
+            client_data=SimpleNamespace(url_hostname=lambda: "localhost"),
+            ns=lambda value: value,
+            send_custom_message=lambda *args, **kwargs: None,
+        )
+
+        card.server(inputs, lambda function: function, session)
+
+        assert functions["TempFilePath"]() == str(csv_file)
 
     @pytest.mark.unit
     def test_csv_import(self, card_module, csv_file):
@@ -336,12 +609,30 @@ class TestSummary:
 
 class TestWebKitInitialState:
     @pytest.mark.ui
+    def test_committed_dataset_waits_for_dynamically_bound_inputs(
+        self, page: Page, restore_app: ShinyAppProc
+    ):
+        page.goto(restore_app.url)
+        expect(page.get_by_role(
+            "tab", name="Web based", exact=True
+        )).to_have_attribute("aria-selected", "true")
+        expect(page.locator("#data_import-Name")).to_contain_text(
+            "restored iris",
+            timeout=20_000,
+        )
+        expect(page.get_by_text(
+            "The previous data import could not be reconnected",
+            exact=False,
+        )).to_have_count(0)
+
+    @pytest.mark.ui
     def test_card_and_file_tab_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         expect(get_card(page)).to_be_visible()
         expect(page.get_by_text("Data import", exact=True)).to_be_visible()
         expect(page.get_by_role("tab", name="File based", exact=True)).to_be_visible()
-        expect(by_id(page, "ServerFile")).to_be_attached()
+        expect(by_id(page, "NativeFilePicker")).to_be_visible()
+        expect(by_id(page, "ServerFile")).to_have_count(0)
         expect(by_id(page, "FName")).to_be_visible()
 
     @pytest.mark.ui
@@ -366,9 +657,9 @@ class TestWebKitInitialState:
 class TestWebKitFileWorkflow:
     @pytest.mark.ui
     def test_upload_sets_short_name_and_ready_status(
-        self, page: Page, app: ShinyAppProc, csv_file
+        self, page: Page, server_app: ShinyAppProc, csv_file
     ):
-        page.goto(app.url)
+        page.goto(server_app.url)
         by_id(page, "ServerFile").set_input_files(str(csv_file))
         expect(by_id(page, "FName")).to_have_value("observations")
         expect(by_id(page, "Check")).to_contain_text("File import ready")
@@ -377,9 +668,9 @@ class TestWebKitFileWorkflow:
 
     @pytest.mark.ui
     def test_upload_summary_on_reverse_side(
-        self, page: Page, app: ShinyAppProc, csv_file
+        self, page: Page, server_app: ShinyAppProc, csv_file
     ):
-        page.goto(app.url)
+        page.goto(server_app.url)
         by_id(page, "ServerFile").set_input_files(str(csv_file))
         expect(by_id(page, "Check")).to_contain_text("File import ready")
         get_card(page).hover()
@@ -391,9 +682,9 @@ class TestWebKitFileWorkflow:
 
     @pytest.mark.ui
     def test_commit_reports_success(
-        self, page: Page, app: ShinyAppProc, csv_file
+        self, page: Page, server_app: ShinyAppProc, csv_file
     ):
-        page.goto(app.url)
+        page.goto(server_app.url)
         by_id(page, "ServerFile").set_input_files(str(csv_file))
         commit = by_id(page, "Commit")
         expect(commit).to_be_enabled()

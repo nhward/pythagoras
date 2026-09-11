@@ -211,6 +211,19 @@ class Module(ABC):
 
     MaxInstances = config.get("settings", {}).get("max_dupl_cards")
 
+    @classmethod
+    def runtime_mode(cls, session) -> str:
+        """Classify the runtime as Shinylive, local, or remote server."""
+        if cls.IS_SHINYLIVE:
+            return "shinylive"
+        client_data = getattr(session, "clientdata", None)
+        if client_data is None:
+            client_data = session.client_data
+        hostname = client_data.url_hostname()
+        if hostname in {"localhost", "127.0.0.1", "::1"}:
+            return "local"
+        return "server"
+
 
     # Initialiser
     def __init__(self, name, *args, **kwargs): # will be inherited by child classes
