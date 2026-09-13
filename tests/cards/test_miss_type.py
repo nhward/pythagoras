@@ -24,6 +24,10 @@ from shiny.run import ShinyAppProc
 _HELPER_CARDS = {}
 
 app = create_app_fixture(app="../scenarios/miss_type.py", scope="function")
+restore_app = create_app_fixture(
+    app="../scenarios/miss_type_restore.py",
+    scope="function",
+)
 
 @pytest.fixture(scope="session")
 def browser_context_args():
@@ -491,6 +495,22 @@ class TestTableAndPlot:
 
 
 class TestWebKitUI:
+    @pytest.mark.ui
+    def test_bookmark_selects_dynamic_target_after_panel_creation(
+        self,
+        page: Page,
+        restore_app: ShinyAppProc,
+    ):
+        page.goto(restore_app.url)
+        target_tab = page.get_by_role("tab", name="target", exact=True)
+        expect(target_tab).to_be_visible(timeout=30_000)
+        expect(target_tab).to_have_attribute("aria-selected", "true")
+        expect(by_id(page, "Summary")).to_contain_text(
+            "Interpretation:",
+            timeout=30_000,
+        )
+        expect(page.locator(".shiny-notification-error")).to_have_count(0)
+
     @pytest.mark.ui
     def test_card_targets_and_settings_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)

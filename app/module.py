@@ -46,13 +46,16 @@ import inspect
 import io
 import json
 import logging
+import numbers
 import re
 import sys
 import textwrap
 import threading
+import time
 from abc import ABC, abstractmethod
 from collections import deque, namedtuple
 from contextlib import redirect_stdout
+from contextvars import ContextVar
 from datetime import datetime
 from functools import wraps
 from os import environ
@@ -67,6 +70,18 @@ from shiny import ui as _ui
 from shiny.types import SilentException
 
 _UNSET = object()
+_ACTIVE_CONFIGURATION_MODULE: ContextVar["Module | None"] = ContextVar(
+    "active_configuration_module",
+    default=None,
+)
+
+_NON_PERSISTENT_INPUT_CONSTRUCTORS = frozenset({
+    "input_action_button",
+    "input_action_link",
+    "input_bookmark_button",
+    "input_file",
+    "input_task_button",
+})
 
 
 class ApplicationLogHandler(logging.Handler):
@@ -121,7 +136,8 @@ class BusyTracker:
             status = getattr(task, "status", None)
             if not callable(status):
                 raise TypeError(
-                    "@busy.track must be placed above @reactive.extended_task"
+                    "@busy.track must be placed above @this.extended_task "
+                    "or @reactive.extended_task"
                 )
             self._tasks.append((task, message))
             return task
@@ -269,7 +285,323 @@ class Module(ABC):
         # instance registries
         self.suspendables = [] # An instance-level list of all suspendable reactives
         # Code recording
-        self.code_registry = {} # An instance-level Code-Registry 
+        self.code_registry = {} # An instance-level Code-Registry
+        # Generic bookmark state. Special cards may disable this and provide
+        # their own configuration_state/restore_configuration_state methods.
+        self.generic_configuration_state = True
+        self._configuration_input = None
+        self._configuration_input_ids: set[str] = set()
+        self._configuration_excluded_input_ids: set[str] = set()
+        self._configuration_deferred_input_ids: set[str] = set()
+        self._configuration_restored_ids: set[str] = set()
+        self._configuration_warned_ids: set[str] = set()
+        self._configuration_choice_codecs: dict[
+            str, tuple[dict[str, object], type | None]
+        ] = {}
+        self._generic_restored_inputs: dict[str, object] = {}
+        self._generic_extra_state: dict[str, object] = {}
+        self._configuration_state_fields: set[str] = set()
+        self._configuration_state_providers: dict[str, object] = {}
+        self._generic_state_loaded = False
+
+    def configuration_ui_context(self):
+        """Make this module discoverable while its input UI is constructed."""
+        module = self
+
+        class ConfigurationContext:
+            def __enter__(self):
+                self.token = _ACTIVE_CONFIGURATION_MODULE.set(module)
+                return module
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                _ACTIVE_CONFIGURATION_MODULE.reset(self.token)
+
+        return ConfigurationContext()
+
+    @staticmethod
+    def _json_value(value):
+        """Return a detached strict-JSON representation of an input value."""
+        return json.loads(json.dumps(value, ensure_ascii=False, allow_nan=False))
+
+    def restore_configuration_state(self, state) -> None:
+        """Validate and retain generic input state until UI construction."""
+        if not self.generic_configuration_state:
+            return
+        if not isinstance(state, dict):
+            self.log.warning(
+                "Ignoring malformed non-object bookmark state for %s",
+                self.name,
+            )
+            self._generic_state_loaded = True
+            return
+        inputs = state.get("inputs", {})
+        if not isinstance(inputs, dict):
+            self.log.warning(
+                "Ignoring malformed input state for %s; current defaults will be used",
+                self.name,
+            )
+            inputs = {}
+        extra = sorted(set(state) - {"inputs"})
+        unknown_extra = sorted(set(extra) - self._configuration_state_fields)
+        if unknown_extra:
+            self.log.warning(
+                "Bookmark state for %s contains unrecognised field(s) %s; "
+                "they will be retained for compatibility",
+                self.name,
+                ", ".join(unknown_extra),
+            )
+        self._generic_extra_state = {}
+        for name in extra:
+            try:
+                self._generic_extra_state[name] = self._json_value(state[name])
+            except (TypeError, ValueError):
+                self.log.warning(
+                    "Ignoring non-JSON bookmark field %s.%s",
+                    self.name,
+                    name,
+                )
+        restored = {}
+        for input_id, value in inputs.items():
+            if not isinstance(input_id, str):
+                self.log.warning(
+                    "Ignoring non-text bookmark input ID %r for %s",
+                    input_id,
+                    self.name,
+                )
+                continue
+            try:
+                restored[input_id] = self._json_value(value)
+            except (TypeError, ValueError):
+                self.log.warning(
+                    "Ignoring non-JSON bookmark value for %s.%s",
+                    self.name,
+                    input_id,
+                )
+        self._generic_restored_inputs = restored
+        self._generic_state_loaded = True
+
+    def register_configuration_state_field(self, name: str) -> None:
+        """Declare a card-owned JSON field outside the generic input mapping."""
+        if not isinstance(name, str) or not name or name == "inputs":
+            raise ValueError(
+                "A configuration state field must be non-empty text other than "
+                "'inputs'"
+            )
+        self._configuration_state_fields.add(name)
+
+    def restored_configuration_field(self, name: str, default=None):
+        """Return a detached value for a declared card-owned state field."""
+        self.register_configuration_state_field(name)
+        if name not in self._generic_extra_state:
+            return default
+        return self._json_value(self._generic_extra_state[name])
+
+    def register_configuration_state_provider(self, name: str, provider) -> None:
+        """Supply the current value of a declared card-owned state field."""
+        self.register_configuration_state_field(name)
+        if not callable(provider):
+            raise TypeError("A configuration state provider must be callable")
+        self._configuration_state_providers[name] = provider
+
+    def register_configuration_input(self, input_id: str) -> None:
+        """Include a custom Shiny input which has no ``ui.input_*`` widget."""
+        if not isinstance(input_id, str) or not input_id:
+            raise ValueError("A configuration input ID must be non-empty text")
+        self._configuration_input_ids.add(input_id)
+
+    def exclude_configuration_input(self, input_id: str) -> None:
+        """Exclude a transient input whose value is represented elsewhere."""
+        if not isinstance(input_id, str) or not input_id:
+            raise ValueError("A configuration input ID must be non-empty text")
+        self._configuration_excluded_input_ids.add(input_id)
+
+    def defer_configuration_input(self, input_id: str) -> None:
+        """Persist an input but let its card restore it after dynamic UI exists."""
+        if not isinstance(input_id, str) or not input_id:
+            raise ValueError("A configuration input ID must be non-empty text")
+        self._configuration_deferred_input_ids.add(input_id)
+        self._configuration_input_ids.add(input_id)
+
+    def restored_configuration_input(self, input_id: str, default=None):
+        """Return detached restored state for a manually registered input."""
+        self.register_configuration_input(input_id)
+        if input_id not in self._generic_restored_inputs:
+            if self._generic_state_loaded and input_id not in self._configuration_warned_ids:
+                self.log.warning(
+                    "Bookmark has no value for new input %s.%s; using its default",
+                    self.name,
+                    input_id,
+                )
+                self._configuration_warned_ids.add(input_id)
+            return default
+        self._configuration_restored_ids.add(input_id)
+        return self._json_value(self._generic_restored_inputs[input_id])
+
+    @staticmethod
+    def _declared_choice_values(choices) -> list[object]:
+        """Flatten Shiny choices while retaining their declared value types."""
+        if isinstance(choices, dict):
+            values = []
+            for key, label in choices.items():
+                if isinstance(label, dict):
+                    values.extend(Module._declared_choice_values(label))
+                else:
+                    values.append(key)
+            return values
+        elif isinstance(choices, (list, tuple, set)):
+            return list(choices)
+        return []
+
+    @classmethod
+    def _choice_codec(cls, choices) -> tuple[dict[str, object], type | None]:
+        values = cls._declared_choice_values(choices)
+        mapping = {str(value): value for value in values}
+        numeric = [value for value in values if not isinstance(value, bool)]
+        if numeric and all(isinstance(value, numbers.Integral) for value in numeric):
+            inferred_type = int
+        elif numeric and all(isinstance(value, numbers.Real) for value in numeric):
+            inferred_type = float
+        else:
+            inferred_type = None
+        return mapping, inferred_type
+
+    @staticmethod
+    def _coerce_choice_value(value, codec):
+        mapping, inferred_type = codec
+
+        def coerce(item):
+            declared = mapping.get(str(item), _UNSET)
+            if declared is not _UNSET:
+                return declared
+            if inferred_type is not None and isinstance(item, str):
+                try:
+                    return inferred_type(item)
+                except ValueError:
+                    pass
+            return item
+
+        if isinstance(value, (list, tuple)):
+            return [coerce(item) for item in value]
+        return coerce(value)
+
+    @classmethod
+    def _choices_with_restored_value(cls, choices, selected):
+        """Make absent saved selections legal until dynamic choices arrive."""
+        selected_values = selected if isinstance(selected, list) else [selected]
+        existing = {
+            str(value) for value in cls._declared_choice_values(choices)
+        }
+        missing = [value for value in selected_values if str(value) not in existing]
+        if not missing:
+            return choices
+        if isinstance(choices, dict):
+            return {**{str(value): str(value) for value in missing}, **choices}
+        return [*missing, *(list(choices) if choices is not None else [])]
+
+    def _configuration_kwargs(self, func, input_id: str, kwargs: dict) -> dict:
+        """Register an input and apply its bookmarked constructor value."""
+        if not self.generic_configuration_state:
+            return kwargs
+        if input_id in self._configuration_excluded_input_ids:
+            return kwargs
+        if input_id in self._configuration_deferred_input_ids:
+            self._configuration_input_ids.add(input_id)
+            return kwargs
+        name = getattr(func, "__name__", "")
+        if name in _NON_PERSISTENT_INPUT_CONSTRUCTORS:
+            return kwargs
+        signature = inspect.signature(func)
+        if "selected" in signature.parameters:
+            parameter = "selected"
+        elif "value" in signature.parameters:
+            parameter = "value"
+        else:
+            self.log.warning(
+                "Input %s.%s cannot be restored generically; using its default",
+                self.name,
+                input_id,
+            )
+            return kwargs
+        self._configuration_input_ids.add(input_id)
+        codec = None
+        if parameter == "selected" and "choices" in signature.parameters:
+            codec = self._choice_codec(kwargs.get("choices"))
+            self._configuration_choice_codecs[input_id] = codec
+        if input_id not in self._generic_restored_inputs:
+            if self._generic_state_loaded and input_id not in self._configuration_warned_ids:
+                self.log.warning(
+                    "Bookmark has no value for new input %s.%s; using its default",
+                    self.name,
+                    input_id,
+                )
+                self._configuration_warned_ids.add(input_id)
+            return kwargs
+        value = self._generic_restored_inputs[input_id]
+        if codec is not None:
+            value = self._coerce_choice_value(value, codec)
+            kwargs["choices"] = self._choices_with_restored_value(
+                kwargs.get("choices"),
+                value,
+            )
+        kwargs[parameter] = value
+        self._configuration_restored_ids.add(input_id)
+        return kwargs
+
+    def configuration_state(self) -> dict[str, object]:
+        """Capture JSON-compatible values for the module's declared inputs."""
+        if not self.generic_configuration_state:
+            return {}
+        values = {
+            input_id: value
+            for input_id, value in self._generic_restored_inputs.items()
+            if input_id not in self._configuration_excluded_input_ids
+        }
+        scoped_input = self._configuration_input
+        for input_id in sorted(self._configuration_input_ids):
+            if scoped_input is None:
+                continue
+            try:
+                current = getattr(scoped_input, input_id)()
+                codec = self._configuration_choice_codecs.get(input_id)
+                if codec is not None:
+                    current = self._coerce_choice_value(current, codec)
+                values[input_id] = self._json_value(current)
+            except SilentException:
+                continue
+            except (AttributeError, TypeError, ValueError):
+                self.log.warning(
+                    "Input %s.%s is not JSON-compatible and was not updated "
+                    "in the bookmark",
+                    self.name,
+                    input_id,
+                )
+        self.warn_obsolete_configuration_inputs()
+        extra = dict(self._generic_extra_state)
+        for name, provider in self._configuration_state_providers.items():
+            try:
+                extra[name] = self._json_value(provider())
+            except SilentException:
+                continue
+            except (TypeError, ValueError):
+                self.log.warning(
+                    "Configuration field %s.%s is not JSON-compatible and was "
+                    "not updated in the bookmark",
+                    self.name,
+                    name,
+                )
+        return {**extra, "inputs": values}
+
+    def warn_obsolete_configuration_inputs(self) -> None:
+        """Report saved IDs which no constructor in the current card declared."""
+        obsolete = set(self._generic_restored_inputs) - self._configuration_input_ids
+        for input_id in sorted(obsolete - self._configuration_warned_ids):
+            self.log.warning(
+                "Bookmark input %s.%s is no longer present; retaining it for "
+                "compatibility",
+                self.name,
+                input_id,
+            )
+            self._configuration_warned_ids.add(input_id)
 
 
     def reset(self):
@@ -375,6 +707,29 @@ class Module(ABC):
         json_steps = self._tour_steps_payload()
         await session.send_custom_message("create_run_tour", json_steps)
 
+    def extended_task(self, func):
+        """Create a Shiny ExtendedTask with consistent lifecycle logging."""
+        if not asyncio.iscoroutinefunction(func):
+            raise TypeError("@extended_task requires an async function")
+
+        @reactive.extended_task
+        @functools.wraps(func)
+        async def wrapped(*args, **kwargs):
+            task_name = func.__name__
+            started = time.perf_counter()
+            self.log.debug("Extended task %s started", task_name)
+            try:
+                return await func(*args, **kwargs)
+            finally:
+                elapsed = time.perf_counter() - started
+                self.log.info(
+                    "Extended task %s completed in %.3f seconds",
+                    task_name,
+                    elapsed,
+                )
+
+        return wrapped
+
     def _make_wrapper(self, func, kind = "input"):
         """
         Wrap a Shiny UI function to register a shepherd step
@@ -383,6 +738,9 @@ class Module(ABC):
         """
         @functools.wraps(func)
         def wrapped(id, *, guide : Module = None, label = None, title = None, text = None, position = "bottom", priority = 0, **kwargs):
+            owner = guide or _ACTIVE_CONFIGURATION_MODULE.get()
+            if kind == "input" and isinstance(owner, Module):
+                kwargs = owner._configuration_kwargs(func, id, dict(kwargs))
             # Call original Shiny UI function
             sig = inspect.signature(func)
             if "label" in sig.parameters:
@@ -406,6 +764,23 @@ class Module(ABC):
             return _ui.div(widget, id = wid, class_ = "html-fill-container html-fill-item")
         return wrapped
 
+    def _make_navset_wrapper(self, func):
+        """Restore card-local navset selections while preserving its API."""
+        @functools.wraps(func)
+        def wrapped(*args, id=None, selected=None, **kwargs):
+            owner = _ACTIVE_CONFIGURATION_MODULE.get()
+            if isinstance(owner, Module) and id is not None:
+                restored = owner._configuration_kwargs(
+                    func,
+                    id,
+                    {**kwargs, "selected": selected},
+                )
+                selected = restored.pop("selected", selected)
+                kwargs = restored
+            return func(*args, id=id, selected=selected, **kwargs)
+
+        return wrapped
+
     _ui_patch_lock = threading.Lock()
 
 
@@ -425,10 +800,14 @@ class Module(ABC):
             for name, obj in list(vars(module).items()):
                 if not callable(obj):
                     continue
+                if name.startswith("navset_"):
+                    module._original_funcs[name] = obj
+                    setattr(module, name, self._make_navset_wrapper(obj))
+                    continue
                 if not name.startswith(("input_", "output_", "download_")):
                     continue
                 module._original_funcs[name] = obj
-                setattr(module, name, self._make_wrapper(obj))
+                setattr(module, name, self._make_wrapper(obj, name.split("_", 1)[0]))
 
     def capture_print(self, func):
         """
@@ -447,7 +826,14 @@ class Module(ABC):
         return wrapper    
 
 
-    def suspendable(self, *, triggers = None, suspended:bool = True, default = None, calc:bool = False):
+    def suspendable(
+        self,
+        *,
+        triggers=None,
+        suspended: bool = True,
+        default=_UNSET,
+        calc: bool = False,
+    ):
         # Universal Suspendable decorator
         #   Suspendable decorator to replace @reactive.calc, @reactive.event, @reactive.effect, @reactive.calc
         #   Suspends all registered suspendable reactives.
@@ -457,7 +843,8 @@ class Module(ABC):
         # Args:
         #   triggers: Optional reactive inputs (for event observers).
         #   suspended: Start suspended (default True).
-        #   default: Value returned if a suspended calc is called.
+        #   default: Value returned if a suspended calc is called. When omitted,
+        #            a suspended calc stops its consumers with req(False).
         #   calc: Whether the function is a "reactive.calc"
         def decorator(func):
             enabled = reactive.Value(not suspended)
@@ -470,6 +857,8 @@ class Module(ABC):
                     @functools.wraps(func)
                     async def wrapped():
                         if not enabled():
+                            if default is _UNSET:
+                                req(False)
                             return default
                         return await func()
                 else:
@@ -477,6 +866,8 @@ class Module(ABC):
                     @functools.wraps(func)
                     def wrapped():
                         if not enabled():
+                            if default is _UNSET:
+                                req(False)
                             return default
                         return func()
             else:

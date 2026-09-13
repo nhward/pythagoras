@@ -114,7 +114,7 @@ body.bslib-gap-spacing {
 /* Keep modal dialogs above fullscreen cards. */
 #shiny-modal-wrapper {
     position: absolute;
-    z-index: 10000 !important;
+    z-index: 1060 !important;
 }
 
 /* ---------- Hover controls ---------- */

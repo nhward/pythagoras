@@ -23,7 +23,7 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, ui
+from shiny import reactive, render, req, ui
 from shinywidgets import render_widget
 
 NO_COLOUR = "__none__"
@@ -435,6 +435,7 @@ def instance():
 
         @this.suspendable()
         def UpdateChoices():
+            req(incomingproxy_data())
             eligible, _ = _eligible_columns(incomingproxy_data().frame)
             with reactive.isolate():
                 previous_variables = list(input.Variables() or [])

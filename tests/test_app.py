@@ -9,7 +9,7 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from jsonschema import ValidationError
@@ -53,6 +53,14 @@ BOOKMARK_RESTORE_ENV = {
     "PYTHAGORAS_TEST_SHOW_START": "false",
     "PYTHAGORAS_TEST_BOOKMARK_DIR": str(BOOKMARK_RESTORE_DIR),
 }
+SERVER_BOOKMARK_ENV = {
+    **WEB_TEST_ENV,
+    "PYTHAGORAS_TEST_RUNTIME_MODE": "server",
+}
+SHINYLIVE_BOOKMARK_ENV = {
+    **WEB_TEST_ENV,
+    "PYTHAGORAS_TEST_RUNTIME_MODE": "shinylive",
+}
 
 app = create_app_fixture(
     app="../app/app.py",
@@ -77,7 +85,12 @@ bookmark_restore_app = create_app_fixture(
 server_bookmark_app = create_app_fixture(
     app="scenarios/bookmark_server.py",
     scope="function",
-    env=WEB_TEST_ENV,
+    env=SERVER_BOOKMARK_ENV,
+)
+shinylive_bookmark_app = create_app_fixture(
+    app="scenarios/bookmark_shinylive.py",
+    scope="function",
+    env=SHINYLIVE_BOOKMARK_ENV,
 )
 
 
@@ -155,6 +168,93 @@ def sample_config() -> dict[str, object]:
 
 
 class TestApplicationHelpers:
+    @pytest.mark.unit
+    @pytest.mark.parametrize("invalid_state", [{"bad": {1, 2}}, {"bad": float("nan")}])
+    def test_configuration_validation_rejects_non_json_card_state(
+        self, app_module, sample_config, invalid_state
+    ):
+        candidate = json.loads(json.dumps(sample_config))
+        candidate["layout"][0]["cards"][0]["state"] = invalid_state
+
+        with pytest.raises((TypeError, ValueError)):
+            app_module.validate_configuration(candidate)
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("forced_mode", "is_shinylive"),
+        [("server", False), ("shinylive", True)],
+    )
+    def test_nonlocal_ui_construction_never_reads_local_bookmarks(
+        self, app_module, monkeypatch, forced_mode, is_shinylive
+    ):
+        calls = []
+        monkeypatch.setenv("SHINY_TESTMODE", "1")
+        monkeypatch.setenv("PYTHAGORAS_TEST_RUNTIME_MODE", forced_mode)
+        monkeypatch.setattr(app_module.Module, "IS_SHINYLIVE", is_shinylive)
+        monkeypatch.setattr(
+            app_module.sys_bookmark,
+            "latest_local_bookmark",
+            lambda **kwargs: calls.append(kwargs),
+        )
+        request = SimpleNamespace(
+            query_params={},
+            url=SimpleNamespace(hostname="localhost"),
+        )
+
+        app_module.configuration_for_ui_request(request)
+
+        assert calls == []
+
+    @pytest.mark.unit
+    def test_ui_shell_preserves_layout_but_not_card_input_state(
+        self, app_module, sample_config
+    ):
+        candidate = json.loads(json.dumps(sample_config))
+        candidate["version"] = 2
+        candidate["active_section"] = "Missing values"
+        candidate["layout"][0]["cards"][0]["state"] = {
+            "inputs": {"Dataset": "sklearn::iris"},
+        }
+
+        shell = app_module.configuration_ui_shell(candidate)
+
+        assert shell["active_section"] == "Missing values"
+        assert shell["layout"] == [
+            {
+                "section": group["section"],
+                "cards": [
+                    {"module": card["module"]}
+                    for card in group["cards"]
+                ],
+            }
+            for group in candidate["layout"]
+        ]
+
+    @pytest.mark.unit
+    def test_ui_query_rebuilds_saved_layout_before_session_start(
+        self, app_module, sample_config, monkeypatch
+    ):
+        saved = json.loads(json.dumps(sample_config))
+        saved["version"] = 2
+        saved["active_section"] = "Missing values"
+        saved["layout"] = [saved["layout"][1], saved["layout"][0]]
+        shell = app_module.configuration_ui_shell(saved)
+        monkeypatch.setenv("SHINY_TESTMODE", "1")
+        monkeypatch.setenv("PYTHAGORAS_TEST_RUNTIME_MODE", "server")
+        request = SimpleNamespace(
+            query_params={app_module.UI_QUERY_PARAMETER: json.dumps(shell)},
+            url=SimpleNamespace(hostname="example.test"),
+        )
+
+        restored = app_module.configuration_for_ui_request(request)
+
+        assert restored["version"] == 2
+        assert restored["active_section"] == "Missing values"
+        assert [group["section"] for group in restored["layout"]] == [
+            "Missing values",
+            "Data prep",
+        ]
+
     @pytest.mark.unit
     def test_section_normalise_surrounding_and_internal_spaces(self, app_module):
         assert app_module.Module.section_normalise("Data prep") == "Data_prep"
@@ -368,7 +468,38 @@ class TestApplicationHelpers:
         ]
 
     @pytest.mark.unit
-    def test_bookmark_restore_applies_settings_and_data_import_state(
+    def test_configuration_save_keeps_distinct_state_for_duplicate_cards(
+        self, app_module, sample_config
+    ):
+        candidate = app_module.configuration_from_card_state(
+            sample_config,
+            visited_sections=["Data prep"],
+            section_orders={
+                "Data prep": ("data_tabulation", "data_tabulation_0"),
+            },
+            card_modules={
+                "data_tabulation": "data_tabulation",
+                "data_tabulation_0": "data_tabulation",
+            },
+            card_states={
+                "data_tabulation": {"inputs": {"PageSize": 10}},
+                "data_tabulation_0": {"inputs": {"PageSize": 50}},
+            },
+        )
+
+        assert candidate["layout"][0]["cards"] == [
+            {
+                "module": "data_tabulation",
+                "state": {"inputs": {"PageSize": 10}},
+            },
+            {
+                "module": "data_tabulation",
+                "state": {"inputs": {"PageSize": 50}},
+            },
+        ]
+
+    @pytest.mark.unit
+    def test_bookmark_restore_migrates_complete_layout_and_card_state(
         self, app_module, sample_config
     ):
         saved = {
@@ -402,11 +533,12 @@ class TestApplicationHelpers:
 
         restored = app_module.restore_data_import_only(sample_config, saved)
 
-        assert restored["layout"][0]["section"] == "Data prep"
+        assert restored["version"] == 2
+        assert restored["layout"][0]["section"] == "Different saved layout"
         assert restored["layout"][0]["cards"][0]["state"] == (
             saved["layout"][0]["cards"][0]["state"]
         )
-        assert restored["layout"][1] == sample_config["layout"][1]
+        assert restored["layout"][0]["cards"][1]["state"] == {"ignored": True}
         assert restored["settings"] == saved["settings"]
 
     @pytest.mark.unit
@@ -429,6 +561,16 @@ class TestApplicationHelpers:
         with pytest.raises(ValidationError):
             app_module.write_validated_configuration(
                 invalid,
+                config_path=config_path,
+                schema_path=app_module.SCHEMA_PATH,
+            )
+        assert config_path.read_text(encoding="utf-8") == original
+
+        non_json = json.loads(json.dumps(sample_config))
+        non_json["layout"][0]["cards"][0]["state"] = {"value": float("nan")}
+        with pytest.raises(ValueError):
+            app_module.write_validated_configuration(
+                non_json,
                 config_path=config_path,
                 schema_path=app_module.SCHEMA_PATH,
             )
@@ -806,15 +948,19 @@ class TestApplicationBrowser:
 
         page.locator("#SaveConfiguration").click()
         dialog = page.get_by_role("dialog")
-        dialog.get_by_role(
-            "button", name="Save bookmark", exact=False
-        ).click()
+        with page.expect_download() as download_info:
+            dialog.get_by_role(
+                "button", name="Save bookmark", exact=False
+            ).click()
         expect(page.get_by_text("Bookmark saved as", exact=False)).to_be_visible()
         data_names = dialog.locator("[id$='-SelectedDataName']")
         saved_times = dialog.locator("[id$='-SelectedBookmarkTime']")
         expect(data_names).to_have_value("browser-iris")
         expect(saved_times).to_have_value(
             re.compile(r"^\d{8}T\d{6}[+-]\d{4}$")
+        )
+        assert download_info.value.suggested_filename == (
+            f"browser-iris--{saved_times.input_value()}.pythagoras.json"
         )
         assert saved_times.locator("option").first.text_content() != (
             saved_times.input_value()
@@ -854,6 +1000,120 @@ class TestApplicationBrowser:
             "[id^='data_import'][id$='-Name']"
         ).first).to_contain_text("browser iris", timeout=20_000)
         expect(page.locator("#Accordion")).to_be_visible(timeout=20_000)
+
+    @pytest.mark.ui
+    def test_server_can_import_browser_bookmark_and_restore_it(
+        self, page: Page, server_bookmark_app: ShinyAppProc, tmp_path
+    ):
+        candidate = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        imported = next(
+            card
+            for group in candidate["layout"]
+            for card in group["cards"]
+            if card["module"] == "data_import"
+        )
+        imported["state"]["last_committed_tab"] = "Dataset based"
+        imported["state"]["inputs"]["Dataset"] = "sklearn::iris"
+        imported["state"]["inputs"]["DName"] = "imported browser iris"
+        candidate["bookmark"] = {
+            "filename": "imported-browser-iris--20260912T120000+1200.pythagoras.json",
+            "created_at": "2026-09-12T12:00:00+12:00",
+        }
+        import_path = tmp_path / "imported.pythagoras.json"
+        import_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+        page.goto(server_bookmark_app.url)
+        wait_for_shiny_ready(page)
+        page.locator("#SaveConfiguration").click()
+        dialog = page.get_by_role("dialog")
+        upload = dialog.locator("[id$='-ImportBookmark']")
+        expect(upload).to_be_visible()
+        upload.set_input_files(import_path)
+        with page.expect_navigation(wait_until="load"):
+            dialog.get_by_role(
+                "button", name="Import and load", exact=True
+            ).click()
+
+        wait_for_shiny_ready(page)
+        expect(page.locator(
+            "[id^='data_import'][id$='-Name']"
+        ).first).to_contain_text("imported browser iris", timeout=20_000)
+        assert page.evaluate(
+            """
+            async () => {
+                const database = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open("pythagoras-bookmarks", 1);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                try {
+                    return await new Promise((resolve, reject) => {
+                        const request = database.transaction(
+                            "bookmarks", "readonly",
+                        ).objectStore("bookmarks").count();
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    });
+                } finally {
+                    database.close();
+                }
+            }
+            """
+        ) == 1
+
+    @pytest.mark.ui
+    def test_shinylive_mode_uses_browser_storage_controls(
+        self, page: Page, shinylive_bookmark_app: ShinyAppProc
+    ):
+        page.goto(shinylive_bookmark_app.url)
+        wait_for_shiny_ready(page)
+        page.locator("#SaveConfiguration").click()
+        dialog = page.get_by_role("dialog")
+
+        expect(dialog.get_by_text("Browser bookmark entries", exact=True)).to_be_visible()
+        expect(dialog.locator("[id$='-ImportBookmark']")).to_be_visible()
+        expect(dialog.locator("[id$='-SelectedDataName'] option")).to_have_count(0)
+
+    @pytest.mark.ui
+    def test_invalid_latest_browser_bookmark_falls_back_gracefully(
+        self, page: Page, server_bookmark_app: ShinyAppProc
+    ):
+        page.goto(server_bookmark_app.url)
+        wait_for_shiny_ready(page)
+        page.evaluate(
+            """
+            async () => {
+                const database = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open("pythagoras-bookmarks", 1);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                try {
+                    await new Promise((resolve, reject) => {
+                        const request = database.transaction(
+                            "bookmarks", "readwrite",
+                        ).objectStore("bookmarks").add({
+                            filename: "invalid--20260912T130000+1200.pythagoras.json",
+                            createdAt: (Date.now() / 1000) + 1000,
+                            configuration: {version: "not valid"},
+                        });
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                } finally {
+                    database.close();
+                }
+            }
+            """
+        )
+
+        page.reload()
+        wait_for_shiny_ready(page)
+
+        expect(page.get_by_text(
+            "The saved bookmark could not be restored:", exact=False
+        )).to_be_visible(timeout=20_000)
+        expect(page.get_by_text("Pythagoras", exact=True)).to_be_visible()
 
     @pytest.mark.ui
     def test_empty_section_can_add_a_card_and_then_be_deleted(
@@ -1031,6 +1291,114 @@ class TestApplicationBrowser:
             shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
 
     @pytest.mark.ui
+    def test_generic_card_inputs_are_saved_and_restored(
+        self, page: Page, save_app: ShinyAppProc
+    ):
+        shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
+        try:
+            page.goto(save_app.url)
+            wait_for_shiny_ready(page)
+            expect(page.locator("#data_tabulation-Decimals")).to_be_attached(
+                timeout=20_000
+            )
+            page.evaluate(
+                """
+                () => window.Shiny.setInputValue(
+                    "data_tabulation-Decimals", 3, {priority: "event"}
+                )
+                """
+            )
+            page.get_by_role("tab", name="Data cleaning", exact=True).click()
+            expect(page.locator("#obs_duplicates-Card")).to_be_attached(
+                timeout=20_000
+            )
+
+            page.locator("#SaveConfiguration").click()
+            dialog = page.get_by_role("dialog")
+            dialog.locator("[id$='-SaveBookmark']").click()
+            expect(page.get_by_text(
+                "Bookmark saved as", exact=False
+            )).to_be_visible()
+
+            saved = list(BOOKMARK_TEST_DIR.glob("*.pythagoras.json"))
+            assert len(saved) == 1
+            written = json.loads(saved[0].read_text(encoding="utf-8"))
+            assert written["version"] == 2
+            assert written["active_section"] == "Data cleaning"
+            tabulation = next(
+                card
+                for group in written["layout"]
+                for card in group["cards"]
+                if card["module"] == "data_tabulation"
+            )
+            assert tabulation["state"]["inputs"]["Decimals"] == 3
+
+            page.reload()
+            wait_for_shiny_ready(page)
+            restored_section = page.get_by_role(
+                "tab", name="Data cleaning", exact=True
+            )
+            expect(restored_section).to_have_attribute("aria-selected", "true")
+            page.get_by_role("tab", name="Data prep", exact=True).click()
+            page.wait_for_function(
+                """
+                () => Object.entries(window.Shiny.shinyapp.$inputValues).some(
+                    ([name, value]) => name.startsWith("data_tabulation")
+                        && name.endsWith("-Decimals")
+                        && value === 3
+                )
+                """,
+                timeout=20_000,
+            )
+        finally:
+            shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
+
+    @pytest.mark.ui
+    def test_role_assignment_custom_input_is_written_to_bookmark(
+        self, page: Page, save_app: ShinyAppProc
+    ):
+        shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
+        try:
+            page.goto(save_app.url)
+            wait_for_shiny_ready(page)
+            page.wait_for_function(
+                """
+                () => Object.entries(window.Shiny.shinyapp.$inputValues).some(
+                    ([name, value]) => name.startsWith("role_assignment")
+                        && name.endsWith("-role_map")
+                        && value
+                        && Object.values(value).flat().length > 0
+                )
+                """,
+                timeout=20_000,
+            )
+            current = page.evaluate(
+                """
+                () => Object.entries(window.Shiny.shinyapp.$inputValues).find(
+                    ([name]) => name.startsWith("role_assignment")
+                        && name.endsWith("-role_map")
+                )[1]
+                """
+            )
+
+            page.locator("#SaveConfiguration").click()
+            page.get_by_role("dialog").locator("[id$='-SaveBookmark']").click()
+            expect(page.get_by_text("Bookmark saved as", exact=False)).to_be_visible()
+
+            saved = list(BOOKMARK_TEST_DIR.glob("*.pythagoras.json"))
+            assert len(saved) == 1
+            written = json.loads(saved[0].read_text(encoding="utf-8"))
+            role_assignment = next(
+                card
+                for group in written["layout"]
+                for card in group["cards"]
+                if card["module"] == "role_assignment"
+            )
+            assert role_assignment["state"]["inputs"]["role_map"] == current
+        finally:
+            shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
+
+    @pytest.mark.ui
     def test_committed_data_reacts_through_cards_and_section_boundary(
         self, page: Page, app: ShinyAppProc, csv_file,
     ):
@@ -1060,6 +1428,7 @@ class TestApplicationBrowser:
         page.locator("#role_assignment-CloseButton").click(force=True)
         page.get_by_role("dialog").get_by_role("button", name="Yes, remove").click()
         expect(page.locator("#role_assignment-Card")).to_have_count(0)
+        expect(page.locator(".shiny-output-error")).to_have_count(0)
 
         # replacement = tmp_path / "after-removal.csv"
         # replacement.write_text("id,value\n1,100\n2,200\n", encoding="utf-8")

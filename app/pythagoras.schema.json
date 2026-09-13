@@ -14,7 +14,13 @@
 
     "version": {
       "type": "integer",
-      "minimum": 1
+      "enum": [1, 2],
+      "description": "Version 1 bookmarks remain readable and are migrated in memory to version 2."
+    },
+
+    "active_section": {
+      "type": "string",
+      "minLength": 1
     },
 
     "bookmark": {
@@ -107,64 +113,9 @@
   "required": ["version", "settings", "layout"],
 
   "$defs": {
-    "nullableString": {
-      "type": ["string", "null"]
-    },
-
-    "uploadedFile": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "name": {"type": "string"},
-        "size": {"type": "integer", "minimum": 0},
-        "type": {"type": "string"},
-        "datapath": {"type": "string"}
-      },
-      "required": ["name", "size", "type", "datapath"]
-    },
-
-    "dataImportInputs": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "Navset": {
-          "type": "string",
-          "enum": ["File based", "Dataset based", "Web based", "UC Irvine"]
-        },
-        "ServerFile": {
-          "type": ["array", "null"],
-          "items": {"$ref": "#/$defs/uploadedFile"}
-        },
-        "LocalFilePath": {"$ref": "#/$defs/nullableString"},
-        "FName": {"$ref": "#/$defs/nullableString"},
-        "Dataset": {"$ref": "#/$defs/nullableString"},
-        "DName": {"$ref": "#/$defs/nullableString"},
-        "Url": {"$ref": "#/$defs/nullableString"},
-        "UName": {"$ref": "#/$defs/nullableString"},
-        "UciDataset": {"$ref": "#/$defs/nullableString"},
-        "IName": {"$ref": "#/$defs/nullableString"},
-        "Separator": {"$ref": "#/$defs/nullableString"},
-        "Sheet": {"type": ["number", "null"]}
-      }
-    },
-
     "cardState": {
       "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "inputs": {"$ref": "#/$defs/dataImportInputs"},
-        "last_committed_tab": {
-          "type": ["string", "null"],
-          "enum": [
-            "File based",
-            "Dataset based",
-            "Web based",
-            "UC Irvine",
-            null
-          ]
-        }
-      },
-      "required": ["inputs", "last_committed_tab"]
+      "description": "Opaque JSON-compatible state owned and validated by the card that produced it."
     }
   }
 }

@@ -195,6 +195,20 @@ class TestInstance:
             assert f'id="{control}"' in html
 
     @pytest.mark.unit
+    def test_numeric_sentinel_strings_restore_as_selected_numeric_choices(self, card):
+        card.restore_configuration_state({
+            "inputs": {
+                "NA_Integers": ["-9999", "-99", "-1"],
+                "NA_Floats": ["-9999.99", "-99.0", "-1.0"],
+            }
+        })
+
+        html = str(card.settings)
+
+        for value in ("-9999", "-99", "-1", "-9999.99", "-99.0", "-1.0"):
+            assert f'value="{value}" selected=""' in html
+
+    @pytest.mark.unit
     def test_front_contains_all_tabs_and_charts(self, card):
         html = str(card.front.tagify())
         for label in ("All variables", "Integer", "Decimal", "Character", "Dates &amp; Times"):

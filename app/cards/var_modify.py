@@ -13,7 +13,7 @@ if __name__ == "__main__":
         sys.path.insert(0, root_string)
 
 import difflib
-from collections.abc import Hashable, Sequence
+from collections.abc import Hashable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -25,11 +25,189 @@ from list_pandas import as_list, is_list, is_list_like
 from module import Module
 from proxy_data import proxy_data as pxd
 from shiny import reactive, render, req, ui
+from shiny.types import SilentException
 from text_pandas import as_text, is_text_like
 from var_types import TYPES, var_kind
 
 #TODO: Improve Script output
 #TODO: Expose more setting used in _Like functions
+
+_MODIFICATION_STATE_FIELD = "modifications"
+_ORIG_NAME = "Orig\nname"
+_NEW_NAME = "New\nname"
+_ORIG_TYPE = "Orig\nd-type"
+_NEW_TYPE = "New\nd-type"
+_ORIG_ORDER = "Orig\norder"
+_NEW_ORDER = "New\norder"
+_CONVERTIBLE_TYPES = {
+    "decimal",
+    "integer",
+    "date",
+    "text",
+    "nominal",
+    "ordered",
+    "cyclic",
+    "basket",
+    "geometry",
+    "code",
+    "logical",
+}
+
+
+def _order_as_list(value) -> list[str]:
+    """Return the table's legacy comma-separated order as JSON-safe values."""
+    if value is None or value == "":
+        return []
+    if isinstance(value, str):
+        return value.split(",")
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [str(item) for item in value]
+    return []
+
+
+def _modification_plan(schema: pd.DataFrame) -> list[dict[str, object]]:
+    """Serialize only rows whose proposed definition differs from its source."""
+    plan: list[dict[str, object]] = []
+    required = {
+        _ORIG_NAME,
+        _NEW_NAME,
+        _ORIG_TYPE,
+        _NEW_TYPE,
+        _ORIG_ORDER,
+        _NEW_ORDER,
+    }
+    if not isinstance(schema, pd.DataFrame) or not required.issubset(schema.columns):
+        return plan
+    for row in schema.to_dict(orient="records"):
+        if (
+            row[_ORIG_NAME] == row[_NEW_NAME]
+            and row[_ORIG_TYPE] == row[_NEW_TYPE]
+            and row[_ORIG_ORDER] == row[_NEW_ORDER]
+        ):
+            continue
+        plan.append({
+            "source": str(row[_ORIG_NAME]),
+            "source_type": str(row[_ORIG_TYPE]),
+            "name": str(row[_NEW_NAME]),
+            "data_type": str(row[_NEW_TYPE]),
+            "order": _order_as_list(row[_NEW_ORDER]),
+        })
+    return plan
+
+
+def _reconcile_modification_plan(
+    schema: pd.DataFrame,
+    saved,
+    *,
+    levels_by_source: Mapping[str, Sequence[str]] | None = None,
+) -> tuple[pd.DataFrame, list[str]]:
+    """Apply a saved plan safely to a schema generated from current input data."""
+    restored = schema.copy()
+    warnings: list[str] = []
+    if saved is None:
+        return restored, warnings
+    if not isinstance(saved, list):
+        return restored, ["The saved variable-modification plan is malformed."]
+
+    source_lookup = {
+        str(source): index
+        for index, source in restored[_ORIG_NAME].items()
+    }
+    seen: set[str] = set()
+    for raw in saved:
+        if not isinstance(raw, Mapping):
+            warnings.append("A malformed saved variable modification was ignored.")
+            continue
+        source = raw.get("source")
+        if not isinstance(source, str) or not source:
+            warnings.append("A saved variable modification had no source name.")
+            continue
+        if source in seen:
+            warnings.append(
+                f"A duplicate saved modification for {source!r} was ignored."
+            )
+            continue
+        seen.add(source)
+        if source not in source_lookup:
+            warnings.append(f"Variable {source!r} is no longer present and was ignored.")
+            continue
+        index = source_lookup[source]
+        current_type = str(restored.at[index, _ORIG_TYPE])
+        saved_source_type = raw.get("source_type")
+        if isinstance(saved_source_type, str) and saved_source_type != current_type:
+            warnings.append(
+                f"Variable {source!r} changed from saved type "
+                f"{saved_source_type!r} to {current_type!r}."
+            )
+
+        name = raw.get("name", source)
+        if not isinstance(name, str) or not name:
+            warnings.append(
+                f"The saved name for {source!r} was invalid and was ignored."
+            )
+            name = str(restored.at[index, _ORIG_NAME])
+
+        new_type = raw.get("data_type", current_type)
+        if (
+            not isinstance(new_type, str)
+            or (new_type != current_type and new_type not in _CONVERTIBLE_TYPES)
+        ):
+            warnings.append(
+                f"The saved data type for {source!r} was unsupported and was ignored."
+            )
+            new_type = current_type
+
+        order = raw.get("order", [])
+        if not isinstance(order, list) or not all(
+            isinstance(value, str) for value in order
+        ):
+            warnings.append(
+                f"The saved order for {source!r} was invalid and was ignored."
+            )
+            order = _order_as_list(restored.at[index, _ORIG_ORDER])
+        if (
+            new_type in {"ordered", "cyclic"}
+            and levels_by_source is not None
+            and source in levels_by_source
+        ):
+            current_levels = list(levels_by_source[source])
+            current_set = set(current_levels)
+            removed_levels = [level for level in order if level not in current_set]
+            retained_order = [level for level in order if level in current_set]
+            added_levels = [
+                level for level in current_levels if level not in retained_order
+            ]
+            if removed_levels:
+                warnings.append(
+                    f"Levels no longer present in {source!r} were removed from "
+                    "its saved order: " + ", ".join(removed_levels) + "."
+                )
+            if added_levels and order:
+                warnings.append(
+                    f"New levels in {source!r} were appended to its saved order: "
+                    + ", ".join(added_levels)
+                    + "."
+                )
+            order = retained_order + added_levels
+
+        restored.at[index, _NEW_NAME] = name
+        restored.at[index, _NEW_TYPE] = new_type
+        restored.at[index, _NEW_ORDER] = ",".join(order)
+
+    duplicated_names = restored[_NEW_NAME][restored[_NEW_NAME].duplicated(False)]
+    if not duplicated_names.empty:
+        duplicates = sorted({str(value) for value in duplicated_names})
+        warnings.append(
+            "Duplicate restored variable name(s) were rejected: "
+            + ", ".join(duplicates)
+            + "."
+        )
+        duplicate_set = set(duplicated_names.tolist())
+        for index, row in restored.iterrows():
+            if row[_NEW_NAME] in duplicate_set and row[_NEW_NAME] != row[_ORIG_NAME]:
+                restored.at[index, _NEW_NAME] = row[_ORIG_NAME]
+    return restored, warnings
+
 
 def instance():
     """
@@ -42,6 +220,9 @@ def instance():
     """
 
     this = Card(file=__file__, mutable=True)
+    this.register_configuration_state_field(_MODIFICATION_STATE_FIELD)
+    for transient_input in ("NewName", "NewDataType", "NewOrder"):
+        this.exclude_configuration_input(transient_input)
     this.long_name = "Modification"
     this.description = "This card allows the basic modification of variables such as name, data-type, and cyclic-order ."
 
@@ -161,6 +342,30 @@ def instance():
     def server(input, output, session):
 
         OutputData = reactive.Value()
+        restored_modifications = this.restored_configuration_field(
+            _MODIFICATION_STATE_FIELD,
+            {},
+        )
+        if not isinstance(restored_modifications, Mapping):
+            this.log.warning(
+                "Variable-modification bookmark state is malformed; using defaults"
+            )
+            restored_modifications = {}
+        restored_proposed = restored_modifications.get("proposed", [])
+        restored_committed = restored_modifications.get("committed", [])
+        restored_source_columns = restored_modifications.get("source_columns")
+        restored_selected_source = restored_modifications.get("selected_source")
+        restored_formats = this.restored_configuration_input(
+            "Formats",
+            ", ".join(DATE_FORMATS),
+        )
+        CommittedPlan = reactive.Value(
+            restored_committed if isinstance(restored_committed, list) else []
+        )
+        ProposedPlan = reactive.Value(
+            restored_proposed if isinstance(restored_proposed, list) else []
+        )
+        restored_commit_pending = bool(restored_committed)
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
@@ -176,9 +381,61 @@ def instance():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
+        def current_levels(plan) -> dict[str, list[str]]:
+            """Return stable text levels for restored ordered conversions."""
+            requested = {
+                item.get("source")
+                for item in plan
+                if isinstance(item, Mapping)
+                and item.get("data_type") in {"ordered", "cyclic"}
+            } if isinstance(plan, list) else set()
+            if not requested:
+                return {}
+            frame = PreparedData().frame
+            levels: dict[str, list[str]] = {}
+            for column in frame.columns:
+                if str(column) not in requested:
+                    continue
+                series = frame[column]
+                if isinstance(series.dtype, pd.CategoricalDtype):
+                    values = series.cat.categories.tolist()
+                else:
+                    try:
+                        values = series.dropna().drop_duplicates().tolist()
+                    except TypeError:
+                        continue
+                levels[str(column)] = [str(value) for value in values]
+            return levels
+
         @this.suspendable()
         def PxdChange():
-            OutputData.set(incomingproxy_data())
+            nonlocal restored_commit_pending
+            data = incomingproxy_data()
+            req(data is not None)
+            if restored_commit_pending:
+                committed_schema, warnings = _reconcile_modification_plan(
+                    Schema(),
+                    restored_committed,
+                    levels_by_source=current_levels(restored_committed),
+                )
+                for warning in warnings:
+                    this.log.warning("Variable modification bookmark: %s", warning)
+                try:
+                    restored_output = _apply_modifications(data, committed_schema)
+                except Exception:  # noqa: BLE001
+                    this.log.exception(
+                        "The committed variable-modification bookmark could not "
+                        "be replayed; incoming data will pass through unchanged"
+                    )
+                    OutputData.set(data)
+                    CommittedPlan.set([])
+                else:
+                    OutputData.set(restored_output)
+                    CommittedPlan.set(_modification_plan(committed_schema))
+                restored_commit_pending = False
+                return
+            OutputData.set(data)
+            CommittedPlan.set([])
 
         @this.suspendable(calc = True)
         def Schema():
@@ -212,11 +469,49 @@ def instance():
             df.set_index("Orig\nname")
             return df                
 
+        reconciliation_warnings: set[str] = set()
+
+        @this.suspendable(calc=True)
+        def CurrentSchema():
+            schema, warnings = _reconcile_modification_plan(
+                Schema(),
+                ProposedPlan(),
+                levels_by_source=current_levels(ProposedPlan()),
+            )
+            if isinstance(restored_source_columns, list) and all(
+                isinstance(column, str) for column in restored_source_columns
+            ):
+                saved_columns = set(restored_source_columns)
+                current_columns = {
+                    str(column) for column in schema[_ORIG_NAME].tolist()
+                }
+                removed = sorted(saved_columns - current_columns)
+                added = sorted(current_columns - saved_columns)
+                if removed:
+                    warnings.append(
+                        "Variables no longer present in the imported data: "
+                        + ", ".join(removed)
+                        + "."
+                    )
+                if added:
+                    warnings.append(
+                        "New variables used their current definitions: "
+                        + ", ".join(added)
+                        + "."
+                    )
+            for warning in warnings:
+                if warning not in reconciliation_warnings:
+                    this.log.warning(
+                        "Variable modification bookmark: %s",
+                        warning,
+                    )
+                    reconciliation_warnings.add(warning)
+            return schema
 
         @output
         @render.data_frame
         def Table():
-            schema = Schema()
+            schema = CurrentSchema()
             req(schema is not None)
             return render.DataGrid(
                 schema,
@@ -230,29 +525,74 @@ def instance():
             nonlocal selection_scheduled
             if selection_scheduled:
                 return
-            data = Table.data()  # creates dependence on Table
+            data = Table.data()  # creates dependence on the client-bound grid
             # Suspends until the browser-side grid has initialized.
             Table.cell_selection()
             if len(data) == 0:
                 return
             selection_scheduled = True
+            selected_index = 0
+            if isinstance(restored_selected_source, str):
+                matches = data.index[
+                    data[_ORIG_NAME].astype(str) == restored_selected_source
+                ].tolist()
+                if matches:
+                    selected_index = int(matches[0])
 
             async def apply_initial_selection():
                 await Table.update_cell_selection(
                     {
                         "type": "row",
-                        "rows": [0],
+                        "rows": [selected_index],
                     }
                 )
 
-            # Runs after the flush in which client readiness was observed.
             session.on_flushed(apply_initial_selection, once=True)
 
         @this.suspendable(calc=True)
         def selected_row():
             return Table.data_view(selected=True)
 
+        def modification_configuration_state():
+            proposed = ProposedPlan()
+            selected_source = None
+            try:
+                row = selected_row()
+                if row is not None and not row.empty:
+                    selected_source = str(row[_ORIG_NAME].iloc[0])
+            except Exception:  # noqa: BLE001 - grid may not yet be client-bound
+                if isinstance(restored_selected_source, str):
+                    selected_source = restored_selected_source
+            committed = CommittedPlan.get() if CommittedPlan.is_set() else []
+            try:
+                source_columns = [
+                    str(column)
+                    for column in CurrentSchema()[_ORIG_NAME].tolist()
+                ]
+            except Exception:  # noqa: BLE001 - data may not yet be available
+                source_columns = (
+                    restored_source_columns
+                    if isinstance(restored_source_columns, list)
+                    else []
+                )
+            return {
+                "proposed": proposed,
+                "committed": committed,
+                "source_columns": source_columns,
+                "selected_source": selected_source,
+            }
+
+        this.register_configuration_state_provider(
+            _MODIFICATION_STATE_FIELD,
+            modification_configuration_state,
+        )
+
         previous_row = reactive.value(None)
+
+        def set_proposed_schema(schema: pd.DataFrame) -> None:
+            plan = _modification_plan(schema)
+            if plan != ProposedPlan():
+                ProposedPlan.set(plan)
 
         @this.suspendable(calc=True)
         def allowed_d_types():
@@ -323,17 +663,16 @@ def instance():
             previous_row.set(row["Orig\nname"].iloc[0])
             ui.update_text(id="NewName", value=row["New\nname"].iloc[0])
             at = allowed_d_types()
-            if len(at) == 1:
-                selected = at[0]
-            else:
-                selected = row["New\nd-type"].iloc[0]
+            selected = row["New\nd-type"].iloc[0]
+            if selected not in at:
+                at = [*at, selected]
             ui.update_selectize(id="NewDataType", choices=at, selected=selected)
-            if row["New\nd-type"].iloc[0] not in at:
+            if selected not in allowed_d_types():
                 await session.send_custom_message(
                     "animate",
                     {"id": session.ns("NewDataType"), "animation": "shakeX", "delay": 0, "duration": 500, "lock": "TableDiv"},
                 )
-            order = row["New\norder"].iloc[0].split(",")
+            order = _order_as_list(row["New\norder"].iloc[0])
             ui.update_selectize(id="NewOrder", choices=order, selected=order)
             
         @this.suspendable(triggers=[input.NewName])
@@ -341,16 +680,25 @@ def instance():
             row = selected_row()
             req(row is not None, not row.empty)
             origName = row["Orig\nname"].iloc[0]
-            df = Table.data().copy()
-            if input.NewName() != origName:
-                if input.NewName() in df["Orig\nname"].values:
-                    await session.send_custom_message(
-                        "animate",
-                        {"id": session.ns("NewName"), "animation": "shakeX", "delay": 500},
-                    )
-                else:
-                    df.loc[df["Orig\nname"] == origName, "New\nname"] = input.NewName()
-                    await Table.update_data(df)
+            df = CurrentSchema().copy()
+            new_name = input.NewName()
+            current_name = row[_NEW_NAME].iloc[0]
+            if new_name == current_name:
+                return
+            used_elsewhere = df.loc[
+                df[_ORIG_NAME] != origName,
+                _NEW_NAME,
+            ].tolist()
+            if not isinstance(new_name, str) or not new_name or new_name in used_elsewhere:
+                await session.send_custom_message(
+                    "animate",
+                    {"id": session.ns("NewName"), "animation": "shakeX", "delay": 500},
+                )
+                ui.update_text(id="NewName", value=current_name)
+                return
+            df.loc[df[_ORIG_NAME] == origName, _NEW_NAME] = new_name
+            set_proposed_schema(df)
+            await Table.update_data(df)
 
         @this.suspendable(triggers = [input.NewDataType])
         async def TypeChange():
@@ -358,14 +706,15 @@ def instance():
             req(row is not None, not row.empty)
             origName = row["Orig\nname"].iloc[0]
             if len(input.NewDataType()) > 0:
-                df = Table.data().copy()
+                df = CurrentSchema().copy()
                 df.loc[df["Orig\nname"]==origName, "New\nd-type"] = input.NewDataType()
+                set_proposed_schema(df)
                 await Table.update_data(df)
             if input.NewDataType() in ["ordered", "cyclic"]:
                 px = PreparedData()
                 req(px)
                 var = px.frame[row["Orig\nname"].iloc[0]]
-                if not isinstance(var, pd.CategoricalDtype):
+                if not isinstance(var.dtype, pd.CategoricalDtype):
                     var = var.astype("category")
                 order = var.cat.categories.tolist()
                 ui.update_selectize(id = "NewOrder", choices = order, selected = order)
@@ -381,7 +730,11 @@ def instance():
             if value in allowed_d_types():
                 ui.update_selectize(id="NewDataType", choices=allowed_d_types(), selected=value)
             else:
-                ui.update_selectize(id="NewDataType", choices=allowed_d_types())
+                ui.update_selectize(
+                    id="NewDataType",
+                    choices=[*allowed_d_types(), value],
+                    selected=value,
+                )
                 
         @this.suspendable(triggers=[input.NewOrder])
         async def validate_new_order():
@@ -389,8 +742,9 @@ def instance():
             req(row is not None, not row.empty)
             origName = row["Orig\nname"].iloc[0]
             if len(input.NewOrder()) > 0:
-                df = Table.data().copy()
+                df = CurrentSchema().copy()
                 df.loc[df["Orig\nname"]==origName, "New\norder"] = ",".join(input.NewOrder())
+                set_proposed_schema(df)
                 await Table.update_data(df)
 
 
@@ -427,19 +781,35 @@ def instance():
                 diff = "No committed modifications."
             return ui.tags.pre(diff, style="white-space: pre-wrap; font-size: 0.85rem;")
 
-        @this.suspendable(triggers=[input.Commit])
-        @this.record_code
-        def CommitEvent():
-            # ui.update_action_button(id="Commit", disabled=True)
-            data = incomingproxy_data()
+        def _configured_formats() -> list[str]:
+            try:
+                value = input.Formats()
+            except SilentException:
+                value = restored_formats
+            if not isinstance(value, str):
+                return []
+            return [item.strip() for item in value.split(",") if item.strip()]
+
+        def _apply_modifications(
+            data: pxd,
+            table_data: pd.DataFrame,
+            converter=None,
+        ) -> pxd:
+            """Apply one complete reconciled schema to incoming proxy data."""
+            converter = convert_series if converter is None else converter
             rm = data._copy_roles()
-            table_data = Table.data()
-            #Transform the data as per Table control
             d = data.frame.copy()
             changes = []
-            for name, newName, origType, newType, origOrder, newOrder in table_data[["Orig\nname","New\nname","Orig\nd-type","New\nd-type","Orig\norder","New\norder"]].itertuples(index=False, name=None):
+            for name, newName, origType, newType, origOrder, newOrder in table_data[
+                [_ORIG_NAME, _NEW_NAME, _ORIG_TYPE, _NEW_TYPE, _ORIG_ORDER, _NEW_ORDER]
+            ].itertuples(index=False, name=None):
                 if origType != newType or origOrder != newOrder:
-                    d[name] = convert_series(series = d[name], new_type = newType, order=newOrder, formats = input.Formats)
+                    d[name] = converter(
+                        series=d[name],
+                        new_type=newType,
+                        order=newOrder,
+                        formats=_configured_formats(),
+                    )
                     changes.append({
                         "variable": name,
                         "original_type": origType,
@@ -454,31 +824,39 @@ def instance():
                         "variable": name,
                         "new_name": newName,
                     })
-            data2 = (
-                data.with_cleaned_data(
+            if changes:
+                return data.with_cleaned_data(
                     d,
                     card="var_modify",
                     operation="Modify variable definitions",
                     parameters={"changes": changes},
                     role_map=rm,
                 )
-                if changes
-                else data.with_inactive_step(
-                    stage="Cleaning",
-                    card="var_modify",
-                    operation="Modify variable definitions",
-                )
+            return data.with_inactive_step(
+                stage="Cleaning",
+                card="var_modify",
+                operation="Modify variable definitions",
             )
-            #set the output data
-            OutputData.set(data2)
+
+        @this.suspendable(triggers=[input.Commit])
+        @this.record_code
+        def CommitEvent():
+            data = incomingproxy_data()
+            table_data = CurrentSchema()
+            CommittedPlan.set(_modification_plan(table_data))
+            OutputData.set(
+                _apply_modifications(data, table_data, converter=convert_series)
+            )
 
         @this.suspendable(triggers=[input.Reset])
         async def Reset():
             #reset the Table's data
-            df = Table.data().copy()
+            df = CurrentSchema().copy()
             df["New\nname"] = df["Orig\nname"]
             df["New\nd-type"] = df["Orig\nd-type"]
             df["New\norder"] = df["Orig\norder"]
+            ProposedPlan.set([])
+            CommittedPlan.set([])
             await Table.update_data(df)
             #reinstate the pass-through of the actual data
             OutputData.set(incomingproxy_data())

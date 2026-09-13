@@ -331,7 +331,7 @@ def instance():
             return _round_significant(frame, SignificantFigures())
 
         @busy.track("Searching for (near) duplicate observations…")
-        @reactive.extended_task
+        @this.extended_task
         async def CalculateDuplicates(
             before: pd.DataFrame,
             after: pd.DataFrame,

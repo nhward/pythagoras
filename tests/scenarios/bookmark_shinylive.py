@@ -1,4 +1,4 @@
-"""Full application fixture forced into remote-server runtime mode."""
+"""Full application fixture forced into Shinylive runtime mode."""
 
 import os
 import sys
@@ -11,6 +11,7 @@ if str(APP_ROOT) not in sys.path:
 
 from module import Module
 
-Module.runtime_mode = classmethod(lambda cls, session: "server")
+Module.IS_SHINYLIVE = True
+Module.runtime_mode = classmethod(lambda cls, session: "shinylive")
 
 from app import app

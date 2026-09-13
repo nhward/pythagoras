@@ -781,6 +781,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const bookmarkStoreName = "bookmarks";
     const stagedBookmarkKey = "pythagoras-bookmark-once";
     const settingsQueryParameter = "_pythagoras_settings";
+    const uiQueryParameter = "_pythagoras_ui";
     const systemSettingNames = [
         "section_style",
         "show_start",
@@ -803,10 +804,35 @@ document.addEventListener("DOMContentLoaded", () => {
         return content ? systemSettings({ settings: JSON.parse(content) }) : {};
     };
 
+    const bookmarkUiConfiguration = (configuration) => ({
+        version: 2,
+        settings: configuration?.settings || {},
+        layout: (configuration?.layout || []).map((group) => ({
+            section: group.section,
+            cards: (group.cards || []).map((card) => ({ module: card.module })),
+        })),
+        ...(typeof configuration?.active_section === "string"
+            ? { active_section: configuration.active_section }
+            : {}),
+    });
+
+    const renderedUiConfiguration = () => {
+        const content = document.querySelector(
+            'meta[name="pythagoras-ui-configuration"]',
+        )?.content;
+        return content ? JSON.parse(content) : null;
+    };
+
+    const renderedRuntimeMode = () => document.querySelector(
+        'meta[name="pythagoras-runtime-mode"]',
+    )?.content || "server";
+
     const clearSettingsQuery = () => {
         const url = new URL(window.location.href);
-        if (!url.searchParams.has(settingsQueryParameter)) return;
+        if (!url.searchParams.has(settingsQueryParameter)
+                && !url.searchParams.has(uiQueryParameter)) return;
         url.searchParams.delete(settingsQueryParameter);
+        url.searchParams.delete(uiQueryParameter);
         window.history.replaceState(null, "", url);
     };
 
@@ -958,6 +984,10 @@ document.addEventListener("DOMContentLoaded", () => {
             settingsQueryParameter,
             JSON.stringify(systemSettings(configuration)),
         );
+        url.searchParams.set(
+            uiQueryParameter,
+            JSON.stringify(bookmarkUiConfiguration(configuration)),
+        );
         // Let the Shiny flush that delivered this message finish before closing
         // its WebSocket. Reloading synchronously can leave the server attempting
         // to complete work against a session that the browser has just closed.
@@ -984,12 +1014,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 return;
             }
+            if (renderedRuntimeMode() === "local") {
+                Shiny.setInputValue(
+                    "BookmarkStartup",
+                    { ready: true, source: "none", configuration: null },
+                    { priority: "event" },
+                );
+                return;
+            }
             const records = await bookmarkRecords();
             const latest = records[0];
             if (
                 latest
-                && JSON.stringify(systemSettings(latest.configuration))
-                    !== JSON.stringify(renderedSystemSettings())
+                && JSON.stringify(bookmarkUiConfiguration(latest.configuration))
+                    !== JSON.stringify(renderedUiConfiguration())
             ) {
                 stageBookmarkAndReload(latest.configuration);
                 return;

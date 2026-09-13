@@ -24,7 +24,7 @@ from roles import Role
 from scipy.cluster.hierarchy import leaves_list, linkage, optimal_leaf_ordering
 from scipy.spatial.distance import squareform
 from scipy.stats import norm, rankdata
-from shiny import reactive, render, req, ui
+from shiny import render, req, ui
 from shinywidgets import render_widget
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.metrics import mean_absolute_error
@@ -901,7 +901,7 @@ def instance():
             }
 
         @busy.track("Calculating variable associations…")
-        @reactive.extended_task
+        @this.extended_task
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_correlation, data, **options)
 

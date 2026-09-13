@@ -21,7 +21,7 @@ import shinywidgets
 from card import Card
 from module import Module
 from proxy_data import proxy_data
-from shiny import render, req, ui
+from shiny import render, ui
 from shinywidgets import render_widget
 
 JOURNEY_COLUMNS = [

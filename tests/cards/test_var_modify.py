@@ -23,6 +23,10 @@ from shiny.run import ShinyAppProc
 from text_pandas import is_text
 
 app = create_app_fixture(app="../scenarios/var_modify.py", scope="function")
+restore_app = create_app_fixture(
+    app="../scenarios/var_modify_restore.py",
+    scope="function",
+)
 _HELPER_CARDS = {}
 
 
@@ -210,6 +214,42 @@ class TestInstance:
         assert isinstance(frame["cat"].dtype, pd.CategoricalDtype)
         assert pd.api.types.is_datetime64_any_dtype(frame["date_DT"])
 
+    @pytest.mark.unit
+    def test_card_owned_modification_state_is_preserved_for_saving(
+        self,
+        card_module,
+    ):
+        card = card_module.instance()
+        state = {
+            "inputs": {},
+            "modifications": {
+                "proposed": [{
+                    "source": "y32",
+                    "source_type": "integer",
+                    "name": "y32",
+                    "data_type": "decimal",
+                    "order": [],
+                }],
+                "committed": [],
+                "source_columns": list(seeded_frame().columns),
+                "selected_source": "y32",
+            },
+        }
+        card.restore_configuration_state(state)
+        card.record_code = lambda function: function
+        card.suspendable = lambda **kwargs: lambda function: function
+        card.settle = lambda *args, **kwargs: lambda function: function
+        with reactive.isolate():
+            card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
+        card.server(FakeInputs(), lambda function: function, FakeSession())
+
+        with reactive.isolate():
+            saved = card.configuration_state()["modifications"]
+
+        assert saved["proposed"] == state["modifications"]["proposed"]
+        assert saved["committed"] == []
+        assert saved["source_columns"] == list(seeded_frame().columns)
+
 
 class TestSchema:
     @pytest.mark.unit
@@ -265,6 +305,89 @@ class TestSchema:
         with reactive.isolate():
             result = functions["Schema"]()
         assert result.loc[0, "Role"] == "target"
+
+    @pytest.mark.unit
+    def test_modification_plan_round_trips_multiple_rows(self, card_module):
+        _, _, functions, _, _ = recorded_helpers(card_module)
+        with reactive.isolate():
+            schema = functions["Schema"]()
+        base = schema.copy()
+        schema.loc[schema["Orig\nname"] == "integer", "New\nd-type"] = "decimal"
+        schema.loc[schema["Orig\nname"] == "code", "New\nname"] = "identifier"
+        schema.loc[schema["Orig\nname"] == "ordered", "New\norder"] = (
+            "high,medium,low"
+        )
+
+        plan = card_module._modification_plan(schema)
+        restored, warnings = card_module._reconcile_modification_plan(
+            base,
+            plan,
+        )
+
+        assert warnings == []
+        assert len(plan) == 3
+        rows = restored.set_index("Orig\nname")
+        assert rows.loc["integer", "New\nd-type"] == "decimal"
+        assert rows.loc["code", "New\nname"] == "identifier"
+        assert rows.loc["ordered", "New\norder"] == "high,medium,low"
+
+    @pytest.mark.unit
+    def test_reconcile_warns_and_defaults_for_changed_schema(self, card_module):
+        _, _, functions, _, _ = recorded_helpers(card_module)
+        with reactive.isolate():
+            schema = functions["Schema"]()
+        restored, warnings = card_module._reconcile_modification_plan(
+            schema,
+            [
+                {
+                    "source": "removed",
+                    "source_type": "integer",
+                    "name": "removed",
+                    "data_type": "decimal",
+                    "order": [],
+                },
+                {
+                    "source": "integer",
+                    "source_type": "text",
+                    "name": "decimal",
+                    "data_type": "unsupported",
+                    "order": [],
+                },
+            ],
+        )
+
+        row = restored.set_index("Orig\nname").loc["integer"]
+        assert row["New\nname"] == "integer"
+        assert row["New\nd-type"] == "integer"
+        assert any("no longer present" in warning for warning in warnings)
+        assert any("changed from saved type" in warning for warning in warnings)
+        assert any("unsupported" in warning for warning in warnings)
+        assert any("Duplicate restored variable name" in warning for warning in warnings)
+
+    @pytest.mark.unit
+    def test_reconcile_updates_saved_category_order_for_current_levels(
+        self,
+        card_module,
+    ):
+        _, _, functions, _, _ = recorded_helpers(card_module)
+        with reactive.isolate():
+            schema = functions["Schema"]()
+        restored, warnings = card_module._reconcile_modification_plan(
+            schema,
+            [{
+                "source": "ordered",
+                "source_type": "ordered",
+                "name": "ordered",
+                "data_type": "ordered",
+                "order": ["high", "retired", "low"],
+            }],
+            levels_by_source={"ordered": ["low", "medium", "high", "new"]},
+        )
+
+        row = restored.set_index("Orig\nname").loc["ordered"]
+        assert row["New\norder"] == "high,low,medium,new"
+        assert any("no longer present" in warning for warning in warnings)
+        assert any("were appended" in warning for warning in warnings)
 
 
 class TestInferenceHelpers:
@@ -472,3 +595,22 @@ class TestWebKit:
         expect(restore).to_be_visible()
         restore.click(force=True)
         controller.OutputDataFrame(page, namespaced_id(page, "Table")).expect_nrow(12)
+
+    @pytest.mark.ui
+    def test_bookmark_restores_grid_editor_and_committed_output(
+        self,
+        page: Page,
+        restore_app: ShinyAppProc,
+    ):
+        page.goto(restore_app.url)
+        grid = controller.OutputDataFrame(page, namespaced_id(page, "Table"))
+        grid.expect_nrow(2)
+        grid.expect_cell("decimal", row=0, col=3)
+        grid.expect_cell("cohort", row=1, col=1)
+        grid.expect_selected_rows([1])
+        expect(by_id(page, "NewName")).to_have_value("cohort")
+        expect(by_id(page, "NewDataType")).to_have_value("nominal")
+
+        get_card(page).hover()
+        by_id(page, "FlipButton").click(force=True)
+        expect(by_id(page, "DFDiff")).to_contain_text("Float64")

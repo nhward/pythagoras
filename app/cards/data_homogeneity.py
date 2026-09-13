@@ -684,7 +684,7 @@ def instance():
             }
 
         @busy.track("Comparing distributions through the observation sequence…")
-        @reactive.extended_task
+        @this.extended_task
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_homogeneity, data, **options)
 

@@ -26,7 +26,7 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from shiny import reactive, render, req, ui
+from shiny import render, ui
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
@@ -644,7 +644,7 @@ def instance():
             return float(input.MinImprovement())
 
         @busy.track("Imputing and cross-validating missing values…")
-        @reactive.extended_task
+        @this.extended_task
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse, data, **options)
 

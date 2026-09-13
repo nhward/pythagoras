@@ -175,14 +175,12 @@ class TestCaptureOutput:
         def function(value):
             print(f"value={value}")
             return "ignored"
-
         assert card_module.capture_output(function, 3) == "value=3\n"
 
     @pytest.mark.unit
     def test_forwards_keyword_arguments(self, card_module):
         def function(*, label):
             print(label)
-
         assert card_module.capture_output(function, label="ready") == "ready\n"
 
 
@@ -192,16 +190,13 @@ class TestNativeFilePicker:
         monkeypatch.setattr(card_module.sys, "platform", "darwin")
         monkeypatch.setattr(card_module.os.path, "isfile", lambda path: True)
         monkeypatch.setattr(card_module.os, "access", lambda path, mode: True)
-
         assert card_module.native_file_picker_backend() == (
             "osascript",
             "/usr/bin/osascript",
         )
 
     @pytest.mark.unit
-    def test_windows_uses_available_powershell(
-        self, card_module, monkeypatch
-    ):
+    def test_windows_uses_available_powershell(self, card_module, monkeypatch):
         monkeypatch.setattr(card_module.sys, "platform", "win32")
         monkeypatch.setattr(
             card_module.shutil,
@@ -215,9 +210,7 @@ class TestNativeFilePicker:
         )
 
     @pytest.mark.unit
-    def test_linux_needs_a_display_and_supported_dialog(
-        self, card_module, monkeypatch
-    ):
+    def test_linux_needs_a_display_and_supported_dialog(self, card_module, monkeypatch):
         monkeypatch.setattr(card_module.sys, "platform", "linux")
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
@@ -227,7 +220,6 @@ class TestNativeFilePicker:
             lambda name: f"/usr/bin/{name}",
         )
         assert card_module.native_file_picker_backend() is None
-
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         assert card_module.native_file_picker_backend() == (
             "zenity",
@@ -235,22 +227,16 @@ class TestNativeFilePicker:
         )
 
     @pytest.mark.unit
-    def test_chooser_runs_asynchronously_and_returns_full_path(
-        self, card_module, monkeypatch, tmp_path
-    ):
+    def test_chooser_runs_asynchronously_and_returns_full_path(self, card_module, monkeypatch, tmp_path):
         selected = tmp_path / "observations.csv"
         calls = []
-
         class Process:
             returncode = 0
-
             async def communicate(self):
                 return str(selected).encode(), b""
-
         async def create_process(*command, **kwargs):
             calls.append(command)
             return Process()
-
         monkeypatch.setattr(
             card_module,
             "native_file_picker_backend",
@@ -261,26 +247,19 @@ class TestNativeFilePicker:
             "create_subprocess_exec",
             create_process,
         )
-
         result = asyncio.run(card_module.choose_local_file(tmp_path))
-
         assert result == str(selected.resolve())
         assert calls[0][0] == "/usr/bin/zenity"
         assert f"--filename={tmp_path.resolve()}{os.sep}" in calls[0]
 
     @pytest.mark.unit
-    def test_chooser_cancellation_returns_empty_string(
-        self, card_module, monkeypatch, tmp_path
-    ):
+    def test_chooser_cancellation_returns_empty_string(self, card_module, monkeypatch, tmp_path):
         class Process:
             returncode = 1
-
             async def communicate(self):
                 return b"", b"User cancelled"
-
         async def create_process(*command, **kwargs):
             return Process()
-
         monkeypatch.setattr(
             card_module,
             "native_file_picker_backend",
@@ -291,7 +270,6 @@ class TestNativeFilePicker:
             "create_subprocess_exec",
             create_process,
         )
-
         assert asyncio.run(card_module.choose_local_file(tmp_path)) == ""
 
 
@@ -359,10 +337,8 @@ class TestInstance:
             },
             "last_committed_tab": "Web based",
         })
-
         front = str(card.front.tagify())
         settings = str(card.settings.tagify())
-
         assert 'value="file draft"' in front
         assert 'value="saved package name"' in front
         assert 'value="https://example.test/saved.csv"' in front
@@ -370,6 +346,17 @@ class TestInstance:
         assert 'value="saved UCI name"' in front
         assert 'value=";"' in settings
         assert 'value="3"' in settings
+
+    @pytest.mark.unit
+    def test_data_import_tolerates_obsolete_state_with_warnings(self, card, caplog):
+        invalid_states = [
+            {"inputs": {"UnknownFutureInput": "value"}},
+            {"inputs": {"Navset": "Unknown tab"}},
+            {"inputs": {}, "last_committed_tab": "Unknown tab"},
+        ]
+        for state in invalid_states:
+            card.restore_configuration_state(state)
+        assert "Ignoring" in caplog.text
 
     @pytest.mark.unit
     def test_last_committed_dataset_is_reloaded_after_flush(self, card_module):
@@ -393,11 +380,9 @@ class TestInstance:
         }
         card.restore_configuration_state(state)
         functions = {}
-
         def record(function):
             functions[function.__name__] = function
             return function
-
         card.record_code = record
         card.suspendable = lambda **kwargs: record
         card.isFullScreen = lambda: False
@@ -419,25 +404,20 @@ class TestInstance:
             Commit=lambda: 0,
         )
         callbacks = []
-
         async def send_custom_message(*args, **kwargs):
             return None
-
         session = SimpleNamespace(
             client_data=SimpleNamespace(url_hostname=lambda: "example.test"),
             ns=lambda value: value,
             send_custom_message=send_custom_message,
             on_flushed=lambda callback, once: callbacks.append(callback),
         )
-
         exported = card.server(inputs, lambda function: function, session)
         for callback in callbacks:
             asyncio.run(callback())
-
         asyncio.run(reactive.flush())
         dataset_value.set("sklearn::iris")
         asyncio.run(reactive.flush())
-
         with reactive.isolate():
             restored = exported()
         assert restored.name == "restored iris"
@@ -461,9 +441,7 @@ class TestFileHelpers:
         assert functions["TempFilePath"]() is None
 
     @pytest.mark.unit
-    def test_local_mode_prefers_native_file_path(
-        self, card_module, csv_file
-    ):
+    def test_local_mode_prefers_native_file_path(self, card_module, csv_file):
         card = card_module.instance()
         functions = {}
         card.record_code = lambda function: functions.setdefault(
@@ -494,9 +472,7 @@ class TestFileHelpers:
             ns=lambda value: value,
             send_custom_message=lambda *args, **kwargs: None,
         )
-
         card.server(inputs, lambda function: function, session)
-
         assert functions["TempFilePath"]() == str(csv_file)
 
     @pytest.mark.unit
@@ -580,9 +556,7 @@ class TestFileHelpers:
 
 class TestSummary:
     @pytest.mark.unit
-    def test_dataframe_summary_contains_shape_types_and_variables(
-        self, card_module, csv_file
-    ):
+    def test_dataframe_summary_contains_shape_types_and_variables(self, card_module, csv_file):
         _, functions = recorded_helpers(card_module, file_path=csv_file)
         result = functions["Summary"]()
         html = str(result)
@@ -595,9 +569,7 @@ class TestSummary:
         assert "Memory usage" in html
 
     @pytest.mark.unit
-    def test_geodataframe_summary_contains_geometry_details(
-        self, card_module, tmp_path
-    ):
+    def test_geodataframe_summary_contains_geometry_details(self, card_module, tmp_path):
         path = tmp_path / "points.csv"
         path.write_text('id,geometry\n1,"POINT (1 2)"\n')
         _, functions = recorded_helpers(card_module, file_path=path)
@@ -609,9 +581,7 @@ class TestSummary:
 
 class TestWebKitInitialState:
     @pytest.mark.ui
-    def test_committed_dataset_waits_for_dynamically_bound_inputs(
-        self, page: Page, restore_app: ShinyAppProc
-    ):
+    def test_committed_dataset_waits_for_dynamically_bound_inputs(self, page: Page, restore_app: ShinyAppProc):
         page.goto(restore_app.url)
         expect(page.get_by_role(
             "tab", name="Web based", exact=True
@@ -656,9 +626,7 @@ class TestWebKitInitialState:
 
 class TestWebKitFileWorkflow:
     @pytest.mark.ui
-    def test_upload_sets_short_name_and_ready_status(
-        self, page: Page, server_app: ShinyAppProc, csv_file
-    ):
+    def test_upload_sets_short_name_and_ready_status(self, page: Page, server_app: ShinyAppProc, csv_file):
         page.goto(server_app.url)
         by_id(page, "ServerFile").set_input_files(str(csv_file))
         expect(by_id(page, "FName")).to_have_value("observations")
@@ -667,9 +635,7 @@ class TestWebKitFileWorkflow:
         expect(by_id(page, "Commit")).to_be_enabled()
 
     @pytest.mark.ui
-    def test_upload_summary_on_reverse_side(
-        self, page: Page, server_app: ShinyAppProc, csv_file
-    ):
+    def test_upload_summary_on_reverse_side(self, page: Page, server_app: ShinyAppProc, csv_file):
         page.goto(server_app.url)
         by_id(page, "ServerFile").set_input_files(str(csv_file))
         expect(by_id(page, "Check")).to_contain_text("File import ready")
@@ -681,9 +647,7 @@ class TestWebKitFileWorkflow:
         expect(summary).to_contain_text("group")
 
     @pytest.mark.ui
-    def test_commit_reports_success(
-        self, page: Page, server_app: ShinyAppProc, csv_file
-    ):
+    def test_commit_reports_success(self, page: Page, server_app: ShinyAppProc, csv_file):
         page.goto(server_app.url)
         by_id(page, "ServerFile").set_input_files(str(csv_file))
         commit = by_id(page, "Commit")

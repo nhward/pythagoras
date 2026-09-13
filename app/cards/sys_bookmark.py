@@ -244,6 +244,7 @@ def instance(
         allow_remove=False,
         allow_drag=False,
     )
+    this.generic_configuration_state = False
     this.long_name = "Bookmarks"
     this.description = "Save and restore analysis bookmarks."
     catalogue_version = reactive.Value(0)
@@ -262,8 +263,8 @@ def instance(
     def back():
         return ui.TagList(
             ui.p(
-                "Bookmarks restore the saved data-import card state. Other "
-                "card restoration will be added later."
+                "Bookmarks restore the workflow, system settings, active "
+                "section, data source, and the inputs of each analysis card."
             ),
             ui.output_text_verbatim("StorageLocation"),
         )
@@ -273,21 +274,23 @@ def instance(
     def footer():
         return ui.div(
             ui.input_action_button(
-                id="SaveBookmark",
-                label="Save bookmark",
-                icon=icon("bookmark", title="Save bookmark", a11y="sem"),
-                class_="btn btn-primary",
+                id="SaveBookmark", label="Save bookmark", icon=icon("bookmark", title="Save bookmark", a11y="sem"),
+                width="250px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
+                guide=this, position="top",
+                text="This button saves a bookmark for the current state of Pythagoras. It will use the current data 'name' and suffix this with the current timestamp."
+            ),
+
+             ui.input_action_button(
+                id="LoadBookmark", label="Load selected", icon=icon("folder-open", title="Load bookmark", a11y="sem"),
+                width="250px", class_="btn rounded-pill btn-sm btn-secondary", style="border: 0px; box-shadow: none;",
+                guide=this, position="top",
+                text="This button loads the selected bookmark by restarting Pythagoras using these settings."
             ),
             ui.input_action_button(
-                id="LoadBookmark",
-                label="Load selected",
-                icon=icon("folder-open", title="Load bookmark", a11y="sem"),
-                class_="btn btn-secondary",
-            ),
-            ui.input_action_button(
-                id="CloseManager",
-                label="Close",
-                class_="btn btn-light",
+                id="CloseManager", label="Close", icon=icon("xmark", title="Close dialogue", a11y="sem"),
+                width="250px", class_="btn rounded-pill btn-sm btn-light", style="border: 0px; box-shadow: none;",
+                guide=this, position="top",
+                text="This button closes the dialogue. The Esc key also performs this function."
             ),
             class_="d-flex justify-content-center gap-2",
         )
@@ -351,7 +354,7 @@ def instance(
             )
             return ui.input_select(
                 id="SelectedDataName", label="Data name", choices={name: name for name in names}, selected=names[0] if names else None,
-                guide=this, position="bottom", text="This dialogue selects the recent saved data names. They are in descending age order."
+                guide=this, position="bottom", text="This dialogue selects the recent saved data names. The most recent is at the top."
             )
 
         @output

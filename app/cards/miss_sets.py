@@ -19,7 +19,7 @@ from card import Card
 from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
-from shiny import render, req, ui
+from shiny import render, ui
 from shinywidgets import render_widget
 
 INTERSECTION_COLUMNS = [

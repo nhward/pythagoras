@@ -26,7 +26,7 @@ from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, ui
+from shiny import render, ui
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -673,7 +673,7 @@ def instance():
             }
 
         @busy.track("Transforming continuous numeric predictors…")
-        @reactive.extended_task
+        @this.extended_task
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_distribution, data, **options)
 

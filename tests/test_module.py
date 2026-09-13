@@ -7,9 +7,11 @@ path = str(Path(__file__).resolve().parent.parent / "app")
 if path not in sys.path:
     sys.path.insert(0, path)
 
+import module as module_lib
 import pytest
 from module import BusyTracker, Module
 from shiny import reactive, ui
+from shiny.types import SilentException
 
 
 # -------------------------------------------------------------------
@@ -254,6 +256,222 @@ def test_make_wrapper_registers_shepherd_step_and_wraps():
     assert widget.attrs.get("id") == wid
 
 
+@pytest.mark.unit
+def test_generic_bookmark_state_restores_and_captures_inputs(caplog):
+    module = DummyModule("card")
+    module.restore_configuration_state({
+        "inputs": {
+            "Columns": ["saved", "removed"],
+            "RemovedInput": "retained for compatibility",
+        },
+        "future_card_field": {"mode": "newer"},
+    })
+
+    def input_select(id, label, choices, *, selected=None):
+        return id, label, choices, selected
+
+    restored = module._configuration_kwargs(
+        input_select,
+        "Columns",
+        {"choices": ["current"], "selected": None},
+    )
+    assert restored["selected"] == ["saved", "removed"]
+    assert restored["choices"] == ["saved", "removed", "current"]
+
+    module._configuration_input = SimpleNamespace(
+        Columns=lambda: ("current", "saved"),
+    )
+    state = module.configuration_state()
+
+    assert state["inputs"]["Columns"] == ["current", "saved"]
+    assert state["inputs"]["RemovedInput"] == "retained for compatibility"
+    assert state["future_card_field"] == {"mode": "newer"}
+    assert "is no longer present" in caplog.text
+
+
+@pytest.mark.unit
+def test_generic_bookmark_uses_defaults_for_new_inputs_and_skips_buttons(caplog):
+    module = DummyModule("card")
+    module.restore_configuration_state({"inputs": {}})
+
+    def input_text(id, label, value=""):
+        return id, label, value
+
+    def input_action_button(id, label):
+        return id, label
+
+    text_options = module._configuration_kwargs(
+        input_text,
+        "NewInput",
+        {"value": "default"},
+    )
+    module._configuration_kwargs(input_action_button, "Run", {})
+
+    assert text_options["value"] == "default"
+    assert module._configuration_input_ids == {"NewInput"}
+    assert "has no value for new input" in caplog.text
+
+
+@pytest.mark.unit
+def test_generic_bookmark_restores_card_navset_selection():
+    module = DummyModule("card")
+    module.restore_configuration_state({"inputs": {"Navset": "Evidence"}})
+
+    def navset_tab(*args, id=None, selected=None):
+        return args, id, selected
+
+    wrapped = module._make_navset_wrapper(navset_tab)
+    with module.configuration_ui_context():
+        _args, input_id, selected = wrapped(
+            "front",
+            "evidence",
+            id="Navset",
+            selected="front",
+        )
+
+    assert input_id == "Navset"
+    assert selected == "Evidence"
+    assert module._configuration_input_ids == {"Navset"}
+
+
+@pytest.mark.unit
+def test_generic_bookmark_supports_manually_registered_custom_inputs():
+    module = DummyModule("card")
+    saved_role_map = {
+        "target": ["y"],
+        "predictor": ["x1", "x2"],
+    }
+    module.register_configuration_input("role_map")
+    module.restore_configuration_state({"inputs": {"role_map": saved_role_map}})
+
+    assert module.restored_configuration_input("role_map") == saved_role_map
+
+    current_role_map = {
+        "target": ["y"],
+        "predictor": ["x2"],
+        "none": ["x1"],
+    }
+    module._configuration_input = SimpleNamespace(
+        role_map=lambda: current_role_map,
+    )
+
+    assert module.configuration_state()["inputs"]["role_map"] == current_role_map
+
+
+@pytest.mark.unit
+def test_generic_bookmark_supports_card_owned_state_fields(caplog):
+    module = DummyModule("card")
+    module.register_configuration_state_field("table_model")
+    module.restore_configuration_state({
+        "inputs": {},
+        "table_model": {"rows": [{"source": "x", "type": "integer"}]},
+    })
+
+    restored = module.restored_configuration_field("table_model")
+    assert restored == {"rows": [{"source": "x", "type": "integer"}]}
+    assert "unrecognised field" not in caplog.text
+
+    module.register_configuration_state_provider(
+        "table_model",
+        lambda: {"rows": [{"source": "x", "type": "decimal"}]},
+    )
+    assert module.configuration_state()["table_model"] == {
+        "rows": [{"source": "x", "type": "decimal"}]
+    }
+
+
+@pytest.mark.unit
+def test_generic_bookmark_excludes_transient_projection_inputs():
+    module = DummyModule("card")
+    module.exclude_configuration_input("CurrentRowType")
+    module.restore_configuration_state({
+        "inputs": {"CurrentRowType": "integer", "Persistent": "saved"},
+    })
+
+    def input_select(id, label, choices, *, selected=None):
+        return id, label, choices, selected
+
+    options = module._configuration_kwargs(
+        input_select,
+        "CurrentRowType",
+        {"choices": ["decimal"], "selected": "decimal"},
+    )
+    module._configuration_input = SimpleNamespace(
+        CurrentRowType=lambda: "text",
+        Persistent=lambda: "current",
+    )
+    module._configuration_input_ids.add("Persistent")
+
+    assert options["selected"] == "decimal"
+    assert module.configuration_state()["inputs"] == {"Persistent": "current"}
+
+
+@pytest.mark.unit
+def test_generic_bookmark_defers_dynamic_input_restoration():
+    module = DummyModule("card")
+    module.defer_configuration_input("DynamicNavset")
+    module.restore_configuration_state({
+        "inputs": {"DynamicNavset": "created-later"},
+    })
+
+    def navset_tab(*args, id=None, selected=None):
+        return args, id, selected
+
+    wrapped = module._make_navset_wrapper(navset_tab)
+    with module.configuration_ui_context():
+        _args, input_id, selected = wrapped(
+            "initial-panel",
+            id="DynamicNavset",
+            selected="initial-panel",
+        )
+
+    assert input_id == "DynamicNavset"
+    assert selected == "initial-panel"
+    assert (
+        module.restored_configuration_input("DynamicNavset")
+        == "created-later"
+    )
+
+    module._configuration_input = SimpleNamespace(
+        DynamicNavset=lambda: "current-panel",
+    )
+    assert module.configuration_state()["inputs"]["DynamicNavset"] == (
+        "current-panel"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("choices", "saved", "expected"),
+    [
+        ([-9999, -999, -1], ["-9999", "-1"], [-9999, -1]),
+        (
+            [-9999.99, -99.0, -1.0],
+            ["-9999.99", "-99.0", "-1.0"],
+            [-9999.99, -99.0, -1.0],
+        ),
+    ],
+)
+def test_generic_bookmark_coerces_numeric_choice_strings(
+    choices, saved, expected
+):
+    module = DummyModule("card")
+    module.restore_configuration_state({"inputs": {"Sentinels": saved}})
+
+    def input_selectize(id, label, choices, *, selected=None):
+        return id, label, choices, selected
+
+    restored = module._configuration_kwargs(
+        input_selectize,
+        "Sentinels",
+        {"choices": choices, "selected": choices},
+    )
+    module._configuration_input = SimpleNamespace(Sentinels=lambda: saved)
+
+    assert restored["selected"] == expected
+    assert module.configuration_state()["inputs"]["Sentinels"] == expected
+
+
 # -------------------------------------------------------------------
 # capture_print decorator
 # -------------------------------------------------------------------
@@ -310,6 +528,61 @@ def test_suspendable_calc_respects_suspend_and_resume():
         assert calls["count"] == 2
     # Registered as suspendable
     assert f in m.suspendables
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_async_suspendable_calc_without_default_stops_silently():
+    m = DummyModule("card")
+
+    @m.suspendable(suspended=True, calc=True)
+    async def f() -> int:
+        return 99
+
+    with pytest.raises(SilentException):  # noqa: SIM117
+        with reactive.isolate():
+            await f()
+
+    f.resume()
+    with reactive.isolate():
+        assert await f() == 99
+
+
+@pytest.mark.unit
+def test_suspendable_calc_without_default_is_silent_while_suspended():
+    m = DummyModule("card")
+    calls = {"count": 0}
+
+    @m.suspendable(suspended=True, calc=True)
+    def value():
+        calls["count"] += 1
+        return "available"
+
+    with reactive.isolate(), pytest.raises(SilentException):
+        value()
+    assert calls["count"] == 0
+
+    value.resume()
+    with reactive.isolate():
+        assert value() == "available"
+    assert calls["count"] == 1
+
+    value.suspend()
+    with reactive.isolate(), pytest.raises(SilentException):
+        value()
+    assert calls["count"] == 1
+
+
+@pytest.mark.unit
+def test_suspendable_calc_preserves_explicit_none_default():
+    m = DummyModule("card")
+
+    @m.suspendable(suspended=True, default=None, calc=True)
+    def value():
+        return "available"
+
+    with reactive.isolate():
+        assert value() is None
 
 
 # -------------------------------------------------------------------
@@ -371,6 +644,77 @@ def test_settle_test_bypass_returns_immediately(monkeypatch):
 
     assert result == 42
     assert calls["count"] == 1
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_extended_task_logs_start_and_elapsed_completion(monkeypatch):
+    module = DummyModule("timed-card")
+    records = []
+    module.log = SimpleNamespace(
+        debug=lambda message, *args: records.append(
+            ("DEBUG", message % args)
+        ),
+        info=lambda message, *args: records.append(
+            ("INFO", message % args)
+        ),
+    )
+    clock = iter((10.0, 12.3456))
+    monkeypatch.setattr(module_lib.time, "perf_counter", lambda: next(clock))
+    monkeypatch.setattr(reactive, "extended_task", lambda function: function)
+
+    @module.extended_task
+    async def Calculate(value):
+        return value * 2
+
+    assert await Calculate(21) == 42
+    assert records == [
+        ("DEBUG", "Extended task Calculate started"),
+        ("INFO", "Extended task Calculate completed in 2.346 seconds"),
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_extended_task_logs_completion_without_hiding_failure(monkeypatch):
+    module = DummyModule("failing-card")
+    records = []
+    module.log = SimpleNamespace(
+        debug=lambda message, *args: records.append(
+            ("DEBUG", message % args)
+        ),
+        info=lambda message, *args: records.append(
+            ("INFO", message % args)
+        ),
+    )
+    clock = iter((20.0, 20.5))
+    monkeypatch.setattr(module_lib.time, "perf_counter", lambda: next(clock))
+    monkeypatch.setattr(reactive, "extended_task", lambda function: function)
+
+    @module.extended_task
+    async def Calculate():
+        raise RuntimeError("calculation failed")
+
+    with pytest.raises(RuntimeError, match="calculation failed"):
+        await Calculate()
+    assert records[-1] == (
+        "INFO",
+        "Extended task Calculate completed in 0.500 seconds",
+    )
+
+
+@pytest.mark.unit
+def test_extended_task_can_be_tracked_by_busy_decorator():
+    module = DummyModule("busy-card")
+    busy = BusyTracker()
+
+    @busy.track("Calculating…")
+    @module.extended_task
+    async def Calculate():
+        return 1
+
+    assert callable(Calculate.status)
+    assert busy._tasks == [(Calculate, "Calculating…")]
 
 
 class FakeExtendedTask:

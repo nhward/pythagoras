@@ -21,7 +21,7 @@ from card import Card
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, req, ui
+from shiny import render, req, ui
 from shinywidgets import render_widget
 from text_pandas import text_evidence
 from var_types import var_kind
@@ -784,7 +784,7 @@ def instance():
             }
 
         @busy.track("Profiling variable cardinality…")
-        @reactive.extended_task
+        @this.extended_task
         async def Calculate(data: proxy_data, options: dict[str, object]):
             analysis_options = {
                 key: options[key]

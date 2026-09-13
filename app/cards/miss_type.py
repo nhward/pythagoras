@@ -32,7 +32,7 @@ from module import Module
 from plotly.colors import sample_colorscale
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, req, ui
+from shiny import render, req, ui
 from shinywidgets import render_widget
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.metrics import balanced_accuracy_score, r2_score
@@ -1122,6 +1122,7 @@ def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
 def instance():
     """Create the immutable missingness-type card."""
     this = Card(file=__file__, mutable=False)
+    this.defer_configuration_input("Target")
     this.long_name = "Missingness Type"
     this.description = "This card uses decision trees to assess whether each variable's missingness is random or not."
 
@@ -1259,6 +1260,8 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
+        restored_target = this.restored_configuration_input("Target", OBS_COUNT)
+        restored_target_pending = True
         model_cache: OrderedDict[tuple[object, ...], TreeAnalysis] = OrderedDict()
         regression_cache: OrderedDict[tuple[object, ...], dict[str, object]] = OrderedDict()
         cache_owner: proxy_data | None = None
@@ -1360,12 +1363,19 @@ def instance():
                 )
             ]
 
+        @this.suspendable(calc=True)
+        def SelectedTarget() -> str:
+            """Return a valid target while dynamic nav panels are binding."""
+            target = input.Target()
+            available = {OBS_COUNT, *map(str, MissingVariables())}
+            return target if target in available else OBS_COUNT
+
         current_tabs: tuple[str, ...] = ()
         registered_tree_outputs: set[str] = set()
 
         @this.suspendable(triggers=[MissingVariables])
         def UpdateChoices():
-            nonlocal current_tabs
+            nonlocal current_tabs, restored_target_pending
             desired_tabs = tuple(map(str, MissingVariables()))
             removed_tabs, added_tabs = _navbar_changes(
                 current_tabs,
@@ -1398,9 +1408,21 @@ def instance():
                 ui.insert_nav_panel(
                     id="Target",
                     nav_panel=panel,
-                    select=False,
+                    select=(
+                        restored_target_pending
+                        and var == restored_target
+                    ),
                 )
             current_tabs = desired_tabs
+            if restored_target_pending:
+                available = {OBS_COUNT, *desired_tabs}
+                if restored_target not in available:
+                    this.log.warning(
+                        "Saved missingness target %r is unavailable; using %r",
+                        restored_target,
+                        OBS_COUNT,
+                    )
+                restored_target_pending = False
 
 
         def _weighting_column(proxy: proxy_data) -> str | None:
@@ -1451,7 +1473,7 @@ def instance():
         @this.record_code
         def Model():
             proxy = PreparedData()
-            return _cached_model(proxy, input.Target())
+            return _cached_model(proxy, SelectedTarget())
 
         @this.suspendable(calc=True)
         @this.record_code
@@ -1485,7 +1507,7 @@ def instance():
             )
 
         @busy.track("Classifying missingness types…")
-        @reactive.extended_task
+        @this.extended_task
         async def CalculateTypeTable(
             frame: pd.DataFrame,
             options: dict[str, object],
@@ -1613,7 +1635,7 @@ def instance():
             analysis = Model()
             if analysis.task == "classification":
                 table = TypeTable()
-                selected = table.loc[table["Variable"] == input.Target()]
+                selected = table.loc[table["Variable"] == SelectedTarget()]
                 req(not selected.empty)
                 row = selected.iloc[0]
                 if pd.isna(row["CV Balanced Accuracy"]):

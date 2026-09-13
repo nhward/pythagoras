@@ -381,7 +381,10 @@ class Card(Module):
                     min_height = "250px",
                     max_height = self.max_height
                 )
-        return ui_cardfunc(id = self.namespace)
+        with self.configuration_ui_context():
+            card_ui = ui_cardfunc(id = self.namespace)
+        self.warn_obsolete_configuration_inputs()
+        return card_ui
 
 
     # Read html from a file 
@@ -414,6 +417,7 @@ class Card(Module):
         def server_func(input, output, session, upstream, on_remove):
 
             self._upstream = upstream
+            self._configuration_input = input
 
 
             # isFullScreen

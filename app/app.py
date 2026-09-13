@@ -73,6 +73,7 @@ TEST_CONFIG_PATH_ENV = "PYTHAGORAS_TEST_CONFIG_PATH"
 START_SECTION_ID = "start"
 SECTIONS_NAV_ID = "sections"
 SETTINGS_QUERY_PARAMETER = "_pythagoras_settings"
+UI_QUERY_PARAMETER = "_pythagoras_ui"
 WELCOME_ICON_TAG_PATTERN = re.compile(
     r"<i\b(?P<attributes>[^>]*)>\s*</i>",
     flags=re.IGNORECASE,
@@ -285,6 +286,15 @@ def inserted_section_order(
     return tuple(order)
 
 
+def json_configuration(candidate: Mapping[str, object]) -> dict[str, object]:
+    """Return a strict JSON round-trip of a configuration candidate."""
+    encoded = json.dumps(candidate, ensure_ascii=False, allow_nan=False)
+    decoded = json.loads(encoded)
+    if not isinstance(decoded, dict):
+        raise TypeError("A configuration must be a JSON object")
+    return decoded
+
+
 def write_validated_configuration(
     candidate: Mapping[str, object],
     *,
@@ -297,7 +307,8 @@ def write_validated_configuration(
     temporary_path: Path | None = None
     with CONFIG_WRITE_LOCK:
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        validate(instance=candidate, schema=schema)
+        serializable = json_configuration(candidate)
+        validate(instance=serializable, schema=schema)
         try:
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -308,7 +319,13 @@ def write_validated_configuration(
                 delete=False,
             ) as temporary:
                 temporary_path = Path(temporary.name)
-                json.dump(candidate, temporary, indent=2, ensure_ascii=False)
+                json.dump(
+                    serializable,
+                    temporary,
+                    indent=2,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                )
                 temporary.write("\n")
                 temporary.flush()
                 os.fsync(temporary.fileno())
@@ -322,9 +339,13 @@ def write_validated_configuration(
 
 
 def validate_configuration(candidate: Mapping[str, object]) -> None:
-    """Validate a complete configuration without writing it."""
+    """Validate a complete, strictly JSON-compatible configuration."""
+    # jsonschema intentionally ignores Python value types below a schema node
+    # with no further constraints.  Card state is deliberately opaque, so use
+    # a strict JSON round-trip to reject sets, datetimes, NaN, infinity, etc.
+    decoded = json_configuration(candidate)
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    validate(instance=candidate, schema=schema)
+    validate(instance=decoded, schema=schema)
 
 
 def load_default_configuration() -> dict[str, object]:
@@ -353,29 +374,74 @@ def data_import_state(
     return None
 
 
+def restore_configuration(
+    base: Mapping[str, object],
+    saved: Mapping[str, object],
+) -> dict[str, object]:
+    """Migrate a validated bookmark and fill newly introduced defaults."""
+    candidate = deepcopy(dict(saved))
+    defaults = base.get("settings", {})
+    settings = candidate.setdefault("settings", {})
+    if not isinstance(settings, dict) or not isinstance(defaults, Mapping):
+        raise TypeError("Configuration settings must be an object")
+    for name, value in defaults.items():
+        if name not in settings:
+            settings[name] = deepcopy(value)
+            log.warning(
+                "Bookmark has no value for new application setting %s; "
+                "using its default",
+                name,
+            )
+    if candidate.get("version") != 2:
+        log.warning(
+            "Loading configuration version %r as version 2",
+            candidate.get("version"),
+        )
+    candidate["version"] = 2
+    active_section = candidate.get("active_section")
+    section_names = {
+        group.get("section")
+        for group in candidate.get("layout", [])
+        if isinstance(group, Mapping)
+    }
+    if active_section is not None and active_section not in section_names:
+        log.warning(
+            "Bookmark active section %r is no longer present; using the first section",
+            active_section,
+        )
+        candidate.pop("active_section", None)
+    if "_runtime_mode" in base:
+        candidate["_runtime_mode"] = base["_runtime_mode"]
+    return candidate
+
+
 def restore_data_import_only(
     base: Mapping[str, object],
     saved: Mapping[str, object],
 ) -> dict[str, object]:
-    """Apply bookmarked system settings and data-import state to the app."""
-    candidate = deepcopy(dict(base))
-    settings = saved.get("settings")
-    if isinstance(settings, Mapping):
-        candidate["settings"] = deepcopy(dict(settings))
-    state = data_import_state(saved)
-    if state is not None:
-        for group in candidate.get("layout", []):
-            for card in group.get("cards", []):
-                if card.get("module") == "data_import":
-                    card["state"] = deepcopy(dict(state))
-                    break
-            else:
-                continue
-            break
-    metadata = saved.get("bookmark")
-    if isinstance(metadata, Mapping):
-        candidate["bookmark"] = deepcopy(dict(metadata))
-    return candidate
+    """Backward-compatible name for the complete version-2 restore."""
+    return restore_configuration(base, saved)
+
+
+def configuration_ui_shell(candidate: Mapping[str, object]) -> dict[str, object]:
+    """Return the state-free portion needed to construct the initial page."""
+    shell = {
+        "version": 2,
+        "settings": deepcopy(dict(candidate.get("settings", {}))),
+        "layout": [],
+    }
+    active_section = candidate.get("active_section")
+    if isinstance(active_section, str):
+        shell["active_section"] = active_section
+    for group in candidate.get("layout", []):
+        shell["layout"].append({
+            "section": group["section"],
+            "cards": [
+                {"module": card["module"]}
+                for card in group.get("cards", [])
+            ],
+        })
+    return shell
 
 
 def configuration_write_path() -> Path:
@@ -581,6 +647,11 @@ def create_sections(configuration: Mapping[str, object] | None = None):
                     ],
                     multiple=False,
                     id="Accordion",
+                    open=[
+                        configured_section_id(index)
+                        for index, group in enumerate(configuration["layout"])
+                        if group["section"] == configuration.get("active_section")
+                    ] or None,
                 ),
                 value=SECTIONS_NAV_ID,
             )
@@ -592,6 +663,27 @@ def configuration_for_ui_request(request) -> dict[str, object]:
     """Resolve system settings before constructing session navigation UI."""
     try:
         candidate = load_default_configuration()
+        forced_mode = None
+        if os.environ.get("SHINY_TESTMODE") == "1":
+            forced_mode = os.environ.get("PYTHAGORAS_TEST_RUNTIME_MODE")
+        local_request = (
+            forced_mode == "local"
+            or (
+                forced_mode is None
+                and not Module.IS_SHINYLIVE
+                and request.url.hostname in {"localhost", "127.0.0.1", "::1"}
+            )
+        )
+        candidate["_runtime_mode"] = (
+            "local" if local_request else ("shinylive" if Module.IS_SHINYLIVE else "server")
+        )
+        encoded_ui = request.query_params.get(UI_QUERY_PARAMETER)
+        if encoded_ui:
+            saved_ui = json.loads(encoded_ui)
+            if not isinstance(saved_ui, dict):
+                raise TypeError("Bookmark UI configuration must be an object")
+            validate_configuration(saved_ui)
+            return restore_configuration(candidate, saved_ui)
         encoded_settings = request.query_params.get(SETTINGS_QUERY_PARAMETER)
         if encoded_settings:
             settings = json.loads(encoded_settings)
@@ -601,10 +693,10 @@ def configuration_for_ui_request(request) -> dict[str, object]:
             validate_configuration(candidate)
             return candidate
 
-        if request.url.hostname in {"localhost", "127.0.0.1", "::1"}:
+        if local_request:
             saved = sys_bookmark.latest_local_bookmark(validator=validate_configuration)
-            if isinstance(saved, Mapping) and isinstance(saved.get("settings"), Mapping):
-                candidate["settings"] = deepcopy(dict(saved["settings"]))
+            if isinstance(saved, Mapping):
+                candidate = restore_configuration(candidate, saved)
     except Exception:
         log.exception("Could not apply bookmarked settings to the initial UI")
         return deepcopy(config)
@@ -614,11 +706,33 @@ def configuration_for_ui_request(request) -> dict[str, object]:
 def application_ui(configuration: Mapping[str, object]):
     """Build the page using the resolved per-request system settings."""
     settings_json = json.dumps(configuration.get("settings", {}))
+    ui_configuration_json = json.dumps(configuration_ui_shell(configuration))
+    selected_section = next(
+        (
+            configured_section_id(index)
+            for index, group in enumerate(configuration.get("layout", []))
+            if group.get("section") == configuration.get("active_section")
+        ),
+        None,
+    )
+    navbar_selected = (
+        SECTIONS_NAV_ID
+        if configuration.get("settings", {}).get("section_style") == "accordion"
+        else selected_section
+    )
     return ui.page_fillable(
         ui.head_content(
             ui.tags.meta(
                 name="pythagoras-settings",
                 content=settings_json,
+            ),
+            ui.tags.meta(
+                name="pythagoras-ui-configuration",
+                content=ui_configuration_json,
+            ),
+            ui.tags.meta(
+                name="pythagoras-runtime-mode",
+                content=str(configuration.get("_runtime_mode", "server")),
             ),
             ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
             [ui.include_js(script, method="inline") for script in dict.fromkeys(Module.script_list)],
@@ -651,6 +765,7 @@ def application_ui(configuration: Mapping[str, object]):
                 style="border: 0px; box-shadow: none; display: block;",
             )),
             id="Navbar",
+            selected=navbar_selected,
             title=ui.tooltip(
                 ui.TagList(
                     ui.tags.img(src="favicon.ico", style="height:2em; margin-right:0.5em;"),
@@ -691,6 +806,18 @@ def application():
             str(config.get("settings", {}).get("section_style", "tab"))
         )
         next_section_number = len(section_definitions)
+
+        def apply_configuration_layout(candidate: Mapping[str, object]) -> None:
+            """Make the live section model match the page built for a bookmark."""
+            nonlocal next_section_number
+            section_definitions.clear()
+            section_definitions.update({
+                configured_section_id(index): deepcopy(group)
+                for index, group in enumerate(candidate.get("layout", []))
+            })
+            SectionOrder.set(tuple(section_definitions))
+            SectionsVisited.set(())
+            next_section_number = len(section_definitions)
 
         def section_name(section_id: str) -> str:
             return section_definitions[section_id]["section"]
@@ -753,11 +880,12 @@ def application():
                     # Round-trip through JSON to recover the list-based configuration representation.
                     selected = json.loads(json.dumps(selected))
                     validate_configuration(selected)
-                    restored = restore_data_import_only(base_configuration, selected)
+                    restored = restore_configuration(base_configuration, selected)
+                    apply_configuration_layout(restored)
                     ShowStart.set(show_start_enabled(restored))
                     PendingSectionStyle.set(str(restored["settings"].get("section_style", "tab")))
                     ActiveConfiguration.set(restored)
-                    log.info("🔖 Restored bookmarked settings and data import")
+                    log.info("🔖 Restored version-2 bookmark configuration")
                     return
             except Exception as error:
                 log.exception("Could not restore the startup bookmark")
@@ -773,6 +901,7 @@ def application():
                 fallback = deepcopy(config)
             ShowStart.set(show_start_enabled(fallback))
             PendingSectionStyle.set(str(fallback.get("settings", {}).get("section_style", "tab")))
+            apply_configuration_layout(fallback)
             ActiveConfiguration.set(fallback)
 
         @reactive.effect
@@ -1273,7 +1402,7 @@ def application():
 
             base = ActiveConfiguration()
             req(isinstance(base, Mapping))
-            return configuration_from_section_state(
+            candidate = configuration_from_section_state(
                 base,
                 section_order=SectionOrder(),
                 section_definitions=section_definitions,
@@ -1297,6 +1426,16 @@ def application():
                 show_start=ShowStart(),
                 section_style=PendingSectionStyle(),
             )
+            candidate["version"] = 2
+            try:
+                candidate["active_section"] = section_name(currentSection())
+            except Exception:  # noqa: BLE001
+                log.warning(
+                    "The active section was unavailable while bookmarking; "
+                    "the first section will be used on restore"
+                )
+                candidate.pop("active_section", None)
+            return candidate
 
         bookmark_manager = sys_bookmark.instance(
             configuration_provider=snapshot_configuration,
@@ -1308,6 +1447,8 @@ def application():
             session,
             upstream=reactive.Value(None),
         )
+        bookmark_manager.resume()
+
 
         @reactive.effect
         @reactive.event(input.SaveConfiguration)

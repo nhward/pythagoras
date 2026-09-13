@@ -24,7 +24,7 @@ from joblib import parallel_config
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, req, ui
+from shiny import reactive, render, ui
 from shinywidgets import render_widget
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -597,7 +597,7 @@ def instance():
                 ]
             ui.update_checkbox_group(id="Shadow", choices=choices, selected=selected)
         @busy.track("Analysing informative missingness…")
-        @reactive.extended_task
+        @this.extended_task
         async def CalculateAnalysis(
             frame,
             target,

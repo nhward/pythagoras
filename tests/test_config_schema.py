@@ -24,7 +24,17 @@ def configuration() -> dict[str, object]:
 
 @pytest.mark.unit
 def test_current_configuration_satisfies_schema(schema, configuration):
+    assert configuration["version"] == 2
     validate(instance=configuration, schema=schema)
+
+
+@pytest.mark.unit
+def test_unknown_future_configuration_version_is_rejected(schema, configuration):
+    candidate = deepcopy(configuration)
+    candidate["version"] = 3
+
+    with pytest.raises(ValidationError):
+        validate(instance=candidate, schema=schema)
 
 
 @pytest.mark.unit
@@ -105,12 +115,26 @@ def test_bookmark_metadata_is_accepted(schema, configuration):
 
 
 @pytest.mark.unit
-def test_unknown_data_import_state_input_is_rejected(schema, configuration):
+def test_card_state_is_an_opaque_json_object(schema, configuration):
     candidate = deepcopy(configuration)
     candidate["layout"][0]["cards"][0]["state"] = {
-        "inputs": {"Unknown": "value"},
-        "last_committed_tab": None,
+        "inputs": {
+            "UnknownFutureInput": "value",
+            "Selections": ["alpha", "beta"],
+        },
+        "card_owned": {
+            "nested": {"enabled": True, "threshold": 0.25},
+            "nullable": None,
+        },
     }
 
-    with pytest.raises(ValidationError, match="Additional properties"):
+    validate(instance=candidate, schema=schema)
+
+
+@pytest.mark.unit
+def test_card_state_must_be_an_object(schema, configuration):
+    candidate = deepcopy(configuration)
+    candidate["layout"][0]["cards"][0]["state"] = ["not", "an", "object"]
+
+    with pytest.raises(ValidationError, match="is not of type 'object'"):
         validate(instance=candidate, schema=schema)

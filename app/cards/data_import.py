@@ -176,21 +176,57 @@ def instance():
     Creates an instance of Card configured as "dataImport".
     """
     this=Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this.generic_configuration_state = False
     this.long_name="Data import"
     this.description="This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
     this.requires_import=False
     this._restored_configuration_state = {}
+    this._obsolete_configuration_inputs = {}
 
     def restore_configuration_state(state: Mapping[str, object]) -> None:
         """Attach validated, JSON-compatible state before the card UI is built."""
         if not isinstance(state, Mapping):
-            raise TypeError("Data-import card state must be an object")
+            this.log.warning("Ignoring malformed non-object data-import state")
+            state = {}
         inputs = state.get("inputs", {})
         if not isinstance(inputs, Mapping):
-            raise TypeError("Data-import input state must be an object")
+            this.log.warning(
+                "Ignoring malformed data-import input state; using defaults"
+            )
+            inputs = {}
+        supported_inputs = {
+            "Navset", "ServerFile", "LocalFilePath", "FName", "Dataset",
+            "DName", "Url", "UName", "UciDataset", "IName", "Separator",
+            "Sheet",
+        }
+        unknown = set(inputs) - supported_inputs
+        if unknown:
+            this.log.warning(
+                "Ignoring data-import bookmark input(s) no longer present: %s",
+                ", ".join(sorted(map(str, unknown))),
+            )
+        this._obsolete_configuration_inputs = {
+            key: value for key, value in inputs.items() if key in unknown
+        }
+        inputs = {key: value for key, value in inputs.items() if key in supported_inputs}
+        tabs = {"File based", "Dataset based", "Web based", "UC Irvine"}
+        navset = inputs.get("Navset")
+        if navset is not None and navset not in tabs:
+            this.log.warning(
+                "Ignoring unavailable data-import tab %r from bookmark",
+                navset,
+            )
+            inputs.pop("Navset", None)
+        committed_tab = state.get("last_committed_tab")
+        if committed_tab is not None and committed_tab not in tabs:
+            this.log.warning(
+                "Ignoring unavailable committed data-import tab %r from bookmark",
+                committed_tab,
+            )
+            committed_tab = None
         this._restored_configuration_state = {
             "inputs": dict(inputs),
-            "last_committed_tab": state.get("last_committed_tab"),
+            "last_committed_tab": committed_tab,
         }
 
     this.restore_configuration_state = restore_configuration_state
@@ -520,6 +556,7 @@ def instance():
                     else input.ServerFile() or restored_inputs.get("ServerFile")
                 )
                 values = {
+                    **this._obsolete_configuration_inputs,
                     "Navset": input.Navset(),
                     "ServerFile": serializable_upload(files),
                     "LocalFilePath": input.LocalFilePath(),

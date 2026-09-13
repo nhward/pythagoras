@@ -1,6 +1,6 @@
 {
   "$schema": "pythagoras.schema.json",
-  "version": 1,
+  "version": 2,
   "settings": {
     "section_style": "tab",
     "show_start": true,

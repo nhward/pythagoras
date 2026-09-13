@@ -22,6 +22,10 @@ from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
 app = create_app_fixture(app="../scenarios/role_assignment.py", scope="function")
+restored_app = create_app_fixture(
+    app="../scenarios/role_assignment_restore.py",
+    scope="function",
+)
 _HELPER_CARDS = {}
 
 VALID_ROLE_MAP = {
@@ -205,6 +209,59 @@ class TestInstance:
 
 class TestServerHelpers:
     @pytest.mark.unit
+    def test_role_map_structure_requires_every_column_exactly_once(self, card_module):
+        assert card_module._role_map_covers_columns(
+            VALID_ROLE_MAP,
+            seeded_frame().columns,
+        )
+        duplicated = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        duplicated["sensitive"] = ["id"]
+        assert not card_module._role_map_covers_columns(
+            duplicated,
+            seeded_frame().columns,
+        )
+
+    @pytest.mark.unit
+    def test_reconcile_restored_roles_preserves_saved_bucket_order(self, card_module):
+        saved = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        saved["predictor"] = ["x2", "x1"]
+
+        restored, warnings = card_module._reconcile_restored_role_map(
+            saved,
+            seeded_frame().columns,
+            RoleMap.from_primitive(VALID_ROLE_MAP),
+        )
+
+        assert restored == saved
+        assert warnings == []
+
+    @pytest.mark.unit
+    def test_reconcile_restored_roles_handles_changed_columns_with_warnings(
+        self, card_module
+    ):
+        saved = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        saved["predictor"] = ["x1", "removed"]
+        saved["unknown-role"] = ["x2"]
+        fallback = RoleMap.from_primitive({
+            **VALID_ROLE_MAP,
+            "predictor": ["x1", "x2", "new"],
+        })
+
+        restored, warnings = card_module._reconcile_restored_role_map(
+            saved,
+            [*seeded_frame().columns, "new"],
+            fallback,
+        )
+
+        assert restored["predictor"] == ["x1", "x2", "new"]
+        assert "removed" not in {
+            column for columns in restored.values() for column in columns
+        }
+        assert any("no longer present" in warning for warning in warnings)
+        assert any("Unknown saved role" in warning for warning in warnings)
+        assert any("New variables" in warning for warning in warnings)
+
+    @pytest.mark.unit
     def test_max_observations_uses_logarithmic_input(self, card_module):
         _, _, functions = recorded_helpers(card_module, max_obs=5)
         assert functions["MaxObs"]() == 100_000
@@ -376,6 +433,23 @@ class TestServerHelpers:
 
 
 class TestWebKitRoles:
+    @pytest.mark.ui
+    def test_bookmarked_role_map_rebuilds_the_sortable_buckets(
+        self, page: Page, restored_app: ShinyAppProc
+    ):
+        page.goto(restored_app.url)
+        expect(role_bucket(page, "target").locator(".var-chip")).to_have_text(["y"])
+        expect(role_bucket(page, "predictor").locator(".var-chip")).to_have_text(
+            ["x2", "x1"]
+        )
+        expect(role_bucket(page, "identifier").locator(".var-chip")).to_have_text(
+            ["id"]
+        )
+        expect(role_bucket(page, "partition").locator(".var-chip")).to_have_text(
+            ["part"]
+        )
+        expect(by_id(page, "Check")).to_contain_text("ready to commit")
+
     @pytest.mark.ui
     def test_card_and_all_role_buckets_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)

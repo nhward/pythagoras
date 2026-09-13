@@ -129,6 +129,14 @@ def test_latest_local_bookmark_uses_creation_order(
 
 
 @pytest.mark.unit
+def test_empty_local_bookmark_directory_has_no_startup_bookmark(
+    bookmark_module, tmp_path
+):
+    assert bookmark_module.list_local_bookmarks(tmp_path) == []
+    assert bookmark_module.latest_local_bookmark(directory=tmp_path) is None
+
+
+@pytest.mark.unit
 def test_invalid_newest_bookmark_is_skipped(
     bookmark_module, configuration, tmp_path, monkeypatch
 ):
@@ -143,6 +151,42 @@ def test_invalid_newest_bookmark_is_skipped(
     )
 
     assert bookmark_module.latest_local_bookmark(directory=tmp_path) == configuration
+
+
+@pytest.mark.unit
+def test_schema_invalid_newest_bookmark_is_skipped(
+    bookmark_module, configuration, tmp_path, monkeypatch
+):
+    invalid = tmp_path / f"invalid{bookmark_module.BOOKMARK_SUFFIX}"
+    valid = tmp_path / f"valid{bookmark_module.BOOKMARK_SUFFIX}"
+    invalid.write_text(json.dumps({**configuration, "version": "wrong"}))
+    valid.write_text(json.dumps(configuration), encoding="utf-8")
+    monkeypatch.setattr(
+        bookmark_module,
+        "filesystem_creation_time",
+        lambda path: 2 if path.name == invalid.name else 1,
+    )
+
+    def validator(candidate):
+        if not isinstance(candidate.get("version"), int):
+            raise TypeError("version must be an integer")
+
+    assert bookmark_module.latest_local_bookmark(
+        directory=tmp_path,
+        validator=validator,
+    ) == configuration
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "filename",
+    ["../outside.pythagoras.json", "/tmp/outside.pythagoras.json", "plain.json"],
+)
+def test_local_load_rejects_unsafe_or_non_bookmark_names(
+    bookmark_module, tmp_path, filename
+):
+    with pytest.raises(ValueError, match="Invalid bookmark filename"):
+        bookmark_module.load_local_bookmark(filename, directory=tmp_path)
 
 
 @pytest.mark.unit

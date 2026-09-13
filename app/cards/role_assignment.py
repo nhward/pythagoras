@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -39,11 +40,138 @@ def _retained_role_state(
     return retained, retained_roles, removed
 
 
+def _role_map_covers_columns(value, columns) -> bool:
+    """Return whether a browser role map assigns every current column once."""
+    if not isinstance(value, Mapping):
+        return False
+    current = {str(column) for column in columns}
+    counts = {column: 0 for column in current}
+    for role_name, assigned in value.items():
+        try:
+            Role.from_value(role_name)
+        except (TypeError, ValueError):
+            return False
+        if isinstance(assigned, (str, bytes)) or not isinstance(assigned, Iterable):
+            return False
+        for raw_column in assigned:
+            column = str(raw_column)
+            if column not in counts:
+                return False
+            counts[column] += 1
+    return all(count == 1 for count in counts.values())
+
+
+def _reconcile_restored_role_map(
+    saved,
+    columns,
+    fallback: RoleMap | Mapping[str, Iterable[str]],
+) -> tuple[dict[str, list[str]], list[str]]:
+    """Make saved sortable state structurally safe for the current dataset."""
+    column_order = [str(column) for column in columns]
+    current = set(column_order)
+    role_order = [role.value for role in Role]
+    restored = {role: [] for role in role_order}
+    warnings: list[str] = []
+
+    if isinstance(fallback, RoleMap):
+        fallback = fallback.to_primitive()
+    fallback_by_column: dict[str, list[str]] = {}
+    if isinstance(fallback, Mapping):
+        for role_name in role_order:
+            for raw_column in fallback.get(role_name, []):
+                column = str(raw_column)
+                if column in current:
+                    fallback_by_column.setdefault(column, []).append(role_name)
+
+    saved_by_role = {role: [] for role in role_order}
+    stale: set[str] = set()
+    malformed_roles: list[str] = []
+    if not isinstance(saved, Mapping):
+        warnings.append("The saved role map is malformed; upstream roles were used.")
+        saved = {}
+    for raw_role, assigned in saved.items():
+        try:
+            role = Role.from_value(raw_role).value
+        except (TypeError, ValueError):
+            malformed_roles.append(str(raw_role))
+            continue
+        if isinstance(assigned, (str, bytes)) or not isinstance(assigned, Iterable):
+            warnings.append(
+                f"Saved role {role!r} did not contain a variable list and was ignored."
+            )
+            continue
+        for raw_column in assigned:
+            column = str(raw_column)
+            if column not in current:
+                stale.add(column)
+                continue
+            saved_by_role[role].append(column)
+
+    if malformed_roles:
+        warnings.append(
+            "Unknown saved role(s) were ignored: "
+            + ", ".join(sorted(malformed_roles))
+            + "."
+        )
+    if stale:
+        warnings.append(
+            "Variables no longer present were removed from the saved roles: "
+            + ", ".join(sorted(stale))
+            + "."
+        )
+
+    occurrences: dict[str, list[str]] = {}
+    for role in role_order:
+        for column in saved_by_role[role]:
+            roles = occurrences.setdefault(column, [])
+            if role not in roles:
+                roles.append(role)
+    duplicated = {
+        column for column, roles in occurrences.items() if len(roles) > 1
+    }
+    if duplicated:
+        warnings.append(
+            "Multiply assigned saved variables reverted to their upstream roles: "
+            + ", ".join(sorted(duplicated))
+            + "."
+        )
+
+    assigned: set[str] = set()
+    for role in role_order:
+        for column in saved_by_role[role]:
+            if column in duplicated or column in assigned:
+                continue
+            restored[role].append(column)
+            assigned.add(column)
+
+    added = [column for column in column_order if column not in occurrences]
+    if added and isinstance(saved, Mapping) and saved:
+        warnings.append(
+            "New variables used their upstream roles: " + ", ".join(added) + "."
+        )
+
+    for column in column_order:
+        if column in assigned:
+            continue
+        fallback_roles = fallback_by_column.get(column, [])
+        if len(fallback_roles) > 1:
+            warnings.append(
+                f"Variable {column!r} had multiple upstream roles; "
+                f"{fallback_roles[0]!r} was used."
+            )
+        role = fallback_roles[0] if fallback_roles else Role.PREDICTOR.value
+        restored[role].append(column)
+        assigned.add(column)
+
+    return restored, warnings
+
+
 def instance():
     """
     Creates an instance of Card configured as "roleAssign".
     """
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this.register_configuration_input("role_map")
     this.long_name = "Role Assignment"
     this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data."
 
@@ -141,6 +269,10 @@ def instance():
     def server(input, output, session):
 
         OutputData = reactive.Value()
+        restored_role_map = this.restored_configuration_input("role_map")
+        restored_roles_consumed = False
+        protected_columns: tuple[str, ...] | None = None
+        protected_role_map: dict[str, list[str]] | None = None
 
         @this.suspendable(calc = True)
         def incomingproxy_data():
@@ -162,21 +294,53 @@ def instance():
 
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
+            nonlocal restored_roles_consumed, protected_columns, protected_role_map
             if not this.has_input_data():
                 rm = RoleMap().to_primitive()
                 await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
-            else:
-                try:
-                    input.role_map()
-                    messages = ValidateMap() # using input.role_map
-                    if len(messages) > 0: # not valid
-                        pxd = PreparedData()
-                        rm = pxd.role_map.to_primitive()
-                        await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
-                except (Exception):  # noqa: BLE001
-                    pxd = PreparedData()
-                    rm = pxd.role_map.to_primitive()
-                    await session.send_custom_message("PopulateRoles", {"card": session.ns("Card"), "role_map": rm})
+                return
+
+            pxd = PreparedData()
+            columns = tuple(str(column) for column in pxd.frame.columns)
+            if not restored_roles_consumed and restored_role_map is not None:
+                role_map, warnings = _reconcile_restored_role_map(
+                    restored_role_map,
+                    columns,
+                    pxd.role_map,
+                )
+                for warning in warnings:
+                    this.log.warning("Role bookmark: %s", warning)
+                restored_roles_consumed = True
+                protected_columns = columns
+                protected_role_map = role_map
+                await session.send_custom_message(
+                    "PopulateRoles",
+                    {"card": session.ns("Card"), "role_map": role_map},
+                )
+                return
+
+            try:
+                current_role_map = input.role_map()
+            except Exception:  # noqa: BLE001
+                current_role_map = None
+            if _role_map_covers_columns(current_role_map, columns):
+                return
+            if protected_columns == columns and protected_role_map is not None:
+                await session.send_custom_message(
+                    "PopulateRoles",
+                    {"card": session.ns("Card"), "role_map": protected_role_map},
+                )
+                return
+
+            protected_columns = None
+            protected_role_map = None
+            await session.send_custom_message(
+                "PopulateRoles",
+                {
+                    "card": session.ns("Card"),
+                    "role_map": pxd.role_map.to_primitive(),
+                },
+            )
 
         @output
         @render.table
