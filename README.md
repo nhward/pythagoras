@@ -168,6 +168,7 @@ Cards (available and planned)
 * [Data tabulation](app/www/markdown/data_tabulation.html)
 * [Role assignment](app/www/markdown/var_roles.html)
 * [Variable modification](app/www/markdown/var_modify.html)
+* [Variable cardinality](app/www/markdown/var_cardinality.html)
 
 
 🧹 Data cleaning
@@ -190,6 +191,14 @@ Cards (available and planned)
 🧠 Preprocessing
 
 * [Variable transforms](app/www/markdown/var_transform.html)
+* [Parallel coordinates](app/www/markdown/var_parallel.html)
+* [Variable correlation](app/www/markdown/var_correlation.html)
+
+💐 Clusters
+
+* [Number of clusters](app/www/markdown/obs_k_clusters.html)
+* [Cluster charts](app/www/markdown/?????.html)
+
 * Feature roles
 * Partitioning
 * Weighting
