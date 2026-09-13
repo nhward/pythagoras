@@ -1,4 +1,4 @@
-"""Role-assignment card started with a bookmarked sortable role map."""
+"""var-role card started with a bookmarked sortable role map."""
 
 import os
 import sys
@@ -11,7 +11,7 @@ os.chdir(APP_ROOT)
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-from cards.role_assignment import instance
+from cards.var_roles import instance
 from proxy_data import proxy_data
 
 this = instance()

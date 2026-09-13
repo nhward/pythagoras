@@ -21,9 +21,9 @@ from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
 from shiny.run import ShinyAppProc
 
-app = create_app_fixture(app="../scenarios/role_assignment.py", scope="function")
+app = create_app_fixture(app="../scenarios/var_roles.py", scope="function")
 restored_app = create_app_fixture(
-    app="../scenarios/role_assignment_restore.py",
+    app="../scenarios/var_roles_restore.py",
     scope="function",
 )
 _HELPER_CARDS = {}
@@ -50,7 +50,7 @@ def browser_context_args():
 
 @pytest.fixture
 def card_module():
-    return importlib.import_module("cards.role_assignment")
+    return importlib.import_module("cards.var_roles")
 
 
 def seeded_frame() -> pd.DataFrame:
@@ -161,7 +161,7 @@ def populate_roles(page: Page, payload: dict[str, list[str]]):
 class TestInstance:
     @pytest.mark.unit
     def test_metadata(self, card):
-        assert card.name == "role_assignment"
+        assert card.name == "var_roles"
         assert card.long_name == "Role Assignment"
         assert "assigned to roles" in card.description
         assert card.mutable
@@ -372,7 +372,7 @@ class TestServerHelpers:
 
         record = result.processing_records[-1]
         assert record.stage == "Cleaning"
-        assert record.card == "role_assignment"
+        assert record.card == "var_roles"
         assert record.operation == "Assign variable roles"
         assert record.attempted is True
         assert record.input_shape == result.shape
@@ -388,7 +388,7 @@ class TestServerHelpers:
             "new_roles": ["target"],
         }
         journey = importlib.import_module("cards.data_provenance")._journey_table(result)
-        role_step = journey.loc[journey["Card"] == "role_assignment"].iloc[-1]
+        role_step = journey.loc[journey["Card"] == "var_roles"].iloc[-1]
         assert role_step["Operation"] == "Assign variable roles"
         assert role_step["Attempted"] == "Yes"
         assert role_step["Variables"] == "y, id, part"
@@ -405,7 +405,7 @@ class TestServerHelpers:
             result = functions["Committed"]()
 
         record = result.processing_records[-1]
-        assert record.card == "role_assignment"
+        assert record.card == "var_roles"
         assert record.operation == "Assign variable roles"
         assert record.attempted is False
         assert record.parameters["changes"] == []

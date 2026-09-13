@@ -1354,7 +1354,7 @@ class TestApplicationBrowser:
             shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
 
     @pytest.mark.ui
-    def test_role_assignment_custom_input_is_written_to_bookmark(
+    def test_var_roles_custom_input_is_written_to_bookmark(
         self, page: Page, save_app: ShinyAppProc
     ):
         shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
@@ -1364,7 +1364,7 @@ class TestApplicationBrowser:
             page.wait_for_function(
                 """
                 () => Object.entries(window.Shiny.shinyapp.$inputValues).some(
-                    ([name, value]) => name.startsWith("role_assignment")
+                    ([name, value]) => name.startsWith("var_roles")
                         && name.endsWith("-role_map")
                         && value
                         && Object.values(value).flat().length > 0
@@ -1375,7 +1375,7 @@ class TestApplicationBrowser:
             current = page.evaluate(
                 """
                 () => Object.entries(window.Shiny.shinyapp.$inputValues).find(
-                    ([name]) => name.startsWith("role_assignment")
+                    ([name]) => name.startsWith("var_roles")
                         && name.endsWith("-role_map")
                 )[1]
                 """
@@ -1388,13 +1388,13 @@ class TestApplicationBrowser:
             saved = list(BOOKMARK_TEST_DIR.glob("*.pythagoras.json"))
             assert len(saved) == 1
             written = json.loads(saved[0].read_text(encoding="utf-8"))
-            role_assignment = next(
+            var_roles = next(
                 card
                 for group in written["layout"]
                 for card in group["cards"]
-                if card["module"] == "role_assignment"
+                if card["module"] == "var_roles"
             )
-            assert role_assignment["state"]["inputs"]["role_map"] == current
+            assert var_roles["state"]["inputs"]["role_map"] == current
         finally:
             shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
 
@@ -1408,7 +1408,7 @@ class TestApplicationBrowser:
         # page.locator("#data_import-ServerFile").set_input_files(str(csv_file))
         # expect(page.locator("#data_import-Commit")).to_be_enabled()
         # page.locator("#data_import-Commit").click()
-        # for namespace in ("data_tabulation", "role_assignment", "var_modify"):
+        # for namespace in ("data_tabulation", "var_roles", "var_modify"):
         #     expect(page.locator(f"#{namespace}-Name")).to_contain_text("reactive-flow", timeout=20_000)
         # page.get_by_role("tab", name="Data cleaning", exact=True).click()
         # expect(page.locator("#obs_duplicates-Name")).to_contain_text("reactive-flow", timeout=20_000)
@@ -1424,10 +1424,10 @@ class TestApplicationBrowser:
         page.locator("#data_import-Commit").click()
         # expect(page.locator("#var_modify-Name")).to_contain_text("reactive-flow", timeout=20_000)
 
-        page.locator("#role_assignment-Card").hover()
-        page.locator("#role_assignment-CloseButton").click(force=True)
+        page.locator("#var_roles-Card").hover()
+        page.locator("#var_roles-CloseButton").click(force=True)
         page.get_by_role("dialog").get_by_role("button", name="Yes, remove").click()
-        expect(page.locator("#role_assignment-Card")).to_have_count(0)
+        expect(page.locator("#var_roles-Card")).to_have_count(0)
         expect(page.locator(".shiny-output-error")).to_have_count(0)
 
         # replacement = tmp_path / "after-removal.csv"

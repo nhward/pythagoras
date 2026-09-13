@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Role assignment</title>
+<title>Number of clusters</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -124,7 +124,7 @@ min-height: 100%;
 
 #shiny-modal-wrapper {
 position: absolute;
-z-index: 10000 !important;
+z-index: 1060 !important;
 }
 
 .hover-card {
@@ -749,6 +749,92 @@ pointer-events: none;
 .parallel-line-near .gl-canvas-pick {
 cursor: pointer;
 }
+
+.card .card-body.flip-container {
+overflow: hidden;
+}
+.flip-container > .flippable > :is(.front, .back) {
+overflow: auto;
+min-height: 0;
+}
+
+.flip-container shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 1 1 auto;
+min-height: 0;
+}
+
+.card-scroll-content {
+flex: 0 0 auto;
+min-width: 0;
+}
+.card-scroll-content shiny-data-frame,
+.card-scroll-content shiny-data-frame > .html-fill-container,
+.card-scroll-content shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 0 0 auto;
+height: auto;
+}
+
+.card-footer .shiny-input-radiogroup {
+margin-inline: auto;
+margin-bottom: 0;
+max-width: 100%;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup .shiny-options-group {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.card-footer .shiny-input-radiogroup :is(.radio, label.radio-inline) {
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup :is(.radio label, label.radio-inline) {
+position: relative;
+padding-left: 0;
+margin-bottom: 0;
+}
+
+.card-footer .shiny-input-radiogroup input[type="radio"] {
+position: absolute;
+opacity: 0;
+width: 1px;
+height: 1px;
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.card-footer .shiny-input-radiogroup label:hover > input[type="radio"] + span,
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span {
+background-color: #0b5494;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span::before {
+content: "○";
+flex: 0 0 1em;
+width: 1em;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
+content: "●";
+}
 </style>
 </head>
 
@@ -756,7 +842,7 @@ cursor: pointer;
 
 
 <header id="title-block-header">
-<h1 class="title">Role assignment</h1>
+<h1 class="title">Number of clusters</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -764,15 +850,14 @@ cursor: pointer;
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Committed assignments change how later cards interpret retained values, while the <strong>None</strong> role removes a variable from downstream data.</em></p>
+<p><em>Assess plausible values of K, the number of clusters, after assigning variable roles and preparing the data. This card compares evidence from numeric predictors and records your decision for downstream cluster analysis. It changes cluster-count metadata, not observations or predictor values.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Give every variable an explicit analytical role.</li>
-<li><strong>Secondary:</strong> Validate that types, missingness, and cardinality are appropriate for those roles.</li>
-<li><strong>Tertiary:</strong> Make downstream card behavior predictable and reviewable.</li>
+<li><strong>Primary:</strong> Choose a defensible number of clusters using several perspectives on the data.</li>
+<li><strong>Secondary:</strong> Identify disagreement, weak evidence, and sensitivity before committing to a clustering interpretation.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Drag each variable into one role container. The supported roles are:</p>
+<p>Only varying, real-valued numeric columns assigned the Predictor role enter the analysis. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from the assessment. Sampling and optional standardization prepare an analysis copy.</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 50%">
@@ -780,91 +865,120 @@ cursor: pointer;
 </colgroup>
 <thead>
 <tr class="header">
-<th>Role</th>
-<th>Intended use</th>
+<th>Evidence family</th>
+<th>How it supports K</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Target</strong></td>
-<td>Outcome to be predicted.</td>
+<td>Agglomerative</td>
+<td>Merges observations into a hierarchy; compares cuts using silhouette, Calinski–Harabasz, and Davies–Bouldin scores.</td>
 </tr>
 <tr class="even">
-<td><strong>Predictor</strong></td>
-<td>Input available to a model or analysis.</td>
+<td>Divisive</td>
+<td>Splits observations using DIANA; compares the same three scores.</td>
 </tr>
 <tr class="odd">
-<td><strong>Treatment</strong></td>
-<td>Exposure whose possible causal effect is of interest.</td>
+<td>Partition</td>
+<td>Fits K-means or PAM (representative observations called medoids); compares the same three scores.</td>
 </tr>
 <tr class="even">
-<td><strong>Identifier</strong></td>
-<td>One or more fields that identify an observation.</td>
+<td>Mixture</td>
+<td>Fits Gaussian mixtures with four covariance structures; each favors the lowest Bayesian information criterion (BIC), balancing fit and complexity.</td>
 </tr>
 <tr class="odd">
-<td><strong>Weighting</strong></td>
-<td>Nonnegative numeric case weight.</td>
+<td>Topology</td>
+<td>Uses the largest gap between single-linkage merge distances as a separation heuristic.</td>
 </tr>
 <tr class="even">
-<td><strong>Partition</strong></td>
-<td>Predefined training or test membership.</td>
+<td>Density</td>
+<td>Sweeps DBSCAN neighborhood radii and counts the non-noise clusters at each eligible radius.</td>
 </tr>
 <tr class="odd">
-<td><strong>Stratifier</strong></td>
-<td>Low-cardinality grouping used for comparison rather than prediction.</td>
+<td>Spectral</td>
+<td>Builds a nearest-neighbor graph and favors a large gap between successive normalized graph-Laplacian eigenvalues.</td>
 </tr>
 <tr class="even">
-<td><strong>Sequence</strong></td>
-<td>Meaningful observation order, commonly time.</td>
+<td>Stability</td>
+<td>Repeatedly splits the sample, fits K-means, and checks whether pairs grouped together remain together under the other half’s model.</td>
 </tr>
 <tr class="odd">
-<td><strong>Sensitive</strong></td>
-<td>Attribute retained for fairness assessment rather than prediction.</td>
-</tr>
-<tr class="even">
-<td><strong>Geometry</strong></td>
-<td>Spatial object used by geographic methods.</td>
-</tr>
-<tr class="odd">
-<td><strong>None</strong></td>
-<td>Variable removed from the data passed to downstream cards.</td>
+<td>Gap statistic</td>
+<td>Compares K-means within-cluster dispersion with uniform reference data in a principal-component-aligned bounding box.</td>
 </tr>
 </tbody>
 </table>
-<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.</p>
+<p>Silhouette rewards separation relative to within-cluster distances; Calinski–Harabasz rewards between-cluster relative to within-cluster dispersion; Davies–Bouldin measures cluster overlap. Higher values favor K for the first two; lower values favor K for the third. These scores compare K ≥ 2 and cannot establish whether one group suffices.</p>
+<p>Stability favors the largest K meeting the mean prediction-strength threshold. K=1 is trivially stable, so its selection is a fallback rather than proof of homogeneity. Gap uses the smallest K satisfying its one-standard-error comparison with K+1; it casts no vote when none qualifies. Both evaluations always use K-means, independently of the partition method.</p>
+<p>With observation weighting enabled, positive weights express relative importance and are normalized to mean one; zero-weight rows are excluded. Unequal weights affect partition fitting and scores, DBSCAN neighborhood mass and noise fractions, stability, and gap. Agglomerative, Divisive, Mixture, Topology, and Spectral then contribute no evidence. Equal weights retain all families. Weighted evaluations are importance-weight extensions; weights do not represent additional independent observations.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.</p>
+<p>The <strong>K-th Support barchart</strong> stacks colored contributions by family. The discrete horizontal axis runs from 1 through the configured maximum K. Each family with recommendations contributes one total unit, distributed across the K values it favors. Taller bars show greater combined support, not probabilities or independent confirmations.</p>
+<p>Hover over segments for their values; use the legend to inspect family contributions. Full-screen view provides Plotly tools and an expanded vertical-axis label. Empty evidence produces a message instead of recommendations. The footer reports the analyzed rows and weighting status.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side lists roles in the most recently committed output. Variables committed to <strong>None</strong> are absent because they are no longer part of that output. Uncommitted dragging is not shown.</p>
+<p>The <strong>Support evidence table</strong> provides the underlying evidence and explanatory notes.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Family / Criterion</td>
+<td>The method and score or diagnostic used.</td>
+</tr>
+<tr class="even">
+<td>K</td>
+<td>The cluster count evaluated or produced.</td>
+</tr>
+<tr class="odd">
+<td>Score</td>
+<td>The raw value; units differ across criteria.</td>
+</tr>
+<tr class="even">
+<td>Direction</td>
+<td>Whether to maximize, minimize, apply a threshold or one-SE rule, or read a diagnostic.</td>
+</tr>
+<tr class="odd">
+<td>Recommended</td>
+<td>Whether that row contributes support to the chart.</td>
+</tr>
+</tbody>
+</table>
+<p>Diagnostic rows, including uncertainty and noise fractions, need interpretation alongside the notes. DBSCAN can report K=0 (all noise) or counts beyond the assessed range in this table; these contribute no chart support. A low noise fraction alone does not establish useful clusters.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p><strong>Commit Assignments</strong> becomes available when the proposed role map is valid. Clicking it publishes the assignments and removes <strong>None</strong> variables from the data passed downstream. Dragging alone changes neither the exported roles nor columns. A removed variable remains available within this card and can be restored by assigning another role and committing again.</p>
-<p>If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Other role changes alter downstream eligibility; assigning <strong>None</strong> also reduces the data-frame width.</p>
+<p>Select a <strong>K=1</strong>, <strong>K=2</strong>, or other K button to update the outgoing cluster-count decision immediately. The incoming decision is selected initially, constrained to the configured range; the raw-data default is 1. Lowering the maximum also caps the decision. The selected count cannot exceed the incoming row count.</p>
+<p>Evidence does not automatically select a winner. K=1 records no segmentation. No separate Apply action is required.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Assign roles according to how variables may legitimately be used at prediction time. An identifier is not automatically a useful predictor; a sensitive attribute may be essential for auditing but inappropriate as a model input; and a sequence should represent a meaningful order rather than arbitrary row position.</p>
-<p>If a variable genuinely needs two analytical uses, create a deliberate duplicate rather than assigning multiple roles implicitly.</p>
+<p>Agreement across families strengthens a candidate’s case, but methods share assumptions and can agree for unhelpful reasons. Compare neighboring K values, separation, stability uncertainty, and density noise. Support at the search boundary is a reason to investigate a wider range.</p>
+<p>The recorded K is intended for a downstream card that will fit a chosen clustering method and chart groups in a dimensionally reduced 2D space. This card does not produce that plot or store memberships. A future 2D projection should be treated as a view of the fitted groups; separation in a projection alone cannot validate K.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>Validation can detect structural conflicts but cannot determine the correct scientific role.</li>
-<li>Sampling may be used to assess cardinality and missingness on very large datasets.</li>
-<li>Most singleton roles reflect current application and modeling constraints, not universal statistical rules.</li>
-<li>Committing a plausible role map does not prevent leakage from conceptually invalid predictors.</li>
-<li><strong>None</strong> removes a variable only from this card’s output; it does not alter the upstream dataset.</li>
+<li>There need not be one optimal K. Scaling, distance, method, importance weights, and sampling can change the evidence.</li>
+<li>Categorical predictors are not encoded here. Incomplete-row exclusion and sampling may hide small or unusual groups.</li>
+<li>Resampling evaluates the prepared K-means data, not every family or the full preprocessing pipeline. Small samples and few repeats increase uncertainty.</li>
+<li>Pairwise distances require memory growing with the square of the analysis row count. Large samples can be expensive even when resampling is capped.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Identify the target, if the analysis is supervised.</li>
-<li>Separate identifiers, sequence fields, partitions, weights, and geometry from predictors.</li>
-<li>Assign exclusion and auditing roles deliberately.</li>
-<li>Resolve every validation message.</li>
-<li>Commit and confirm the assignments on the flip side.</li>
+<li>Check predictor roles, missing values, and any observation-importance assignment.</li>
+<li>Review support across K and compare the contributing families.</li>
+<li>Inspect raw scores, uncertainty, noise, and exclusion notes on the flip side.</li>
+<li>Check whether plausible changes to scaling, sampling, or the search range alter the conclusion.</li>
+<li>Select K explicitly for downstream analysis.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> The upstream variables and current role map.</li>
-<li><strong>Output:</strong> Retained values with the committed role map; variables assigned <strong>None</strong> are omitted.</li>
-<li><strong>Data journey:</strong> A committed role change or <strong>None</strong> removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.</li>
+<li><strong>Input:</strong> Upstream data, variable roles, and the incoming cluster-count decision.</li>
+<li><strong>Output:</strong> The same observations, columns, roles, and pipeline, with the selected K stored in <code>proxy_data.cluster_count</code>. Analysis sampling, scaling, and exclusions do not alter the outgoing data. No clustering method, memberships, or reduced coordinates are stored.</li>
+<li><strong>Data journey:</strong> Recording K adds no processing step or Data journey transformation entry.</li>
 </ul>
 
 

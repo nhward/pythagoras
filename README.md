@@ -166,7 +166,7 @@ Cards (available and planned)
 
 * [Data importation](app/www/markdown/data_import.html) 
 * [Data tabulation](app/www/markdown/data_tabulation.html)
-* [Role assignment](app/www/markdown/role_assignment.html)
+* [Role assignment](app/www/markdown/var_roles.html)
 * [Variable modification](app/www/markdown/var_modify.html)
 
 

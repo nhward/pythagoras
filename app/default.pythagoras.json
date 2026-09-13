@@ -46,7 +46,7 @@
           "module": "var_modify"
         },
         {
-          "module": "role_assignment"
+          "module": "var_roles"
         },
         {
           "module": "var_cardinality"

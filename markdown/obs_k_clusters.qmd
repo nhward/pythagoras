@@ -1,0 +1,91 @@
+---
+title: Number of clusters
+---
+
+#### 🧭 Purpose
+
+_Assess plausible values of K, the number of clusters, after assigning variable roles and preparing the data. This card compares evidence from numeric predictors and records your decision for downstream cluster analysis. It changes cluster-count metadata, not observations or predictor values._
+
+#### 🎯 Goals
+
+1. **Primary:** Choose a defensible number of clusters using several perspectives on the data.
+1. **Secondary:** Identify disagreement, weak evidence, and sensitivity before committing to a clustering interpretation.
+
+#### 🧠 How it works
+
+Only varying, real-valued numeric columns assigned the Predictor role enter the analysis. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from the assessment. Sampling and optional standardization prepare an analysis copy.
+
+| Evidence family | How it supports K |
+|---|---|
+| Agglomerative | Merges observations into a hierarchy; compares cuts using silhouette, Calinski–Harabasz, and Davies–Bouldin scores. |
+| Divisive | Splits observations using DIANA; compares the same three scores. |
+| Partition | Fits K-means or PAM (representative observations called medoids); compares the same three scores. |
+| Mixture | Fits Gaussian mixtures with four covariance structures; each favors the lowest Bayesian information criterion (BIC), balancing fit and complexity. |
+| Topology | Uses the largest gap between single-linkage merge distances as a separation heuristic. |
+| Density | Sweeps DBSCAN neighborhood radii and counts the non-noise clusters at each eligible radius. |
+| Spectral | Builds a nearest-neighbor graph and favors a large gap between successive normalized graph-Laplacian eigenvalues. |
+| Stability | Repeatedly splits the sample, fits K-means, and checks whether pairs grouped together remain together under the other half's model. |
+| Gap statistic | Compares K-means within-cluster dispersion with uniform reference data in a principal-component-aligned bounding box. |
+
+Silhouette rewards separation relative to within-cluster distances; Calinski–Harabasz rewards between-cluster relative to within-cluster dispersion; Davies–Bouldin measures cluster overlap. Higher values favor K for the first two; lower values favor K for the third. These scores compare K ≥ 2 and cannot establish whether one group suffices.
+
+Stability favors the largest K meeting the mean prediction-strength threshold. K=1 is trivially stable, so its selection is a fallback rather than proof of homogeneity. Gap uses the smallest K satisfying its one-standard-error comparison with K+1; it casts no vote when none qualifies. Both evaluations always use K-means, independently of the partition method.
+
+With observation weighting enabled, positive weights express relative importance and are normalized to mean one; zero-weight rows are excluded. Unequal weights affect partition fitting and scores, DBSCAN neighborhood mass and noise fractions, stability, and gap. Agglomerative, Divisive, Mixture, Topology, and Spectral then contribute no evidence. Equal weights retain all families. Weighted evaluations are importance-weight extensions; weights do not represent additional independent observations.
+
+#### 🏞️ Front
+
+The **K-th Support barchart** stacks colored contributions by family. The discrete horizontal axis runs from 1 through the configured maximum K. Each family with recommendations contributes one total unit, distributed across the K values it favors. Taller bars show greater combined support, not probabilities or independent confirmations.
+
+Hover over segments for their values; use the legend to inspect family contributions. Full-screen view provides Plotly tools and an expanded vertical-axis label. Empty evidence produces a message instead of recommendations. The footer reports the analyzed rows and weighting status.
+
+#### 🔄 Flip side
+
+The **Support evidence table** provides the underlying evidence and explanatory notes.
+
+| Column | Meaning |
+|---|---|
+| Family / Criterion | The method and score or diagnostic used. |
+| K | The cluster count evaluated or produced. |
+| Score | The raw value; units differ across criteria. |
+| Direction | Whether to maximize, minimize, apply a threshold or one-SE rule, or read a diagnostic. |
+| Recommended | Whether that row contributes support to the chart. |
+
+Diagnostic rows, including uncertainty and noise fractions, need interpretation alongside the notes. DBSCAN can report K=0 (all noise) or counts beyond the assessed range in this table; these contribute no chart support. A low noise fraction alone does not establish useful clusters.
+
+#### 🛠️ Controls and actions
+
+Select a **K=1**, **K=2**, or other K button to update the outgoing cluster-count decision immediately. The incoming decision is selected initially, constrained to the configured range; the raw-data default is 1. Lowering the maximum also caps the decision. The selected count cannot exceed the incoming row count.
+
+Evidence does not automatically select a winner. K=1 records no segmentation. No separate Apply action is required.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Agreement across families strengthens a candidate's case, but methods share assumptions and can agree for unhelpful reasons. Compare neighboring K values, separation, stability uncertainty, and density noise. Support at the search boundary is a reason to investigate a wider range.
+
+The recorded K is intended for a downstream card that will fit a chosen clustering method and chart groups in a dimensionally reduced 2D space. This card does not produce that plot or store memberships. A future 2D projection should be treated as a view of the fitted groups; separation in a projection alone cannot validate K.
+
+#### ⛔️ Limitations
+
+* There need not be one optimal K. Scaling, distance, method, importance weights, and sampling can change the evidence.
+* Categorical predictors are not encoded here. Incomplete-row exclusion and sampling may hide small or unusual groups.
+* Resampling evaluates the prepared K-means data, not every family or the full preprocessing pipeline. Small samples and few repeats increase uncertainty.
+* Pairwise distances require memory growing with the square of the analysis row count. Large samples can be expensive even when resampling is capped.
+
+#### 📌 Suggested workflow
+
+1. Check predictor roles, missing values, and any observation-importance assignment.
+1. Review support across K and compare the contributing families.
+1. Inspect raw scores, uncertainty, noise, and exclusion notes on the flip side.
+1. Check whether plausible changes to scaling, sampling, or the search range alter the conclusion.
+1. Select K explicitly for downstream analysis.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream data, variable roles, and the incoming cluster-count decision.
+* **Output:** The same observations, columns, roles, and pipeline, with the selected K stored in `proxy_data.cluster_count`. Analysis sampling, scaling, and exclusions do not alter the outgoing data. No clustering method, memberships, or reduced coordinates are stored.
+* **Data journey:** Recording K adds no processing step or Data journey transformation entry.

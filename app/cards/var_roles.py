@@ -394,7 +394,7 @@ def instance():
             if changes:
                 return data.with_cleaned_data(
                     data.frame.loc[:, retained],
-                    card="role_assignment",
+                    card="var_roles",
                     operation="Assign variable roles",
                     parameters={
                         "changes": changes,
@@ -404,7 +404,7 @@ def instance():
                 )
             return data.with_inactive_step(
                 stage="Cleaning",
-                card="role_assignment",
+                card="var_roles",
                 operation="Assign variable roles",
                 parameters={"changes": changes},
             )

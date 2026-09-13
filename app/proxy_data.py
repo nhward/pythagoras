@@ -10,6 +10,7 @@ if str(path) not in sys.path:
 
 from collections.abc import Iterable as _Iterable
 from dataclasses import dataclass, field
+from numbers import Integral
 from typing import Literal
 
 import geopandas as gpd
@@ -47,6 +48,8 @@ class proxy_data:
     _clean_df: pd.DataFrame | None = None
     _processing_records: tuple[ProcessingRecord, ...] = field(default_factory=tuple)
 
+    _cluster_count: int | None = 1
+
     # ----------------- post-init: default roles -------------------------
 
     def __post_init__(self):
@@ -58,6 +61,8 @@ class proxy_data:
         - Default is: "everything is a predictor until we know better",
           which is more useful than putting everything in Role.NONE.
         """
+        self._cluster_count = self._validate_cluster_count(self._cluster_count)
+
         # Normalise _roles to a RoleMap instance
         if not isinstance(self._roles, RoleMap):
             # Allow passing primitive dicts like {col: ["predictor", ...]}
@@ -176,6 +181,26 @@ class proxy_data:
     def name(self, value):
         self._name = value
 
+    @staticmethod
+    def _validate_cluster_count(value: int | None) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise TypeError("cluster_count must be an integer or None")
+        if value < 1:
+            raise ValueError("cluster_count must be at least 1")
+        return int(value)
+
+    @property
+    def cluster_count(self) -> int | None:
+        return self._cluster_count
+
+    def with_cluster_count(self, value: int | None) -> proxy_data:
+        value = self._validate_cluster_count(value)
+        result = self.clone()
+        result._cluster_count = value
+        return result
+
     @property
     def cleaning_records(self) -> tuple[CleaningRecord, ...]:
         """Return the ordered, immutable cleaning provenance."""
@@ -277,6 +302,7 @@ class proxy_data:
             _df=preview_frame.copy(),
             _roles=self._copy_roles(),
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _pipeline=Pipeline(steps),
             _clean_df=self.clean_frame.copy(),
@@ -306,6 +332,7 @@ class proxy_data:
             _df=self.frame.copy(),
             _roles=self._copy_roles(),
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -365,6 +392,7 @@ class proxy_data:
             _df=frame.copy(),
             _roles=roles,
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=(*self.cleaning_records, record),
             _clean_df=frame.copy(),
             _processing_records=(*self.processing_records, processing),
@@ -389,6 +417,7 @@ class proxy_data:
             _df=selected,
             _roles=new_rm,
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -459,6 +488,7 @@ class proxy_data:
             _df=selected,
             _roles=new_rm,
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -516,6 +546,7 @@ class proxy_data:
             _df=sampled,
             _roles=self._copy_roles(),
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -530,6 +561,7 @@ class proxy_data:
             _df=self._df,
             _roles=role_map,
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -549,6 +581,7 @@ class proxy_data:
             _df=df_copy,
             _roles=roles_copy,
             _name=self.name,
+            _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -715,13 +748,14 @@ class proxy_data:
             f"columns={list(self._df.columns)!r}, "
             f"cleaning_records={len(self.cleaning_records)}, "
             f"pipeline_steps={len(self.pipeline_steps)}, "
-            f"processing_records={len(self.processing_records)})"
+            f"processing_records={len(self.processing_records)}, "
+            f"cluster_count={self.cluster_count})"
         )
 
     def __len__(self) -> int:
         return len(self._df)
     
-    def equals(self, other: object, *, check_name: bool = True, check_roles: bool = True, check_crs: bool = True, check_geometry_column: bool = True, check_cleaning_records: bool = True, check_pipeline: bool = True, check_processing_records: bool | None = None) -> bool:
+    def equals(self, other: object, *, check_name: bool = True, check_roles: bool = True, check_crs: bool = True, check_geometry_column: bool = True, check_cleaning_records: bool = True, check_pipeline: bool = True, check_processing_records: bool | None = None, check_cluster_count: bool = True) -> bool:
         """
         Compare two proxy_data instances for equality.
         By default this checks:
@@ -732,6 +766,8 @@ class proxy_data:
         - same GeoDataFrame CRS and active geometry column, where relevant
         """
         if not isinstance(other, proxy_data):
+            return False
+        if check_cluster_count and self.cluster_count != other.cluster_count:
             return False
         if check_name and self.name != other.name:
             return False
