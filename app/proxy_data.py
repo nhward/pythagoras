@@ -87,8 +87,12 @@ class proxy_data:
             self._clean_df = self._df.copy()
         elif not isinstance(self._clean_df, pd.DataFrame):
             raise TypeError("_clean_df must be a pandas or GeoPandas DataFrame")
-        if list(self._clean_df.columns) != list(self._df.columns):
-            raise ValueError("clean and current frames must have identical columns")
+        clean_columns = list(self._clean_df.columns)
+        current_columns = list(self._df.columns)
+        if clean_columns != current_columns:
+            if (not self.has_pipeline or not self._df.columns.is_unique
+                    or current_columns[:len(clean_columns)] != clean_columns):
+                raise ValueError("clean and current frames must have identical columns except appended pipeline features")
 
         # If no roles defined at all, default every column to PREDICTOR
         if not self._roles.column_roles:
@@ -246,19 +250,31 @@ class proxy_data:
         name: str,
         operation: str | None = None,
         preview_frame: pd.DataFrame | gpd.GeoDataFrame,
+        added_roles: RoleMap | None = None,
     ) -> proxy_data:
         """Return a successor with an unfitted learned transformer appended.
 
         ``preview_frame`` is the card's full-data, fitted result for interactive
         display only. The stored estimator is cloned, so fitted attributes from
         that preview cannot leak into later train/test or cross-validation fits.
+        Appended columns must be declared in ``added_roles``; existing columns
+        and row indices remain intact, and clean_frame stays the pipeline input.
         """
         if not isinstance(transformer, BaseEstimator):
             raise TypeError("transformer must be a scikit-learn estimator")
         if not isinstance(preview_frame, pd.DataFrame):
             raise TypeError("preview_frame must be a pandas or GeoPandas DataFrame")
-        if list(preview_frame.columns) != list(self.frame.columns):
-            raise ValueError("pipeline steps must preserve DataFrame columns")
+        added = [] if added_roles is None else list(added_roles.column_roles)
+        if set(added) & set(self.frame.columns):
+            raise ValueError("Added pipeline columns must not overwrite existing columns")
+        if list(preview_frame.columns) != [*self.frame.columns, *added]:
+            raise ValueError("pipeline steps must preserve DataFrame columns except explicitly declared additions")
+        roles = self._copy_roles()
+        for column in added:
+            assigned = added_roles.roles_for(column)
+            if not assigned:
+                raise ValueError("Added pipeline columns require a role")
+            roles.set_roles(column, assigned)
         if not preview_frame.index.equals(self.frame.index):
             raise ValueError("pipeline steps must preserve the DataFrame index")
 
@@ -300,7 +316,7 @@ class proxy_data:
         )
         return proxy_data(
             _df=preview_frame.copy(),
-            _roles=self._copy_roles(),
+            _roles=roles,
             _name=self.name,
             _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,

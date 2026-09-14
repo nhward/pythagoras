@@ -1,0 +1,88 @@
+---
+title: Cluster membership
+---
+
+#### 🧭 Purpose
+
+_Compare clustering methods at the incoming K, the number of groups chosen upstream, and inspect their memberships in a shared two-dimensional view. Use this card after Number of clusters and predictor preparation. It can also add nominal membership predictors and learned pipeline steps for downstream modeling._
+
+#### 🎯 Goals
+
+1. **Primary:** Visualize how different methods group the same observations at the chosen K.
+1. **Secondary:** Inspect individual memberships and disagreements between methods.
+1. **Tertiary:** Optionally introduce membership predictors that can also be assigned to new observations.
+
+#### 🧠 How it works
+
+Clustering uses varying, real-valued numeric Predictor columns. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from fitting. Optional standardization and reproducible sampling prepare an analysis copy without changing outgoing predictor values.
+
+| Tab | Method |
+|---|---|
+| **Partition** | K-means or PAM, which represents clusters by actual observations called medoids. |
+| **Agglomerative** | Successively merges observations, then cuts the hierarchy at K groups. |
+| **Divisive** | Uses DIANA to split a hierarchy into K groups. |
+| **Mixture** | Fits Gaussian mixtures at fixed K and selects the converged covariance structure with the lowest Bayesian information criterion (BIC), balancing fit and complexity. |
+| **Density** | Uses DBSCAN to find dense neighborhoods. A bounded radius search favors counts closest to K, then less unallocated observation importance. Exact K is not guaranteed. |
+| **Spectral** | Groups a graph connecting nearby observations. Too many disconnected components can prevent a result at K. |
+
+With weighting enabled, positive weights express observation importance and are normalized to mean one; zero-weight rows are excluded from fitting. Unequal weights are supported by Partition and Density. Other methods explain their unavailability; disabling weighting permits an equal-importance analysis.
+
+#### 🏞️ Front
+
+Each tab colors the same analyzed observations by its own memberships. All tabs share coordinates and axis ranges. Axes show either t-SNE, a neighborhood-focused embedding, or principal components from PCA. Clustering is fitted in predictor space, not in this two-dimensional display. PCA can use importance-weighted axes; t-SNE does not weight its embedding.
+
+Colors and numbers identify groups within a method; matching colors across tabs do not imply matching groups. Density shows **unallocated** in gray. Hover displays Identifier-role values when available, otherwise the original row position. Full-screen view enables Plotly tools. Unavailable results appear as explanatory messages, and the footer reports incoming K, analyzed rows, and predictor count.
+
+#### 🔄 Flip side
+
+The table follows the active tab. **Row** is the original one-based row position, **Membership** is the displayed label, and columns prefixed **Data:** contain incoming values. It includes analyzed rows in their original order, rather than every row that may receive an exported membership. An unavailable method displays its explanation instead.
+
+#### 🛠️ Controls and actions
+
+The footer offers three independent checkboxes:
+
+| Control | Added nominal Predictor |
+|---|---|
+| **Add Partition members** | `cluster_partition` |
+| **Add Mixture members** | `cluster_mixture` |
+| **Add DBSCAN members** | `cluster_density` |
+
+Membership levels are `c1`, `c2`, and so on, with `unallocated` as an additional DBSCAN level. These are unordered categorical labels.
+
+Select any combination, independently of the active tab. A numeric suffix avoids existing column names. Each selection immediately adds a preview column and a learned pipeline step. Unchecking removes that method's addition. All three controls remain visible but disabled when incoming K is 1, including DBSCAN.
+
+Each selected recipe stays fixed until unchecked and checked again. Changing settings may therefore change the charts without updating an already selected recipe. Incoming data changes, including a new K, clear the selections. Failed additions are explained in the existing status text.
+
+Memberships are assigned to all rows with complete fitted predictors, including unsampled and zero-weight rows. Incomplete rows retain missing labels. DBSCAN assigns the nearest training core observation's cluster within the learned radius, otherwise **unallocated**. With border assignment disabled, a row must also meet the minimum neighborhood importance mass against the fixed training observations. New rows never create or merge clusters.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Compare membership disagreements using identifiers and the table. Separation in a projection is not evidence by itself that K is appropriate. Return to Number of clusters when the chosen count seems poorly supported.
+
+**unallocated** is a nominal level describing observations outside the assigned groups, not an additional coherent cluster. Evaluate whether membership predictors improve downstream validation. They summarize existing predictors and do not provide independent information.
+
+#### ⛔️ Limitations
+
+* Categorical predictors are not encoded. Missing-row exclusion and sampling can obscure small groups.
+* Scaling, distance, observation importance, and sampling can change memberships. The requested K must fit the available distinct analysis rows.
+* Pairwise distances require quadratic memory; PAM and t-SNE can be expensive.
+* Agglomerative, Divisive, and Spectral memberships are visualization-only here.
+* Training fits can produce different groups and label numbers from the exploratory preview. DBSCAN prediction uses a fixed training reference, rather than reclustering each new batch.
+
+#### 📌 Suggested workflow
+
+1. Confirm predictor and identifier roles, weighting, and the upstream K decision.
+1. Compare tabs and inspect unexpected memberships on the flip side.
+1. Check sensitivity to preparation and method choices before selecting membership predictors.
+1. Select the required additions, reselecting them after any intended recipe change.
+1. Inspect Data journey and evaluate the resulting pipeline inside training partitions.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream observations, roles, cluster-count decision, and any existing learned pipeline.
+* **Output:** With no selections, incoming data passes through. Selected additions append unordered categorical Predictors while preserving existing columns, rows, roles, K, and earlier pipeline steps. Projection coordinates are not exported.
+* **Data journey:** Each selected method adds an **Add cluster membership** Learning entry. The pipeline stores an unfitted transformer so preprocessing and clusters are learned within each training partition. Additions are permitted after learning has begun; clearing a selection removes its step while retaining upstream steps.

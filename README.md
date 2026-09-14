@@ -41,9 +41,9 @@ Cards are implemented as Shiny modules with a consistent interface and UI.
 Every card can support:
 
 - 🔄 **Flip view** (front = visualization, back = summary/metadata)
-- ⚙️ **Settings sidebar**
+- ⚙️ **Settings sidebar** (there when you need them)
 - 🧾 **Code extraction** (view and collect executable snippets)
-- 📖 **Documentation** (markdown-driven modal window)
+- 📖 **Documentation** (quarto-driven modal window)
 - 🧭 **Guided tours** (Shepherd-based walkthroughs)
 - 🖥️ **Full-screen mode** (higher resolution and greater detail)
 - 🟰 **Consistent styling and controls**
@@ -160,24 +160,25 @@ Drag-and-drop ordering is handled via:
 
 ⸻
 
-Cards (available and planned)
+## Cards (available and planned)
 
-📊 Data Prep
+### 📊 Data Prep
 
 * [Data importation](app/www/markdown/data_import.html) 
 * [Data tabulation](app/www/markdown/data_tabulation.html)
 * [Role assignment](app/www/markdown/var_roles.html)
 * [Variable modification](app/www/markdown/var_modify.html)
 * [Variable cardinality](app/www/markdown/var_cardinality.html)
+* Data coverage
+* Variable plots
 
-
-🧹 Data cleaning
+### 🧹 Data cleaning
 
 * [Duplicate Observations](app/www/markdown/obs_duplicates.html)
 * [Data homogeneity](app/www/markdown/data_homogeneity.html)
 * [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
 
-∅ Missing values
+### ∅ Missing values
 
 * [Missing Placeholders](app/www/markdown/miss_placeholders.html)
 * [Missingness types](app/www/markdown/miss_type.html)
@@ -188,30 +189,37 @@ Cards (available and planned)
 * [Learned imputation ](app/www/markdown/miss_impute.html)
 
 
-🧠 Preprocessing
+### 🧠 Preprocessing
 
 * [Variable transforms](app/www/markdown/var_transform.html)
-* [Parallel coordinates](app/www/markdown/var_parallel.html)
+* [Parallel coordinates](app/www/markdown/data_parallel.html)
 * [Variable correlation](app/www/markdown/var_correlation.html)
 
-💐 Clusters
+### 💐 Clusters
 
 * [Number of clusters](app/www/markdown/obs_k_clusters.html)
-* [Cluster charts](app/www/markdown/?????.html)
+* [Cluster charts](app/www/markdown/obs_clusters.html)
+
+### ☢️ Outliers
+
+* Observation outliers
+
+### 🌏 Spatial
 
 * Feature roles
 * Partitioning
 * Weighting
 * Stratification
 
-Miscellaneous
+### 🤖 System
+
 * [Configuration](app/www/markdown/sys_configuration.html)
 * [System log](app/www/markdown/system_log.html)
 * [Data journey](app/www/markdown/data_provenance.html)
 
 ⸻
 
-Code Extraction
+## Code Extraction
 
 Each card can expose the code it uses.
 

@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Role assignment</title>
+<title>Cluster membership</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -842,7 +842,7 @@ content: "●";
 
 
 <header id="title-block-header">
-<h1 class="title">Role assignment</h1>
+<h1 class="title">Cluster membership</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -850,108 +850,112 @@ content: "●";
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Committed assignments change how later cards interpret retained values, while the <strong>None</strong> role removes a variable from downstream data.</em></p>
+<p><em>Compare clustering methods at the incoming K, the number of groups chosen upstream, and inspect their memberships in a shared two-dimensional view. Use this card after Number of clusters and predictor preparation. It can also add nominal membership predictors and learned pipeline steps for downstream modeling.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Give every variable an explicit analytical role.</li>
-<li><strong>Secondary:</strong> Validate that types, missingness, and cardinality are appropriate for those roles.</li>
-<li><strong>Tertiary:</strong> Make downstream card behavior predictable and reviewable.</li>
+<li><strong>Primary:</strong> Visualize how different methods group the same observations at the chosen K.</li>
+<li><strong>Secondary:</strong> Inspect individual memberships and disagreements between methods.</li>
+<li><strong>Tertiary:</strong> Optionally introduce membership predictors that can also be assigned to new observations.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Drag each variable into one role container. The supported roles are:</p>
+<p>Clustering uses varying, real-valued numeric Predictor columns. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from fitting. Optional standardization and reproducible sampling prepare an analysis copy without changing outgoing predictor values.</p>
 <table class="caption-top">
-<caption>Table 1: Role table</caption>
 <colgroup>
-<col style="width: 25%">
-<col style="width: 75%">
+<col style="width: 50%">
+<col style="width: 50%">
 </colgroup>
 <thead>
 <tr class="header">
-<th style="text-align: left;">Role</th>
-<th style="text-align: left;">Intended use</th>
+<th>Tab</th>
+<th>Method</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;"><strong>Target</strong></td>
-<td style="text-align: left;">Outcome to be predicted.</td>
+<td><strong>Partition</strong></td>
+<td>K-means or PAM, which represents clusters by actual observations called medoids.</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Predictor</strong></td>
-<td style="text-align: left;">Input available to a model or analysis.</td>
+<td><strong>Agglomerative</strong></td>
+<td>Successively merges observations, then cuts the hierarchy at K groups.</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Treatment</strong></td>
-<td style="text-align: left;">Exposure whose possible causal effect is of interest.</td>
+<td><strong>Divisive</strong></td>
+<td>Uses DIANA to split a hierarchy into K groups.</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Identifier</strong></td>
-<td style="text-align: left;">One or more fields that identify an observation.</td>
+<td><strong>Mixture</strong></td>
+<td>Fits Gaussian mixtures at fixed K and selects the converged covariance structure with the lowest Bayesian information criterion (BIC), balancing fit and complexity.</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Weighting</strong></td>
-<td style="text-align: left;">Nonnegative numeric case weight.</td>
+<td><strong>Density</strong></td>
+<td>Uses DBSCAN to find dense neighborhoods. A bounded radius search favors counts closest to K, then less unallocated observation importance. Exact K is not guaranteed.</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Partition</strong></td>
-<td style="text-align: left;">Predefined training or test membership.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Stratifier</strong></td>
-<td style="text-align: left;">Low-cardinality grouping used for comparison rather than prediction.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Sequence</strong></td>
-<td style="text-align: left;">Meaningful observation order, commonly time.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Sensitive</strong></td>
-<td style="text-align: left;">Attribute retained for fairness assessment rather than prediction.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Geometry</strong></td>
-<td style="text-align: left;">Spatial object used by geographic methods.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>None</strong></td>
-<td style="text-align: left;">Variable removed from the data passed to downstream cards.</td>
+<td><strong>Spectral</strong></td>
+<td>Groups a graph connecting nearby observations. Too many disconnected components can prevent a result at K.</td>
 </tr>
 </tbody>
 </table>
-<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.</p>
+<p>With weighting enabled, positive weights express observation importance and are normalized to mean one; zero-weight rows are excluded from fitting. Unequal weights are supported by Partition and Density. Other methods explain their unavailability; disabling weighting permits an equal-importance analysis.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.</p>
+<p>Each tab colors the same analyzed observations by its own memberships. All tabs share coordinates and axis ranges. Axes show either t-SNE, a neighborhood-focused embedding, or principal components from PCA. Clustering is fitted in predictor space, not in this two-dimensional display. PCA can use importance-weighted axes; t-SNE does not weight its embedding.</p>
+<p>Colors and numbers identify groups within a method; matching colors across tabs do not imply matching groups. Density shows <strong>Unallocated</strong> in gray. Hover displays Identifier-role values when available, otherwise the original row position. Full-screen view enables Plotly tools. Unavailable results appear as explanatory messages, and the footer reports incoming K, analyzed rows, and predictor count.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side lists roles in the most recently committed output. Variables committed to <strong>None</strong> are absent because they are no longer part of that output. Uncommitted dragging is not shown.</p>
+<p>The table follows the active tab. <strong>Row</strong> is the original one-based row position, <strong>Membership</strong> is the displayed label, and columns prefixed <strong>Data:</strong> contain incoming values. It includes analyzed rows in their original order, rather than every row that may receive an exported membership. An unavailable method displays its explanation instead.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p><strong>Commit Assignments</strong> becomes available when the proposed role map is valid. Clicking it publishes the assignments and removes <strong>None</strong> variables from the data passed downstream. Dragging alone changes neither the exported roles nor columns. A removed variable remains available within this card and can be restored by assigning another role and committing again.</p>
-<p>If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Other role changes alter downstream eligibility; assigning <strong>None</strong> also reduces the data-frame width.</p>
+<p>The footer offers three independent checkboxes:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Control</th>
+<th>Added nominal Predictor</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Add Partition members</strong></td>
+<td><code>cluster_partition</code></td>
+</tr>
+<tr class="even">
+<td><strong>Add Mixture members</strong></td>
+<td><code>cluster_mixture</code></td>
+</tr>
+<tr class="odd">
+<td><strong>Add DBSCAN members</strong></td>
+<td><code>cluster_density</code></td>
+</tr>
+</tbody>
+</table>
+<p>Select any combination, independently of the active tab. A numeric suffix avoids existing column names. Each selection immediately adds a preview column and a learned pipeline step. Unchecking removes that method’s addition. All three controls remain visible but disabled when incoming K is 1, including DBSCAN.</p>
+<p>Each selected recipe stays fixed until unchecked and checked again. Changing settings may therefore change the charts without updating an already selected recipe. Incoming data changes, including a new K, clear the selections. Failed additions are explained in the existing status text.</p>
+<p>Memberships are assigned to all rows with complete fitted predictors, including unsampled and zero-weight rows. Incomplete rows retain missing labels. DBSCAN assigns the nearest training core observation’s cluster within the learned radius, otherwise <strong>Unallocated</strong>. With border assignment disabled, a row must also meet the minimum neighborhood importance mass against the fixed training observations. New rows never create or merge clusters.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Assign roles according to how variables may legitimately be used at prediction time. An identifier is not automatically a useful predictor; a sensitive attribute may be essential for auditing but inappropriate as a model input; and a sequence should represent a meaningful order rather than arbitrary row position.</p>
-<p>If a variable genuinely needs two analytical uses, create a deliberate duplicate rather than assigning multiple roles implicitly.</p>
+<p>Compare membership disagreements using identifiers and the table. Separation in a projection is not evidence by itself that K is appropriate. Return to Number of clusters when the chosen count seems poorly supported.</p>
+<p><strong>Unallocated</strong> is a nominal level describing observations outside the assigned groups, not an additional coherent cluster. Evaluate whether membership predictors improve downstream validation. They summarize existing predictors and do not provide independent information.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>Validation can detect structural conflicts but cannot determine the correct scientific role.</li>
-<li>Sampling may be used to assess cardinality and missingness on very large datasets.</li>
-<li>Most singleton roles reflect current application and modeling constraints, not universal statistical rules.</li>
-<li>Committing a plausible role map does not prevent leakage from conceptually invalid predictors.</li>
-<li><strong>None</strong> removes a variable only from this card’s output; it does not alter the upstream dataset.</li>
+<li>Categorical predictors are not encoded. Missing-row exclusion and sampling can obscure small groups.</li>
+<li>Scaling, distance, observation importance, and sampling can change memberships. The requested K must fit the available distinct analysis rows.</li>
+<li>Pairwise distances require quadratic memory; PAM and t-SNE can be expensive.</li>
+<li>Agglomerative, Divisive, and Spectral memberships are visualization-only here.</li>
+<li>Training fits can produce different groups and label numbers from the exploratory preview. DBSCAN prediction uses a fixed training reference, rather than reclustering each new batch.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Identify the target, if the analysis is supervised.</li>
-<li>Separate identifiers, sequence fields, partitions, weights, and geometry from predictors.</li>
-<li>Assign exclusion and auditing roles deliberately.</li>
-<li>Resolve every validation message.</li>
-<li>Commit and confirm the assignments on the flip side.</li>
+<li>Confirm predictor and identifier roles, weighting, and the upstream K decision.</li>
+<li>Compare tabs and inspect unexpected memberships on the flip side.</li>
+<li>Check sensitivity to preparation and method choices before selecting membership predictors.</li>
+<li>Select the required additions, reselecting them after any intended recipe change.</li>
+<li>Inspect Data journey and evaluate the resulting pipeline inside training partitions.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> The upstream variables and current role map.</li>
-<li><strong>Output:</strong> Retained values with the committed role map; variables assigned <strong>None</strong> are omitted.</li>
-<li><strong>Data journey:</strong> A committed role change or <strong>None</strong> removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.</li>
+<li><strong>Input:</strong> Upstream observations, roles, cluster-count decision, and any existing learned pipeline.</li>
+<li><strong>Output:</strong> With no selections, incoming data passes through. Selected additions append unordered categorical Predictors while preserving existing columns, rows, roles, K, and earlier pipeline steps. Projection coordinates are not exported.</li>
+<li><strong>Data journey:</strong> Each selected method adds an <strong>Add cluster membership</strong> Learning entry. The pipeline stores an unfitted transformer so preprocessing and clusters are learned within each training partition. Additions are permitted after learning has begun; clearing a selection removes its step while retaining upstream steps.</li>
 </ul>
 
 

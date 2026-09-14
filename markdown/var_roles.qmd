@@ -16,11 +16,13 @@ _The Role assignment card declares how each variable is intended to participate 
 
 Drag each variable into one role container. The supported roles are:
 
+: Table 1: Role table {tbl-colwidths="[30,90]"}
 | Role | Intended use |
-|---|---|
+|:----------|:----------------------------------------------------------|
 | **Target** | Outcome to be predicted. |
 | **Predictor** | Input available to a model or analysis. |
-| **Treatment** | Exposure whose possible causal effect is of interest. |
+| **Treatment** | Exposure who
+se possible causal effect is of interest. |
 | **Identifier** | One or more fields that identify an observation. |
 | **Weighting** | Nonnegative numeric case weight. |
 | **Partition** | Predefined training or test membership. |
@@ -30,7 +32,7 @@ Drag each variable into one role container. The supported roles are:
 | **Geometry** | Spatial object used by geographic methods. |
 | **None** | Variable removed from the data passed to downstream cards. |
 
-Every variable has one role at most, and the **None** role makes exclusion explicit. **Predictor**, **Identifier**, and **None** accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.
+Every variable has one role at most, and the **None** role makes exclusion explicit. **Predictor**, **Identifier**, and **None** accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.
 
 #### 🏞️ Front
 

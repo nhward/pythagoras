@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-from functools import lru_cache
 import os
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 if __name__ == "__main__":
     ROOT = Path(__file__).resolve().parent.parent
     os.chdir(ROOT)
     sys.path.insert(0, str(ROOT))
+
+import itertools
 
 import numpy as np
 import pandas as pd
@@ -119,7 +121,7 @@ def _diana(distance: np.ndarray, maximum: int) -> dict[int, np.ndarray]:
     return results
 
 
-def _pam(distance: np.ndarray, k: int, weights=None) -> np.ndarray:
+def _pam(distance: np.ndarray, k: int, weights=None, *, return_medoids=False) -> np.ndarray:
     # https://stat.ethz.ch/CRAN/web/packages/cluster/refman/cluster.html
     # PAM BUILD followed by best-improving SWAP (Kaufman & Rousseeuw).
     weights = np.ones(len(distance)) if weights is None else weights
@@ -146,7 +148,8 @@ def _pam(distance: np.ndarray, k: int, weights=None) -> np.ndarray:
                 best_cost = costs[candidate]
                 swap = position, candidate
         if swap is None:
-            return distance[:, medoids].argmin(axis=1)
+            labels = distance[:, medoids].argmin(axis=1)
+            return (labels, medoids) if return_medoids else labels
         medoids[swap[0]] = swap[1]
     raise ValueError("PAM did not converge within 100 swaps")
 
@@ -346,7 +349,7 @@ def _resampling_evidence(x, maximum, *, stability=True, gap=True, limit=300,
                 if k <= maximum:
                     scores.extend([("Gap statistic", "Gap", k, value, "one-SE rule"),
                                    ("Gap statistic", "Reference uncertainty", k, se, "diagnostic")])
-            chosen = next((left[0] for left, right in zip(values, values[1:])
+            chosen = next((left[0] for left, right in itertools.pairwise(values)
                            if left[0] <= maximum and left[1] >= right[1] - right[2]), None)
             if chosen is not None:
                 votes.append(("Gap statistic", "Gap", chosen))
@@ -718,7 +721,7 @@ def instance():
             # Enforce the limit before the browser receives the updated radio group.
             return min(max(1, count), int(input.Maximum()))
 
-        @this.settle(seconds=1)
+        @this.settle(seconds=2)
         @this.suspendable(calc=True)
         def Options():
             return {"maximum": int(input.Maximum()), "limit": 10**int(input.MaxObs()),

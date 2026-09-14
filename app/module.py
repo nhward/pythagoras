@@ -195,7 +195,7 @@ class Module(ABC):
         ROOT / "www" / "animate.css"
     ]        
     mjs_list: ClassVar[list] = [
-        "/guide.mjs",
+        "guide.mjs",
     ]
     _ui_patched = False  # whether patching has been performed
     min_log_level = logging.DEBUG
