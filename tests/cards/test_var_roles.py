@@ -26,6 +26,8 @@ restored_app = create_app_fixture(
     app="../scenarios/var_roles_restore.py",
     scope="function",
 )
+upstream_app = create_app_fixture(app="../scenarios/var_roles_upstream.py", scope="function")
+late_restore_app = create_app_fixture(app="../scenarios/var_roles_late_restore.py", scope="function")
 _HELPER_CARDS = {}
 
 VALID_ROLE_MAP = {
@@ -94,7 +96,7 @@ class FakeInputs:
         return 0
 
 
-def recorded_helpers(card_module, *, frame=None, role_map=None, max_obs=3):
+def recorded_helpers(card_module, *, frame=None, role_map=None, max_obs=3, restored=None):
     """Expose nested server helpers through inert test decorators."""
     card = _HELPER_CARDS.get(card_module)
     if card is None:
@@ -115,7 +117,12 @@ def recorded_helpers(card_module, *, frame=None, role_map=None, max_obs=3):
     with reactive.isolate():
         card._imports.set(proxy)
     inputs = FakeInputs(role_map, max_obs=max_obs)
-    card.output_data = card.server(inputs, lambda function: function, None)
+    restore_reader = card.restored_configuration_input
+    card.restored_configuration_input = lambda name: restored if name == "role_map" else None
+    try:
+        card.output_data = card.server(inputs, lambda function: function, None)
+    finally:
+        card.restored_configuration_input = restore_reader
     return card, inputs, functions
 
 
@@ -432,6 +439,116 @@ class TestServerHelpers:
         assert target == "y"
 
 
+class TestUpstreamChanges:
+    @pytest.mark.unit
+    def test_metadata_update_preserves_commit_and_none_removal(self, card_module):
+        role_map = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        role_map["predictor"] = ["x1"]
+        role_map["none"] = ["x2"]
+        card, inputs, functions = recorded_helpers(card_module, role_map=role_map)
+        with reactive.isolate():
+            functions["PxdChange"]()
+            functions["CommitEvent"]()
+            before = card.output_data()
+            source = card._imports.get().with_cluster_count(3)
+            card._imports.set(source)
+            # An uncommitted draft must not leak into the replayed output.
+            inputs.current_role_map = VALID_ROLE_MAP
+            functions["PxdChange"]()
+            result = card.output_data()
+        assert result.cluster_count == 3
+        assert result.frame.equals(before.frame)
+        assert result.role_map == before.role_map
+        assert "x2" not in result.columns
+        assert "x2" in source.columns
+        assert len(result.processing_records) == len(before.processing_records)
+
+    @pytest.mark.unit
+    def test_latest_name_and_history_pass_through_without_duplicate_role_steps(self, card_module):
+        card, _, functions = recorded_helpers(card_module)
+        with reactive.isolate():
+            functions["CommitEvent"]()
+            old = card._imports.get()
+            source = proxy_data(_df=old.frame, _roles=old.role_map, _name="Renamed", _cluster_count=2)
+            source = source.with_inactive_step(stage="Cleaning", card="upstream", operation="Reviewed")
+            card._imports.set(source)
+            functions["PxdChange"]()
+            functions["PxdChange"]()
+            result = card.output_data()
+        assert result.name == "Renamed"
+        assert result.cluster_count == 2
+        assert [r.card for r in result.processing_records] == ["upstream", "var_roles"]
+        assert result.role_map == RoleMap.from_primitive(VALID_ROLE_MAP)
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("change", ["columns", "invalid_target"])
+    def test_relevant_changes_reset_commit(self, card_module, change):
+        card, _, functions = recorded_helpers(card_module)
+        with reactive.isolate():
+            functions["CommitEvent"]()
+            source = card._imports.get().clone()
+            if change == "columns":
+                source = proxy_data(_df=source.frame.assign(new=1))
+            else:
+                source.frame.loc[0, "y"] = float("nan")
+            card._imports.set(source)
+            functions["PxdChange"]()
+            assert card.output_data() is source
+            newer = source.with_cluster_count(2)
+            card._imports.set(newer)
+            functions["PxdChange"]()
+            assert card.output_data() is newer
+
+    @pytest.mark.unit
+    def test_restored_weights_retry_after_late_type_conversion(self, card_module):
+        roles = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+        roles["predictor"] = ["x2"]
+        roles["weighting"] = ["x1"]
+        frame = seeded_frame()
+        frame["x1"] = frame.x1.astype(str)
+        card, inputs, functions = recorded_helpers(card_module, frame=frame, role_map=roles, restored=roles)
+        with reactive.isolate():
+            functions["PxdChange"]()
+            assert card.output_data() is card._imports.get()
+            converted = card._imports.get().frame.copy()
+            converted["x1"] = converted.x1.astype(float)
+            source = proxy_data(_df=converted, _cluster_count=3)
+            card._imports.set(source)
+            functions["PxdChange"]()
+            result = card.output_data()
+        assert result.role_map == RoleMap.from_primitive(roles)
+        assert result.cluster_count == 3
+        assert result.frame.equals(converted)
+        assert len(result.processing_records) == 1
+
+    @pytest.mark.unit
+    def test_valid_type_changes_reapply_commit_but_never_draft(self, card_module):
+        card, inputs, functions = recorded_helpers(card_module)
+        with reactive.isolate():
+            functions["CommitEvent"]()
+            draft = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+            draft["target"] = ["x1"]
+            draft["predictor"] = ["y", "x2"]
+            inputs.current_role_map = draft
+            frame = card._imports.get().frame.copy()
+            frame["x2"] = frame.x2.astype("category")
+            card._imports.set(proxy_data(_df=frame))
+            functions["PxdChange"]()
+            result = card.output_data()
+        assert result.role_map == RoleMap.from_primitive(VALID_ROLE_MAP)
+        assert result.frame.equals(frame)
+
+    @pytest.mark.unit
+    def test_without_commit_metadata_passes_through(self, card_module):
+        card, _, functions = recorded_helpers(card_module)
+        with reactive.isolate():
+            functions["PxdChange"]()
+            source = card._imports.get().with_cluster_count(3)
+            card._imports.set(source)
+            functions["PxdChange"]()
+            assert card.output_data() is source
+
+
 class TestWebKitRoles:
     @pytest.mark.ui
     def test_bookmarked_role_map_rebuilds_the_sortable_buckets(
@@ -448,7 +565,7 @@ class TestWebKitRoles:
         expect(role_bucket(page, "partition").locator(".var-chip")).to_have_text(
             ["part"]
         )
-        expect(by_id(page, "Check")).to_contain_text("ready to commit")
+        expect(by_id(page, "Check")).to_contain_text("Assignments applied")
 
     @pytest.mark.ui
     def test_card_and_all_role_buckets_render(self, page: Page, app: ShinyAppProc):
@@ -561,3 +678,43 @@ class TestWebKitRoles:
         expect(restore).to_be_visible()
         restore.click(force=True)
         expect(role_bucket(page, Role.PREDICTOR)).to_be_visible()
+
+
+@pytest.mark.ui
+def test_committed_roles_survive_upstream_k_change(page: Page, upstream_app: ShinyAppProc):
+    page.goto(upstream_app.url)
+    roles = {key: value.copy() for key, value in VALID_ROLE_MAP.items()}
+    roles["predictor"] = ["x1"]
+    roles["none"] = ["x2"]
+    populate_roles(page, roles)
+    by_id(page, "Commit").click()
+    expect(by_id(page, "ExportProbe")).to_have_text("K=1; target=y; columns=y,x1,id,part; steps=1")
+    by_id(page, "ChangeK").click()
+    expect(by_id(page, "ExportProbe")).to_have_text("K=3; target=y; columns=y,x1,id,part; steps=1")
+    expect(by_id(page, "Check")).to_contain_text("Assignments applied")
+    expect(role_bucket(page, "none").locator(".var-chip")).to_have_text(["x2"])
+
+
+@pytest.mark.ui
+def test_late_restored_types_revalidate_without_commit(page: Page, late_restore_app: ShinyAppProc):
+    page.goto(late_restore_app.url)
+    expect(by_id(page, "Check")).to_contain_text("Weighting role must be numeric")
+    expect(by_id(page, "Commit")).to_be_disabled()
+    expect(by_id(page, "ExportProbe")).to_contain_text("weighting=; dtype=")
+    by_id(page, "Convert").click()
+    expect(by_id(page, "ExportProbe")).to_have_text("K=3; target=y; weighting=x1; dtype=float64; steps=1")
+    expect(by_id(page, "Check")).to_contain_text("Assignments applied")
+    by_id(page, "Invalid").click()
+    expect(by_id(page, "Check")).to_contain_text("Target role has missing values")
+    expect(by_id(page, "ExportProbe")).to_contain_text("target=; weighting=;")
+    by_id(page, "Convert").click()
+    expect(by_id(page, "ExportProbe")).to_have_text("K=3; target=y; weighting=x1; dtype=float64; steps=1")
+    # A valid manual draft must neither apply immediately nor replace the saved
+    # plan when another upstream update arrives.
+    populate_roles(page, VALID_ROLE_MAP)
+    expect(by_id(page, "Check")).to_contain_text("ready to commit")
+    expect(by_id(page, "ExportProbe")).to_contain_text("weighting=x1")
+    by_id(page, "ChangeK").click()
+    expect(by_id(page, "ExportProbe")).to_contain_text("weighting=x1")
+    by_id(page, "Commit").click()
+    expect(by_id(page, "ExportProbe")).to_contain_text("weighting=; dtype=float64")

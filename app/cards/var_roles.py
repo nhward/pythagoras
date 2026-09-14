@@ -166,6 +166,50 @@ def _reconcile_restored_role_map(
     return restored, warnings
 
 
+def _apply_roles(data: Pxy, role_map: RoleMap) -> Pxy:
+    """Apply committed roles to the latest input, retaining its current metadata."""
+    retained, retained_roles, removed = _retained_role_state(
+        data.frame.columns,
+        role_map,
+    )
+    changes = []
+    for variable in data.frame.columns:
+        original_roles = sorted(
+            role.value for role in data.role_map.roles_for(variable)
+        )
+        new_roles = sorted(
+            role.value for role in role_map.roles_for(variable)
+        )
+        is_removed = variable in removed
+        if original_roles != new_roles or is_removed:
+            change = {
+                "variable": str(variable),
+                "original_roles": original_roles,
+                "new_roles": new_roles,
+            }
+            if is_removed:
+                change["removed_downstream"] = True
+            changes.append(change)
+
+    if changes:
+        return data.with_cleaned_data(
+            data.frame.loc[:, retained],
+            card="var_roles",
+            operation="Assign variable roles",
+            parameters={
+                "changes": changes,
+                "removed_variables": [str(variable) for variable in removed],
+            },
+            role_map=retained_roles,
+        )
+    return data.with_inactive_step(
+        stage="Cleaning",
+        card="var_roles",
+        operation="Assign variable roles",
+        parameters={"changes": changes},
+    )
+
+
 def instance():
     """
     Creates an instance of Card configured as "roleAssign".
@@ -252,7 +296,7 @@ def instance():
                 style = "border: 0px; box-shadow: none;",
                 guide = this, 
                 title = "Commit button",
-                text = "This button commits the role assignments. Variables assigned to None are removed from the data passed downstream, but remain available here for later reassignment. The button bounces momentarily when it is ready to be clicked.",
+                text = "This button commits the role assignments. Variables assigned to None are removed from the data passed downstream, but remain available here for later reassignment. Restored or previously committed assignments are reapplied automatically when incoming data changes and they remain valid. Manual edits still require this button. The button bounces momentarily when it is ready to be clicked.",
                 position = "top"
             ),
             ui.output_ui(
@@ -270,6 +314,9 @@ def instance():
 
         OutputData = reactive.Value()
         restored_role_map = this.restored_configuration_input("role_map")
+        # Keep the accepted/restored plan separate from the browser's draft.
+        # Retain it even if an intermediate upstream restoration is invalid.
+        accepted_role_map = restored_role_map
         restored_roles_consumed = False
         protected_columns: tuple[str, ...] | None = None
         protected_role_map: dict[str, list[str]] | None = None
@@ -290,7 +337,23 @@ def instance():
 
         @this.suspendable()
         def PxdChange():
-            OutputData.set(incomingproxy_data())
+            data = incomingproxy_data()
+            # Only upstream changes trigger replay. Reading settings in isolation
+            # prevents a draft edit or validation-setting change from committing.
+            with reactive.isolate():
+                role_map = accepted_role_map
+                if _role_map_covers_columns(role_map, data.columns):
+                    roles = RoleMap.from_primitive(role_map)
+                    sample = data.sample(n=10**input.MaxObs(), mode="random", keep_geometry=True)
+                    messages = sample.validate(
+                        role_map=roles, separator=input.Separator(),
+                        low_cardinality=input.CardinalityThreshold(),
+                    )
+                    if not messages:
+                        OutputData.set(_apply_roles(data, roles))
+                        return
+                # Never export a stale dataset or invalid restored assignments.
+                OutputData.set(data)
 
         @this.suspendable(triggers = [PreparedData])
         async def PopulateRoles():
@@ -368,52 +431,15 @@ def instance():
             req(input.role_map())
             data = incomingproxy_data()
             role_map = RoleMap.from_primitive(input.role_map())
-            retained, retained_roles, removed = _retained_role_state(
-                data.frame.columns,
-                role_map,
-            )
-            changes = []
-            for variable in data.frame.columns:
-                original_roles = sorted(
-                    role.value for role in data.role_map.roles_for(variable)
-                )
-                new_roles = sorted(
-                    role.value for role in role_map.roles_for(variable)
-                )
-                is_removed = variable in removed
-                if original_roles != new_roles or is_removed:
-                    change = {
-                        "variable": str(variable),
-                        "original_roles": original_roles,
-                        "new_roles": new_roles,
-                    }
-                    if is_removed:
-                        change["removed_downstream"] = True
-                    changes.append(change)
-
-            if changes:
-                return data.with_cleaned_data(
-                    data.frame.loc[:, retained],
-                    card="var_roles",
-                    operation="Assign variable roles",
-                    parameters={
-                        "changes": changes,
-                        "removed_variables": [str(variable) for variable in removed],
-                    },
-                    role_map=retained_roles,
-                )
-            return data.with_inactive_step(
-                stage="Cleaning",
-                card="var_roles",
-                operation="Assign variable roles",
-                parameters={"changes": changes},
-            )
-            
+            return _apply_roles(data, role_map)
 
         #### Commit event ----
         @this.suspendable(triggers = [input.Commit])
         def CommitEvent():
+            nonlocal accepted_role_map
+            req(not ValidateMap())
             OutputData.set(Committed())
+            accepted_role_map = RoleMap.from_primitive(input.role_map()).to_primitive()
 
 
         @output
