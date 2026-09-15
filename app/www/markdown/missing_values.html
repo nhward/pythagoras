@@ -124,7 +124,7 @@ min-height: 100%;
 
 #shiny-modal-wrapper {
 position: absolute;
-z-index: 10000 !important;
+z-index: 1060 !important;
 }
 
 .hover-card {
@@ -318,12 +318,43 @@ shiny-data-frame .shiny-data-grid > table
 background-color: #e2e3e5 !important;
 }
 
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+background-color: #d95f02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-review-row {
+background-color: #e6ab02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+background-color: #3978a8 !important;
+color: #fff !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+background-color: #9aa7b2 !important;
+color: #000 !important;
+}
+
 :is(
 table.table,
 table.dataframe,
 shiny-data-frame .shiny-data-grid > table
 ) > tbody > tr:hover > * {
 background-color: var(--py-table-row-hover) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
+> :is(
+.var-cardinality-strong-review-row,
+.var-cardinality-review-row,
+.var-cardinality-expected-row,
+.var-cardinality-not-assessed-row
+) {
+color: var(--bs-body-color, #212529) !important;
 }
 
 :is(
@@ -718,6 +749,92 @@ pointer-events: none;
 .parallel-line-near .gl-canvas-pick {
 cursor: pointer;
 }
+
+.card .card-body.flip-container {
+overflow: hidden;
+}
+.flip-container > .flippable > :is(.front, .back) {
+overflow: auto;
+min-height: 0;
+}
+
+.flip-container shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 1 1 auto;
+min-height: 0;
+}
+
+.card-scroll-content {
+flex: 0 0 auto;
+min-width: 0;
+}
+.card-scroll-content shiny-data-frame,
+.card-scroll-content shiny-data-frame > .html-fill-container,
+.card-scroll-content shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 0 0 auto;
+height: auto;
+}
+
+.card-footer .shiny-input-radiogroup {
+margin-inline: auto;
+margin-bottom: 0;
+max-width: 100%;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup .shiny-options-group {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.card-footer .shiny-input-radiogroup :is(.radio, label.radio-inline) {
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup :is(.radio label, label.radio-inline) {
+position: relative;
+padding-left: 0;
+margin-bottom: 0;
+}
+
+.card-footer .shiny-input-radiogroup input[type="radio"] {
+position: absolute;
+opacity: 0;
+width: 1px;
+height: 1px;
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.card-footer .shiny-input-radiogroup label:hover > input[type="radio"] + span,
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span {
+background-color: #0b5494;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span::before {
+content: "○";
+flex: 0 0 1em;
+width: 1em;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
+content: "●";
+}
 </style>
 <link rel="stylesheet" href="markdown.css">
 </head>
@@ -740,38 +857,39 @@ cursor: pointer;
 <h1 id="begin-with-the-meaning-of-missing">🧾 Begin with the meaning of “missing”</h1>
 <p>Several superficially similar states require different treatment.</p>
 <table class="caption-top">
+<caption>Table 1 - States</caption>
 <colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
+<col style="width: 18%">
+<col style="width: 29%">
+<col style="width: 51%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>State</th>
-<th>Meaning</th>
-<th>Typical response</th>
+<th style="text-align: left;">State</th>
+<th style="text-align: left;">Meaning</th>
+<th style="text-align: left;">Typical response</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Missing value</strong></td>
-<td>A value is unavailable even though the variable is relevant to the observation.</td>
-<td>Investigate, remove, impute, add an indicator, or use supported native handling.</td>
+<td style="text-align: left;"><strong>Missing value</strong></td>
+<td style="text-align: left;">A value is unavailable even though the variable is relevant to the observation.</td>
+<td style="text-align: left;">Investigate, remove, impute, add an indicator, or use supported native handling.</td>
 </tr>
 <tr class="even">
-<td><strong>Placeholder</strong></td>
-<td>An ordinary-looking value such as <code>-99</code>, <code>N/A</code>, or <code>1900-01-01</code> was used to represent absence.</td>
-<td>Confirm its meaning and convert it to an explicit missing marker.</td>
+<td style="text-align: left;"><strong>Placeholder</strong></td>
+<td style="text-align: left;">An ordinary-looking value such as <code>-99</code>, <code>N/A</code>, or <code>1900-01-01</code> was used to represent absence.</td>
+<td style="text-align: left;">Confirm its meaning and convert it to an explicit missing marker.</td>
 </tr>
 <tr class="odd">
-<td><strong>Structurally absent</strong></td>
-<td>The variable does not apply, such as a component measurement for an object without that component.</td>
-<td>Preserve the distinction or apply a documented domain rule; do not automatically treat it as unknown.</td>
+<td style="text-align: left;"><strong>Structurally absent</strong></td>
+<td style="text-align: left;">The variable does not apply, such as a component measurement for an object without that component.</td>
+<td style="text-align: left;">Preserve the distinction or apply a documented domain rule; do not automatically treat it as unknown.</td>
 </tr>
 <tr class="even">
-<td><strong>Not yet observed</strong></td>
-<td>The value may arrive later because of workflow or reporting delay.</td>
-<td>Model the delay, wait, or define a prediction-time cutoff consistently.</td>
+<td style="text-align: left;"><strong>Not yet observed</strong></td>
+<td style="text-align: left;">The value may arrive later because of workflow or reporting delay.</td>
+<td style="text-align: left;">Model the delay, wait, or define a prediction-time cutoff consistently.</td>
 </tr>
 </tbody>
 </table>
@@ -792,28 +910,29 @@ cursor: pointer;
 <h3 id="mechanisms">Formal missing-data mechanisms</h3>
 <p>The formal MCAR, MAR, and MNAR terms describe assumptions about the missingness process rather than labels that an exploratory chart can usually determine.</p>
 <table class="caption-top">
+<caption>Table 2 - Mechanisms</caption>
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 37%">
+<col style="width: 62%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Mechanism</th>
-<th>Informal meaning</th>
+<th style="text-align: left;">Mechanism</th>
+<th style="text-align: left;">Informal meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Missing completely at random (MCAR)</strong></td>
-<td>Missingness does not depend on observed values or on the values that are missing.</td>
+<td style="text-align: left;"><strong>Missing completely at random (MCAR)</strong></td>
+<td style="text-align: left;">Missingness does not depend on observed values or on the values that are missing.</td>
 </tr>
 <tr class="even">
-<td><strong>Missing at random (MAR)</strong></td>
-<td>After conditioning on the observed information used in the analysis, missingness does not additionally depend on the unseen value itself.</td>
+<td style="text-align: left;"><strong>Missing at random (MAR)</strong></td>
+<td style="text-align: left;">After conditioning on the observed information used in the analysis, missingness does not additionally depend on the unseen value itself.</td>
 </tr>
 <tr class="odd">
-<td><strong>Missing not at random (MNAR)</strong></td>
-<td>Dependence on unseen values remains after conditioning on observed information.</td>
+<td style="text-align: left;"><strong>Missing not at random (MNAR)</strong></td>
+<td style="text-align: left;">Dependence on unseen values remains after conditioning on observed information.</td>
 </tr>
 </tbody>
 </table>
@@ -839,62 +958,63 @@ cursor: pointer;
 </blockquote>
 </div>
 <table class="caption-top">
+<caption>Table 3 - Strategies</caption>
 <colgroup>
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
+<col style="width: 12%">
+<col style="width: 29%">
+<col style="width: 20%">
+<col style="width: 36%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Strategy</th>
-<th>Most appropriate when</th>
-<th>Principal risk</th>
-<th>Learned inside resampling?</th>
+<th style="text-align: left;">Strategy</th>
+<th style="text-align: left;">Most appropriate when</th>
+<th style="text-align: left;">Principal risk</th>
+<th style="text-align: left;">Learned inside resampling?</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Correct the source</strong></td>
-<td>Missingness or placeholders reflect a repairable collection or parsing problem.</td>
-<td>A repair rule may silently encode an incorrect assumption.</td>
-<td>No, when the rule is external and deterministic.</td>
+<td style="text-align: left;"><strong>Correct the source</strong></td>
+<td style="text-align: left;">Missingness or placeholders reflect a repairable collection or parsing problem.</td>
+<td style="text-align: left;">A repair rule may silently encode an incorrect assumption.</td>
+<td style="text-align: left;">No, when the rule is external and deterministic.</td>
 </tr>
 <tr class="even">
-<td><strong>Manual domain rule</strong></td>
-<td>The absent value has a documented, reproducible interpretation.</td>
-<td>Inventing information or confusing “unknown” with “not applicable.”</td>
-<td>No, if fixed independently of the analytical sample.</td>
+<td style="text-align: left;"><strong>Manual domain rule</strong></td>
+<td style="text-align: left;">The absent value has a documented, reproducible interpretation.</td>
+<td style="text-align: left;">Inventing information or confusing “unknown” with “not applicable.”</td>
+<td style="text-align: left;">No, if fixed independently of the analytical sample.</td>
 </tr>
 <tr class="odd">
-<td><strong>Missingness indicator</strong></td>
-<td>Absence itself has stable predictive value.</td>
-<td>Leakage, unstable operational signals, and unnecessary features.</td>
-<td>Selection and validation should occur inside resampling.</td>
+<td style="text-align: left;"><strong>Missingness indicator</strong></td>
+<td style="text-align: left;">Absence itself has stable predictive value.</td>
+<td style="text-align: left;">Leakage, unstable operational signals, and unnecessary features.</td>
+<td style="text-align: left;">Selection and validation should occur inside resampling.</td>
 </tr>
 <tr class="even">
-<td><strong>Variable removal</strong></td>
-<td>A field is too incomplete, unavailable in deployment, or provides insufficient value.</td>
-<td>Loss of useful signal or unfair exclusion of a subgroup.</td>
-<td>If chosen from outcome performance, tune inside resampling.</td>
+<td style="text-align: left;"><strong>Variable removal</strong></td>
+<td style="text-align: left;">A field is too incomplete, unavailable in deployment, or provides insufficient value.</td>
+<td style="text-align: left;">Loss of useful signal or unfair exclusion of a subgroup.</td>
+<td style="text-align: left;">If chosen from outcome performance, tune inside resampling.</td>
 </tr>
 <tr class="odd">
-<td><strong>Observation removal</strong></td>
-<td>The final procedure deliberately declines very incomplete cases or complete-case analysis is defensible.</td>
-<td>Reduced precision, changed population, and selection bias.</td>
-<td>Evaluate the rule within the validation design.</td>
+<td style="text-align: left;"><strong>Observation removal</strong></td>
+<td style="text-align: left;">The final procedure deliberately declines very incomplete cases or complete-case analysis is defensible.</td>
+<td style="text-align: left;">Reduced precision, changed population, and selection bias.</td>
+<td style="text-align: left;">Evaluate the rule within the validation design.</td>
 </tr>
 <tr class="even">
-<td><strong>Learned imputation</strong></td>
-<td>Missing predictors can be estimated well enough for the intended model.</td>
-<td>Leakage, distorted distributions, and false certainty.</td>
-<td>Yes.</td>
+<td style="text-align: left;"><strong>Learned imputation</strong></td>
+<td style="text-align: left;">Missing predictors can be estimated well enough for the intended model.</td>
+<td style="text-align: left;">Leakage, distorted distributions, and false certainty.</td>
+<td style="text-align: left;">Yes.</td>
 </tr>
 <tr class="odd">
-<td><strong>Native model handling</strong></td>
-<td>A particular estimator has documented missing-value support.</td>
-<td>Assuming support or behavior shared by an entire model family.</td>
-<td>The estimator is fitted within resampling.</td>
+<td style="text-align: left;"><strong>Native model handling</strong></td>
+<td style="text-align: left;">A particular estimator has documented missing-value support.</td>
+<td style="text-align: left;">Assuming support or behavior shared by an entire model family.</td>
+<td style="text-align: left;">The estimator is fitted within resampling.</td>
 </tr>
 </tbody>
 </table>
@@ -915,44 +1035,45 @@ cursor: pointer;
 <p>Native support does not remove the need to identify placeholders, consider structural absence, assess informative missingness, or compare the population of usable predictions.</p>
 <h1 id="cards">🧭 Pythagoras card map</h1>
 <table class="caption-top">
+<caption>Table 4 - Map of cards</caption>
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 71%">
+<col style="width: 28%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Question</th>
-<th>Card</th>
+<th style="text-align: left;">Question</th>
+<th style="text-align: left;">Card</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Are ordinary-looking values actually missingness codes?</td>
-<td><strong>Missing value placeholders</strong></td>
+<td style="text-align: left;">Are ordinary-looking values actually missingness codes?</td>
+<td style="text-align: left;"><strong>Missing value placeholders</strong></td>
 </tr>
 <tr class="even">
-<td>Where is missingness concentrated, and what would threshold-based removal do?</td>
-<td><strong>Excessive missingness</strong></td>
+<td style="text-align: left;">Where is missingness concentrated, and what would threshold-based removal do?</td>
+<td style="text-align: left;"><strong>Excessive missingness</strong></td>
 </tr>
 <tr class="odd">
-<td>Which exact combinations of variables are missing together?</td>
-<td><strong>Missingness sets</strong></td>
+<td style="text-align: left;">Which exact combinations of variables are missing together?</td>
+<td style="text-align: left;"><strong>Missingness sets</strong></td>
 </tr>
 <tr class="even">
-<td>Which directional missingness associations recur?</td>
-<td><strong>Missingness rules</strong></td>
+<td style="text-align: left;">Which directional missingness associations recur?</td>
+<td style="text-align: left;"><strong>Missingness rules</strong></td>
 </tr>
 <tr class="odd">
-<td>Can observed predictors or row order predict missingness?</td>
-<td><strong>Missingness type</strong></td>
+<td style="text-align: left;">Can observed predictors or row order predict missingness?</td>
+<td style="text-align: left;"><strong>Missingness type</strong></td>
 </tr>
 <tr class="even">
-<td>Does a predictor’s absence help predict the target?</td>
-<td><strong>Informative missingness</strong></td>
+<td style="text-align: left;">Does a predictor’s absence help predict the target?</td>
+<td style="text-align: left;"><strong>Informative missingness</strong></td>
 </tr>
 <tr class="odd">
-<td>How well can eligible predictor values be reconstructed?</td>
-<td><strong>Learned imputation</strong></td>
+<td style="text-align: left;">How well can eligible predictor values be reconstructed?</td>
+<td style="text-align: left;"><strong>Learned imputation</strong></td>
 </tr>
 </tbody>
 </table>

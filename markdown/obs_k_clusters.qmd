@@ -15,8 +15,10 @@ _Assess plausible values of K, the number of clusters, after assigning variable 
 
 Only varying, real-valued numeric columns assigned the Predictor role enter the analysis. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from the assessment. Sampling and optional standardization prepare an analysis copy.
 
+: Table 1 - Families
+
 | Evidence family | How it supports K |
-|---|---|
+|:----------------|:------------------|
 | Agglomerative | Merges observations into a hierarchy; compares cuts using silhouette, Calinski–Harabasz, and Davies–Bouldin scores. |
 | Divisive | Splits observations using DIANA; compares the same three scores. |
 | Partition | Fits K-means or PAM (representative observations called medoids); compares the same three scores. |
@@ -35,7 +37,7 @@ With observation weighting enabled, positive weights express relative importance
 
 #### 🏞️ Front
 
-The **K-th Support barchart** stacks colored contributions by family. The discrete horizontal axis runs from 1 through the configured maximum K. Each family with recommendations contributes one total unit, distributed across the K values it favors. Taller bars show greater combined support, not probabilities or independent confirmations.
+The **K-th Support bar-chart** stacks colored contributions by family. The discrete horizontal axis runs from 1 through the configured maximum K. Each family with recommendations contributes one total unit, distributed across the K values it favors. Taller bars show greater combined support, not probabilities or independent confirmations.
 
 Hover over segments for their values; use the legend to inspect family contributions. Full-screen view provides Plotly tools and an expanded vertical-axis label. Empty evidence produces a message instead of recommendations. The footer reports the analyzed rows and weighting status.
 
@@ -43,8 +45,10 @@ Hover over segments for their values; use the legend to inspect family contribut
 
 The **Support evidence table** provides the underlying evidence and explanatory notes.
 
-| Column | Meaning |
-|---|---|
+: Table 2 - Columns
+
+| Column  | Meaning           |
+|:--------|:------------------|
 | Family / Criterion | The method and score or diagnostic used. |
 | K | The cluster count evaluated or produced. |
 | Score | The raw value; units differ across criteria. |

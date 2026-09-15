@@ -42,8 +42,10 @@ calculates from what it merely displays. Avoid repeating the Purpose section.]
 [If several concepts or output categories need definition, prefer a compact
 table such as:]
 
-| Term | Meaning |
-|---|---|
+: Table 1 - Table name
+
+| Term  | Meaning |
+|:------|:--------|
 | **Example term** | A concise, card-specific interpretation. |
 
 #### 🏞️ Front

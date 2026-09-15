@@ -411,3 +411,18 @@ class TestWebKitUI:
         )
         assert plot.evaluate("element => element.data[0].line.showscale") is True
         expect(get_card(page)).to_be_visible()
+
+
+restoring_app = create_app_fixture(app="../scenarios/data_parallel_restoring.py", scope="function")
+
+@pytest.mark.ui
+def test_colour_and_axes_survive_late_upstream_restore(page, restoring_app):
+    page.goto(restoring_app.url)
+    expect(by_id(page, "Check")).to_contain_text("Select at least two compatible variables", timeout=30000)
+    expect(by_id(page, "Colour")).to_have_value("__none__")
+    by_id(page, "FinishRestore").click()
+    expect(by_id(page, "Colour")).to_have_value("group", timeout=30000)
+    page.wait_for_function(
+        "id => JSON.stringify(document.getElementById(id).selectize.getValue()) === JSON.stringify(['score','group'])",
+        arg=namespaced_id(page, "Variables"),
+    )

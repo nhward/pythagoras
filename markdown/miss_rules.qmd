@@ -17,8 +17,10 @@ For the broader framework, see [patterns and associations](/markdown/missing_val
 
 Each observation is treated as a set containing the names of its missing variables. Complete observations contribute an empty set and are excluded from rule mining. A rule has a left-hand side (LHS) and right-hand side (RHS): when the LHS variables are missing, the RHS variables are also frequently missing.
 
-| Metric | Meaning |
-|---|---|
+: Table 1 - Metrics
+
+| Metric   | Meaning               |
+|:---------|:----------------------|
 | **Support** | Proportion of all analyzed observations containing every variable in the rule. |
 | **Confidence** | Proportion of observations with the LHS missing that also have the RHS missing. |
 | **Lift** | Confidence divided by the unconditional frequency of the RHS. A lift of 1 indicates independence; above 1 indicates positive association. |

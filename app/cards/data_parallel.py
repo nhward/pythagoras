@@ -23,6 +23,7 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
+from selection_restore import SelectionRestore
 from shiny import reactive, render, req, ui
 from shinywidgets import render_widget
 
@@ -345,6 +346,8 @@ def _parallel_figure(
 def instance():
     """Create the immutable parallel-coordinates card."""
     this = Card(file=__file__, mutable=False)
+    this.defer_configuration_input("Variables")
+    this.defer_configuration_input("Colour")
     this.long_name = "Parallel coordinates"
     this.description = (
         "This card compares observations across several variables in a "
@@ -428,6 +431,9 @@ def instance():
     this.settings = settings
 
     def server(input, output, session):
+        variable_selection = SelectionRestore(this.restored_configuration_input("Variables"))
+        saved_colour = this.restored_configuration_input("Colour")
+        colour_selection = SelectionRestore(None if saved_colour is None else ([saved_colour] if saved_colour != NO_COLOUR else []))
 
         @this.suspendable(calc=True)
         def incomingproxy_data():
@@ -440,10 +446,11 @@ def instance():
             with reactive.isolate():
                 previous_variables = list(input.Variables() or [])
                 previous_colour = input.Colour()
-            selected = [name for name in previous_variables if name in eligible]
-            if not selected:
-                selected = eligible[:DEFAULT_AXES]
-            colour = previous_colour if previous_colour in eligible else NO_COLOUR
+            selected = variable_selection.resolve(previous_variables, eligible, eligible[:DEFAULT_AXES])
+            colour = colour_selection.resolve(
+                [previous_colour] if previous_colour and previous_colour != NO_COLOUR else [], eligible, [],
+            )
+            colour = colour[0] if colour else NO_COLOUR
             ui.update_selectize("Variables", choices=eligible, selected=selected)
             ui.update_select(
                 "Colour",

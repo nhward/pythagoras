@@ -16,8 +16,10 @@ _The Data journey card explains how the data reaching this point was prepared. I
 
 A mutable card records an operation when it changes data or adds a trainable pipeline step. It may also record an inactive operation when its data-changing control is not enabled. Immutable diagnostic cards normally pass data through without adding a step.
 
-| Stage | Meaning |
-|---|---|
+: Table 1 - Stages
+
+| Stage   | Meaning          |
+|:--------|:-----------------|
 | **Source** | The imported starting dataset. |
 | **Cleaning** | A materialized correction, addition, removal, or role change. |
 | **Learning** | An unfitted scikit-learn step whose parameters must be learned from training data. |

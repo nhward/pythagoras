@@ -22,8 +22,10 @@ The aim is not necessarily to produce a table containing no missing markers. The
 
 Several superficially similar states require different treatment.
 
-| State | Meaning | Typical response |
-|---|---|---|
+: Table 1 - States
+
+| State | Meaning   | Typical response  |
+|:------|:----------|:------------------|
 | **Missing value** | A value is unavailable even though the variable is relevant to the observation. | Investigate, remove, impute, add an indicator, or use supported native handling. |
 | **Placeholder** | An ordinary-looking value such as `-99`, `N/A`, or `1900-01-01` was used to represent absence. | Confirm its meaning and convert it to an explicit missing marker. |
 | **Structurally absent** | The variable does not apply, such as a component measurement for an object without that component. | Preserve the distinction or apply a documented domain rule; do not automatically treat it as unknown. |
@@ -61,8 +63,10 @@ A missingness indicator can be modeled using observed predictors. Good held-out 
 
 The formal MCAR, MAR, and MNAR terms describe assumptions about the missingness process rather than labels that an exploratory chart can usually determine.
 
+: Table 2 - Mechanisms
+
 | Mechanism | Informal meaning |
-|---|---|
+|:----------|:-----------------|
 | **Missing completely at random (MCAR)** | Missingness does not depend on observed values or on the values that are missing. |
 | **Missing at random (MAR)** | After conditioning on the observed information used in the analysis, missingness does not additionally depend on the unseen value itself. |
 | **Missing not at random (MNAR)** | Dependence on unseen values remains after conditioning on observed information. |
@@ -93,8 +97,10 @@ Resolution is usually iterative rather than a rigid one-pass sequence. Start wit
 Any preprocessing step that estimates quantities from data—including medians, category frequencies, neighbors, regression relationships, selected thresholds, or chosen features—must be fitted using training observations only. Place learned preprocessing inside the resampling pipeline so every validation fold is transformed using parameters learned without that fold.
 :::
 
+: Table 3 - Strategies
+
 | Strategy | Most appropriate when | Principal risk | Learned inside resampling? |
-|---|---|---|---|
+|:---------|:----------------------|:---------------|:---------------------------|
 | **Correct the source** | Missingness or placeholders reflect a repairable collection or parsing problem. | A repair rule may silently encode an incorrect assumption. | No, when the rule is external and deterministic. |
 | **Manual domain rule** | The absent value has a documented, reproducible interpretation. | Inventing information or confusing “unknown” with “not applicable.” | No, if fixed independently of the analytical sample. |
 | **Missingness indicator** | Absence itself has stable predictive value. | Leakage, unstable operational signals, and unnecessary features. | Selection and validation should occur inside resampling. |
@@ -135,8 +141,10 @@ Native support does not remove the need to identify placeholders, consider struc
 
 # 🧭 Pythagoras card map {#cards}
 
-| Question | Card |
-|---|---|
+: Table 4 - Map of cards
+
+| Question           | Card   |
+|:-------------------|:-------|
 | Are ordinary-looking values actually missingness codes? | **Missing value placeholders** |
 | Where is missingness concentrated, and what would threshold-based removal do? | **Excessive missingness** |
 | Which exact combinations of variables are missing together? | **Missingness sets** |

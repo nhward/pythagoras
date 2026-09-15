@@ -20,8 +20,10 @@ For every selected variable and group, the card compares both the observed-value
 
 Small groups produce positive discrepancies even under random order. The card therefore repeats the analysis under 100 deterministic random permutations and records each permutation’s maximum discrepancy. The 95th percentile becomes a variable-specific random boundary. Only excess above that boundary is displayed, scaled by the variable’s random variation and constrained from zero to one.
 
-| Score | Interpretation |
-|---|---|
+: Table 1 - Scores
+
+| Score  | Interpretation            |
+|:-------|:--------------------------|
 | **0** | The discrepancy did not exceed the random-order boundary. |
 | **Above 0** | More drift than the variable usually produced under random ordering. |
 | **Near 1** | Strong excess relative to that variable’s simulated random variation. |

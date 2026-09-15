@@ -422,7 +422,7 @@ def instance():
                     this.log.warning("Variable modification bookmark: %s", warning)
                 try:
                     restored_output = _apply_modifications(data, committed_schema)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     this.log.exception(
                         "The committed variable-modification bookmark could not "
                         "be replayed; incoming data will pass through unchanged"

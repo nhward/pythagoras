@@ -124,7 +124,7 @@ min-height: 100%;
 
 #shiny-modal-wrapper {
 position: absolute;
-z-index: 10000 !important;
+z-index: 1060 !important;
 }
 
 .hover-card {
@@ -318,12 +318,43 @@ shiny-data-frame .shiny-data-grid > table
 background-color: #e2e3e5 !important;
 }
 
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+background-color: #d95f02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-review-row {
+background-color: #e6ab02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+background-color: #3978a8 !important;
+color: #fff !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+background-color: #9aa7b2 !important;
+color: #000 !important;
+}
+
 :is(
 table.table,
 table.dataframe,
 shiny-data-frame .shiny-data-grid > table
 ) > tbody > tr:hover > * {
 background-color: var(--py-table-row-hover) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
+> :is(
+.var-cardinality-strong-review-row,
+.var-cardinality-review-row,
+.var-cardinality-expected-row,
+.var-cardinality-not-assessed-row
+) {
+color: var(--bs-body-color, #212529) !important;
 }
 
 :is(
@@ -718,6 +749,92 @@ pointer-events: none;
 .parallel-line-near .gl-canvas-pick {
 cursor: pointer;
 }
+
+.card .card-body.flip-container {
+overflow: hidden;
+}
+.flip-container > .flippable > :is(.front, .back) {
+overflow: auto;
+min-height: 0;
+}
+
+.flip-container shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 1 1 auto;
+min-height: 0;
+}
+
+.card-scroll-content {
+flex: 0 0 auto;
+min-width: 0;
+}
+.card-scroll-content shiny-data-frame,
+.card-scroll-content shiny-data-frame > .html-fill-container,
+.card-scroll-content shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 0 0 auto;
+height: auto;
+}
+
+.card-footer .shiny-input-radiogroup {
+margin-inline: auto;
+margin-bottom: 0;
+max-width: 100%;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup .shiny-options-group {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.card-footer .shiny-input-radiogroup :is(.radio, label.radio-inline) {
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup :is(.radio label, label.radio-inline) {
+position: relative;
+padding-left: 0;
+margin-bottom: 0;
+}
+
+.card-footer .shiny-input-radiogroup input[type="radio"] {
+position: absolute;
+opacity: 0;
+width: 1px;
+height: 1px;
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.card-footer .shiny-input-radiogroup label:hover > input[type="radio"] + span,
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span {
+background-color: #0b5494;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span::before {
+content: "○";
+flex: 0 0 1em;
+width: 1em;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
+content: "●";
+}
 </style>
 </head>
 
@@ -743,28 +860,29 @@ cursor: pointer;
 <h4 id="how-it-works">🧠 How it works</h4>
 <p>Each observation is treated as a set containing the names of its missing variables. Complete observations contribute an empty set and are excluded from rule mining. A rule has a left-hand side (LHS) and right-hand side (RHS): when the LHS variables are missing, the RHS variables are also frequently missing.</p>
 <table class="caption-top">
+<caption>Table 1 - Metrics</caption>
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 30%">
+<col style="width: 69%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Metric</th>
-<th>Meaning</th>
+<th style="text-align: left;">Metric</th>
+<th style="text-align: left;">Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Support</strong></td>
-<td>Proportion of all analyzed observations containing every variable in the rule.</td>
+<td style="text-align: left;"><strong>Support</strong></td>
+<td style="text-align: left;">Proportion of all analyzed observations containing every variable in the rule.</td>
 </tr>
 <tr class="even">
-<td><strong>Confidence</strong></td>
-<td>Proportion of observations with the LHS missing that also have the RHS missing.</td>
+<td style="text-align: left;"><strong>Confidence</strong></td>
+<td style="text-align: left;">Proportion of observations with the LHS missing that also have the RHS missing.</td>
 </tr>
 <tr class="odd">
-<td><strong>Lift</strong></td>
-<td>Confidence divided by the unconditional frequency of the RHS. A lift of 1 indicates independence; above 1 indicates positive association.</td>
+<td style="text-align: left;"><strong>Lift</strong></td>
+<td style="text-align: left;">Confidence divided by the unconditional frequency of the RHS. A lift of 1 indicates independence; above 1 indicates positive association.</td>
 </tr>
 </tbody>
 </table>

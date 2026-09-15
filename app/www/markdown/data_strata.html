@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Data homogeneity</title>
+<title>Data strata comparison</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -842,7 +842,7 @@ content: "●";
 
 
 <header id="title-block-header">
-<h1 class="title">Data homogeneity</h1>
+<h1 class="title">Data strata comparison</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -850,83 +850,93 @@ content: "●";
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Data homogeneity card examines whether variable distributions and missingness remain stable through a meaningful observation sequence. With “time” as the sequence this is data-drift analysis; batch, site, collection order, or another ordered field can reveal other forms of changing population or process. The card is diagnostic.</em></p>
+<p><em>Compare numeric distributions across assigned strata using violin or box plots, then assess differences in stratum means with ANOVA. Use this diagnostic card after variable-role assignment, including after Cluster membership has created Stratifiers. Charts and tests treat observations equally and leave the incoming data unchanged.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Identify variables that change materially through an ordered sequence.</li>
-<li><strong>Secondary:</strong> Locate changes and distinguish distribution drift from missingness drift.</li>
-<li><strong>Tertiary:</strong> Generate operational or data-quality explanations for investigation.</li>
+<li><strong>Primary:</strong> Compare location, spread, shape, and overlap across strata.</li>
+<li><strong>Secondary:</strong> Quantify mean differences with ANOVA and descriptive effect sizes.</li>
+<li><strong>Tertiary:</strong> Identify small groups and missing values that limit interpretation.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Observations are sorted by the selected sequence and divided into consecutive, approximately equal groups. The requested number of groups is reduced when necessary so that each group has enough observations.</p>
-<p>For every selected variable and group, the card compares both the observed-value distribution and missing-value proportion with a reference. The raw discrepancy is the larger of these components. Numeric and datetime distributions are compared using robustly scaled empirical distance; Boolean and manageable categorical distributions are compared through changing level proportions.</p>
-<p>Small groups produce positive discrepancies even under random order. The card therefore repeats the analysis under 100 deterministic random permutations and records each permutation’s maximum discrepancy. The 95th percentile becomes a variable-specific random boundary. Only excess above that boundary is displayed, scaled by the variable’s random variation and constrained from zero to one.</p>
+<p>Numeric Predictor-role columns are available initially, with only the first selected. <strong>Offer numeric Target variables</strong> makes numeric Targets available without selecting them automatically. Boolean, complex, and shadow variables are excluded. The selected <strong>Facet by Stratifier</strong> supplies group labels; the first available Stratifier is selected initially. Choosing <strong>None</strong> shows overall distributions.</p>
+<p>Missing stratum labels are omitted. Missing or infinite numeric values are excluded separately for each variable. Above the observation cap, a reproducible, approximately proportional sample retains at least one observation from every stratum. Plots, summaries, and ANOVA use the same sampled rows. The assigned weighting column is not applied.</p>
+<p>One ANOVA is calculated per selected variable, comparing the observed levels of the chosen Stratifier. Each group needs at least two finite observations. Ordinary one-way ANOVA assumes equal population variances; Welch ANOVA permits unequal variances but requires positive sample variance in every group. Both rely on independent observations and distribution assumptions for inferential interpretation. Unavailable tests include an explanation instead of a p-value.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>Selected variables occupy rows; stratum levels occupy columns. All facets within a variable share the same vertical range. Different variables retain their own scales. Stratum colors remain consistent across variable rows.</p>
+<p>Violin width represents estimated density rather than sample size. A constant or singleton group uses a box instead because a smooth density is not supported. Box plots show quartiles and the median, with whiskers extending to the most extreme observations within 1.5 interquartile ranges of the box. Observation overlays reveal individual values; their hover text uses Identifier-role values when available and original row positions otherwise.</p>
+<p><strong>Display normalization</strong> can center each variable or center and scale it to unit sample standard deviation. Normalization is performed across all analyzed strata together, preserving between-stratum differences. It changes the display only: summaries retain original units and ANOVA results remain unchanged.</p>
+<p>Full-screen view enables Plotly tools and gives larger facet grids more room. Empty selections, absent data, and excessive stratum counts use the standard empty-plot explanation. No strata are silently dropped to fit the display limit.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p><strong>ANOVA</strong> provides one row per selected variable.</p>
 <table class="caption-top">
-<caption>Table 1 - Scores</caption>
+<caption>Table 1 - ANOVA columns</caption>
 <colgroup>
-<col style="width: 22%">
-<col style="width: 77%">
+<col style="width: 47%">
+<col style="width: 52%">
 </colgroup>
 <thead>
 <tr class="header">
-<th style="text-align: left;">Score</th>
-<th style="text-align: left;">Interpretation</th>
+<th style="text-align: left;">Column</th>
+<th style="text-align: left;">Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;"><strong>0</strong></td>
-<td style="text-align: left;">The discrepancy did not exceed the random-order boundary.</td>
+<td style="text-align: left;"><strong>Groups</strong>, <strong>N</strong></td>
+<td style="text-align: left;">Observed stratum count and finite observations used.</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Above 0</strong></td>
-<td style="text-align: left;">More drift than the variable usually produced under random ordering.</td>
+<td style="text-align: left;"><strong>DF between</strong>, <strong>DF denominator</strong></td>
+<td style="text-align: left;">Numerator and denominator degrees of freedom; Welch’s denominator can be fractional.</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Near 1</strong></td>
-<td style="text-align: left;">Strong excess relative to that variable’s simulated random variation.</td>
+<td style="text-align: left;"><strong>F</strong>, <strong>p</strong></td>
+<td style="text-align: left;">Test statistic and unadjusted p-value for equal population means.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Eta squared</strong></td>
+<td style="text-align: left;">Descriptive fraction of total sample variation associated with differences between stratum means. This is not a Welch-adjusted effect size.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>BH adjusted p</strong></td>
+<td style="text-align: left;">Benjamini–Hochberg adjustment across valid tests for the currently selected variables.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Status</strong></td>
+<td style="text-align: left;">Assumption reminder or reason a test could not be calculated.</td>
 </tr>
 </tbody>
 </table>
-<p>This score is not a probability, percentage, or formal hypothesis-test p-value.</p>
-<p>The reference changes the question. <strong>All observations</strong> finds locally unusual groups. <strong>First sequence group</strong> measures cumulative departure from the starting population. <strong>Previous sequence group</strong> emphasizes transitions between adjacent groups.</p>
-<h4 id="front">🏞️ Front</h4>
-<p>The heat map places variables on rows and sequence groups on columns. Pale cells show no excess drift; darker blue indicates increasing drift; brown reaches the strongest end of the scale. Hover information reports the sequence interval, excess score, raw discrepancy, random boundary, distribution component, missingness component, and compact group and reference summaries.</p>
-<p>Vertical bands across variables suggest a broad event such as a source-system or population change. A horizontal run suggests a variable-specific process. Gradual strengthening is clearest against the first group, while isolated cells may indicate a temporary event, unusual batch, or unstable small group.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The summary table orders analyzed variables from strongest to weakest and lists excluded variables with reasons. Important fields include overall and maximum drift, raw maximum, random boundary, peak location, first-to-last drift, trend, maximum missingness difference, and status.</p>
-<p>High maximum but low overall drift suggests a localized event. High values for both suggest sustained change. First-to-last drift captures net movement but can miss a temporary change that reverses.</p>
+<p><strong>Group summaries</strong> reports each variable and stratum’s finite count, missing/nonfinite count, mean, sample standard deviation, and quartiles. These quantities use original units even when the chart is normalized.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p>This card has no data-changing action. Changing sequence, variables, reference, groups, or classification threshold recalculates only the diagnostic result.</p>
+<p><strong>Variables</strong> is a multi-selector: add variables for comparison or clear the selection. <strong>Facet by Stratifier</strong> selects one grouping variable at a time. Chart appearance can change independently of the ANOVA method. Restored selections are retained when their columns remain eligible.</p>
+<p>There is no Apply or Commit action. Changing selections or settings affects only the diagnostic output.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Begin with the strongest cells and compare distribution drift with missingness drift. Then inspect the raw values around the peak interval. A detected change can reflect a real population shift, improved collection, altered coding, unresolved placeholders, changing instrumentation, or sampling variation. The chart locates evidence but does not determine cause.</p>
-<p>Repeat the assessment using meaningful alternative references and group counts. Stable conclusions across reasonable choices are more persuasive than one isolated configuration.</p>
+<p>Begin with effect size, group counts, and distribution overlap. A small p-value does not establish a large or useful difference, and an overall ANOVA does not identify which pairs of strata differ. Multiple-variable adjustment depends on the selected family of tests; repeatedly changing selections is exploratory rather than confirmatory analysis.</p>
+<p>Cluster-derived strata deserve particular care. If a variable helped define the clusters, separation on that variable is partly expected. Its ANOVA p-value is not independent evidence that the clustering is valid. Check unrelated variables, held-out data, and domain explanations before drawing stronger conclusions.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>This is exploratory effect-size analysis, not a formal significance test.</li>
-<li>Approximately equal observation groups may cover unequal spans of time.</li>
-<li>Extreme values and unresolved placeholders can raise the random boundary and reduce sensitivity.</li>
-<li>Trend describes group medians and can miss changes in spread or shape.</li>
-<li>Cyclic, list, geometry, shadow, high-cardinality text-like, constant, and unsupported variables are excluded.</li>
-<li>Results depend on sequence, reference, group count, variable selection, and finite permutation calibration.</li>
-<li>Observation weights are not applied.</li>
+<li>ANOVA compares means; it does not summarize every difference in distribution shape or spread.</li>
+<li>Small samples make violin smoothing and approximate median notches unstable. Notches are not confidence intervals for means.</li>
+<li>Missing-value exclusions can differ across variables and alter the compared populations.</li>
+<li>Sampling can affect tests and effect sizes; retaining rare strata does not guarantee enough observations for inference.</li>
+<li>Observation weights, paired observations, repeated measures, and survey-design corrections are not supported in this version.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Choose a sequence with a defensible real-world interpretation.</li>
-<li>Start with <strong>All observations</strong> and inspect broad patterns.</li>
-<li>Hover over strong cells to separate distribution and missingness effects.</li>
-<li>Locate peak variables and intervals on the flip side.</li>
-<li>Compare first-group, previous-group, and alternative group-count results.</li>
-<li>Investigate source or operational events before choosing a response.</li>
+<li>Confirm numeric Predictor and Stratifier roles, then inspect the initially selected variable.</li>
+<li>Add variables and select the grouping that answers the substantive question.</li>
+<li>Compare box and violin views, using observation overlays for sparse groups.</li>
+<li>Inspect group counts, missing values, effect sizes, and ANOVA assumptions on the flip side.</li>
+<li>Investigate meaningful differences with domain knowledge and, where justified, pairwise follow-up comparisons.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> Selected upstream variables ordered by a sequence field or preserved row order.</li>
-<li><strong>Output:</strong> The upstream data unchanged.</li>
-<li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
+<li><strong>Input:</strong> Numeric Predictors, optional numeric Targets, available Stratifiers, and optional Identifiers for hover text.</li>
+<li><strong>Output:</strong> Incoming observations, values, roles, and pipeline pass through unchanged. Sampling and normalization affect analysis copies only.</li>
+<li><strong>Data journey:</strong> No transformation or learned pipeline step is added.</li>
 </ul>
 
 

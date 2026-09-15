@@ -1,0 +1,86 @@
+---
+title: Data strata comparison
+---
+
+#### 🧭 Purpose
+
+_Compare numeric distributions across assigned strata using violin or box plots, then assess differences in stratum means with ANOVA. Use this diagnostic card after variable-role assignment, including after Cluster membership has created Stratifiers. Charts and tests treat observations equally and leave the incoming data unchanged._
+
+#### 🎯 Goals
+
+1. **Primary:** Compare location, spread, shape, and overlap across strata.
+1. **Secondary:** Quantify mean differences with ANOVA and descriptive effect sizes.
+1. **Tertiary:** Identify small groups and missing values that limit interpretation.
+
+#### 🧠 How it works
+
+Numeric Predictor-role columns are available initially, with only the first selected. **Offer numeric Target variables** makes numeric Targets available without selecting them automatically. Boolean, complex, and shadow variables are excluded. The selected **Facet by Stratifier** supplies group labels; the first available Stratifier is selected initially. Choosing **None** shows overall distributions.
+
+Missing stratum labels are omitted. Missing or infinite numeric values are excluded separately for each variable. Above the observation cap, a reproducible, approximately proportional sample retains at least one observation from every stratum. Plots, summaries, and ANOVA use the same sampled rows. The assigned weighting column is not applied.
+
+One ANOVA is calculated per selected variable, comparing the observed levels of the chosen Stratifier. Each group needs at least two finite observations. Ordinary one-way ANOVA assumes equal population variances; Welch ANOVA permits unequal variances but requires positive sample variance in every group. Both rely on independent observations and distribution assumptions for inferential interpretation. Unavailable tests include an explanation instead of a p-value.
+
+#### 🏞️ Front
+
+Selected variables occupy rows; stratum levels occupy columns. All facets within a variable share the same vertical range. Different variables retain their own scales. Stratum colors remain consistent across variable rows.
+
+Violin width represents estimated density rather than sample size. A constant or singleton group uses a box instead because a smooth density is not supported. Box plots show quartiles and the median, with whiskers extending to the most extreme observations within 1.5 interquartile ranges of the box. Observation overlays reveal individual values; their hover text uses Identifier-role values when available and original row positions otherwise.
+
+**Display normalization** can center each variable or center and scale it to unit sample standard deviation. Normalization is performed across all analyzed strata together, preserving between-stratum differences. It changes the display only: summaries retain original units and ANOVA results remain unchanged.
+
+Full-screen view enables Plotly tools and gives larger facet grids more room. Empty selections, absent data, and excessive stratum counts use the standard empty-plot explanation. No strata are silently dropped to fit the display limit.
+
+#### 🔄 Flip side
+
+**ANOVA** provides one row per selected variable.
+
+: Table 1 - ANOVA columns
+
+| Column | Meaning |
+|:-------|:--------|
+| **Groups**, **N** | Observed stratum count and finite observations used. |
+| **DF between**, **DF denominator** | Numerator and denominator degrees of freedom; Welch's denominator can be fractional. |
+| **F**, **p** | Test statistic and unadjusted p-value for equal population means. |
+| **Eta squared** | Descriptive fraction of total sample variation associated with differences between stratum means. This is not a Welch-adjusted effect size. |
+| **BH adjusted p** | Benjamini–Hochberg adjustment across valid tests for the currently selected variables. |
+| **Status** | Assumption reminder or reason a test could not be calculated. |
+
+**Group summaries** reports each variable and stratum's finite count, missing/nonfinite count, mean, sample standard deviation, and quartiles. These quantities use original units even when the chart is normalized.
+
+#### 🛠️ Controls and actions
+
+**Variables** is a multi-selector: add variables for comparison or clear the selection. **Facet by Stratifier** selects one grouping variable at a time. Chart appearance can change independently of the ANOVA method. Restored selections are retained when their columns remain eligible.
+
+There is no Apply or Commit action. Changing selections or settings affects only the diagnostic output.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Begin with effect size, group counts, and distribution overlap. A small p-value does not establish a large or useful difference, and an overall ANOVA does not identify which pairs of strata differ. Multiple-variable adjustment depends on the selected family of tests; repeatedly changing selections is exploratory rather than confirmatory analysis.
+
+Cluster-derived strata deserve particular care. If a variable helped define the clusters, separation on that variable is partly expected. Its ANOVA p-value is not independent evidence that the clustering is valid. Check unrelated variables, held-out data, and domain explanations before drawing stronger conclusions.
+
+#### ⛔️ Limitations
+
+* ANOVA compares means; it does not summarize every difference in distribution shape or spread.
+* Small samples make violin smoothing and approximate median notches unstable. Notches are not confidence intervals for means.
+* Missing-value exclusions can differ across variables and alter the compared populations.
+* Sampling can affect tests and effect sizes; retaining rare strata does not guarantee enough observations for inference.
+* Observation weights, paired observations, repeated measures, and survey-design corrections are not supported in this version.
+
+#### 📌 Suggested workflow
+
+1. Confirm numeric Predictor and Stratifier roles, then inspect the initially selected variable.
+1. Add variables and select the grouping that answers the substantive question.
+1. Compare box and violin views, using observation overlays for sparse groups.
+1. Inspect group counts, missing values, effect sizes, and ANOVA assumptions on the flip side.
+1. Investigate meaningful differences with domain knowledge and, where justified, pairwise follow-up comparisons.
+
+#### 🔗 Data flow
+
+* **Input:** Numeric Predictors, optional numeric Targets, available Stratifiers, and optional Identifiers for hover text.
+* **Output:** Incoming observations, values, roles, and pipeline pass through unchanged. Sampling and normalization affect analysis copies only.
+* **Data journey:** No transformation or learned pipeline step is added.

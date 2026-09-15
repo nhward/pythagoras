@@ -859,52 +859,53 @@ content: "●";
 <h4 id="how-it-works">🧠 How it works</h4>
 <p>Only varying, real-valued numeric columns assigned the Predictor role enter the analysis. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from the assessment. Sampling and optional standardization prepare an analysis copy.</p>
 <table class="caption-top">
+<caption>Table 1 - Families</caption>
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 47%">
+<col style="width: 52%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Evidence family</th>
-<th>How it supports K</th>
+<th style="text-align: left;">Evidence family</th>
+<th style="text-align: left;">How it supports K</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Agglomerative</td>
-<td>Merges observations into a hierarchy; compares cuts using silhouette, Calinski–Harabasz, and Davies–Bouldin scores.</td>
+<td style="text-align: left;">Agglomerative</td>
+<td style="text-align: left;">Merges observations into a hierarchy; compares cuts using silhouette, Calinski–Harabasz, and Davies–Bouldin scores.</td>
 </tr>
 <tr class="even">
-<td>Divisive</td>
-<td>Splits observations using DIANA; compares the same three scores.</td>
+<td style="text-align: left;">Divisive</td>
+<td style="text-align: left;">Splits observations using DIANA; compares the same three scores.</td>
 </tr>
 <tr class="odd">
-<td>Partition</td>
-<td>Fits K-means or PAM (representative observations called medoids); compares the same three scores.</td>
+<td style="text-align: left;">Partition</td>
+<td style="text-align: left;">Fits K-means or PAM (representative observations called medoids); compares the same three scores.</td>
 </tr>
 <tr class="even">
-<td>Mixture</td>
-<td>Fits Gaussian mixtures with four covariance structures; each favors the lowest Bayesian information criterion (BIC), balancing fit and complexity.</td>
+<td style="text-align: left;">Mixture</td>
+<td style="text-align: left;">Fits Gaussian mixtures with four covariance structures; each favors the lowest Bayesian information criterion (BIC), balancing fit and complexity.</td>
 </tr>
 <tr class="odd">
-<td>Topology</td>
-<td>Uses the largest gap between single-linkage merge distances as a separation heuristic.</td>
+<td style="text-align: left;">Topology</td>
+<td style="text-align: left;">Uses the largest gap between single-linkage merge distances as a separation heuristic.</td>
 </tr>
 <tr class="even">
-<td>Density</td>
-<td>Sweeps DBSCAN neighborhood radii and counts the non-noise clusters at each eligible radius.</td>
+<td style="text-align: left;">Density</td>
+<td style="text-align: left;">Sweeps DBSCAN neighborhood radii and counts the non-noise clusters at each eligible radius.</td>
 </tr>
 <tr class="odd">
-<td>Spectral</td>
-<td>Builds a nearest-neighbor graph and favors a large gap between successive normalized graph-Laplacian eigenvalues.</td>
+<td style="text-align: left;">Spectral</td>
+<td style="text-align: left;">Builds a nearest-neighbor graph and favors a large gap between successive normalized graph-Laplacian eigenvalues.</td>
 </tr>
 <tr class="even">
-<td>Stability</td>
-<td>Repeatedly splits the sample, fits K-means, and checks whether pairs grouped together remain together under the other half’s model.</td>
+<td style="text-align: left;">Stability</td>
+<td style="text-align: left;">Repeatedly splits the sample, fits K-means, and checks whether pairs grouped together remain together under the other half’s model.</td>
 </tr>
 <tr class="odd">
-<td>Gap statistic</td>
-<td>Compares K-means within-cluster dispersion with uniform reference data in a principal-component-aligned bounding box.</td>
+<td style="text-align: left;">Gap statistic</td>
+<td style="text-align: left;">Compares K-means within-cluster dispersion with uniform reference data in a principal-component-aligned bounding box.</td>
 </tr>
 </tbody>
 </table>
@@ -912,41 +913,42 @@ content: "●";
 <p>Stability favors the largest K meeting the mean prediction-strength threshold. K=1 is trivially stable, so its selection is a fallback rather than proof of homogeneity. Gap uses the smallest K satisfying its one-standard-error comparison with K+1; it casts no vote when none qualifies. Both evaluations always use K-means, independently of the partition method.</p>
 <p>With observation weighting enabled, positive weights express relative importance and are normalized to mean one; zero-weight rows are excluded. Unequal weights affect partition fitting and scores, DBSCAN neighborhood mass and noise fractions, stability, and gap. Agglomerative, Divisive, Mixture, Topology, and Spectral then contribute no evidence. Equal weights retain all families. Weighted evaluations are importance-weight extensions; weights do not represent additional independent observations.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The <strong>K-th Support barchart</strong> stacks colored contributions by family. The discrete horizontal axis runs from 1 through the configured maximum K. Each family with recommendations contributes one total unit, distributed across the K values it favors. Taller bars show greater combined support, not probabilities or independent confirmations.</p>
+<p>The <strong>K-th Support bar-chart</strong> stacks colored contributions by family. The discrete horizontal axis runs from 1 through the configured maximum K. Each family with recommendations contributes one total unit, distributed across the K values it favors. Taller bars show greater combined support, not probabilities or independent confirmations.</p>
 <p>Hover over segments for their values; use the legend to inspect family contributions. Full-screen view provides Plotly tools and an expanded vertical-axis label. Empty evidence produces a message instead of recommendations. The footer reports the analyzed rows and weighting status.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
 <p>The <strong>Support evidence table</strong> provides the underlying evidence and explanatory notes.</p>
 <table class="caption-top">
+<caption>Table 2 - Columns</caption>
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 32%">
+<col style="width: 67%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Column</th>
-<th>Meaning</th>
+<th style="text-align: left;">Column</th>
+<th style="text-align: left;">Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Family / Criterion</td>
-<td>The method and score or diagnostic used.</td>
+<td style="text-align: left;">Family / Criterion</td>
+<td style="text-align: left;">The method and score or diagnostic used.</td>
 </tr>
 <tr class="even">
-<td>K</td>
-<td>The cluster count evaluated or produced.</td>
+<td style="text-align: left;">K</td>
+<td style="text-align: left;">The cluster count evaluated or produced.</td>
 </tr>
 <tr class="odd">
-<td>Score</td>
-<td>The raw value; units differ across criteria.</td>
+<td style="text-align: left;">Score</td>
+<td style="text-align: left;">The raw value; units differ across criteria.</td>
 </tr>
 <tr class="even">
-<td>Direction</td>
-<td>Whether to maximize, minimize, apply a threshold or one-SE rule, or read a diagnostic.</td>
+<td style="text-align: left;">Direction</td>
+<td style="text-align: left;">Whether to maximize, minimize, apply a threshold or one-SE rule, or read a diagnostic.</td>
 </tr>
 <tr class="odd">
-<td>Recommended</td>
-<td>Whether that row contributes support to the chart.</td>
+<td style="text-align: left;">Recommended</td>
+<td style="text-align: left;">Whether that row contributes support to the chart.</td>
 </tr>
 </tbody>
 </table>

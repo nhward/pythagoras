@@ -129,7 +129,7 @@ def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
         x, numeric, categorical = _feature_frame(frame.iloc[positions].reset_index(drop=True), columns)
         # No imputation or category vocabulary is learned outside a training fold.
         if x.shape[1] == 0:
-            raise ValueError('No eligible Predictor-role variables are available for profiling.')
+            raise ValueError('No Predictor-role variables are available for profiling.')
         result.predictors = list(x.columns)
         result.observations = len(x)
         result.folds = min(max(2, int(folds)), int(counts.min()))
@@ -363,7 +363,7 @@ def instance():
         @output
         @render_widget
         def EmptyTree():
-            widget = go.FigureWidget(Card.empty_figure('No eligible cluster membership columns.'))
+            widget = go.FigureWidget(Card.empty_figure('No cluster membership columns.'))
             widget._config = {'displayModeBar':False, 'displaylogo':False}
             return widget
 
@@ -398,7 +398,7 @@ def instance():
                 return r.message
             return (f'{r.target.removeprefix("cluster_").title()}: CV accuracy {r.accuracy:.1%}; balanced accuracy {r.balanced:.1%} '
                 f'(fold SD {r.fold_sd:.1%}). Majority baseline {r.baseline:.1%}; balanced {r.baseline_balanced:.1%}. '
-                f'{r.folds} folds; {r.observations} of {r.eligible} eligible rows; {len(r.predictors)} predictors. '
+                f'{r.folds} folds; {r.observations} of {r.eligible} rows; {len(r.predictors)} predictors. '
                 f'{"Observation importance applied. " if r.weighted else "Equal observation importance. "}'
                 'Fidelity to existing labels, not cluster validity.')
         @output

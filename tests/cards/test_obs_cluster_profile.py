@@ -2,17 +2,19 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(ROOT)
 sys.path.insert(0,str(ROOT))
+
 import numpy as np
 import pandas as pd
 import pytest
-from playwright.sync_api import expect
-from shiny.pytest import create_app_fixture
 from cards import obs_cluster_profile as m
+from playwright.sync_api import expect
 from proxy_data import proxy_data
-from roles import Role,RoleMap
+from roles import Role, RoleMap
+from shiny.pytest import create_app_fixture
 
 app = create_app_fixture(app='../scenarios/obs_cluster_profile.py',scope='function')
 @pytest.fixture(scope='session')
@@ -115,8 +117,8 @@ def test_tree_metrics_tables_and_pass_through(page,app):
     expect(by_id(page,'Tree_cluster_partition').locator('.js-plotly-plot')).to_be_visible()
     expect(by_id(page,'PassThrough')).to_contain_text('unchanged=True')
     page.locator('.card').first.hover();by_id(page,'FlipButton').click(force=True)
-    expect(by_id(page,'Comparison')).to_contain_text('cluster_partition')
-    expect(by_id(page,'Comparison')).to_contain_text('cluster_density_2')
+    expect(by_id(page,'Comparison')).to_contain_text('Partition')
+    expect(by_id(page,'Comparison')).to_contain_text('Density_2')
     page.get_by_role('tab',name='Rules',exact=True).click()
     expect(by_id(page,'Rules')).to_contain_text('Training purity')
     page.get_by_role('tab',name='Cluster accuracy',exact=True).click()
@@ -128,8 +130,8 @@ def test_tree_metrics_tables_and_pass_through(page,app):
 def test_target_switch_and_weighting_option(page,app):
     page.goto(app.url)
     expect(by_id(page,'Accuracy')).to_contain_text('CV accuracy',timeout=60000)
-    page.get_by_role('tab',name='cluster_density_2',exact=True).click()
-    expect(by_id(page,'Accuracy')).to_contain_text('cluster_density_2:',timeout=60000)
+    page.get_by_role('tab',name='Density_2',exact=True).click()
+    expect(by_id(page,'Accuracy')).to_contain_text('Density_2:',timeout=60000)
     page.locator('.card').first.hover();page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'UseWeights').uncheck()
     expect(by_id(page,'Accuracy')).to_contain_text('60 of 60 eligible rows',timeout=60000)
@@ -142,24 +144,24 @@ def test_target_switch_and_weighting_option(page,app):
 def test_dynamic_membership_tabs_and_empty_state(page,app):
     page.goto(app.url)
     expect(by_id(page,'Accuracy')).to_contain_text('CV accuracy',timeout=60000)
-    expect(page.get_by_role('tab',name='cluster_partition',exact=True)).to_be_visible()
-    page.get_by_role('tab',name='cluster_density_2',exact=True).click()
+    expect(page.get_by_role('tab',name='Partition',exact=True)).to_be_visible()
+    page.get_by_role('tab',name='Density_2',exact=True).click()
     expect(by_id(page,'Tree_cluster_density_2').locator('.js-plotly-plot')).to_be_visible()
-    expect(by_id(page,'Accuracy')).to_contain_text('cluster_density_2:')
+    expect(by_id(page,'Accuracy')).to_contain_text('Density_2:')
     by_id(page,'RemoveMemberships').click()
     expect(page.get_by_role('tab',name='No memberships',exact=True)).to_be_visible()
-    expect(page.get_by_role('tab',name='cluster_partition',exact=True)).to_have_count(0)
-    expect(by_id(page,'Accuracy')).to_contain_text('No eligible cluster membership',timeout=60000)
+    expect(page.get_by_role('tab',name='Partition',exact=True)).to_have_count(0)
+    expect(by_id(page,'Accuracy')).to_contain_text('Assign a cluster-named column the Stratifier role.',timeout=60000)
     empty = by_id(page,'EmptyTree').locator('.js-plotly-plot')
     expect(empty).to_be_visible()
     state = empty.evaluate('el => ({images: el.layout.images.length, message: el.layout.annotations[0].text})')
     assert state['images'] == 1
-    assert 'No eligible cluster membership' in state['message']
+    assert 'No cluster membership' in state['message']
     by_id(page,'RestoreMemberships').click()
-    expect(page.get_by_role('tab',name='cluster_partition',exact=True)).to_be_visible()
+    expect(page.get_by_role('tab',name='Partition',exact=True)).to_be_visible()
     expect(page.get_by_role('tab',name='No memberships',exact=True)).to_have_count(0)
-    expect(by_id(page,'Accuracy')).to_contain_text('cluster_partition:',timeout=60000)
-    page.get_by_role('tab',name='cluster_density_2',exact=True).click()
+    expect(by_id(page,'Accuracy')).to_contain_text('Partition:',timeout=60000)
+    page.get_by_role('tab',name='Density_2',exact=True).click()
     expect(by_id(page,'Tree_cluster_density_2').locator('.js-plotly-plot')).to_be_visible()
     expect(by_id(page,'PassThrough')).to_contain_text('unchanged=True')
 
@@ -168,8 +170,8 @@ restored_app = create_app_fixture(app='../scenarios/obs_cluster_profile_restored
 @pytest.mark.ui
 def test_restored_membership_tab_is_selected(page,restored_app):
     page.goto(restored_app.url)
-    expect(by_id(page,'Accuracy')).to_contain_text('cluster_density_2:',timeout=60000)
-    expect(page.get_by_role('tab',name='cluster_density_2',exact=True)).to_have_attribute('aria-selected','true')
+    expect(by_id(page,'Accuracy')).to_contain_text('Density_2:',timeout=60000)
+    expect(page.get_by_role('tab',name='Density_2',exact=True)).to_have_attribute('aria-selected','true')
     expect(by_id(page,'Tree_cluster_density_2').locator('.js-plotly-plot')).to_be_visible()
 
 

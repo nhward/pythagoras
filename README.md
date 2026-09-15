@@ -169,14 +169,20 @@ Drag-and-drop ordering is handled via:
 * [Role assignment](app/www/markdown/var_roles.html)
 * [Variable modification](app/www/markdown/var_modify.html)
 * [Variable cardinality](app/www/markdown/var_cardinality.html)
+
+### 📊 Data preview
+
 * Data coverage
 * Variable plots
+* Variable summary
+* [Data homogeneity](app/www/markdown/data_homogeneity.html)
+* [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
 
 ### 🧹 Data cleaning
 
 * [Duplicate Observations](app/www/markdown/obs_duplicates.html)
-* [Data homogeneity](app/www/markdown/data_homogeneity.html)
-* [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
+* Variable coverage
+
 
 ### ∅ Missing values
 
@@ -187,7 +193,7 @@ Drag-and-drop ordering is handled via:
 * [Excessive missingness](app/www/markdown/miss_map.html)
 * [Missingness rules](app/www/markdown/miss_rules.html)
 * [Learned imputation ](app/www/markdown/miss_impute.html)
-
+* Manual imputation
 
 ### 🧠 Preprocessing
 
@@ -195,10 +201,23 @@ Drag-and-drop ordering is handled via:
 * [Parallel coordinates](app/www/markdown/data_parallel.html)
 * [Variable correlation](app/www/markdown/var_correlation.html)
 
+### 🛏️ Embedding
+
+* Embedding Datetime  (Components)
+* Embedding Text      ('word-to-vector', topic, sentiment)
+* Embedding Nominal   (one-hot for card > 2)
+* Embedding Ordinal   (label + dummy/ orthogonal contrasts)
+* Embedding Codes     (target encoding ++)
+* Embedding baskets   (pivoting)
+* Embedding Cyclic    (sine & cosine components)
+
+
 ### 💐 Clusters
 
 * [Number of clusters](app/www/markdown/obs_k_clusters.html)
 * [Cluster charts](app/www/markdown/obs_clusters.html)
+* [Cluster profiling](app/www/markdown/obs_cluster_profile.html)
+* stratifier violin charts
 
 ### ☢️ Outliers
 

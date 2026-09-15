@@ -33,12 +33,16 @@ Node colors distinguish predicted classes within the tree. Positions show tree s
 
 **Model accuracy** compares every membership model. The other tabs follow the tree selected on the front.
 
+: Table 1 - Tabs
+
 | Tab | Contents |
 |:----|:---------|
 | **Model accuracy** | Cross-validated scores, majority baselines, fold variability, analyzed rows, leaf count, and any diagnostic message. |
 | **Rules** | One row per leaf: the combined conditions, predicted cluster, row count, importance mass, and training purity. |
 | **Cluster accuracy** | Actual class counts, importance mass, and held-out recall for each cluster. |
 | **Confusion** | Actual classes in rows and predicted classes in columns. Values are normalized importance mass when weighting is enabled, otherwise observation counts. |
+
+: Table 2 - Measures
 
 | Measure | Interpretation |
 |:--------|:---------------|
