@@ -858,67 +858,13 @@ content: "●";
 <li><strong>Tertiary:</strong> Make downstream card behavior predictable and reviewable.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Drag each variable into one role container. The supported roles are:</p>
-<table class="caption-top">
-<caption>Table 1: Role table</caption>
-<colgroup>
-<col style="width: 25%">
-<col style="width: 75%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Role</th>
-<th style="text-align: left;">Intended use</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;"><strong>Target</strong></td>
-<td style="text-align: left;">Outcome to be predicted.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Predictor</strong></td>
-<td style="text-align: left;">Input available to a model or analysis.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Treatment</strong></td>
-<td style="text-align: left;">Exposure whose possible causal effect is of interest.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Identifier</strong></td>
-<td style="text-align: left;">One or more fields that identify an observation.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Weighting</strong></td>
-<td style="text-align: left;">Nonnegative numeric case weight.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Partition</strong></td>
-<td style="text-align: left;">Predefined training or test membership.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Stratifier</strong></td>
-<td style="text-align: left;">Low-cardinality grouping used for comparison rather than prediction.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Sequence</strong></td>
-<td style="text-align: left;">Meaningful observation order, commonly time.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Sensitive</strong></td>
-<td style="text-align: left;">Attribute retained for fairness assessment rather than prediction.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Geometry</strong></td>
-<td style="text-align: left;">Spatial object used by geographic methods.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>None</strong></td>
-<td style="text-align: left;">Variable removed from the data passed to downstream cards.</td>
-</tr>
-</tbody>
-</table>
-<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints that are validated before commitment.</p>
+<dl>
+<dt>Drag each variable into one role container. The supported roles are:</dt>
+<dd>
+<p>Table 1: Role table {tbl-colwidths=“[30,90]”} | Role | Intended use | |:———-|:———————————————————-| | <strong>Target</strong> | Outcome to be predicted. | | <strong>Predictor</strong> | Input available to a model or analysis. | | <strong>Treatment</strong> | Exposure whose possible causal effect is of interest. | | <strong>Identifier</strong> | One or more fields that identify an observation. | | <strong>Weighting</strong> | Nonnegative numeric case weight. | | <strong>Partition</strong> | Predefined training or test membership. | | <strong>Stratifier</strong> | Low-cardinality grouping used for comparison rather than prediction. | | <strong>Sequence</strong> | Meaningful observation order, commonly time. | | <strong>Sensitive</strong> | Attribute retained for fairness assessment rather than prediction. | | <strong>Geometry</strong> | Spatial object used by geographic methods. | | <strong>None</strong> | Variable removed from the data passed to downstream cards. |</p>
+</dd>
+</dl>
+<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.</p>
 <h4 id="flip-side">🔄 Flip side</h4>

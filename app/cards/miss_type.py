@@ -1185,14 +1185,14 @@ def instance():
                 id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
                 guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
             ),
-            # ui.input_checkbox(
-            #     id="UseWeights",
-            #     label="Use observation weights",
-            #     value=True,
-            #     guide=this,
-            #     text="Use any variable assigned with the weighting role as tree observations weights.",
-            #     position="left",
-            # ),
+            ui.input_checkbox(
+                id="UseWeights",
+                label="Use observation weights",
+                value=True,
+                guide=this,
+                text="Use any variable assigned with the weighting role as tree observations weights.",
+                position="left",
+            ),
             ui.input_slider(
                 id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
                 guide=this, text="Number of stratified held-out folds. This is reduced automatically when the minority class is small.", position="left",
@@ -1252,7 +1252,8 @@ def instance():
             ),
             ui.input_slider(
                 id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Sets a logarithmic cap of 10^n observations used for cross-validation and permutations. Raising it improves coverage but can substantially increase fitting time.", position="left",
+                guide=this, position="left", 
+                text="Reproducible stratified sampling above this cap which is used for cross-validation and permutations. Raising it improves coverage but can substantially increase fitting time."
             ),
         )
 
@@ -1448,7 +1449,7 @@ def instance():
         def _cached_model(proxy: proxy_data, target: str) -> TreeAnalysis:
             _activate_cache(proxy)
             frame = proxy.frame
-            weighting = _weighting_column(proxy)
+            weighting = _weighting_column(proxy) if input.UseWeights() else None
             weights = frame[weighting] if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
             if weighting is not None:
@@ -1481,7 +1482,7 @@ def instance():
             proxy = PreparedData()
             _activate_cache(proxy)
             frame = proxy.frame
-            weighting = _weighting_column(proxy)
+            weighting = _weighting_column(proxy) if input.UseWeights() else None
             weights = frame[weighting] if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
             if weighting is not None:
@@ -1529,8 +1530,8 @@ def instance():
             """Snapshot reactive values and start a nonblocking table calculation."""
             proxy = PreparedData()
             frame = proxy.frame
-            weighting = _weighting_column(proxy)
-            weights = frame[weighting] if weighting is not None else None
+            weighting = _weighting_column(proxy) if input.UseWeights() else None
+            weights = frame[weighting] if weighting is not None and input.UseWeights() else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
             if weighting is not None:
                 excluded.add(weighting)
@@ -1551,6 +1552,7 @@ def instance():
                 "minimum_class_count": int(input.MinClassCount()),
                 "processes": 1
             }
+            CalculateTypeTable.cancel()
             CalculateTypeTable.invoke(frame, options)
 
         @this.suspendable(calc=True)
@@ -1702,10 +1704,8 @@ def instance():
                         class_="text-info text-center d-block"
                     )
                 )
-        def cancel_type_table() -> None:
-            CalculateTypeTable.cancel()
 
-        session.on_ended(cancel_type_table)
+        session.on_ended(CalculateTypeTable.cancel)
 
     this.server = server
     return this

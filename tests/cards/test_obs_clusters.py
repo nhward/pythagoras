@@ -98,7 +98,7 @@ class TestClusters:
         np.testing.assert_allclose(r.coordinates, analyze().coordinates)
         assert r.predictors == ['x', 'y']
 
-    def test_export_is_nominal_predictor_and_preserves_positions(self):
+    def test_export_is_nominal_stratifier_and_preserves_positions(self):
         data = source(True)
         data.frame.index = [0] * len(data)
         data.frame.iloc[0, 2] = 0
@@ -108,7 +108,7 @@ class TestClusters:
         assert out.cluster_count == 2
         assert isinstance(out.frame.membership.dtype, pd.CategoricalDtype)
         assert not out.frame.membership.cat.ordered
-        assert out.role_map.roles_for('membership') == {Role.PREDICTOR}
+        assert out.role_map.roles_for('membership') == {Role.STRATIFIER}
         assert out.frame.membership.notna().sum() == 23
         assert out.has_pipeline
         assert out.processing_records[-1].stage == "Learning"
@@ -168,7 +168,7 @@ def test_tabs_table_export_and_reset(page, app):
     by_id(page, 'FlipButton').click(force=True)
     toggle(page, 'Partition').check()
     toggle(page, 'Mixture').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition,cluster_mixture; methods=Partition,Mixture; nominal=True; predictors=True')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition,cluster_mixture; methods=Partition,Mixture; nominal=True; stratifiers=True')
     toggle(page, 'Partition').uncheck()
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_mixture; methods=Mixture')
     toggle(page, 'Mixture').uncheck()
@@ -235,7 +235,7 @@ def test_density_membership_can_be_added_and_removed(page, app):
     page.goto(app.url)
     expect(by_id(page, 'Status')).to_contain_text('Incoming K=2', timeout=60000)
     toggle(page, 'Density').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_density; methods=Density; nominal=True; predictors=True')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_density; methods=Density; nominal=True; stratifiers=True')
     toggle(page, 'Partition').check()
     expect(by_id(page, 'ExportProbe')).to_contain_text('methods=Partition,Density')
     toggle(page, 'Density').uncheck()
@@ -302,7 +302,7 @@ class TestMembershipCoverage:
         exported = m._export(result, method, 'members')
         levels = list(exported.frame.members.cat.categories)
         assert set(levels) == ({'c1', 'c2', 'unallocated'} if method == 'Density' else {'c1', 'c2'})
-        assert exported.role_map.roles_for('members') == {Role.PREDICTOR}
+        assert exported.role_map.roles_for('members') == {Role.STRATIFIER}
         assert not exported.frame.members.cat.ordered
         assert not hasattr(exported.pipeline.steps[-1][1], 'label_map_')
         assert_frame_equal(exported.clean_frame, data.frame)
@@ -459,3 +459,32 @@ def test_every_tab_has_comparable_plot_and_does_not_export_implicitly(page, app)
         ranges.append((state['x'], state['y']))
         expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')
     assert all(value == ranges[0] for value in ranges)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('method', ['Partition', 'Mixture', 'Density'])
+def test_export_is_immediately_available_for_cluster_profiling(method):
+    from cards.obs_cluster_profile import _targets
+    name = f'cluster_{method.lower()}'
+    exported = m._export(analyze(), method, name)
+    assert _targets(exported) == [name]
+    assert name not in exported.role_map.columns_with_role(Role.PREDICTOR)
+    assert exported.clone().role_map.roles_for(name) == {Role.STRATIFIER}
+
+
+restoring_app = create_app_fixture(app='../scenarios/obs_clusters_restoring.py', scope='function')
+
+@pytest.mark.ui
+def test_restored_membership_waits_for_current_analysis_without_closing_session(page, restoring_app):
+    page.goto(restoring_app.url)
+    expect(by_id(page, 'RestorationProbe')).to_contain_text('Obsolete completion delivered', timeout=60000)
+    expect(toggle(page, 'Partition')).to_be_checked()
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')
+    # This upstream update supplies a current completion. No second checkbox
+    # click should be required, and the connection must still be alive.
+    by_id(page, 'ChangeK').click()
+    expect(by_id(page, 'Status')).to_contain_text('Incoming K=3', timeout=60000)
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition; methods=Partition')
+    expect(toggle(page, 'Partition')).to_be_checked()
+    toggle(page, 'Partition').uncheck()
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')

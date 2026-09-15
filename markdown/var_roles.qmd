@@ -21,8 +21,7 @@ Drag each variable into one role container. The supported roles are:
 |:----------|:----------------------------------------------------------|
 | **Target** | Outcome to be predicted. |
 | **Predictor** | Input available to a model or analysis. |
-| **Treatment** | Exposure who
-se possible causal effect is of interest. |
+| **Treatment** | Exposure whose possible causal effect is of interest. |
 | **Identifier** | One or more fields that identify an observation. |
 | **Weighting** | Nonnegative numeric case weight. |
 | **Partition** | Predefined training or test membership. |

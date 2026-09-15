@@ -1,4 +1,4 @@
-"""Visualize fixed-K cluster memberships and optionally export a nominal predictor."""
+"""Visualize fixed-K cluster memberships and optionally export a nominal stratifier."""
 from __future__ import annotations
 
 import asyncio
@@ -35,8 +35,11 @@ from sklearn.mixture import GaussianMixture
 
 from cards.obs_k_clusters import _diana, _importance_weights, _pam
 
-METHODS = ("Partition", "Agglomerative", "Divisive", "Mixture", "Density", "Spectral")
+#TODO: Try to add Agglom, Divisive, Spectral methods to the membership button when it becomes possible to predict these in a transformer sense
+#TODO: Setting to allow nominals to be encoded so as to join the cluster variables (maybe obs_k_clusters too?) Arguably an encoding card can preceed this card.
+#TODO: Move _diana and _importance_weights and _pam to the transformer.
 
+METHODS = ("Partition", "Agglomerative", "Divisive", "Mixture", "Density", "Spectral")
 
 @dataclass
 class ClusterViews:
@@ -252,7 +255,7 @@ def _export(result, method, name):
     transformer.set_params(output_column=name)
     preview = transformer.transform(result.source.frame)
     roles = RoleMap()
-    roles.set_roles(name, [Role.PREDICTOR])
+    roles.set_roles(name, [Role.STRATIFIER])
     return result.source.with_pipeline_step(transformer, name="obs_clusters",
         operation="Add cluster membership", preview_frame=preview, added_roles=roles)
 
@@ -266,7 +269,7 @@ def _export_memberships(source, transformers):
         transformer = transformers[method]
         preview = transformer.transform(result.frame)
         roles = RoleMap()
-        roles.set_roles(transformer.output_column, [Role.PREDICTOR])
+        roles.set_roles(transformer.output_column, [Role.STRATIFIER])
         result = result.with_pipeline_step(transformer, name="obs_clusters",
             operation="Add cluster membership", preview_frame=preview, added_roles=roles)
     return result
@@ -312,7 +315,7 @@ def _figure(result, method, fullscreen=False):
 def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = "Cluster membership"
-    this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal predictors."
+    this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers."
 
     def front():
         return ui.navset_bar(*(ui.nav_panel(method, shinywidgets.output_widget(f"Chart_{method}", fill=True,
@@ -381,12 +384,22 @@ def instance():
         @this.settle(seconds=1)
         @this.suspendable()
         def StartAnalysis():
+            Calculate.cancel()
             Calculate.invoke(this.input_data().clone(), Options())
 
         @this.suspendable(calc=True)
-        def Analysis():
+        def CurrentAnalysis():
             result = Calculate.result()
-            req(result.source.equals(this.input_data()) and result.options == Options(), cancel_output=True)
+            # Obsolete completions are expected while restored inputs settle.
+            # Keep output cancellation out of calculations read by effects.
+            if result.source.equals(this.input_data()) and result.options == Options():
+                return result
+            return None
+
+        @this.suspendable(calc=True)
+        def Analysis():
+            result = CurrentAnalysis()
+            req(result is not None, cancel_output=True)
             return result
 
         @this.suspendable()
@@ -411,12 +424,12 @@ def instance():
             control = ui.input_checkbox_group("IncludeMembership", label=None,
                 choices={"Partition": "Add Partition members", "Mixture": "Add Mixture members", "Density": "Add DBSCAN members"},
                 selected=list(saved[1]) if saved is not None else [], inline=True,
-                guide=this, title="Learned membership predictors", position="top",
+                guide=this, title="Learned membership stratifiers", position="top",
                 text="""
-                All membership controls are disabled when incoming K is 1, including DBSCAN, to avoid constant predictors.
+                All membership controls are disabled when incoming K is 1, including DBSCAN, to avoid constant membership columns.
                 Select any combination of methods, independently of the active chart tab. 
                 Membership levels are c1, c2, and so on, with unallocated also available for DBSCAN.
-                Each adds a learned nominal Predictor named cluster_partition, cluster_mixture or cluster_density; 
+                Each adds a learned nominal Stratifier named cluster_partition, cluster_mixture or cluster_density;
                 a numeric suffix avoids existing names. Uncheck a method to remove its column and pipeline step. 
                 Each selected recipe stays fixed until unchecked and checked again; incoming data changes clear all selections. 
                 Training fits learn their own preprocessing and clusters, then assign all complete rows. 
@@ -452,7 +465,11 @@ def instance():
             if reset_pending or requested == set(plans):
                 return
             additions = requested - set(plans)
-            result = Analysis() if additions else None
+            result = CurrentAnalysis() if additions else None
+            if additions:
+                # Effects understand ordinary silent validation, whereas the
+                # output-only cancellation exception would close the session.
+                req(result is not None)
             with reactive.isolate():
                 source = this.input_data()
                 plans = {method: model for method, model in plans.items() if method in requested}
@@ -527,6 +544,8 @@ def instance():
             frame.insert(0, "Row", result.positions + 1)
             return render.DataTable(frame, width="100%", height="auto")
 
+        session.on_ended(Calculate.cancel)
+        
         return OutputData
     this.server = server
     return this

@@ -907,6 +907,7 @@ def instance():
 
         @this.suspendable()
         def StartAnalysis():
+            Calculate.cancel()
             Calculate.invoke(incomingproxy_data(), AnalysisOptions())
 
         @this.suspendable(calc=True)
@@ -1043,6 +1044,7 @@ def instance():
             return ui.span("; ".join(details) + ".", class_="text-info")
 
         session.on_ended(Calculate.cancel)
+        
         return incomingproxy_data
 
     this.server = server

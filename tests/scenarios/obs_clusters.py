@@ -41,9 +41,9 @@ def server(input, output, session):
         if not added:
             return 'added=none'
         nominal = all(isinstance(data.frame[name].dtype, pd.CategoricalDtype) and not data.frame[name].cat.ordered for name in added)
-        predictors = all(Role.PREDICTOR in data.role_map.roles_for(name) for name in added)
+        stratifiers = all(Role.STRATIFIER in data.role_map.roles_for(name) for name in added)
         methods = [record.parameters['method'] for record in data.processing_records if record.operation == 'Add cluster membership']
-        return f"added={','.join(added)}; methods={','.join(methods)}; nominal={nominal}; predictors={predictors}; pipeline={','.join(data.pipeline_steps)}; clean_columns={','.join(data.clean_frame.columns)}"
+        return f"added={','.join(added)}; methods={','.join(methods)}; nominal={nominal}; stratifiers={stratifiers}; pipeline={','.join(data.pipeline_steps)}; clean_columns={','.join(data.clean_frame.columns)}"
     return selected
 this.server = server
 app = this.application()

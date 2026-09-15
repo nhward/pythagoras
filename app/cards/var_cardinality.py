@@ -800,6 +800,8 @@ def instance():
         def StartAnalysis():
             # proxy_data frames are read-only to card consumers. Avoid cloning a
             # potentially multi-million-row frame merely to profile it.
+            Calculate.cancel()
+
             Calculate.invoke(incomingproxy_data(), Options())
 
         @this.suspendable(calc=True)

@@ -742,6 +742,7 @@ def instance():
 
         @this.suspendable()
         def StartAnalysis():
+            Calculate.cancel()
             Calculate.invoke(this.input_data().clone(), Options())
 
         @this.suspendable(calc=True)
@@ -829,6 +830,8 @@ def instance():
             recommended = set(map(tuple, analysis["votes"].to_numpy()))
             table["Recommended"] = [tuple(row) in recommended for row in table[["Family", "Criterion", "K"]].to_numpy()]
             return render.DataTable(table, width="100%", height="auto")
+
+        session.on_ended(Calculate.cancel)
 
         return SelectedData
 

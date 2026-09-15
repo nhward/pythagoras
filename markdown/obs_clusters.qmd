@@ -4,25 +4,27 @@ title: Cluster membership
 
 #### 🧭 Purpose
 
-_Compare clustering methods at the incoming K, the number of groups chosen upstream, and inspect their memberships in a shared two-dimensional view. Use this card after Number of clusters and predictor preparation. It can also add nominal membership predictors and learned pipeline steps for downstream modeling._
+_Compare clustering methods at the incoming K, the number of groups chosen upstream, and inspect their memberships in a shared two-dimensional view. Use this card after Number of clusters and predictor preparation. It can also add nominal membership stratifiers and learned pipeline steps for downstream modeling._
 
 #### 🎯 Goals
 
 1. **Primary:** Visualize how different methods group the same observations at the chosen K.
 1. **Secondary:** Inspect individual memberships and disagreements between methods.
-1. **Tertiary:** Optionally introduce membership predictors that can also be assigned to new observations.
+1. **Tertiary:** Optionally introduce membership stratifiers that can also be assigned to new observations.
 
 #### 🧠 How it works
 
 Clustering uses varying, real-valued numeric Predictor columns. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from fitting. Optional standardization and reproducible sampling prepare an analysis copy without changing outgoing predictor values.
 
-| Tab | Method |
-|---|---|
+: Table 1: Available tabs {tbl-colwidths="[30,120]"}
+
+| Tab         | Method                                                                           |
+|:------------|:---------------------------------------------------------------------------------|
 | **Partition** | K-means or PAM, which represents clusters by actual observations called medoids. |
 | **Agglomerative** | Successively merges observations, then cuts the hierarchy at K groups. |
 | **Divisive** | Uses DIANA to split a hierarchy into K groups. |
 | **Mixture** | Fits Gaussian mixtures at fixed K and selects the converged covariance structure with the lowest Bayesian information criterion (BIC), balancing fit and complexity. |
-| **Density** | Uses DBSCAN to find dense neighborhoods. A bounded radius search favors counts closest to K, then less unallocated observation importance. Exact K is not guaranteed. |
+| **Density** | Uses DBSCAN to find dense neighborhoods. A bounded radius search favors counts closest to K, then less unallocated observation importance. Not every observation is necessarily allocated a cluster. |
 | **Spectral** | Groups a graph connecting nearby observations. Too many disconnected components can prevent a result at K. |
 
 With weighting enabled, positive weights express observation importance and are normalized to mean one; zero-weight rows are excluded from fitting. Unequal weights are supported by Partition and Density. Other methods explain their unavailability; disabling weighting permits an equal-importance analysis.
@@ -41,8 +43,10 @@ The table follows the active tab. **Row** is the original one-based row position
 
 The footer offers three independent checkboxes:
 
-| Control | Added nominal Predictor |
-|---|---|
+: Table 2: Footer Buttons {tbl-colwidths="[50,40]"}
+
+| Control | Added nominal Stratifier |
+|:--------|:-------------------------|
 | **Add Partition members** | `cluster_partition` |
 | **Add Mixture members** | `cluster_mixture` |
 | **Add DBSCAN members** | `cluster_density` |
@@ -63,7 +67,7 @@ The card's Tour Guide gives a concise description of each setting.
 
 Compare membership disagreements using identifiers and the table. Separation in a projection is not evidence by itself that K is appropriate. Return to Number of clusters when the chosen count seems poorly supported.
 
-**unallocated** is a nominal level describing observations outside the assigned groups, not an additional coherent cluster. Evaluate whether membership predictors improve downstream validation. They summarize existing predictors and do not provide independent information.
+**unallocated** is a nominal level describing observations outside the assigned groups, not an additional coherent cluster. Use these Stratifier-role columns directly in Cluster profiling to investigate explanations for the groups. They summarize existing predictors and do not provide independent information.
 
 #### ⛔️ Limitations
 
@@ -77,12 +81,12 @@ Compare membership disagreements using identifiers and the table. Separation in 
 
 1. Confirm predictor and identifier roles, weighting, and the upstream K decision.
 1. Compare tabs and inspect unexpected memberships on the flip side.
-1. Check sensitivity to preparation and method choices before selecting membership predictors.
+1. Check sensitivity to preparation and method choices before selecting membership stratifiers.
 1. Select the required additions, reselecting them after any intended recipe change.
 1. Inspect Data journey and evaluate the resulting pipeline inside training partitions.
 
 #### 🔗 Data flow
 
 * **Input:** Upstream observations, roles, cluster-count decision, and any existing learned pipeline.
-* **Output:** With no selections, incoming data passes through. Selected additions append unordered categorical Predictors while preserving existing columns, rows, roles, K, and earlier pipeline steps. Projection coordinates are not exported.
+* **Output:** With no selections, incoming data passes through. Selected additions append unordered categorical Stratifiers while preserving existing columns, rows, roles, K, and earlier pipeline steps. Projection coordinates are not exported.
 * **Data journey:** Each selected method adds an **Add cluster membership** Learning entry. The pipeline stores an unfitted transformer so preprocessing and clusters are learned within each training partition. Additions are permitted after learning has begun; clearing a selection removes its step while retaining upstream steps.

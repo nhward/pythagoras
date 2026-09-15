@@ -629,6 +629,7 @@ def instance():
             frame = proxy.frame.copy()
             weighting = _weighting_column(proxy)
             sample_weight = frame[weighting].copy() if weighting else None
+            CalculateAnalysis.cancel()
             CalculateAnalysis.invoke(
                 frame,
                 Target(),
@@ -733,6 +734,8 @@ def instance():
                 "No missingness indicator has stable positive importance.",
                 class_="text-success",
             )
+
+        session.on_ended(CalculateAnalysis.cancel)
 
         return TransformedData
 

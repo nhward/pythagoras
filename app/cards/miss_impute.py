@@ -650,6 +650,7 @@ def instance():
 
         @this.suspendable()
         def StartAnalysis():
+            Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.suspendable(calc=True)

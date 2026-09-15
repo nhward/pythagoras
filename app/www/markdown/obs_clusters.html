@@ -850,91 +850,98 @@ content: "●";
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>Compare clustering methods at the incoming K, the number of groups chosen upstream, and inspect their memberships in a shared two-dimensional view. Use this card after Number of clusters and predictor preparation. It can also add nominal membership predictors and learned pipeline steps for downstream modeling.</em></p>
+<p><em>Compare clustering methods at the incoming K, the number of groups chosen upstream, and inspect their memberships in a shared two-dimensional view. Use this card after Number of clusters and predictor preparation. It can also add nominal membership stratifiers and learned pipeline steps for downstream modeling.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
 <li><strong>Primary:</strong> Visualize how different methods group the same observations at the chosen K.</li>
 <li><strong>Secondary:</strong> Inspect individual memberships and disagreements between methods.</li>
-<li><strong>Tertiary:</strong> Optionally introduce membership predictors that can also be assigned to new observations.</li>
+<li><strong>Tertiary:</strong> Optionally introduce membership stratifiers that can also be assigned to new observations.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
 <p>Clustering uses varying, real-valued numeric Predictor columns. Boolean, complex, shadow, and weighting columns are excluded. Rows with missing or infinite retained predictor values are omitted from fitting. Optional standardization and reproducible sampling prepare an analysis copy without changing outgoing predictor values.</p>
 <table class="caption-top">
+<caption>Table 1: Available tabs</caption>
 <colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
+<col style="width: 20%">
+<col style="width: 80%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Tab</th>
-<th>Method</th>
+<th style="text-align: left;">Tab</th>
+<th style="text-align: left;">Method</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Partition</strong></td>
-<td>K-means or PAM, which represents clusters by actual observations called medoids.</td>
+<td style="text-align: left;"><strong>Partition</strong></td>
+<td style="text-align: left;">K-means or PAM, which represents clusters by actual observations called medoids.</td>
 </tr>
 <tr class="even">
-<td><strong>Agglomerative</strong></td>
-<td>Successively merges observations, then cuts the hierarchy at K groups.</td>
+<td style="text-align: left;"><strong>Agglomerative</strong></td>
+<td style="text-align: left;">Successively merges observations, then cuts the hierarchy at K groups.</td>
 </tr>
 <tr class="odd">
-<td><strong>Divisive</strong></td>
-<td>Uses DIANA to split a hierarchy into K groups.</td>
+<td style="text-align: left;"><strong>Divisive</strong></td>
+<td style="text-align: left;">Uses DIANA to split a hierarchy into K groups.</td>
 </tr>
 <tr class="even">
-<td><strong>Mixture</strong></td>
-<td>Fits Gaussian mixtures at fixed K and selects the converged covariance structure with the lowest Bayesian information criterion (BIC), balancing fit and complexity.</td>
+<td style="text-align: left;"><strong>Mixture</strong></td>
+<td style="text-align: left;">Fits Gaussian mixtures at fixed K and selects the converged covariance structure with the lowest Bayesian information criterion (BIC), balancing fit and complexity.</td>
 </tr>
 <tr class="odd">
-<td><strong>Density</strong></td>
-<td>Uses DBSCAN to find dense neighborhoods. A bounded radius search favors counts closest to K, then less unallocated observation importance. Exact K is not guaranteed.</td>
+<td style="text-align: left;"><strong>Density</strong></td>
+<td style="text-align: left;">Uses DBSCAN to find dense neighborhoods. A bounded radius search favors counts closest to K, then less unallocated observation importance. Not every observation is necessarily allocated a cluster.</td>
 </tr>
 <tr class="even">
-<td><strong>Spectral</strong></td>
-<td>Groups a graph connecting nearby observations. Too many disconnected components can prevent a result at K.</td>
+<td style="text-align: left;"><strong>Spectral</strong></td>
+<td style="text-align: left;">Groups a graph connecting nearby observations. Too many disconnected components can prevent a result at K.</td>
 </tr>
 </tbody>
 </table>
 <p>With weighting enabled, positive weights express observation importance and are normalized to mean one; zero-weight rows are excluded from fitting. Unequal weights are supported by Partition and Density. Other methods explain their unavailability; disabling weighting permits an equal-importance analysis.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>Each tab colors the same analyzed observations by its own memberships. All tabs share coordinates and axis ranges. Axes show either t-SNE, a neighborhood-focused embedding, or principal components from PCA. Clustering is fitted in predictor space, not in this two-dimensional display. PCA can use importance-weighted axes; t-SNE does not weight its embedding.</p>
-<p>Colors and numbers identify groups within a method; matching colors across tabs do not imply matching groups. Density shows <strong>Unallocated</strong> in gray. Hover displays Identifier-role values when available, otherwise the original row position. Full-screen view enables Plotly tools. Unavailable results appear as explanatory messages, and the footer reports incoming K, analyzed rows, and predictor count.</p>
+<p>Colors and numbers identify groups within a method; matching colors across tabs do not imply matching groups. Density shows <strong>unallocated</strong> in gray. Hover displays Identifier-role values when available, otherwise the original row position. Full-screen view enables Plotly tools. Unavailable results appear as explanatory messages, and the footer reports incoming K, analyzed rows, and predictor count.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
 <p>The table follows the active tab. <strong>Row</strong> is the original one-based row position, <strong>Membership</strong> is the displayed label, and columns prefixed <strong>Data:</strong> contain incoming values. It includes analyzed rows in their original order, rather than every row that may receive an exported membership. An unavailable method displays its explanation instead.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
 <p>The footer offers three independent checkboxes:</p>
-<table class="caption-top">
+<table class="caption-top" style="width:90%;">
+<caption>Table 2: Footer Buttons</caption>
+<colgroup>
+<col style="width: 50%">
+<col style="width: 40%">
+</colgroup>
 <thead>
 <tr class="header">
-<th>Control</th>
-<th>Added nominal Predictor</th>
+<th style="text-align: left;">Control</th>
+<th style="text-align: left;">Added nominal Stratifier</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Add Partition members</strong></td>
-<td><code>cluster_partition</code></td>
+<td style="text-align: left;"><strong>Add Partition members</strong></td>
+<td style="text-align: left;"><code>cluster_partition</code></td>
 </tr>
 <tr class="even">
-<td><strong>Add Mixture members</strong></td>
-<td><code>cluster_mixture</code></td>
+<td style="text-align: left;"><strong>Add Mixture members</strong></td>
+<td style="text-align: left;"><code>cluster_mixture</code></td>
 </tr>
 <tr class="odd">
-<td><strong>Add DBSCAN members</strong></td>
-<td><code>cluster_density</code></td>
+<td style="text-align: left;"><strong>Add DBSCAN members</strong></td>
+<td style="text-align: left;"><code>cluster_density</code></td>
 </tr>
 </tbody>
 </table>
+<p>Membership levels are <code>c1</code>, <code>c2</code>, and so on, with <code>unallocated</code> as an additional DBSCAN level. These are unordered categorical labels.</p>
 <p>Select any combination, independently of the active tab. A numeric suffix avoids existing column names. Each selection immediately adds a preview column and a learned pipeline step. Unchecking removes that method’s addition. All three controls remain visible but disabled when incoming K is 1, including DBSCAN.</p>
 <p>Each selected recipe stays fixed until unchecked and checked again. Changing settings may therefore change the charts without updating an already selected recipe. Incoming data changes, including a new K, clear the selections. Failed additions are explained in the existing status text.</p>
-<p>Memberships are assigned to all rows with complete fitted predictors, including unsampled and zero-weight rows. Incomplete rows retain missing labels. DBSCAN assigns the nearest training core observation’s cluster within the learned radius, otherwise <strong>Unallocated</strong>. With border assignment disabled, a row must also meet the minimum neighborhood importance mass against the fixed training observations. New rows never create or merge clusters.</p>
+<p>Memberships are assigned to all rows with complete fitted predictors, including unsampled and zero-weight rows. Incomplete rows retain missing labels. DBSCAN assigns the nearest training core observation’s cluster within the learned radius, otherwise <strong>unallocated</strong>. With border assignment disabled, a row must also meet the minimum neighborhood importance mass against the fixed training observations. New rows never create or merge clusters.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
 <p>Compare membership disagreements using identifiers and the table. Separation in a projection is not evidence by itself that K is appropriate. Return to Number of clusters when the chosen count seems poorly supported.</p>
-<p><strong>Unallocated</strong> is a nominal level describing observations outside the assigned groups, not an additional coherent cluster. Evaluate whether membership predictors improve downstream validation. They summarize existing predictors and do not provide independent information.</p>
+<p><strong>unallocated</strong> is a nominal level describing observations outside the assigned groups, not an additional coherent cluster. Use these Stratifier-role columns directly in Cluster profiling to investigate explanations for the groups. They summarize existing predictors and do not provide independent information.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
 <li>Categorical predictors are not encoded. Missing-row exclusion and sampling can obscure small groups.</li>
@@ -947,14 +954,14 @@ content: "●";
 <ol type="1">
 <li>Confirm predictor and identifier roles, weighting, and the upstream K decision.</li>
 <li>Compare tabs and inspect unexpected memberships on the flip side.</li>
-<li>Check sensitivity to preparation and method choices before selecting membership predictors.</li>
+<li>Check sensitivity to preparation and method choices before selecting membership stratifiers.</li>
 <li>Select the required additions, reselecting them after any intended recipe change.</li>
 <li>Inspect Data journey and evaluate the resulting pipeline inside training partitions.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
 <li><strong>Input:</strong> Upstream observations, roles, cluster-count decision, and any existing learned pipeline.</li>
-<li><strong>Output:</strong> With no selections, incoming data passes through. Selected additions append unordered categorical Predictors while preserving existing columns, rows, roles, K, and earlier pipeline steps. Projection coordinates are not exported.</li>
+<li><strong>Output:</strong> With no selections, incoming data passes through. Selected additions append unordered categorical Stratifiers while preserving existing columns, rows, roles, K, and earlier pipeline steps. Projection coordinates are not exported.</li>
 <li><strong>Data journey:</strong> Each selected method adds an <strong>Add cluster membership</strong> Learning entry. The pipeline stores an unfitted transformer so preprocessing and clusters are learned within each training partition. Additions are permitted after learning has begun; clearing a selection removes its step while retaining upstream steps.</li>
 </ul>
 

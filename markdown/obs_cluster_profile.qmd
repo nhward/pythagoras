@@ -1,0 +1,91 @@
+---
+title: Cluster profiling
+---
+
+#### 🧭 Purpose
+
+_Explain existing cluster memberships with readable decision trees and assess how faithfully those trees reproduce the labels. Use this diagnostic card after Cluster membership has added nominal Stratifier columns. Explanations use Predictor-role variables; the card does not change observations, roles, or the learned pipeline._
+
+#### 🎯 Goals
+
+1. **Primary:** Identify simple variable thresholds and combinations that characterize cluster memberships.
+1. **Secondary:** Compare the trees' held-out accuracy and identify clusters that are poorly explained.
+
+#### 🧠 How it works
+
+Each eligible membership column gets its own classification tree. Eligible names are `cluster_partition`, `cluster_mixture`, and `cluster_density`, optionally followed by a numeric suffix such as `_2`. The column must have the Stratifier role. The assigned Target variable is not used as the response.
+
+Only Predictor-role columns supply explanatory variables. All recognized membership columns are excluded, even if assigned Predictor, along with weighting and shadow columns. Geometry, complex numbers, and nested values are unsupported. Numeric predictors receive median imputation; categorical predictors receive most-frequent imputation and one-hot encoding, which represents each category by a presence indicator. Dates are represented numerically.
+
+Stratified cross-validation divides the analyzed rows into folds while retaining class representation. Each fold learns its own preprocessing and tree from the other folds, then predicts its held-out rows. The displayed tree is fitted separately to the full analyzed sample. Consequently, its node purity is a training description, not a validation score.
+
+Missing membership labels are excluded. **Include unallocated** determines whether DBSCAN's `unallocated` label is treated as another class. With weighting enabled, zero-weight rows are excluded and positive importance weights are normalized to mean one. Weights affect tree fitting and accuracy; imputation and sampling use row counts. Above the observation cap, sampling is reproducible and stratified by membership.
+
+#### 🏞️ Front
+
+The navigation bar provides a tree for each eligible column, labeled **Partition**, **Mixture**, or **Density**, with any suffix retained. There is no aggregate tree. Tabs update when incoming membership columns or their roles change.
+
+Read each tree from the top. A left branch satisfies the displayed ≤ condition; a right branch means >. For a one-hot category indicator, ≤0.5 means that category is absent. Each node shows the predicted cluster, training purity, and row count, `n`. Purity is the fraction of observation importance belonging to that node's predicted class. Hover gives more precise purity and importance mass.
+
+Node colors distinguish predicted classes within the tree. Positions show tree structure rather than measured axes. Full-screen view enables Plotly tools. Unavailable analyses use the standard empty-plot display with an explanation; **No memberships** appears when no eligible columns exist.
+
+#### 🔄 Flip side
+
+**Model accuracy** compares every membership model. The other tabs follow the tree selected on the front.
+
+| Tab | Contents |
+|:----|:---------|
+| **Model accuracy** | Cross-validated scores, majority baselines, fold variability, analyzed rows, leaf count, and any diagnostic message. |
+| **Rules** | One row per leaf: the combined conditions, predicted cluster, row count, importance mass, and training purity. |
+| **Cluster accuracy** | Actual class counts, importance mass, and held-out recall for each cluster. |
+| **Confusion** | Actual classes in rows and predicted classes in columns. Values are normalized importance mass when weighting is enabled, otherwise observation counts. |
+
+| Measure | Interpretation |
+|:--------|:---------------|
+| **CV Accuracy** | Fraction of held-out observation importance assigned the correct label. |
+| **CV Balanced Accuracy** | Mean recall across classes, giving each class equal standing. |
+| **Majority baseline** | Accuracy obtained by always predicting the training fold's most prevalent class, using importance when enabled. |
+| **Balanced baseline** | Balanced accuracy of those same baseline predictions. |
+| **Fold SD** | Standard deviation of balanced accuracy across folds; not a confidence interval. |
+| **CV Recall** | Fraction of an actual class's held-out importance correctly assigned to that class. |
+
+Table scores are proportions; the footer displays percentages for the active tree, together with sampling, predictor, and weighting information.
+
+#### 🛠️ Controls and actions
+
+Select a membership tab to inspect its explanation and corresponding diagnostics. Settings recalculate the models; switching tabs uses the available results. Bookmark restoration retains the selected tab when it remains eligible.
+
+There is no Apply or Commit action. The card does not add variables or alter membership labels.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Strong held-out accuracy above the baseline suggests that a compact rule set can reproduce the existing labels. Compare balanced accuracy and per-cluster recall before accepting a high overall score: a dominant cluster can mask poor minority-cluster predictions.
+
+A tree need not predict every observed class. Small groups, limited depth, minimum leaf size, or weak explanatory predictors can leave a class with no winning leaf. Check **Cluster accuracy** and **Confusion** before interpreting an absent label. Removing `unallocated` excludes those rows; it does not force a separate leaf for each remaining cluster.
+
+These trees describe associations with existing memberships. They do not establish causes, validate K, or independently validate the upstream clustering process.
+
+#### ⛔️ Limitations
+
+* At least two observed classes with two analyzed rows each are required. Rare classes limit the fold count and can prevent assessment after sampling.
+* Incoming labels and any upstream learned transformations are held fixed during validation. Scores assess the explanatory tree, not the complete clustering pipeline on unseen data.
+* Correlated predictors can supply interchangeable rules. Deeper trees may improve fit while reducing readability and stability.
+* Sampling, excluded labels, importance weights, and differing class distributions can limit comparisons between membership methods.
+
+#### 📌 Suggested workflow
+
+1. Add the desired membership columns upstream and confirm their Stratifier roles.
+1. Compare tree structures and held-out scores across the membership tabs.
+1. Inspect per-cluster recall, confusion, and the exact leaf rules.
+1. Check sensitivity to tree complexity, weighting, and inclusion of `unallocated`.
+1. Investigate the resulting descriptions against domain knowledge and upstream clustering evidence.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream data, recognized Stratifier-role memberships, Predictor-role variables, and optional observation importance.
+* **Output:** The incoming data and pipeline pass through unchanged. Trees, imputed analysis values, and validation predictions remain diagnostic results.
+* **Data journey:** No transformation or learned pipeline step is added.

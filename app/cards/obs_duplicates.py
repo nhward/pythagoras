@@ -365,6 +365,7 @@ def instance():
                 MaxDifferences(),
                 max(0, before.shape[1] - 1),
             )
+            CalculateDuplicates.cancel()
             CalculateDuplicates.invoke(before, after, maximum)
 
         @this.suspendable(calc=True)

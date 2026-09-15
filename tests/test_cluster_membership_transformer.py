@@ -76,11 +76,11 @@ def test_pipeline_appends_feature_preserving_clean_input_and_unfitted_recipe():
     first = source.with_pipeline_step(scale, name='scale', preview_frame=scale.fit_transform(X))
     transformer = ClusterMembershipTransformer(('x','y'))
     preview = transformer.fit_transform(first.frame)
-    roles = RoleMap(); roles.set_roles('cluster', [Role.PREDICTOR])
+    roles = RoleMap(); roles.set_roles('cluster', [Role.STRATIFIER])
     result = first.with_pipeline_step(transformer, name='cluster_membership', preview_frame=preview, added_roles=roles)
     assert result.pipeline_steps == ('scale','cluster_membership')
     assert result.cluster_count == 2
-    assert result.role_map.roles_for('cluster') == {Role.PREDICTOR}
+    assert result.role_map.roles_for('cluster') == {Role.STRATIFIER}
     pd.testing.assert_frame_equal(result.clean_frame, X)
     assert not hasattr(result.pipeline.named_steps['cluster_membership'], 'model_')
     training = result.pipeline_for_training().fit(X.iloc[:5])

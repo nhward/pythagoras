@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Role assignment</title>
+<title>Cluster profiling</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -842,7 +842,7 @@ content: "●";
 
 
 <header id="title-block-header">
-<h1 class="title">Role assignment</h1>
+<h1 class="title">Cluster profiling</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -850,54 +850,121 @@ content: "●";
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Role assignment card declares how each variable is intended to participate in analysis. Roles allow downstream cards to distinguish predictors, outcomes, identifiers, ordering variables, and other special-purpose fields. Committed assignments change how later cards interpret retained values, while the <strong>None</strong> role removes a variable from downstream data.</em></p>
+<p><em>Explain existing cluster memberships with readable decision trees and assess how faithfully those trees reproduce the labels. Use this diagnostic card after Cluster membership has added nominal Stratifier columns. Explanations use Predictor-role variables; the card does not change observations, roles, or the learned pipeline.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Give every variable an explicit analytical role.</li>
-<li><strong>Secondary:</strong> Validate that types, missingness, and cardinality are appropriate for those roles.</li>
-<li><strong>Tertiary:</strong> Make downstream card behavior predictable and reviewable.</li>
+<li><strong>Primary:</strong> Identify simple variable thresholds and combinations that characterize cluster memberships.</li>
+<li><strong>Secondary:</strong> Compare the trees’ held-out accuracy and identify clusters that are poorly explained.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<dl>
-<dt>Drag each variable into one role container. The supported roles are:</dt>
-<dd>
-<p>Table 1: Role table {tbl-colwidths=“[30,90]”} | Role | Intended use | |:———-|:———————————————————-| | <strong>Target</strong> | Outcome to be predicted. | | <strong>Predictor</strong> | Input available to a model or analysis. | | <strong>Treatment</strong> | Exposure who se possible causal effect is of interest. | | <strong>Identifier</strong> | One or more fields that identify an observation. | | <strong>Weighting</strong> | Nonnegative numeric case weight. | | <strong>Partition</strong> | Predefined training or test membership. | | <strong>Stratifier</strong> | Low-cardinality grouping used for comparison rather than prediction. | | <strong>Sequence</strong> | Meaningful observation order, commonly time. | | <strong>Sensitive</strong> | Attribute retained for fairness assessment rather than prediction. | | <strong>Geometry</strong> | Spatial object used by geographic methods. | | <strong>None</strong> | Variable removed from the data passed to downstream cards. |</p>
-</dd>
-</dl>
-<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.</p>
+<p>Each eligible membership column gets its own classification tree. Eligible names are <code>cluster_partition</code>, <code>cluster_mixture</code>, and <code>cluster_density</code>, optionally followed by a numeric suffix such as <code>_2</code>. The column must have the Stratifier role. The assigned Target variable is not used as the response.</p>
+<p>Only Predictor-role columns supply explanatory variables. All recognized membership columns are excluded, even if assigned Predictor, along with weighting and shadow columns. Geometry, complex numbers, and nested values are unsupported. Numeric predictors receive median imputation; categorical predictors receive most-frequent imputation and one-hot encoding, which represents each category by a presence indicator. Dates are represented numerically.</p>
+<p>Stratified cross-validation divides the analyzed rows into folds while retaining class representation. Each fold learns its own preprocessing and tree from the other folds, then predicts its held-out rows. The displayed tree is fitted separately to the full analyzed sample. Consequently, its node purity is a training description, not a validation score.</p>
+<p>Missing membership labels are excluded. <strong>Include unallocated</strong> determines whether DBSCAN’s <code>unallocated</code> label is treated as another class. With weighting enabled, zero-weight rows are excluded and positive importance weights are normalized to mean one. Weights affect tree fitting and accuracy; imputation and sampling use row counts. Above the observation cap, sampling is reproducible and stratified by membership.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.</p>
+<p>The navigation bar provides a tree for each eligible column, labeled <strong>Partition</strong>, <strong>Mixture</strong>, or <strong>Density</strong>, with any suffix retained. There is no aggregate tree. Tabs update when incoming membership columns or their roles change.</p>
+<p>Read each tree from the top. A left branch satisfies the displayed ≤ condition; a right branch means &gt;. For a one-hot category indicator, ≤0.5 means that category is absent. Each node shows the predicted cluster, training purity, and row count, <code>n</code>. Purity is the fraction of observation importance belonging to that node’s predicted class. Hover gives more precise purity and importance mass.</p>
+<p>Node colors distinguish predicted classes within the tree. Positions show tree structure rather than measured axes. Full-screen view enables Plotly tools. Unavailable analyses use the standard empty-plot display with an explanation; <strong>No memberships</strong> appears when no eligible columns exist.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side lists roles in the most recently committed output. Variables committed to <strong>None</strong> are absent because they are no longer part of that output. Uncommitted dragging is not shown.</p>
+<p><strong>Model accuracy</strong> compares every membership model. The other tabs follow the tree selected on the front.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 66%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Tab</th>
+<th style="text-align: left;">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Model accuracy</strong></td>
+<td style="text-align: left;">Cross-validated scores, majority baselines, fold variability, analyzed rows, leaf count, and any diagnostic message.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Rules</strong></td>
+<td style="text-align: left;">One row per leaf: the combined conditions, predicted cluster, row count, importance mass, and training purity.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Cluster accuracy</strong></td>
+<td style="text-align: left;">Actual class counts, importance mass, and held-out recall for each cluster.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Confusion</strong></td>
+<td style="text-align: left;">Actual classes in rows and predicted classes in columns. Values are normalized importance mass when weighting is enabled, otherwise observation counts.</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top">
+<colgroup>
+<col style="width: 36%">
+<col style="width: 64%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Measure</th>
+<th style="text-align: left;">Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>CV Accuracy</strong></td>
+<td style="text-align: left;">Fraction of held-out observation importance assigned the correct label.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>CV Balanced Accuracy</strong></td>
+<td style="text-align: left;">Mean recall across classes, giving each class equal standing.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Majority baseline</strong></td>
+<td style="text-align: left;">Accuracy obtained by always predicting the training fold’s most prevalent class, using importance when enabled.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Balanced baseline</strong></td>
+<td style="text-align: left;">Balanced accuracy of those same baseline predictions.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Fold SD</strong></td>
+<td style="text-align: left;">Standard deviation of balanced accuracy across folds; not a confidence interval.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>CV Recall</strong></td>
+<td style="text-align: left;">Fraction of an actual class’s held-out importance correctly assigned to that class.</td>
+</tr>
+</tbody>
+</table>
+<p>Table scores are proportions; the footer displays percentages for the active tree, together with sampling, predictor, and weighting information.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p><strong>Commit Assignments</strong> becomes available when the proposed role map is valid. Clicking it publishes the assignments and removes <strong>None</strong> variables from the data passed downstream. Dragging alone changes neither the exported roles nor columns. A removed variable remains available within this card and can be restored by assigning another role and committing again.</p>
-<p>If several variables form an identifier, their values are combined using the configured separator when an observation label is needed. Other role changes alter downstream eligibility; assigning <strong>None</strong> also reduces the data-frame width.</p>
+<p>Select a membership tab to inspect its explanation and corresponding diagnostics. Settings recalculate the models; switching tabs uses the available results. Bookmark restoration retains the selected tab when it remains eligible.</p>
+<p>There is no Apply or Commit action. The card does not add variables or alter membership labels.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Assign roles according to how variables may legitimately be used at prediction time. An identifier is not automatically a useful predictor; a sensitive attribute may be essential for auditing but inappropriate as a model input; and a sequence should represent a meaningful order rather than arbitrary row position.</p>
-<p>If a variable genuinely needs two analytical uses, create a deliberate duplicate rather than assigning multiple roles implicitly.</p>
+<p>Strong held-out accuracy above the baseline suggests that a compact rule set can reproduce the existing labels. Compare balanced accuracy and per-cluster recall before accepting a high overall score: a dominant cluster can mask poor minority-cluster predictions.</p>
+<p>A tree need not predict every observed class. Small groups, limited depth, minimum leaf size, or weak explanatory predictors can leave a class with no winning leaf. Check <strong>Cluster accuracy</strong> and <strong>Confusion</strong> before interpreting an absent label. Removing <code>unallocated</code> excludes those rows; it does not force a separate leaf for each remaining cluster.</p>
+<p>These trees describe associations with existing memberships. They do not establish causes, validate K, or independently validate the upstream clustering process.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>Validation can detect structural conflicts but cannot determine the correct scientific role.</li>
-<li>Sampling may be used to assess cardinality and missingness on very large datasets.</li>
-<li>Most singleton roles reflect current application and modeling constraints, not universal statistical rules.</li>
-<li>Committing a plausible role map does not prevent leakage from conceptually invalid predictors.</li>
-<li><strong>None</strong> removes a variable only from this card’s output; it does not alter the upstream dataset.</li>
+<li>At least two observed classes with two analyzed rows each are required. Rare classes limit the fold count and can prevent assessment after sampling.</li>
+<li>Incoming labels and any upstream learned transformations are held fixed during validation. Scores assess the explanatory tree, not the complete clustering pipeline on unseen data.</li>
+<li>Correlated predictors can supply interchangeable rules. Deeper trees may improve fit while reducing readability and stability.</li>
+<li>Sampling, excluded labels, importance weights, and differing class distributions can limit comparisons between membership methods.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Identify the target, if the analysis is supervised.</li>
-<li>Separate identifiers, sequence fields, partitions, weights, and geometry from predictors.</li>
-<li>Assign exclusion and auditing roles deliberately.</li>
-<li>Resolve every validation message.</li>
-<li>Commit and confirm the assignments on the flip side.</li>
+<li>Add the desired membership columns upstream and confirm their Stratifier roles.</li>
+<li>Compare tree structures and held-out scores across the membership tabs.</li>
+<li>Inspect per-cluster recall, confusion, and the exact leaf rules.</li>
+<li>Check sensitivity to tree complexity, weighting, and inclusion of <code>unallocated</code>.</li>
+<li>Investigate the resulting descriptions against domain knowledge and upstream clustering evidence.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> The upstream variables and current role map.</li>
-<li><strong>Output:</strong> Retained values with the committed role map; variables assigned <strong>None</strong> are omitted.</li>
-<li><strong>Data journey:</strong> A committed role change or <strong>None</strong> removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.</li>
+<li><strong>Input:</strong> Upstream data, recognized Stratifier-role memberships, Predictor-role variables, and optional observation importance.</li>
+<li><strong>Output:</strong> The incoming data and pipeline pass through unchanged. Trees, imputed analysis values, and validation predictions remain diagnostic results.</li>
+<li><strong>Data journey:</strong> No transformation or learned pipeline step is added.</li>
 </ul>
 
 
