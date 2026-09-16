@@ -1,0 +1,102 @@
+---
+title: Data coverage
+---
+
+#### 🧭 Purpose
+
+_Find combinations of strata, treatments, and sensitive groups that occur less or more often than expected. Use this diagnostic card after assigning variable roles to identify gaps that may limit comparisons or model assessment. Coverage is measured against an independence reference derived from the incoming data; the card leaves those data unchanged._
+
+#### 🎯 Goals
+
+1. **Primary:** Identify under-represented and empty intersections that deserve investigation.
+1. **Secondary:** Distinguish relative deficits from small counts that reflect uncommon individual levels.
+1. **Tertiary:** Inspect over-representation and the associations behind uneven coverage.
+
+#### 🧠 How it works
+
+An intersection is a combination containing one level from each selected variable, such as region North, treatment Control, and group A. The card accepts two to five variables with Stratifier, Treatment, or Sensitive roles. Variables must have at least two observed nonmissing levels and meet the cardinality limit. Numeric values are treated as discrete levels, without binning. Initially, the first two eligible variables are selected.
+
+The card counts every combination of levels present in the analyzed rows, including combinations with no observations. Expected counts use **mutual independence**: the reference assumes that knowing one selected variable's level does not change another's proportions.
+
+For an intersection, the expected count is the number of analyzed rows multiplied by each constituent level's overall proportion. For example, among 200 rows, a region containing 40% of observations and a treatment containing 25% would have an expected intersection count of 20. This is a reference count, not a collection quota.
+
+The Pearson residual measures departure from that reference:
+
+$$
+r = \frac{\text{observed} - \text{expected}}{\sqrt{\text{expected}}}.
+$$
+
+Negative residuals indicate deficits; positive residuals indicate excesses. Colors use descriptive thresholds at −4, −2, 2, and 4. They are not adjusted significance tests.
+
+By default, rows missing any selected variable are omitted. **Include missing values as a level** retains them as explicit groups. Counts and expected proportions always use the same rows. Missing values in unrelated columns do not exclude observations. There is no sampling, and assigned importance weights are not applied.
+
+#### 🏞️ Front
+
+The mosaic divides a rectangle into intersection tiles, alternating horizontal and vertical splits in selection order. Positions describe groups rather than continuous measurement axes. Larger tiles receive level labels and an observed count; hover identifies intersections and reports counts, their ratio, and the residual.
+
+: Table 1 - Coverage colors
+
+| Color | Pearson residual | Interpretation |
+|:------|:-----------------|:---------------|
+| Dark red | ≤ −4 | Strongly under-represented. |
+| Light red | > −4 and ≤ −2 | Under-represented. |
+| Gray | > −2 and < 2 | Near expectation by these thresholds. |
+| Light blue | ≥ 2 and < 4 | Over-represented. |
+| Dark blue | ≥ 4 | Strongly over-represented. |
+
+**Observed counts** gives the conventional mosaic: tile area is proportional to the observed count. Empty intersections have zero area and appear as boundary diamonds, which may overlap. **Expected counts** instead sizes tiles by their reference counts, exposing empty and severely under-represented combinations. Changing tile areas does not change colors or table results.
+
+The legend appears only in full-screen view, with coloring enabled. Full screen also enables the vertical Plotly mode-bar and axis titles. The horizontal title names the first, third, and fifth selected variables; the vertical title names the second and fourth, where present. Arrows indicate successive subdivisions. Category levels remain in tiles and hover because their boundaries can differ between branches. The footer summarizes empty intersections, residual-based deficits and excesses, sparse expected counts, and omitted rows. Invalid selections and excessive intersection counts produce an empty-plot explanation rather than silently dropping groups.
+
+#### 🔄 Flip side
+
+The filterable table includes every analyzed intersection, including empty ones. It initially sorts by Pearson residual from lowest to highest, putting the strongest standardized deficits first. Decimal values are rounded to four places.
+
+: Table 2 - Coverage table
+
+| Column | Meaning |
+|:-------|:--------|
+| **… (level)** | Each selected variable's level in the intersection. |
+| **Observed**, **Expected** | Actual count and independence-reference count. |
+| **Observed %**, **Expected %** | Corresponding percentages of analyzed rows. |
+| **Observed/expected** | Relative coverage; below one indicates a deficit. |
+| **Shortfall** | Expected minus observed, bounded below by zero. |
+| **Pearson residual**, **Coverage** | Standardized departure and its color category. |
+| **Empty** | Whether the observed count is zero. |
+| **Expected < 5** | A sparse reference count requiring cautious interpretation. |
+
+#### 🛠️ Controls and actions
+
+Flip the card to inspect precise counts, filter the table, or expand it for the legend and more plotting space. Changes to selections and display controls update the diagnostic output only. There is no Apply or Commit action.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Prioritize empty and under-represented combinations that matter to the intended analysis. Compare residual, observed count, ratio, and shortfall: statistical departure and practical sample adequacy are different questions. A gray tile can still contain too few observations for reliable assessment.
+
+Check whether gaps reflect collection problems, missing labels, genuine associations, or impossible combinations. A treatment restricted to certain groups can create expected deficits under independence without indicating a data error. Additional collection is appropriate only where the combination is meaningful and relevant.
+
+#### ⛔️ Limitations
+
+* Independence is not an external population benchmark; the card cannot establish representative sampling or fairness.
+* Sparse counts weaken residual-based interpretation. No p-values or multiple-comparison corrections are calculated.
+* Levels absent from the analyzed rows, including unused declared categories, are not represented. The card cannot discover groups missing entirely from the data.
+* Missing-value handling changes the analyzed population and reference proportions.
+* Intersection counts grow rapidly with each added variable. Role, cardinality, and intersection limits constrain the display; nested values are unsupported.
+
+#### 📌 Suggested workflow
+
+1. Confirm the relevant Stratifier, Treatment, and Sensitive roles.
+1. Begin with two variables and inspect the counts and omitted-row summary.
+1. Switch to **Expected counts** to expose empty combinations.
+1. Inspect deficits, shortfalls, and sparse expected counts on the flip side.
+1. Validate important gaps against domain constraints before extending the comparison or collecting more data.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream observations and eligible Stratifier, Treatment, and Sensitive variables.
+* **Output:** Incoming values, roles, and pipeline pass through unchanged. Counts and mosaics remain diagnostic results.
+* **Data journey:** No transformation or learned pipeline step is added.

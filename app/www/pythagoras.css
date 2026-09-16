@@ -941,3 +941,8 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
     content: "●";
 }
+
+/* Make plotly titles look like primary-text */
+.js-plotly-plot .gtitle {
+    fill: var(--bs-primary) !important;
+}

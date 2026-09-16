@@ -43,7 +43,8 @@ def _variables(data, include_target=False):
 
 
 def _stratifiers(data):
-    return [c for c in data.columns if Role.STRATIFIER in data.role_map.roles_for(c)
+    allowed_roles = {Role.STRATIFIER, Role.TREATMENT, Role.SENSITIVE}
+    return [c for c in data.columns if allowed_roles.intersection(data.role_map.roles_for(c))
             and not data.frame[c].map(lambda x: isinstance(x, (list, dict, set, tuple, np.ndarray))).any()]
 
 

@@ -81,7 +81,7 @@ class TestProfile:
     def test_no_predictors_and_rare_class(self):
         data=source()
         for c in ['x','category']:data.role_map.set_roles(c,[Role.NONE])
-        assert 'No eligible' in analyze(data).message
+        assert 'No Predictor-role' in analyze(data).message
         data=source();data.frame['cluster_partition']=['c1']*59+['c2']
         assert 'two analyzed observations' in analyze(data).message
     def test_fold_pipeline_handles_unseen_category(self):
@@ -112,7 +112,7 @@ def by_id(page,name):
 def test_tree_metrics_tables_and_pass_through(page,app):
     page.goto(app.url)
     expect(by_id(page,'Accuracy')).to_contain_text('CV accuracy',timeout=60000)
-    expect(by_id(page,'Accuracy')).to_contain_text('59 of 59 eligible rows; 2 predictors')
+    expect(by_id(page,'Accuracy')).to_contain_text('59 of 59 rows; 2 predictors')
     expect(by_id(page,'Accuracy')).to_contain_text('Observation importance applied')
     expect(by_id(page,'Tree_cluster_partition').locator('.js-plotly-plot')).to_be_visible()
     expect(by_id(page,'PassThrough')).to_contain_text('unchanged=True')
@@ -134,9 +134,9 @@ def test_target_switch_and_weighting_option(page,app):
     expect(by_id(page,'Accuracy')).to_contain_text('Density_2:',timeout=60000)
     page.locator('.card').first.hover();page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'UseWeights').uncheck()
-    expect(by_id(page,'Accuracy')).to_contain_text('60 of 60 eligible rows',timeout=60000)
+    expect(by_id(page,'Accuracy')).to_contain_text('60 of 60 rows',timeout=60000)
     by_id(page,'Unallocated').uncheck()
-    expect(by_id(page,'Accuracy')).to_contain_text('50 of 50 eligible rows',timeout=60000)
+    expect(by_id(page,'Accuracy')).to_contain_text('50 of 50 rows',timeout=60000)
     expect(by_id(page,'PassThrough')).to_contain_text('unchanged=True')
 
 
