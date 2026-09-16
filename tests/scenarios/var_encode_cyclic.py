@@ -2,13 +2,16 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
+
 import pandas as pd
-from cyclic_pandas import as_cyclic
 from cards.var_encode import instance
+from cyclic_pandas import as_cyclic
 from proxy_data import proxy_data
-from shiny import render,ui
+from shiny import render, ui
+
 frame=pd.DataFrame({'hour':as_cyclic(pd.Series([0.,6.,12.,18.,None]),period=24),
     'season':as_cyclic(pd.Series(pd.Categorical(['winter','spring','summer','autumn',None],
         categories=['winter','spring','summer','autumn'],ordered=True)))})

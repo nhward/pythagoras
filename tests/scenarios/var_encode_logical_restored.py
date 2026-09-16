@@ -2,13 +2,15 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
+
 import pandas as pd
-from cyclic_pandas import as_cyclic
 from cards.var_encode import instance
 from proxy_data import proxy_data
-from shiny import render,ui
+from shiny import render, ui
+
 frame=pd.DataFrame({'flag':pd.Series([True,False,True,False,None],dtype='boolean')})
 source=proxy_data(_df=frame,_name='Logical encoding example')
 this=instance()

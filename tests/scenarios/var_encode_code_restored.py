@@ -2,13 +2,15 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
+
 import pandas as pd
 from cards.var_encode import instance
 from proxy_data import proxy_data
-from roles import Role,RoleMap
-from shiny import reactive,render,ui
+from roles import Role, RoleMap
+from shiny import reactive, render, ui
 
 frame=pd.DataFrame({'code':pd.Series(['a','b','c']*6,dtype='string'),
     'nominal':pd.Categorical(['yes','no']*9), 'target':[float(i) for i in range(18)],

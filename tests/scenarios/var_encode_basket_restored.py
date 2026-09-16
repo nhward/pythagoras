@@ -2,13 +2,16 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
+
 import pandas as pd
-from list_pandas import as_list
 from cards.var_encode import instance
+from list_pandas import as_list
 from proxy_data import proxy_data
-from shiny import render,ui
+from shiny import render, ui
+
 frame=pd.DataFrame({'flag':as_list(pd.Series([['apple','apple','pear'],['pear'],[],None,['apple']]))})
 source=proxy_data(_df=frame,_name='Basket encoding example')
 this=instance()

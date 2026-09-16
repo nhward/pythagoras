@@ -2,12 +2,14 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
+
 import pandas as pd
 from cards.var_encode import instance
 from proxy_data import proxy_data
-from shiny import render,ui
+from shiny import render, ui
 
 frame=pd.DataFrame({'binary':pd.Categorical(['yes','no','yes','no',None,'yes']),
     'color':pd.Categorical(['red','blue','green','red','red','blue']), 'numeric':range(6)})
