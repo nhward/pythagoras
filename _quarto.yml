@@ -8,6 +8,7 @@ author: "Nick Ward"
 css: app/www/pythagoras.css
 format:
   html:
+    html-math-method: mathml
     toc: false
     embed-resources: true
     minimal: true

@@ -318,8 +318,7 @@ def instance():
     this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers."
 
     def front():
-        return ui.navset_bar(*(ui.nav_panel(method, shinywidgets.output_widget(f"Chart_{method}", fill=True,
-            guide=this, title=f"{method} membership", position="left",
+        return ui.navset_bar(*(ui.nav_panel(method, shinywidgets.output_widget(f"Chart_{method}", fill=True, guide=this, title=f"{method} membership", position="left",
             text="Clusters are fitted in numeric predictor space and colored on the same 2D coordinates in every tab. Colors identify labels within each method, not equivalent groups across methods. Hover shows Identifier-role values when available, otherwise the original row position. Projection separation does not establish cluster validity."),
             value=method) for method in METHODS), id="ClusterType", selected="Partition", title=None, padding=0, fillable=True)
     this.front = front

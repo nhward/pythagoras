@@ -90,9 +90,15 @@ class proxy_data:
         clean_columns = list(self._clean_df.columns)
         current_columns = list(self._df.columns)
         if clean_columns != current_columns:
+            declared_removals = {
+                column for record in self._processing_records
+                if record.stage == "Learning"
+                for column in record.parameters.get("removed_columns", ())
+            }
+            retained_clean = [column for column in clean_columns if column not in declared_removals]
             if (not self.has_pipeline or not self._df.columns.is_unique
-                    or current_columns[:len(clean_columns)] != clean_columns):
-                raise ValueError("clean and current frames must have identical columns except appended pipeline features")
+                    or current_columns[:len(retained_clean)] != retained_clean):
+                raise ValueError("clean and current frames must have identical columns except declared pipeline additions or removals")
 
         # If no roles defined at all, default every column to PREDICTOR
         if not self._roles.column_roles:
@@ -251,14 +257,16 @@ class proxy_data:
         operation: str | None = None,
         preview_frame: pd.DataFrame | gpd.GeoDataFrame,
         added_roles: RoleMap | None = None,
+        removed_columns: _Iterable[str] = (),
     ) -> proxy_data:
         """Return a successor with an unfitted learned transformer appended.
 
         ``preview_frame`` is the card's full-data, fitted result for interactive
         display only. The stored estimator is cloned, so fitted attributes from
         that preview cannot leak into later train/test or cross-validation fits.
-        Appended columns must be declared in ``added_roles``; existing columns
-        and row indices remain intact, and clean_frame stays the pipeline input.
+        Appended columns must be declared in ``added_roles``. Removals must be
+        explicit in ``removed_columns``; remaining column order and row indices
+        stay intact. clean_frame remains the original pipeline input.
         """
         if not isinstance(transformer, BaseEstimator):
             raise TypeError("transformer must be a scikit-learn estimator")
@@ -267,9 +275,17 @@ class proxy_data:
         added = [] if added_roles is None else list(added_roles.column_roles)
         if set(added) & set(self.frame.columns):
             raise ValueError("Added pipeline columns must not overwrite existing columns")
-        if list(preview_frame.columns) != [*self.frame.columns, *added]:
-            raise ValueError("pipeline steps must preserve DataFrame columns except explicitly declared additions")
+        if isinstance(removed_columns, str):
+            raise TypeError("removed_columns must be a collection of column names")
+        removed = list(removed_columns)
+        if len(set(removed)) != len(removed) or not set(removed).issubset(self.frame.columns):
+            raise ValueError("Removed pipeline columns must be unique existing columns")
+        retained = [column for column in self.frame.columns if column not in removed]
+        if list(preview_frame.columns) != [*retained, *added]:
+            raise ValueError("pipeline steps must preserve DataFrame columns except explicitly declared additions or removals")
         roles = self._copy_roles()
+        for column in removed:
+            roles.clear_roles(column)
         for column in added:
             assigned = added_roles.roles_for(column)
             if not assigned:
@@ -299,6 +315,8 @@ class proxy_data:
             for key, value in transformer.get_params(deep=False).items()
             if key not in omitted
         }
+        if removed:
+            parameters["removed_columns"] = list(removed)
         processing = ProcessingRecord(
             stage="Learning",
             card=step_name,

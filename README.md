@@ -172,7 +172,7 @@ Drag-and-drop ordering is handled via:
 
 ### 📊 Data preview
 
-* Data coverage
+* [Data coverage](app/www/markdown/data_coverage.html)
 * Variable plots
 * Variable summary
 * [Data homogeneity](app/www/markdown/data_homogeneity.html)
@@ -201,16 +201,11 @@ Drag-and-drop ordering is handled via:
 * [Parallel coordinates](app/www/markdown/data_parallel.html)
 * [Variable correlation](app/www/markdown/var_correlation.html)
 
-### 🛏️ Embedding
+### 🆘 Encoding
 
+* [Variable encoding](app/www/markdown/var_encode.html)
 * Embedding Datetime  (Components)
 * Embedding Text      ('word-to-vector', topic, sentiment)
-* Embedding Nominal   (one-hot for card > 2)
-* Embedding Ordinal   (label + dummy/ orthogonal contrasts)
-* Embedding Codes     (target encoding ++)
-* Embedding baskets   (pivoting)
-* Embedding Cyclic    (sine & cosine components)
-
 
 ### 💐 Clusters
 

@@ -24,7 +24,6 @@ ul.task-list li input[type="checkbox"] {
 width: 0.8em;
 margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
 }
-.display.math{display: block; text-align: center; margin: 0.5rem auto;}
 
 html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
@@ -870,7 +869,10 @@ text-align: center;
 .card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
 content: "●";
 }
-</style>
+
+.js-plotly-plot .gtitle {
+fill: var(--bs-primary) !important;
+}</style>
 </head>
 
 <body>
@@ -1006,14 +1008,19 @@ content: "●";
 <li><a href="app/www/markdown/var_roles.html">Role assignment</a></li>
 <li><a href="app/www/markdown/var_modify.html">Variable modification</a></li>
 <li><a href="app/www/markdown/var_cardinality.html">Variable cardinality</a></li>
-<li>Data coverage</li>
+</ul>
+<h3 id="data-preview">📊 Data preview</h3>
+<ul>
+<li><a href="app/www/markdown/data_coverage.html">Data coverage</a></li>
 <li>Variable plots</li>
+<li>Variable summary</li>
+<li><a href="app/www/markdown/data_homogeneity.html">Data homogeneity</a></li>
+<li><a href="app/www/markdown/var_dissimilar.html">Variable dissimilarity</a></li>
 </ul>
 <h3 id="data-cleaning">🧹 Data cleaning</h3>
 <ul>
 <li><a href="app/www/markdown/obs_duplicates.html">Duplicate Observations</a></li>
-<li><a href="app/www/markdown/data_homogeneity.html">Data homogeneity</a></li>
-<li><a href="app/www/markdown/var_dissimilar.html">Variable dissimilarity</a></li>
+<li>Variable coverage</li>
 </ul>
 <h3 id="missing-values">∅ Missing values</h3>
 <ul>
@@ -1024,6 +1031,7 @@ content: "●";
 <li><a href="app/www/markdown/miss_map.html">Excessive missingness</a></li>
 <li><a href="app/www/markdown/miss_rules.html">Missingness rules</a></li>
 <li><a href="app/www/markdown/miss_impute.html">Learned imputation</a></li>
+<li>Manual imputation</li>
 </ul>
 <h3 id="preprocessing">🧠 Preprocessing</h3>
 <ul>
@@ -1031,10 +1039,18 @@ content: "●";
 <li><a href="app/www/markdown/data_parallel.html">Parallel coordinates</a></li>
 <li><a href="app/www/markdown/var_correlation.html">Variable correlation</a></li>
 </ul>
+<h3 id="encoding">🆘 Encoding</h3>
+<ul>
+<li><a href="app/www/markdown/var_encode.html">Variable encoding</a></li>
+<li>Embedding Datetime (Components)</li>
+<li>Embedding Text (‘word-to-vector’, topic, sentiment)</li>
+</ul>
 <h3 id="clusters">💐 Clusters</h3>
 <ul>
 <li><a href="app/www/markdown/obs_k_clusters.html">Number of clusters</a></li>
-<li><a href="app/www/markdown/?????.html">Cluster charts</a></li>
+<li><a href="app/www/markdown/obs_clusters.html">Cluster charts</a></li>
+<li><a href="app/www/markdown/obs_cluster_profile.html">Cluster profiling</a></li>
+<li>stratifier violin charts</li>
 </ul>
 <h3 id="outliers">☢️ Outliers</h3>
 <ul>

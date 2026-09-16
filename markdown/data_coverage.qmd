@@ -14,7 +14,7 @@ _Find combinations of strata, treatments, and sensitive groups that occur less o
 
 #### 🧠 How it works
 
-An intersection is a combination containing one level from each selected variable, such as region North, treatment Control, and group A. The card accepts two to five variables with Stratifier, Treatment, or Sensitive roles. Variables must have at least two observed nonmissing levels and meet the cardinality limit. Numeric values are treated as discrete levels, without binning. Initially, the first two eligible variables are selected.
+An intersection is a combination containing one level from each selected variable, such as region North, treatment Control, and group A. The card accepts two to five variables with Stratifier, Treatment, or Sensitive roles. Variables must have at least two observed non-missing levels and meet the cardinality limit. Numeric values are treated as discrete levels, without binning. Initially, the first two eligible variables are selected.
 
 The card counts every combination of levels present in the analyzed rows, including combinations with no observations. Expected counts use **mutual independence**: the reference assumes that knowing one selected variable's level does not change another's proportions.
 
@@ -25,6 +25,7 @@ The Pearson residual measures departure from that reference:
 $$
 r = \frac{\text{observed} - \text{expected}}{\sqrt{\text{expected}}}.
 $$
+
 
 Negative residuals indicate deficits; positive residuals indicate excesses. Colors use descriptive thresholds at −4, −2, 2, and 4. They are not adjusted significance tests.
 
