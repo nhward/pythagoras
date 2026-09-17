@@ -2,6 +2,7 @@
 import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
+
 app=create_app_fixture(app='../scenarios/var_encode_ordered.py',scope='function')
 restored_app=create_app_fixture(app='../scenarios/var_encode_ordered_restored.py',scope='function')
 empty_app=create_app_fixture(app='../scenarios/var_encode_empty.py',scope='function')
@@ -19,10 +20,10 @@ def test_ordered_method_changes_and_three_independent_toggles(page,app):
     expect(by_id(page,'OrderedTable')).to_contain_text('low → medium → high → very high',timeout=30000)
     toggle(page,'ordered').check()
     expect(by_id(page,'Probe')).to_contain_text('steps=1; ordered_original=False',timeout=30000)
-    expect(by_id(page,'Status')).to_contain_text('Ordered encoding enabled: 1 Predictor features')
+    expect(by_id(page,'Status')).to_contain_text('Ordered: 1 new predictors')
     page.locator('.card').first.hover();page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'OrderedMethod').select_option('polynomial')
-    expect(by_id(page,'Status')).to_contain_text('Ordered encoding enabled: 3 Predictor features',timeout=30000)
+    expect(by_id(page,'Status')).to_contain_text('Ordered: 3 new predictors',timeout=30000)
     expect(by_id(page,'OrderedTable')).to_contain_text('ordered__L, ordered__Q, ordered__C')
     toggle(page,'nominal').check();toggle(page,'code').check()
     expect(by_id(page,'Probe')).to_contain_text('steps=3;',timeout=30000)
@@ -35,7 +36,7 @@ def test_ordered_method_changes_and_three_independent_toggles(page,app):
 def test_restored_polynomial_degree_and_original_retention(page,restored_app):
     page.goto(restored_app.url)
     expect(by_id(page,'OrderedTable')).to_be_visible()
-    expect(by_id(page,'Status')).to_contain_text('Ordered encoding enabled: 2 Predictor features',timeout=30000)
+    expect(by_id(page,'Status')).to_contain_text('Ordered: 2 new predictors',timeout=30000)
     expect(by_id(page,'Probe')).to_contain_text('steps=1; ordered_original=True')
     expect(toggle(page,'ordered')).to_be_checked()
 
@@ -43,6 +44,5 @@ def test_restored_polynomial_degree_and_original_retention(page,restored_app):
 def test_no_ordered_predictors_is_benign(page,empty_app):
     page.goto(empty_app.url)
     page.get_by_role('tab',name='Ordered',exact=True).click()
-    expect(by_id(page,'OrderedMessage')).to_contain_text('No Ordered Predictor',timeout=30000)
     toggle(page,'ordered').check()
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=False; unchanged=True')

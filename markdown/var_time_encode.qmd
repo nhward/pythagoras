@@ -1,0 +1,89 @@
+---
+title: Time feature encoding
+---
+
+#### 🧭 Purpose
+
+_Derive calendar and clock predictors from dates and times. Place this card after Variable modification and role assignment, and before Variable encoding (`var_encode`). It exports numeric features and explicitly cyclic variables that the next card can convert to sine/cosine pairs._
+
+#### 🎯 Goals
+
+1. **Primary:** Expose useful calendar and clock structure to downstream models.
+1. **Secondary:** Preserve the repeating nature of time components through cyclic semantic types.
+1. **Tertiary:** Make date-only detection and timezone assumptions visible before applying changes.
+
+#### 🧠 How it works
+
+Only Predictor-role date/time variables are considered. Targets and shadow variables are excluded. Supported inputs are pandas datetime columns and columns containing Python date or time objects. Strings are not parsed; assign their type upstream. Time differences and durations are not encoded.
+
+A datetime column whose observed hour, minute, second, and fractional second are all zero is treated as date-only. It receives calendar features but no clock features. Time-only columns receive clock features and numeric seconds since midnight, but no invented date. All-missing columns remain unchanged.
+
+: Table 1 - Available features
+
+| Feature | Representation |
+|:--------|:---------------|
+| **Numeric time** | Decimal seconds since 1970-01-01 for dates/datetimes; seconds since midnight for time-only values. |
+| **Year** | An ordinary integer Predictor. |
+| **Quarter**, **Month** | Cyclic labels 1–4 and 1–12. |
+| **Day of week** | Cyclic labels 0–6, with Monday equal to 0. |
+| **Day of month** | Cyclic labels 1–31. |
+| **Day of year** | Cyclic labels 1–366. |
+| **Lunar cycle (approximate)** | Approximate age in days within a 29.530588-day cycle. |
+| **Hour of day (24)** | Cyclic hour component 0–23, period 24. |
+| **Hour of day (12)** | Cyclic hour component 0–11, period 12; noon and midnight both map to 0. |
+| **Minutes**, **Seconds** | Cyclic components with period 60. Seconds include fractional precision. |
+
+Calendar cycles use complete declared categories even when some positions are unobserved. Short months leave unused positions in the 31-day cycle; non-leap years leave position 366 unused. These are fixed day-label representations, not exact fractions of elapsed months or years. Calendar components are discrete: for example, 13:45 has hour 13 and minute 45.
+
+The lunar feature uses the mean synodic period and the new moon at 2001-01-24 13:07 Universal Time from [NASA's phase table](https://eclipse.gsfc.nasa.gov/phase/phase2001gmt.html). It is a repeating approximation, not a precise calculation of lunar phase or illumination.
+
+#### 🏞️ Front
+
+The preview lists each source, detected interpretation, timezone, missing count, generated names, original-column retention, and notes. Review the notes before enabling the card, particularly an inferred date-only interpretation.
+
+For a column with a consistent timezone, calendar and clock components retain local time. Numeric timestamps and lunar calculations use UTC. Naive dates and datetimes are treated as UTC for these two calculations by convention, with a visible note.
+
+Mixed timezones, mixed naive/aware timestamps, and timezone-aware time-only columns are reported and left unchanged. Other supported columns can still generate features. A normal daylight-saving offset change within one named timezone is supported, but repeated or skipped local clock times remain possible.
+
+#### 🔄 Flip side
+
+**Generated time features** lists enabled source-to-output mappings, feature labels, semantic types, and cyclic periods. A summary counts generated Predictors and removed originals. With encoding disabled, the table is empty and incoming data passes through unchanged.
+
+#### 🛠️ Controls and actions
+
+The single footer checkbox **Add time features** applies the selected features to every eligible Predictor and adds one sklearn pipeline step. Unchecking it restores incoming data. Changing settings recalculates enabled output; there is no separate commit action.
+
+Sources are removed by default only when they produce features. **Remove original variables** can retain them alongside the generated columns. New names are adjusted to avoid collisions, and every generated column receives the Predictor role.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Send cyclic outputs to the Cyclic panel of Variable encoding. Year and numeric time are already numeric. Choose features suited to the question: including all available components can introduce redundancy, especially both clock cycles and a continuous timestamp.
+
+The detected input resolution and output schema are preserved in the exported recipe across training folds. Calendar extraction does not estimate relationships with a Target. Missing inputs produce missing outputs, which may require downstream imputation.
+
+#### ⛔️ Limitations
+
+* Midnight-only observations cannot establish that a source truly lacks time information. Later non-midnight values do not add clock outputs to an already fitted date-only recipe.
+* Normalize mixed timezones upstream. A timezone change at transformation time is rejected rather than silently changing the meaning of features.
+* Fixed 31- and 366-position cycles approximate unequal calendar lengths; leap years shift day-of-year labels after February.
+* Lunar age is approximate and is especially uncertain when dates lack times or timezones.
+* Season, daylight, latitude-dependent features, durations, and elapsed-time differences between columns are not included.
+* No Target or observation-importance weights are used. Retained datetime originals may be unsupported by downstream estimators.
+
+#### 📌 Suggested workflow
+
+1. Assign date/time types and Predictor roles upstream.
+1. Place this card before Variable encoding and inspect detected resolution and timezone notes.
+1. Choose relevant features and decide whether to retain originals.
+1. Check **Add time features** and review the flip-side audit.
+1. Encode cyclic outputs downstream and evaluate the resulting pipeline within training and validation.
+
+#### 🔗 Data flow
+
+* **Input:** Upstream data, Predictor roles, typed date/time values, and existing pipeline.
+* **Output:** Updated preview data and one sklearn-compatible feature-generation step; original training input remains available. Unsupported sources pass through unchanged.
+* **Data journey:** Applying nonempty output adds a Learning entry. Disabled encoding or a selection with no applicable features adds no step.

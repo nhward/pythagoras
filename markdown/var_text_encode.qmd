@@ -1,0 +1,93 @@
+---
+title: Text encoding
+---
+
+#### 🧭 Purpose
+
+_Generate numeric features from free-text Predictors for downstream modeling. Place this card after assigning the Text semantic type and Predictor role. It can precede Variable encoding, although its numeric outputs do not require further encoding there._
+
+#### 🎯 Goals
+
+1. **Primary:** Represent text through vocabulary, sentiment, pre-trained embeddings, latent semantics, or writing characteristics.
+1. **Secondary:** Keep vocabulary learning and dimensional reduction inside the training pipeline.
+1. **Tertiary:** Expose missingness, vocabulary coverage, feature expansion, and resource limitations.
+
+#### 🧠 How it works
+
+Each source column is processed separately. Only explicit Text-type Predictors are eligible; Targets, shadow columns, and ordinary string Code variables are excluded. Every generated column receives the Predictor role. No Target or observation-importance weights are used.
+
+: Table 1 - Encoding choices
+
+| Panel | Generated features |
+|:------|:-------------------|
+| **Bag of words** | One column per learned token or n-gram, using counts, binary presence, or TF–IDF; also an unknown-token fraction. |
+| **Sentiment** | VADER compound, positive, negative, and neutral scores. |
+| **Word embeddings** | Mean pre-trained word-vector coordinates and recognized-token coverage. |
+| **Latent semantics** | Compact latent semantic analysis (LSA) component scores. |
+| **Text characteristics** | Character and word counts, average word length, line count, punctuation counts, and character proportions. |
+
+**Bag of words** uses CountVectorizer. Counts are already numeric; repeated tokens increase them unless binary presence is selected. The default TF–IDF method additionally learns inverse document-frequency weights and normalizes document vectors. Word and character n-grams are supported. Vocabulary and weights are learned from non-missing training documents; empty strings remain documents. Unseen test terms are ignored without adding columns. Their fraction is calculated among tokens surviving the configured analyzer and stop-word filtering. [Scikit-learn text vectorization](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
+
+**Sentiment** uses the bundled English VADER 3.3.2 lexicon and rules without training on the incoming data. It preserves punctuation and capitalization. Compound scores range from −1 to 1; positive, negative, and neutral scores describe sentiment proportions. Empty and missing text have missing scores. These scores are not probabilities of a real-world outcome. [VADER project](https://github.com/cjhutto/vaderSentiment)
+
+**Word embeddings** requires a user-supplied pre-trained Word2Vec text resource. Each recognized token contributes its vector, including repeated occurrences; averaging yields one document vector. Unknown words are ignored. Coverage is recognized tokens divided by all tokens. With no recognized tokens, coordinates are missing and coverage is zero; a missing document has missing coverage too. The card does not train Word2Vec or download a model automatically.
+
+**Latent semantics** uses TF–IDF followed by TruncatedSVD. The requested dimension is capped below both non-missing document count and vocabulary size. At least two documents and two vocabulary terms are required. Optional normalization scales each nonzero projected vector to length one. Each training fold learns its own vocabulary, weights, and decomposition. [Scikit-learn TruncatedSVD](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.TruncatedSVD.html)
+
+**Text characteristics** uses fixed definitions: words are Unicode word-character sequences; punctuation uses the ASCII punctuation set. Digit, uppercase, punctuation, and whitespace fractions divide by all characters. Empty text gives zeros; missing text gives missing measurements. These are writing-pattern measurements, not language identification or readability judgments.
+
+Every source producing features also receives one missing-text indicator. For sparse vocabulary output, missing and empty text both produce zero vectors; the indicator distinguishes them. LSA gives zero vectors for empty or wholly unknown text and missing coordinates for missing text.
+
+#### 🏞️ Front
+
+The five tabs preview all methods independently of the footer selection. Summary tables list source columns, document counts, missing and empty documents, generated names, and method notes.
+
+Vocabulary details show up to 100 leading terms per source with document frequencies. LSA details show explained variance and strongest positive and negative terms per component. Sentiment and characteristic details show minimum, median, maximum, available count, and the first five available scores. Embedding details summarize coverage and identify the resource and its SHA256 fingerprint.
+
+Unavailable methods remain visible with an explanation. A missing embedding model does not prevent vocabulary or sentiment features from being generated.
+
+#### 🔄 Flip side
+
+**Text encoding audit** lists enabled methods, output counts and names, source retention, and reasons for skipped combinations. Missing-text indicators appear separately. The summary reports predictors before and after, originals removed, and pipeline steps added.
+
+Counts describe the current preview. Training folds may learn different vocabularies and LSA dimensions; component directions and signs can change between fits.
+
+#### 🛠️ Controls and actions
+
+The footer **Encode** checkbox group selects any combination of methods. Every method reads the original text, independently of the visible tab. Successful methods contribute outputs even when another selected method is unavailable.
+
+**Remove original variables** is enabled by default. A source is removed only when every selected method succeeds for it. Otherwise it remains available for inspection. Unchecking all methods restores the incoming data and pipeline.
+
+Upload a pre-trained resource through **Word2Vec text model**. The UTF-8 file must begin with vocabulary size and dimension, followed by token/vector rows. Binary files are unsupported. Uploads are session resources and must be supplied again after bookmark restoration. Fitted transformers retain their vectors; unfitted pipeline recipes require the matching resource at fitting time. Model licensing and language suitability remain the user's responsibility.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Choose representations suited to the modeling question. Term features are directly interpretable but can be numerous. LSA and embeddings are compact, but their coordinates are not named concepts. Low embedding coverage indicates a vocabulary, language, or tokenization mismatch.
+
+Validate the complete learned pipeline inside training folds. The full-data preview is for inspection and must not be substituted for fold-specific preprocessing. Retained text columns may need removal before a numeric-only estimator.
+
+#### ⛔️ Limitations
+
+* VADER is English-oriented and can misread sarcasm, specialist meanings, and other languages. No automatic language detection is performed.
+* Mean word vectors lose word order and context. No recognized words is an unavailable embedding, not a neutral meaning.
+* Vocabulary outputs use sparse numeric columns. Some downstream estimators densify mixed sparse/dense DataFrames; output-size checks do not guarantee every estimator is memory-efficient.
+* Limits include 4096 vocabulary terms per source, 8192 total generated features, 128 MiB of potential dense output, and 10 million characters per source. Embedding resources are limited to 50 MiB, 200,000 tokens, and 300 dimensions.
+* Empty vocabularies and insufficient LSA data produce no outputs for that source/method. Missing numeric scores can require downstream imputation.
+
+#### 📌 Suggested workflow
+
+1. Assign the Text semantic type and Predictor roles upstream.
+1. Inspect vocabulary and text characteristics; choose relevant representations.
+1. Check language suitability and supply a licensed embedding resource if needed.
+1. Enable methods and review the audit, coverage, and original-column retention.
+1. Evaluate the generated features through the complete training pipeline.
+
+#### 🔗 Data flow
+
+* **Input:** Typed Text Predictors, existing data and pipeline, and an optional pre-trained embedding resource.
+* **Output:** Numeric Predictor features and one sklearn-compatible text-encoding step. Missing indicators accompany successful sources; retained columns preserve their roles.
+* **Data journey:** Nonempty enabled output adds a Learning entry. Disabled encoding or entirely unavailable selections add no step. The original training input remains available.

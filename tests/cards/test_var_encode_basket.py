@@ -1,6 +1,7 @@
 import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
+
 app=create_app_fixture(app='../scenarios/var_encode_basket.py',scope='function')
 restored_app=create_app_fixture(app='../scenarios/var_encode_basket_restored.py',scope='function')
 empty_app=create_app_fixture(app='../scenarios/var_encode_empty.py',scope='function')
@@ -19,7 +20,7 @@ def test_periods_and_reversible_encoding_without_target(page,app):
     expect(table).to_contain_text('Distinct items',timeout=30000)
     expect(table).to_contain_text('flag__apple')
     toggle(page).check()
-    expect(by_id(page,'Status')).to_contain_text('Basket encoding enabled: 2 Predictor indicators',timeout=30000)
+    expect(by_id(page,'Status')).to_contain_text('Basket: 2 new predictors',timeout=30000)
     expect(by_id(page,'Probe')).to_contain_text('steps=1; original=False')
     page.locator('.card').first.hover();page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'RemoveOriginal').uncheck()
@@ -38,6 +39,6 @@ def test_restore_basket_tab_and_enabled_encoding(page,restored_app):
 def test_no_basket_predictors_is_benign(page,empty_app):
     page.goto(empty_app.url)
     page.get_by_role('tab',name='Basket',exact=True).click()
-    expect(by_id(page,'BasketMessage')).to_contain_text('No Basket Predictor',timeout=30000)
+    expect(by_id(page,'BasketMessage')).to_contain_text('No Basket predictors are available',timeout=30000)
     toggle(page).check()
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=False; unchanged=True')

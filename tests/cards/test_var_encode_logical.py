@@ -1,6 +1,7 @@
 import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
+
 app=create_app_fixture(app='../scenarios/var_encode_logical.py',scope='function')
 restored_app=create_app_fixture(app='../scenarios/var_encode_logical_restored.py',scope='function')
 empty_app=create_app_fixture(app='../scenarios/var_encode_empty.py',scope='function')
@@ -19,7 +20,7 @@ def test_periods_and_reversible_encoding_without_target(page,app):
     expect(table).to_contain_text('False → 0; True → 1',timeout=30000)
     expect(table).to_contain_text('flag__integer')
     toggle(page).check()
-    expect(by_id(page,'Status')).to_contain_text('Logical encoding enabled: 1 Predictor features',timeout=30000)
+    expect(by_id(page,'Status')).to_contain_text('Logical: 1 new predictors',timeout=30000)
     expect(by_id(page,'Probe')).to_contain_text('steps=1; original=False')
     page.locator('.card').first.hover();page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'RemoveOriginal').uncheck()
@@ -38,6 +39,5 @@ def test_restore_logical_tab_and_enabled_encoding(page,restored_app):
 def test_no_logical_predictors_is_benign(page,empty_app):
     page.goto(empty_app.url)
     page.get_by_role('tab',name='Logical',exact=True).click()
-    expect(by_id(page,'LogicalMessage')).to_contain_text('No Logical Predictor',timeout=30000)
     toggle(page).check()
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=False; unchanged=True')

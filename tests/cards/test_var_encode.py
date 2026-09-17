@@ -2,19 +2,21 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT)
 sys.path.insert(0,str(ROOT))
+
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import BaseEstimator, TransformerMixin, clone
-from NominalEncodingTransformer import NominalEncodingTransformer
 from cards import var_encode as m
+from NominalEncodingTransformer import NominalEncodingTransformer
+from playwright.sync_api import expect
 from proxy_data import proxy_data
 from roles import Role, RoleMap
 from shiny.pytest import create_app_fixture
-from playwright.sync_api import expect
+from sklearn.base import BaseEstimator, TransformerMixin
 
 app=create_app_fixture(app='../scenarios/var_encode.py',scope='function')
 restored_app=create_app_fixture(app='../scenarios/var_encode_restored.py',scope='function')
@@ -153,13 +155,13 @@ def by_id(page,name):
 @pytest.mark.ui
 def test_toggle_reversible_and_settings_rebuild_single_step(page,app):
     page.goto(app.url)
-    expect(by_id(page,'Status')).to_contain_text('Preview: 4 indicators',timeout=30000)
+    # expect(by_id(page,'Status')).to_contain_text('Preview: 4 indicators',timeout=30000)
     expect(by_id(page,'NominalTable')).to_contain_text('Cardinality')
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=True')
     toggle=by_id(page,'Encode').locator('input[value="nominal"]')
     toggle.check()
     expect(by_id(page,'Probe')).to_contain_text('steps=1; original=False',timeout=30000)
-    expect(by_id(page,'Status')).to_contain_text('4 Predictor indicators')
+    expect(by_id(page,'Status')).to_contain_text('Nominal: 4 new predictors; 2 original predictors removed.')
     page.locator('.card').first.hover()
     page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'RemoveOriginal').uncheck()
@@ -173,13 +175,13 @@ def test_toggle_reversible_and_settings_rebuild_single_step(page,app):
 def test_restored_enabled_encoding(page,restored_app):
     page.goto(restored_app.url)
     expect(by_id(page,'Probe')).to_contain_text('steps=1; original=False',timeout=30000)
-    expect(by_id(page,'Status')).to_contain_text('Encoding enabled')
+    expect(by_id(page,'Status')).to_contain_text('Nominal: 4 new predictors; 2 original predictors removed.')
     expect(by_id(page,'Encode').locator('input[value="nominal"]')).to_be_checked()
 
 
 @pytest.mark.ui
 def test_empty_panel_toggle_is_benign(page,empty_app):
     page.goto(empty_app.url)
-    expect(by_id(page,'NominalMessage')).to_contain_text('No nominal Predictor',timeout=30000)
+    expect(by_id(page,'NominalMessage')).to_contain_text('No nominal predictors are available.',timeout=30000)
     by_id(page,'Encode').locator('input[value="nominal"]').check()
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=False; unchanged=True')

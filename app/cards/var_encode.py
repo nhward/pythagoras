@@ -1,4 +1,4 @@
-"""Learned encoding panels for nominal, Code, Ordered, Cyclic, Logical and Basket predictors."""
+"""Learned encoding panels for Nominal, Code, Ordered, Cyclic, Logical and Basket predictors."""
 from __future__ import annotations
 
 import os
@@ -255,82 +255,165 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = 'Variable encoding'
     this.description = 'Encode nominal, Code, Ordered, Cyclic, Logical and Basket predictors through sklearn pipeline steps.'
-    this.front = lambda: ui.navset_bar(ui.nav_panel('Nominal',
-        ui.output_ui('NominalMessage'), ui.output_data_frame('NominalTable', guide=this, title='Nominal encoding preview', position='left',
-            text='Lists observed nonmissing levels and cardinality for nominal Predictor variables. The proposed encoding shows the dropped reference, pooled rare levels and collision-safe output names. Unused declared categories are ignored. This is a full-data preview: each training fold relearns its own categories and reference. The footer checkbox applies or removes this encoding step.')),
-        ui.nav_panel('Code', ui.output_ui('CodeMessage'),
-            ui.output_data_frame('CodeTable', guide=this, title='Code target encoding', position='left',
-                text='Lists only Code-type Predictors, with observed cardinality, levels and proposed outputs. Exactly one usable Target is required. The preview uses cross-fitting: each row is encoded from other folds. Numeric targets yield means; categorical targets yield probabilities, with one output for binary and one per class for multiclass outcomes. No outcomes are read when transforming future rows.')),
-        ui.nav_panel('Ordered', ui.output_ui('OrderedMessage'),
-            ui.output_data_frame('OrderedTable', guide=this, title='Ordered encoding preview', position='left',
-                text='Lists Ordered Predictors, declared cardinality, observed levels and level order. The order assigned in Variable modification is preserved, including declared levels absent in the current rows. Ordinal ranks produce one feature; full polynomial contrasts produce d−1 features. New variables have Predictor roles. No Target is required.')),
-        ui.nav_panel('Cyclic', ui.output_ui('CyclicMessage'),
-            ui.output_data_frame('CyclicTable', guide=this, title='Cyclic encoding and period', position='left',
-                text='Lists only Cyclic Predictors. Check the period, its units, origin and complete cycle order before encoding. Numeric cycles use the explicit upstream period; categorical periods equal the number of declared levels, including unobserved ones. Each variable produces sine and cosine Predictor columns. Correct an incorrect period or cycle order upstream; observed range is never used to infer the period.')),
-        ui.nav_panel('Logical', ui.output_ui('LogicalMessage'),
-            ui.output_data_frame('LogicalTable', guide=this, title='Logical encoding preview', position='left',
-                text='Lists only Logical Predictor variables, their True, False and missing counts, and proposed output names. True becomes integer 1 and False becomes integer 0. Missing values remain missing. Each output has the Predictor role. No Target, observation weighting or estimated mapping is needed. The shared Remove original variables setting also applies here.')),
-        ui.nav_panel('Basket', ui.output_ui('BasketMessage'),
-            ui.output_data_frame('BasketTable', guide=this, title='Basket encoding preview', position='left',
-                text='Lists Basket Predictors, their distinct observed items, missing and empty basket counts, and generated names. Each item becomes a binary Predictor: present 1, absent 0. Duplicates count once and no reference item is dropped. Training fits learn their own vocabulary; unseen items are ignored without adding columns. Empty and unknown-only baskets give zeros; missing baskets remain missing. Missing items inside a basket are ignored. With no observed items, the original is retained and no features are added. The shared Remove original variables setting applies.')),
+    this.front = lambda: ui.navset_bar(
+        ui.nav_panel(
+            'Nominal',
+            ui.output_ui('NominalMessage'), 
+            ui.output_data_frame(
+                id='NominalTable', 
+                guide=this, title='Nominal encoding preview', position='left',
+                text='Lists observed non-missing levels and cardinality for nominal Predictor variables. The proposed encoding shows the dropped reference, pooled rare levels and collision-safe output names. Unused declared categories are ignored. This is a full-data preview: each training fold relearns its own categories and reference. The footer checkbox applies or removes this encoding step.'
+            )
+        ),
+        ui.nav_panel(
+            'Code', 
+            ui.output_ui('CodeMessage'),
+            ui.output_data_frame(
+                id='CodeTable', 
+                guide=this, title='Code target encoding', position='left',
+                text='Lists only Code-type Predictors, with observed cardinality, levels and proposed outputs. Exactly one usable Target is required. The preview uses cross-fitting: each row is encoded from other folds. Numeric targets yield means; categorical targets yield probabilities, with one output for binary and one per class for multiclass outcomes. No outcomes are read when transforming future rows.'
+            )
+        ),
+        ui.nav_panel(
+            'Ordered', 
+            ui.output_ui('OrderedMessage'),
+            ui.output_data_frame(
+                id='OrderedTable', 
+                guide=this, title='Ordered encoding preview', position='left',
+                text='Lists Ordered Predictors, declared cardinality, observed levels and level order. The order assigned in Variable modification is preserved, including declared levels absent in the current rows. Ordinal ranks produce one feature; full polynomial contrasts produce d−1 features. New variables have Predictor roles. No Target is required.'
+            )
+        ),
+        ui.nav_panel(
+            'Cyclic', 
+            ui.output_ui('CyclicMessage'),
+            ui.output_data_frame(
+                id='CyclicTable', 
+                guide=this, title='Cyclic encoding and period', position='left',
+                text='Lists only Cyclic Predictors. Check the period, its units, origin and complete cycle order before encoding. Numeric cycles use the explicit upstream period; categorical periods equal the number of declared levels, including unobserved ones. Each variable produces sine and cosine Predictor columns. Correct an incorrect period or cycle order upstream; observed range is never used to infer the period.'
+            )
+        ),
+        ui.nav_panel(
+            'Logical', 
+            ui.output_ui('LogicalMessage'),
+            ui.output_data_frame(
+                id='LogicalTable', 
+                guide=this, title='Logical encoding preview', position='left',
+                text='Lists only Logical Predictor variables, their True, False and missing counts, and proposed output names. True becomes integer 1 and False becomes integer 0. Missing values remain missing. Each output has the Predictor role. No Target, observation weighting or estimated mapping is needed. The shared Remove original variables setting also applies here.'
+            )
+        ),
+        ui.nav_panel(
+            'Basket', 
+            ui.output_ui('BasketMessage'),
+            ui.output_data_frame(
+                id='BasketTable', 
+                guide=this, title='Basket encoding preview', position='left',
+                text='Lists Basket Predictors, their distinct observed items, missing and empty basket counts, and generated names. Each item becomes a binary Predictor: present 1, absent 0. Duplicates count once and no reference item is dropped. Training fits learn their own vocabulary; unseen items are ignored without adding columns. Empty and unknown-only baskets give zeros; missing baskets remain missing. Missing items inside a basket are ignored. With no observed items, the original is retained and no features are added. The shared Remove original variables setting applies.'
+            )
+        ),
         id='EncodingType', selected='Nominal', title=None, padding=0, fillable=True)
     
     this.back = lambda: ui.TagList(
         ui.card_header('Encoding audit', class_='text-primary text-center'),
-        ui.output_ui('AuditSummary'),
-        ui.output_data_frame('AuditTable', guide=this, title='Outgoing encoding audit', position='left',
-            text='Shows only encodings selected in the footer, in pipeline order. Each row links a source variable to its generated Predictor columns and reports whether the original remains. Notes explain reference levels, pooling and variables that produce no output. Unavailable selections are listed with their reason and add no step. Counts describe changes made by this card to the current preview; training folds may produce different learned categories and output counts.'))
+        ui.output_ui(id='AuditSummary'),
+        ui.output_data_frame(
+            id='AuditTable', 
+            guide=this, title='Outgoing encoding audit', position='left',
+            text="""Shows only encodings selected in the footer, in pipeline order. 
+            Each row links a source variable to its generated Predictor columns and reports whether the original remains. 
+            Notes explain reference levels, pooling and variables that produce no output. 
+            Unavailable selections are listed with their reason and add no step. """
+        )
+    )
 
     choices={
-        'nominal':'Encode nominal predictors',
-        'code':'Encode Code predictors',
-        'ordered':'Encode Ordered predictors',
-        'cyclic':'Encode Cyclic predictors',
-        'logical':'Encode Logical predictors',
-        'basket':'Encode Basket predictors'
+        'nominal':'Nominal',
+        'code':'Code',
+        'ordered':'Ordered',
+        'cyclic':'Cyclic',
+        'logical':'Logical',
+        'basket':'Basket'
     }
     this.footer = lambda: ui.TagList(
         ui.input_checkbox_group(
-            id='Encode', label=None, choices=choices, selected=[], inline=True,
+            id='Encode', label="Encode", choices=choices, selected=[], inline=True,
             guide=this, title='Apply variable encoding', position='top',
-            text='Select any combination of encodings independently of the active tab. Each exports its preview and an unfitted sklearn recipe; unchecking removes only that encoding. Selected steps run in Nominal, Code, Ordered, Cyclic, Logical, Basket order. Settings and incoming data changes recalculate enabled encodings. An unavailable panel adds no step and reports why; other selected panels still apply. All new columns have Predictor roles.'
+            text='Select any combination of encodings independently of the active tab. Selected steps run in Nominal, Code, Ordered, Cyclic, Logical, Basket order. All new variables have Predictor roles.'
         ),
         ui.output_ui('Busy'), 
         ui.output_text('Status')
     )
 
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox(id='RemoveOriginal', label='Remove original variables', value=True, guide=this, position='left',
-                text='Remove encoded source columns from the exported data and pipeline output. Uncheck to retain them with their existing roles alongside numeric indicators. All-missing nominal variables remain unchanged. This does not change the pipeline’s original training input.'),
-            ui.h6('Nominal encoding'),
-            ui.input_numeric(id='MinFrequency', label='Minimum level count', value=1, min=1, step=1, guide=this, position='left',
-                text='Levels observed fewer than this many times during fitting are pooled into an infrequent group. One disables this threshold. Counts are unweighted and exclude missing values; levels and frequencies are relearned inside every training fold.'),
-            ui.input_numeric(id='MaxCategories', label='Maximum categories (0 = unlimited)', value=0, min=0, step=1, guide=this, position='left',
-                text='Zero or one disables the cap. At two or more, keep at most this many categories including the pooled infrequent category. Binary reference dropping happens after pooling; a single remaining group adds no constant indicator. More than 4096 indicators produces an explanation instead of exporting.'),
-            ui.input_select(id='Unknown', label='Unseen levels', choices={'ignore':'All-zero indicators','infrequent_if_exist':'Use infrequent group if available','error':'Report an error'}, selected='ignore', guide=this, position='left',
-                text='Controls transform-time levels absent during fitting. All-zero indicators can coincide with a dropped binary reference. The infrequent option uses the learned pooled group when it exists, otherwise all zeros. Error rejects unseen values. Missing values stay missing in every indicator, so imputation can be added separately.'),
-            ui.h6('Code target encoding'),
-            ui.input_select(id='CodeMethod', label='Target encoding method', choices=METHODS, selected='auto', guide=this, position='left',
-                text='Empirical Bayes chooses smoothing automatically and is the general default. Fixed smoothing blends each level mean with the global mean using the specified prior strength. No smoothing uses raw level means and can be unstable for rare codes. All methods use cross-fitting for training rows, including the preview.'),
-            ui.input_numeric(id='CodeSmoothing', label='Target smoothing strength', value=10, min=0, step=1, guide=this, position='left',
-                text='Used only by fixed-strength smoothing: (level target sum + strength × overall mean) / (level count + strength). Larger values shrink rare levels more. For classification the calculation applies to class indicators. Assigned importance weights are not applied.'),
-            ui.input_slider(id='CodeFolds', label='Target encoding folds', min=2, max=10, value=5, step=1, guide=this, position='left',
-                text='Training encodings use shuffled, reproducible held-out folds, stratified for classification. Fold count is capped by available rows or the smallest class count. At least two rows, and two per class for classification, are needed. Missing or nonfinite Target outcomes must be resolved upstream. Random folds are not suitable protection for grouped or temporal dependence.'),
-            ui.input_select(id='CodeTargetType', label='Interpret Target as', choices={'auto':'Use semantic type','continuous':'Numeric outcome','classification':'Categorical classes'}, selected='auto', guide=this, position='left',
-                text='By default integer and decimal Targets are numeric outcomes; nominal, ordered, Code and logical Targets are classes. Override for numeric class labels. Binary encoding models the second observed class, named in the output; multiclass adds one probability per class. Missing Code values are a learned category; unseen codes fall back to the fitted target mean or class proportions. Call pipeline.fit_transform on training rows, or append an estimator to the pipeline, to retain cross-fitting. Do not train on pipeline.fit(...).transform(the_same_rows).'),
-            ui.h6('Ordered encoding'),
-            ui.input_select(id='OrderedMethod', label='Ordered encoding method', choices=ORDERED_METHODS, selected='ordinal', guide=this, position='left',
-                text='Ordinal ranks uses sklearn OrdinalEncoder to produce 0, 1, …, d−1 in the declared level order. Polynomial contrasts provide an R contr.poly-style alternative: linear (L), quadratic (Q), cubic (C), and higher terms. With all degrees, d levels produce d−1 columns, excluding the constant. Both methods treat rank spacing as equal; actual numeric level labels do not supply distances.'),
-            ui.input_numeric(id='OrderedDegree', label='Maximum polynomial degree (0 = all)', value=0, min=0, max=64, step=1, guide=this, position='left',
-                text='Used only for polynomial contrasts. Zero includes all d−1 degrees; a positive value caps the degree at that value or d−1, whichever is smaller. At most 64 degrees are supported. Full contrasts allow arbitrary level effects in a linear model; restricting degree imposes a simpler trend. Columns are orthogonal over equally weighted levels, not necessarily across an unbalanced sample. Observation importance is not applied.'),
-            ui.input_select(id='OrderedUnknown', label='Unknown Ordered levels', choices={'missing':'Encode as missing','error':'Report an error'}, selected='missing', guide=this, position='left',
-                text='A level absent from the fitted declared order has no known rank. By default every corresponding output is missing; Error rejects such a value. Ordinary missing values always remain missing. Declared levels absent from a training fold remain valid because their order is part of the upstream schema. No sorting or frequency-based reordering is performed.'),
-            ui.h6('Cyclic encoding'),
-            ui.input_select(id='CyclicUnknown', label='Unknown Cyclic levels', choices={'missing':'Encode as missing','error':'Report an error'}, selected='missing', guide=this, position='left',
-                text='For categorical cycles, an unknown label has no known angle: encode both outputs as missing or reject it. Missing inputs always give two missing outputs; nonfinite numeric inputs also become missing. Numeric values wrap modulo the fitted period, so negative values and complete revolutions are supported. Categorical levels are equally spaced in their declared order. Numeric zero, or the first categorical level, maps to sine 0 and cosine 1. No Target or observation weighting is used.'),
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox(
+            id='RemoveOriginal', label='Remove original variables', value=True, 
+            guide=this, position='left',
+            text="Remove encoded source columns from the card's output. Alternatively, retain them with their existing roles alongside the encoded numeric indicators."
+        ),
+        ui.hr(),
+        ui.h6('Nominal encoding'),
+        ui.input_numeric(
+            id='MinFrequency', label='Minimum level count', value=1, min=1, step=1, 
+            guide=this, position='left',
+            text='Rare nominal-levels that are observed fewer than this minimum are pooled into an infrequent group. "1" disables this threshold.'
+        ),
+        ui.input_numeric( #TODO slider?
+            id='MaxCategories', label='Maximum categories (0 = unlimited)', value=0, min=0, step=1, 
+            guide=this, position='left',
+            text='Keep at most this many nominal-levels, including the pooled infrequent category. "0" or "1" disables the limit. 4096 nominal-levels is the algorithmic upper limit.'
+        ),
+        ui.input_select(
+            id='Unknown', label='Unseen levels', choices={'ignore':'All-zero indicators','infrequent_if_exist':'Use infrequent group if available','error':'Report an error'}, selected='ignore', 
+            guide=this, position='left',
+            text='Controls transform-time levels absent during fitting. All-zero indicators can coincide with a dropped binary reference. The infrequent option uses the pooled group when it exists, otherwise all zeros. Error rejects unseen values.'
+        ),
+        ui.hr(),
+        ui.h6('Code target-encoding'),
+        ui.input_select(
+            id='CodeMethod', label='Target encoding method', choices=METHODS, selected='auto', 
+            guide=this, position='left',
+            text='The "Empirical Bayes" option chooses smoothing automatically and is the general default. The "Fixed smoothing" option blends each level mean with the global mean using the specified prior strength. The "No smoothing" option uses raw level means and can be unstable for rare codes.'
+        ),
+        ui.input_numeric(  #TODO slider?
+            id='CodeSmoothing', label='Target smoothing strength', value=10, min=0, step=1, 
+            guide=this, position='left',
+            text='Used only by the "fixed-strength smoothing" option: (level target sum + strength × overall mean) / (level count + strength). Larger values shrink rare levels more. For classification the calculation applies to class indicators.'
+        ),
+        ui.input_slider(
+            id='CodeFolds', label='Target encoding folds', min=2, max=10, value=5, step=1, 
+            guide=this, position='left',
+            text='Training encodings use shuffled, reproducible held-out folds, stratified for classification. Fold count is capped by available rows or the smallest class count. At least two rows, and two per class for classification, are needed. Random folds are not suitable protection for grouped or temporal dependence.'
+        ),
+        ui.input_select(
+            id='CodeTargetType', label='Interpret Target as', choices={'auto':'Use semantic type','continuous':'Numeric outcome','classification':'Categorical classes'}, selected='auto', 
+            guide=this, position='left',
+            text='By default integer and decimal Targets are numeric outcomes; nominal, ordered, Code and logical Targets are classes. Override for numeric class labels. Binary encoding models the second observed class, named in the output; multiclass adds one probability per class.'
+        ),
+        ui.hr(),
+        ui.h6('Ordered encoding'),
+        ui.input_select(
+            id='OrderedMethod', label='Ordered encoding method', choices=ORDERED_METHODS, selected='ordinal', 
+            guide=this, position='left',
+            text='Ordinal ranks uses sklearn OrdinalEncoder to produce 0, 1, …, d−1 in the declared level order. Polynomial contrasts provide an R contr.poly-style alternative: linear (L), quadratic (Q), cubic (C), and higher terms. With all degrees, d levels produce d−1 columns, excluding the constant. Both methods treat rank spacing as equal; actual numeric level labels do not supply distances.'
+        ),
+        ui.input_numeric( #TODO slider?
+            id='OrderedDegree', label='Maximum polynomial degree (0 = all)', value=0, min=0, max=64, step=1, 
+            guide=this, position='left',
+            text='Used only for polynomial contrasts. Zero includes all d−1 degrees; a positive value caps the degree at that value or d−1, whichever is smaller. At most 64 degrees are supported. Full contrasts allow arbitrary level effects in a linear model; restricting degree imposes a simpler trend. Columns are orthogonal over equally weighted levels, not necessarily across an unbalanced sample.'
+        ),
+        ui.input_select(
+            id='OrderedUnknown', label='Unknown Ordered levels', choices={'missing':'Encode as missing','error':'Report an error'}, selected='missing', 
+            guide=this, position='left',
+            text='A level absent from the fitted declared order has no known rank. By default every corresponding output is missing; Error rejects such a value. Ordinary missing values always remain missing. Declared levels absent from a training fold remain valid because their order is part of the upstream schema.'
+        ),
+        ui.hr(),
+        ui.h6('Cyclic encoding'),
+        ui.input_select(
+            id='CyclicUnknown', label='Unknown Cyclic levels', choices={'missing':'Encode as missing','error':'Report an error'}, selected='missing', 
+            guide=this, position='left',
+            text='For categorical cycles, an unknown label has no known angle: encode both outputs as missing or reject it. Missing inputs always give two missing outputs; nonfinite numeric inputs also become missing. Numeric values wrap modulo the fitted period, so negative values and complete revolutions are supported. Categorical levels are equally spaced in their declared order. Numeric zero, or the first categorical level, maps to sine 0 and cosine 1.'
         )
-    this.settings = settings
+    )
+
 
     def server(input, output, session):
         busy = this.busy()
@@ -369,14 +452,14 @@ def instance():
         @busy.track('Preparing variable encodings…')
         @this.extended_task
         async def Calculate(source,options):
-            result = _analyze_panels(source,options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze_panels,source,options)
+            result = _analyze_panels(source, options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze_panels,source,options)
             return source,options,result
 
 
         @this.suspendable()
         def Start():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(),Options())
+            Calculate.invoke(this.input_data().clone(), Options())
 
         @this.suspendable(calc=True)
         def Analysis():
@@ -393,7 +476,7 @@ def instance():
             results = Analysis()
             for kind in ('nominal','code','ordered','cyclic','logical','basket'):
                 if kind in selected and not results[kind].error:
-                    source = _apply(source,results[kind])
+                    source = _apply(source, results[kind])
             return source
 
         @this.suspendable(calc=True)
@@ -404,12 +487,10 @@ def instance():
         @output
         @render.ui
         def AuditSummary():
-            summary, table = Audit()
+            summary, _table = Audit()
             return ui.TagList(
-                ui.p(f"Predictors: {summary['before']} → {summary['after']} · "
-                    f"Originals removed: {summary['removed']} · Pipeline steps added: {summary['steps']}"),
-                ui.p('No encodings selected; incoming data passes through unchanged.' if table.empty else
-                    'Current outgoing preview. Learned categories and output counts may differ between training folds.'))
+                ui.p(f"Predictors: {summary['before']} → {summary['after']}, Originals removed: {summary['removed']}")
+            )
 
         @output
         @render.data_frame
@@ -428,8 +509,8 @@ def instance():
             if result.error:
                 return ui.p(result.error,class_='text-danger')
             if result.transformer is None:
-                return ui.p('No nominal Predictor variables are available. Assign the Nominal type in Variable modification and the Predictor role upstream. Enabling this panel has no effect.')
-            return ui.p('Full-data preview: training fits learn their own levels and grouping. Binary encodings retain one indicator; constants add none. Missing values stay missing.')
+                return ui.p('No nominal predictors are available.')
+            return ui.p('Nominal: Binary nominals retain one encoding; constants add none. Any missing values remain missing.')
 
         @output
         @render.data_frame
@@ -443,11 +524,9 @@ def instance():
             if result.error:
                 return ui.p(result.error,class_='text-danger')
             if result.transformer is None:
-                return ui.p('No Code-type Predictor variables are available. Assign the Code type and Predictor role upstream. Enabling this panel has no effect.')
+                return ui.p('No Code-type predictors are available.')
             model = result.transformer
-            return ui.p(f'Target: {model.target}. Cross-fitted preview ({model.cv_} folds); training relearns every mapping. '
-                'Unseen codes use the training target mean or class proportions. Missing codes are a category. '
-                'Counts and outcomes are unweighted. Use the pipeline inside downstream training and validation, not the materialized preview as fixed model features.')
+            return ui.p(f'Code: Unseen codes use the {model.target!r} mean or class proportions. Missing codes are a category.')
 
         @output
         @render.data_frame
@@ -461,9 +540,9 @@ def instance():
             if result.error:
                 return ui.p(result.error,class_='text-danger')
             if result.transformer is None:
-                return ui.p('No Ordered Predictor variables are available. Assign an ordered type with the intended level order upstream. Enabling this panel has no effect.')
-            return ui.p('Uses the declared level order, including levels absent from these rows. Ranks assume equal steps. '
-                'Polynomial contrasts are orthogonal over equally weighted levels and omit the constant; sample columns need not be orthogonal when counts differ. No Target is used.')
+                return ui.p('No Ordered predictors are available.')
+            return ui.p('Ordered: Uses the declared level order, including levels absent from these rows. Ranks assume equal steps. '
+                'Polynomial contrasts are orthogonal over equally weighted levels and omit the constant; sample columns need not be orthogonal when counts differ.')
 
         @output
         @render.data_frame
@@ -477,9 +556,8 @@ def instance():
             if result.error:
                 return ui.p(result.error,class_='text-danger')
             if result.transformer is None:
-                return ui.p('No Cyclic Predictor variables are available. Assign the Cyclic type and Predictor role upstream. Enabling this panel has no effect.')
-            return ui.p('Check Period, Period units, Origin and Cycle order below. Each variable becomes sin(2π × position / period) and cos(2π × position / period). '
-                'Periods come from the declared cyclic schema, not observed maxima. Correct errors upstream before encoding; numeric cyclic values may already have been wrapped using that period. No Target is required.')
+                return ui.p('No Cyclic predictors are available.')
+            return ui.p('Cyclic: Uses the declared level order and period. Any missing values remain missing.')
 
         @output
         @render.data_frame
@@ -493,8 +571,8 @@ def instance():
             if result.error:
                 return ui.p(result.error,class_='text-danger')
             if result.transformer is None:
-                return ui.p('No Logical Predictor variables are available. Assign the Logical type and Predictor role upstream. Enabling this panel has no effect.')
-            return ui.p('True becomes integer 1; False becomes integer 0. Missing values remain missing. No Target is required.')
+                return ui.p('No Logical predictor are available.')
+            return ui.p('Logical: True becomes integer 1; False becomes integer 0. Missing values remain missing.')
 
         @output
         @render.data_frame
@@ -508,84 +586,102 @@ def instance():
             if result.error:
                 return ui.p(result.error,class_='text-danger')
             if result.transformer is None:
-                return ui.p('No Basket Predictor variables are available. Assign the Basket type and Predictor role upstream. Enabling this panel has no effect.')
-            return ui.p('One binary column per learned item; duplicates count once. Unseen items are ignored. Empty baskets give zeros; missing baskets remain missing. No Target is required. At most 4096 indicators are supported.')
+                return ui.p('No Basket predictors are available.')
+            return ui.p('Basket: One binary column per unique item; duplicates count once. Unseen items are ignored. Empty baskets give zeros; missing baskets remain missing. At most 4096 indicators are supported.')
 
         def NominalStatus():
             result = Analysis()['nominal']
             if result.error:
                 return 'Nominal encoding unavailable: '+result.error
             if result.transformer is None:
-                return 'No suitable nominal predictors; no nominal step added.'
+                return 'No suitable nominal predictors.'
             model = result.transformer
             active = 'nominal' in (input.Encode() or [])
             if not active:
-                return f'Preview: {len(model.output_columns_)} indicators. Check Encode nominal predictors to apply.'
+                return None
             if not model.output_columns_ and not model.removed_columns_:
-                return 'No encodable nominal levels; no nominal step added.'
-            return f'Encoding enabled: {len(model.output_columns_)} Predictor indicators; {len(model.removed_columns_)} original variables removed. One learned pipeline step added.'
+                return None # 'No encodable nominal levels.'
+            return f'Nominal: {len(model.output_columns_)} new predictors; {len(model.removed_columns_)} original predictors removed.'
 
-        def NominalCodeStatus():
-            nominal = NominalStatus()
-            code = Analysis()['code']
-            selected = 'code' in (input.Encode() or [])
-            if code.error:
-                return nominal + (' Code encoding unavailable: '+code.error if selected else '')
-            if code.transformer is None:
-                return nominal + (' No suitable Code predictors; no Code step added.' if selected else '')
-            count = len(code.transformer.output_columns_)
-            return nominal + (f' Code encoding enabled: {count} Predictor features; one learned step added.' if selected
-                else f' Code preview: {count} features. Check Encode Code predictors to apply.')
+        def CodeStatus():
+            result = Analysis()['code']
+            if result.error:
+                return 'Code encoding unavailable: '+result.error
+            if result.transformer is None:
+                return 'No suitable code predictors.'
+            model = result.transformer
+            active = 'code' in (input.Encode() or [])
+            if not active:
+                return None
+            if not model.output_columns_ and not model.removed_columns_:
+                return None # 'No encodable code levels.'
+            return f'Code: {len(model.output_columns_)} new predictors; {len(model.removed_columns_)} original predictors removed.'
 
-        def NominalCodeOrderedStatus():
-            text = NominalCodeStatus()
+
+        def OrderedStatus():
             result = Analysis()['ordered']
+            if result.error:
+                return 'Ordered encoding unavailable: '+result.error
+            if result.transformer is None:
+                return 'No suitable ordered predictors.'
+            model = result.transformer
             active = 'ordered' in (input.Encode() or [])
-            if result.error:
-                return text + (' Ordered encoding unavailable: '+result.error if active else '')
-            if result.transformer is None or not result.transformer.output_columns_:
-                return text + (' No suitable Ordered predictors; no Ordered step added.' if active else '')
-            count = len(result.transformer.output_columns_)
-            return text + (f' Ordered encoding enabled: {count} Predictor features; one learned step added.' if active
-                else f' Ordered preview: {count} features. Check Encode Ordered predictors to apply.')
+            if not active:
+                return None
+            if not model.output_columns_ and not model.removed_columns_:
+                return None # 'No encodable ordered levels.'
+            return f'Ordered: {len(model.output_columns_)} new predictors; {len(model.removed_columns_)} original predictors removed.'
 
-        def NominalCodeOrderedCyclicStatus():
-            text=NominalCodeOrderedStatus()
-            result=Analysis()['cyclic']
-            active='cyclic' in (input.Encode() or [])
+
+        def CyclicStatus():
+            result = Analysis()['cyclic']
             if result.error:
-                return text+(' Cyclic encoding unavailable: '+result.error if active else '')
+                return 'Cyclic encoding unavailable: '+result.error
             if result.transformer is None:
-                return text+(' No suitable Cyclic predictors; no Cyclic step added.' if active else '')
-            count=len(result.transformer.output_columns_)
-            return text+(f' Cyclic encoding enabled: {count} Predictor features; one learned step added.' if active
-                else f' Cyclic preview: {count} features. Check the periods before enabling.')
+                return 'No suitable cyclic predictors.'
+            model = result.transformer
+            active = 'cyclic' in (input.Encode() or [])
+            if not active:
+                return None
+            if not model.output_columns_ and not model.removed_columns_:
+                return None # 'No encodable cyclic levels.'
+            return f'Cyclic: {len(model.output_columns_)} new predictors; {len(model.removed_columns_)} original predictors removed.'
 
-        def AllPreviousStatus():
-            text = NominalCodeOrderedCyclicStatus()
+
+        def LogicalStatus():
             result = Analysis()['logical']
-            active = 'logical' in (input.Encode() or [])
             if result.error:
-                return text + (' Logical encoding unavailable: '+result.error if active else '')
+                return 'Logical encoding unavailable: '+result.error
             if result.transformer is None:
-                return text + (' No suitable Logical predictors; no Logical step added.' if active else '')
-            count = len(result.transformer.output_columns_)
-            return text + (f' Logical encoding enabled: {count} Predictor features; one pipeline step added.' if active
-                else f' Logical preview: {count} features. Check Encode Logical predictors to apply.')
+                return 'No suitable logical predictors.'
+            model = result.transformer
+            active = 'logical' in (input.Encode() or [])
+            if not active:
+                return None
+            if not model.output_columns_ and not model.removed_columns_:
+                return None # 'No encodable logical levels.'
+            return f'Logical: {len(model.output_columns_)} new predictors; {len(model.removed_columns_)} original predictors removed.'
+
+        def BasketStatus():
+            result = Analysis()['basket']
+            if result.error:
+                return 'Basket encoding unavailable: '+result.error
+            if result.transformer is None:
+                return 'No suitable basket predictors.'
+            model = result.transformer
+            active = 'basket' in (input.Encode() or [])
+            if not active:
+                return None
+            if not model.output_columns_ and not model.removed_columns_:
+                return None # 'No encodable logical levels.'
+            return f'Basket: {len(model.output_columns_)} new predictors; {len(model.removed_columns_)} original predictors removed.'
+
 
         @output
         @render.text
         def Status():
-            text = AllPreviousStatus()
-            result = Analysis()['basket']
-            active = 'basket' in (input.Encode() or [])
-            if result.error:
-                return text + (' Basket encoding unavailable: '+result.error if active else '')
-            if result.transformer is None or not result.transformer.output_columns_:
-                return text + (' No encodable Basket items; no Basket step added.' if active else '')
-            count = len(result.transformer.output_columns_)
-            return text + (f' Basket encoding enabled: {count} Predictor indicators; one pipeline step added.' if active
-                else f' Basket preview: {count} indicators. Check Encode Basket predictors to apply.')
+            print("\n".join(filter(None, [NominalStatus(), CodeStatus(), OrderedStatus(), CyclicStatus(), LogicalStatus(), BasketStatus()])))
+            return "\n".join(filter(None, [NominalStatus(), CodeStatus(), OrderedStatus(), CyclicStatus(), LogicalStatus(), BasketStatus()]))
 
         @output
         @render.ui
@@ -593,6 +689,7 @@ def instance():
             return busy.ui()
 
         session.on_ended(Calculate.cancel)
+
         return Export
     this.server = server
     return this

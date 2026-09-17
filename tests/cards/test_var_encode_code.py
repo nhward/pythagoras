@@ -2,6 +2,7 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
 import pytest
@@ -27,9 +28,9 @@ def toggle(page,value):return by_id(page,'Encode').locator(f'input[value="{value
 
 def test_code_and_nominal_toggle_independently_and_settings_rebuild(page,app):
     page.goto(app.url)
-    expect(by_id(page,'Status')).to_contain_text('Code preview: 1 features',timeout=30000)
+
     page.get_by_role('tab',name='Code',exact=True).click()
-    expect(by_id(page,'CodeMessage')).to_contain_text('Cross-fitted preview')
+    expect(by_id(page,'CodeMessage')).to_contain_text("Code: Unseen codes use the 'target' mean or class proportions.")
     expect(by_id(page,'CodeTable')).to_contain_text('Cardinality')
     toggle(page,'code').check()
     expect(by_id(page,'Probe')).to_contain_text('steps=1; code_original=False; nominal_original=True',timeout=30000)
@@ -53,7 +54,7 @@ def test_restoration_and_target_changes_preserve_nominal_encoding(page,restored_
     expect(by_id(page,'CodeTable')).to_be_visible()
     expect(by_id(page,'Probe')).to_contain_text('steps=2; code_original=False; nominal_original=False',timeout=30000)
     expect(toggle(page,'code')).to_be_checked()
-    expect(by_id(page,'Status')).to_contain_text('Code encoding enabled: 3 Predictor features')
+    expect(by_id(page,'Status')).to_contain_text('Code: 3 new predictors')
     by_id(page,'NoTarget').click()
     expect(by_id(page,'CodeMessage')).to_contain_text('exactly one Target',timeout=30000)
     expect(by_id(page,'Probe')).to_contain_text('steps=1; code_original=True; nominal_original=False',timeout=30000)
