@@ -104,34 +104,34 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinSupport():
             return float(input.MinSupport())
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinLift():
             return float(input.MinLift())
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MaxLength():
             return max(2, int(input.MaxLength()))
 
-        @this.suspendable(calc=True)
         @this.record_code
+        @this.suspendable(calc=True)
         def PreparedData():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.suspendable(calc=True)
         @this.record_code
+        @this.suspendable(calc=True)
         def MissingVariables():
             frame = PreparedData().frame
             return [column for column in frame.columns if frame[column].isna().any()]

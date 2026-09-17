@@ -628,8 +628,8 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Options():
             return {
                 "method": str(input.Method()), "neighbours": int(input.Neighbours()),
@@ -638,8 +638,8 @@ def instance():
                 "jobs": int(input.Jobs()),
             }
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinImprovement():
             return float(input.MinImprovement())
 

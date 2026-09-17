@@ -40,6 +40,7 @@
 ##      application(): method that creates the shiny app object
 ##      Run(): method that either runs the single-card app in the viewer
 import asyncio
+import copy
 import functools
 import html
 import inspect
@@ -960,22 +961,49 @@ class Module(ABC):
         return _ui.HTML("<hr>".join(lines))
 
     def settle(self, seconds: float = 2, bypass_during_tests: bool = True):
+        """Publish after a quiet interval, retaining the last settled value meanwhile.
+
+        A separate producer owns the input dependencies and timer. Consumers read
+        only the published value, so multiple readers cannot release a candidate
+        early or invalidate downstream work while a selection is still changing.
+        """
+        if seconds < 0:
+            raise ValueError("Settling delay must be nonnegative")
+
         def decorator(function):
-            last_value = reactive.value(_UNSET)
+            published = reactive.Value()
+            arguments = reactive.Value()
+            producer = None
+            candidate = _UNSET
+            changed_at = 0.0
 
             @wraps(function)
             def wrapper(*args, **kwargs):
-                # Do not delay reactive values during tests.
+                nonlocal producer
                 if bypass_during_tests and Module.running_under_tests():
                     return function(*args, **kwargs)
-                current = function(*args, **kwargs)
                 with reactive.isolate():
-                    previous = last_value()
-                if previous is not _UNSET and current == previous:
-                    return current
-                last_value.set(current)
-                reactive.invalidate_later(seconds)
-                req(False)
+                    if not arguments.is_set() or arguments.get() != (args, kwargs):
+                        arguments.set((args, kwargs))
+                if producer is None:
+                    @reactive.effect
+                    def publish_when_settled():
+                        nonlocal candidate, changed_at
+                        call_args, call_kwargs = arguments.get()
+                        current = function(*call_args, **call_kwargs)
+                        now = time.monotonic()
+                        if candidate is _UNSET or current != candidate:
+                            candidate = copy.deepcopy(current)
+                            changed_at = now
+                        remaining = seconds - (now - changed_at)
+                        if remaining > 0:
+                            reactive.invalidate_later(remaining)
+                            return
+                        with reactive.isolate():
+                            if not published.is_set() or published.get() != candidate:
+                                published.set(copy.deepcopy(candidate))
+                    producer = publish_when_settled
+                return published.get()
             return wrapper
 
         return decorator

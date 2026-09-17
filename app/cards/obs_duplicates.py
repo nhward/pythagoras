@@ -299,13 +299,13 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def SignificantFigures():
             return max(1, int(input.SignificantFigures()))
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MaxDifferences():
             return max(0, int(input.MaxDifferences()))
 

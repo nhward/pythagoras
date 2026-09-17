@@ -522,33 +522,33 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def Shadow():
             return input.Shadow()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def CVFolds():
             return input.CVFolds()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinMissProp():
             return input.MinMissProp()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.suspendable(calc=True)
         @this.record_code
+        @this.suspendable(calc=True)
         def PreparedData():
             samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
@@ -589,7 +589,19 @@ def instance():
 
         @reactive.effect
         def UpdateShadowChoices():
-            choices = MissingVariables()
+            eligible = MissingVariables()
+            importance = Analysis().importance
+            ranked = importance.loc[
+                importance["Variable Type"].eq("Shadow")
+                & importance["Source Variable"].isin(eligible)
+            ].sort_values(
+                ["Importance", "Variable"],
+                ascending=[False, True],
+                kind="stable",
+                na_position="last",
+            )["Source Variable"].tolist()
+            # Keep eligible variables without an estimate available after ranked ones.
+            choices = ranked + [column for column in eligible if column not in ranked]
             with reactive.isolate():
                 selected = [
                     column for column in (input.Shadow() or [])

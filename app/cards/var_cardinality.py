@@ -768,8 +768,8 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Options():
             thresholds = tuple(input.Thresholds() or ())
             req(len(thresholds) == 2)

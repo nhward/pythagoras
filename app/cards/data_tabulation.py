@@ -24,6 +24,7 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from text_pandas import is_text
 
 
@@ -97,15 +98,23 @@ def instance():
 
         @this.suspendable(calc = True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This grid does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def Decimals():
             return input.Decimals()
         
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
@@ -139,6 +148,7 @@ def instance():
         @this.record_code
         def PreparedData():
             df = incomingproxy_data() #Returns proxy_data
+            req(df is not None)
             if this.isFullScreen():
                 df = df.sample(n = MaxObs(), mode = "random", keep_geometry = True)
             else:
@@ -327,7 +337,8 @@ def instance():
         @output
         @render.ui
         def DataTable():
-            req(PreparedData() is not None)
+            # Bind the grid once. Upstream invalidation belongs to its renderer,
+            # not this container (which would unbind/rebind an in-flight output).
             return ui.output_data_frame(id = "DataTable2")
 
         @output
@@ -347,7 +358,7 @@ def instance():
         @output
         @render.ui
         def StructTable():
-            req(incomingproxy_data() is not None)
+            # Keep the metadata grid mounted through temporary upstream gaps.
             return ui.output_data_frame(id = "Structure")
 
         @output

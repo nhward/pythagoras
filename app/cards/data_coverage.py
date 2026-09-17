@@ -276,8 +276,8 @@ def instance():
                 current = list(input.Variables() or [])
             ui.update_selectize('Variables', choices=choices, selected=selection.resolve(current, choices, choices[:2]))
 
-        @this.settle(2)
         @this.suspendable(calc=True)
+        @this.settle(2)
         def Options():
             return {
                 'variables':list(input.Variables() or []), 

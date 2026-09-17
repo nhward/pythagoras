@@ -379,18 +379,18 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Remove():
             return input.Remove() or []
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def VariableThreshold():
             return float(input.VariableThreshold()) / 100
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def ObservationThreshold():
             return float(input.ObservationThreshold()) / 100
 

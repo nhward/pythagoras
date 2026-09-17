@@ -303,8 +303,8 @@ def instance():
             ui.update_selectize('Variables',choices=choices,selected=selected)
             ui.update_select('Stratifier',choices={**{c:c for c in facets}, '':'None'},selected=selected_facet[0] if selected_facet else '')
         
-        @this.settle(2)
         @this.suspendable(calc=True)
+        @this.settle(2)
         def Options():
             return {
                 "variables": list(input.Variables() or []),

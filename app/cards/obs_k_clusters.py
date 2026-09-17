@@ -721,8 +721,8 @@ def instance():
             # Enforce the limit before the browser receives the updated radio group.
             return min(max(1, count), int(input.Maximum()))
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Options():
             return {"maximum": int(input.Maximum()), "limit": 10**int(input.MaxObs()),
                         "metric": input.Metric(), "method": input.Method(), "centre": input.Centre(),

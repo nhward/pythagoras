@@ -315,23 +315,23 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MaxIntersections():
             return max(1, int(input.MaxIntersections()))
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MaxVariables():
             return max(2, int(input.MaxVariables()))
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinCount():
             return max(1, int(input.MinCount()))
 

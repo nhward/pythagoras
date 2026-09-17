@@ -118,8 +118,8 @@ def instance():
 
     def server(input, output, session):
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
@@ -127,8 +127,8 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Qgram():
             return max(1, int(input.Qgram()))
 

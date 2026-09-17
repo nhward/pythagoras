@@ -1293,58 +1293,58 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinMissProp():
             return input.MinMissProp()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinLeafSamples():
             return input.MinLeafSamples()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MaxTreeDepth():
             return input.MaxTreeDepth()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinFoldFraction():
             return input.MinFoldFraction()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinRSquared():
             return input.MinRSquared()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def MinImprovement():
             return input.MinImprovement()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Alpha():
             return input.Alpha()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def CVFolds():
             return input.CVFolds()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
             
-        @this.suspendable(calc=True)
         @this.record_code
+        @this.settle(seconds=2)
         def PreparedData():
             samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp

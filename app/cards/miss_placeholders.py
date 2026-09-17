@@ -379,13 +379,13 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def Replace():
-            return input.Replace()
+            return input.Replace() or []
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
@@ -478,11 +478,9 @@ def instance():
             ))
             if fs:
                 mask = z > 1
-
                 if mask.any():
                     yy, xx = np.where(mask)
                     codes = z[yy, xx].astype(int)
-
                     hover_text = [
                         (
                             f"<b>{legend.get(c, f'Code {c}')}</b><br>"
@@ -491,9 +489,7 @@ def instance():
                         )
                         for row, col, c in zip(yy, xx, codes)
                     ]
-
                     hover_colors = [code_colours[c] for c in codes]
-
                     fig.add_trace(go.Scatter(
                         x=xx,
                         y=[y[i] for i in yy],
@@ -513,7 +509,6 @@ def instance():
                         showlegend=False,
                         hoverinfo="text",
                     ))
-
                 # Legend-only traces
                 for code in present_codes:
                     fig.add_trace(go.Scatter(

@@ -365,8 +365,8 @@ def instance():
         message = reactive.Value("")
         reset_pending = False
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Options():
             return {"limit": int(input.Limit()), "standardize": bool(input.Standardize()), "use_weights": bool(input.UseWeights()),
                         "metric": input.Metric(), "centre": input.Centre(), "linkage": input.Linkage(), "min_points": int(input.MinPoints()),
@@ -380,8 +380,8 @@ def instance():
                 return _analyze(source, **options)
             return await asyncio.to_thread(_analyze, source, **options)
 
-        @this.settle(seconds=1)
         @this.suspendable()
+        @this.settle(seconds=2)
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(this.input_data().clone(), Options())

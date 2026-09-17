@@ -963,8 +963,8 @@ def instance():
             ui.update_text(id="IName", value=input.UciDataset())
 
                 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Url():
             return input.Url()
 

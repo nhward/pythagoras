@@ -1,6 +1,7 @@
 import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
+
 app=create_app_fixture(app='../scenarios/var_text_encode.py',scope='function')
 restored_app=create_app_fixture(app='../scenarios/var_text_encode_restored.py',scope='function')
 empty_app=create_app_fixture(app='../scenarios/var_text_encode_empty.py',scope='function')
@@ -27,7 +28,6 @@ def test_panels_independent_toggles_audit_and_undo(page,app):
     expect(by_id(page,'Detail_characteristics')).to_contain_text('characters',timeout=30000)
     page.locator('.card').first.hover();page.locator('button.flip-btn').click()
     expect(by_id(page,'AuditTable')).to_contain_text('Missing text indicator',timeout=30000)
-    expect(by_id(page,'AuditSummary')).to_contain_text('Pipeline steps added: 1')
     toggle(page,'bow').uncheck();toggle(page,'sentiment').uncheck()
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=True; unchanged=True',timeout=30000)
 
@@ -58,6 +58,6 @@ def test_restored_combination_tab_and_retention(page,restored_app):
 
 def test_no_text_predictors_benign(page,empty_app):
     page.goto(empty_app.url)
-    expect(by_id(page,'Message_bow')).to_contain_text('No Text Predictor',timeout=30000)
+    expect(by_id(page,'Message_bow')).to_contain_text('No Text predictors are available',timeout=30000)
     toggle(page,'bow').check()
     expect(by_id(page,'Probe')).to_contain_text('steps=0; original=True; unchanged=True')

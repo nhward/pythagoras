@@ -349,8 +349,7 @@ def instance():
             guide=this, position='left',
             text="Remove encoded source columns from the card's output. Alternatively, retain them with their existing roles alongside the encoded numeric indicators."
         ),
-        ui.hr(),
-        ui.h6('Nominal encoding'),
+        ui.h5('Nominal encoding'),
         ui.input_numeric(
             id='MinFrequency', label='Minimum level count', value=1, min=1, step=1, 
             guide=this, position='left',
@@ -366,8 +365,7 @@ def instance():
             guide=this, position='left',
             text='Controls transform-time levels absent during fitting. All-zero indicators can coincide with a dropped binary reference. The infrequent option uses the pooled group when it exists, otherwise all zeros. Error rejects unseen values.'
         ),
-        ui.hr(),
-        ui.h6('Code target-encoding'),
+        ui.h5('Code target-encoding'),
         ui.input_select(
             id='CodeMethod', label='Target encoding method', choices=METHODS, selected='auto', 
             guide=this, position='left',
@@ -388,8 +386,7 @@ def instance():
             guide=this, position='left',
             text='By default integer and decimal Targets are numeric outcomes; nominal, ordered, Code and logical Targets are classes. Override for numeric class labels. Binary encoding models the second observed class, named in the output; multiclass adds one probability per class.'
         ),
-        ui.hr(),
-        ui.h6('Ordered encoding'),
+        ui.h5('Ordered encoding'),
         ui.input_select(
             id='OrderedMethod', label='Ordered encoding method', choices=ORDERED_METHODS, selected='ordinal', 
             guide=this, position='left',
@@ -405,8 +402,7 @@ def instance():
             guide=this, position='left',
             text='A level absent from the fitted declared order has no known rank. By default every corresponding output is missing; Error rejects such a value. Ordinary missing values always remain missing. Declared levels absent from a training fold remain valid because their order is part of the upstream schema.'
         ),
-        ui.hr(),
-        ui.h6('Cyclic encoding'),
+        ui.h5('Cyclic encoding'),
         ui.input_select(
             id='CyclicUnknown', label='Unknown Cyclic levels', choices={'missing':'Encode as missing','error':'Report an error'}, selected='missing', 
             guide=this, position='left',
@@ -418,36 +414,45 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.settle(1)
+        @this.suspendable(calc=True)
+        @this.settle(2)
+        def Encode():
+            return tuple(input.Encode() or [])
+
+        @this.suspendable(calc=True)
+        @this.settle(2)
+        def Settings():
+            return {
+                'nominal': {
+                    'remove_original': bool(input.RemoveOriginal()),
+                    'min_frequency': max(1,int(input.MinFrequency() or 1)),
+                    'max_categories': max(0,int(input.MaxCategories() or 0)), 
+                    'handle_unknown': input.Unknown()
+                },
+                'code': {
+                    'remove_original': bool(input.RemoveOriginal()), 
+                    'method': input.CodeMethod(),
+                    'smoothing': float(input.CodeSmoothing() or 0), 
+                    'cv': int(input.CodeFolds()),
+                    'target_type': input.CodeTargetType()
+                },
+                'ordered': {
+                    'remove_original': bool(input.RemoveOriginal()), 
+                    'method': input.OrderedMethod(),
+                    'degree': int(input.OrderedDegree() or 0), 
+                    'handle_unknown': input.OrderedUnknown()
+                },
+                'cyclic': {
+                    'remove_original': bool(input.RemoveOriginal()), 
+                    'handle_unknown': input.CyclicUnknown()
+                },
+                'logical':{'remove_original': bool(input.RemoveOriginal())},
+                'basket':{'remove_original': bool(input.RemoveOriginal())},
+            }
+
         @this.suspendable(calc=True)
         def Options():
-            return {
-                'nominal':{
-                    'remove_original':bool(input.RemoveOriginal()),
-                    'min_frequency':max(1,int(input.MinFrequency() or 1)),
-                    'max_categories':max(0,int(input.MaxCategories() or 0)), 
-                    'handle_unknown':input.Unknown()
-                },
-                'code':{
-                    'remove_original':bool(input.RemoveOriginal()), 
-                    'method':input.CodeMethod(),
-                    'smoothing':float(input.CodeSmoothing() or 0), 'cv':int(input.CodeFolds()),
-                    'target_type':input.CodeTargetType()
-                },
-                'ordered':{
-                    'remove_original':bool(input.RemoveOriginal()), 
-                    'method':input.OrderedMethod(),
-                    'degree':int(input.OrderedDegree() or 0), 
-                    'handle_unknown':input.OrderedUnknown()
-                },
-                'cyclic':{
-                    'remove_original':bool(input.RemoveOriginal()), 
-                    'handle_unknown':input.CyclicUnknown()
-                },
-                'logical':{'remove_original':bool(input.RemoveOriginal())},
-                'basket':{'remove_original':bool(input.RemoveOriginal())},
-                'selected':tuple(input.Encode() or [])
-            }
+            return {**Settings(), 'selected':Encode()}
 
         @busy.track('Preparing variable encodings…')
         @this.extended_task
@@ -470,7 +475,7 @@ def instance():
         @this.suspendable(calc=True)
         def Export():
             source = this.input_data()
-            selected = input.Encode() or []
+            selected = Encode()
             if not selected:
                 return source
             results = Analysis()
@@ -481,7 +486,7 @@ def instance():
 
         @this.suspendable(calc=True)
         def Audit():
-            selected = input.Encode() or []
+            selected = Encode()
             return _encoding_audit(this.input_data(), Analysis() if selected else {}, selected)
 
         @output
@@ -596,7 +601,7 @@ def instance():
             if result.transformer is None:
                 return 'No suitable nominal predictors.'
             model = result.transformer
-            active = 'nominal' in (input.Encode() or [])
+            active = 'nominal' in Encode()
             if not active:
                 return None
             if not model.output_columns_ and not model.removed_columns_:
@@ -610,7 +615,7 @@ def instance():
             if result.transformer is None:
                 return 'No suitable code predictors.'
             model = result.transformer
-            active = 'code' in (input.Encode() or [])
+            active = 'code' in Encode()
             if not active:
                 return None
             if not model.output_columns_ and not model.removed_columns_:
@@ -625,7 +630,7 @@ def instance():
             if result.transformer is None:
                 return 'No suitable ordered predictors.'
             model = result.transformer
-            active = 'ordered' in (input.Encode() or [])
+            active = 'ordered' in Encode()
             if not active:
                 return None
             if not model.output_columns_ and not model.removed_columns_:
@@ -640,7 +645,7 @@ def instance():
             if result.transformer is None:
                 return 'No suitable cyclic predictors.'
             model = result.transformer
-            active = 'cyclic' in (input.Encode() or [])
+            active = 'cyclic' in Encode()
             if not active:
                 return None
             if not model.output_columns_ and not model.removed_columns_:
@@ -655,7 +660,7 @@ def instance():
             if result.transformer is None:
                 return 'No suitable logical predictors.'
             model = result.transformer
-            active = 'logical' in (input.Encode() or [])
+            active = 'logical' in Encode()
             if not active:
                 return None
             if not model.output_columns_ and not model.removed_columns_:
@@ -669,7 +674,7 @@ def instance():
             if result.transformer is None:
                 return 'No suitable basket predictors.'
             model = result.transformer
-            active = 'basket' in (input.Encode() or [])
+            active = 'basket' in Encode()
             if not active:
                 return None
             if not model.output_columns_ and not model.removed_columns_:

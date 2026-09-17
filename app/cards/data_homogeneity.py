@@ -671,8 +671,8 @@ def instance():
                 selected = choices[:12]
             ui.update_selectize("Variables", choices=choices, selected=selected)
 
-        @this.settle(seconds=2)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Options():
             req(input.Sequence() is not None)
             return {

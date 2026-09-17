@@ -748,3 +748,55 @@ def test_busy_tracker_rejects_wrong_decorator_order():
 
     with pytest.raises(TypeError, match="reactive.extended_task"):
         busy.track("Calculating…")(lambda: None)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_settle_waits_since_last_change_and_retains_published_value():
+    import asyncio
+    module = DummyModule('settle-timing')
+    source = reactive.Value(('initial',))
+    observed = []
+
+    @module.settle(seconds=.12, bypass_during_tests=False)
+    def settled():
+        return source.get()
+
+    @reactive.effect
+    def first_reader():
+        observed.append(('first', settled()))
+
+    @reactive.effect
+    def second_reader():
+        observed.append(('second', settled()))
+
+    try:
+        await reactive.flush()
+        assert observed == []  # A second reader cannot publish the candidate early.
+        await asyncio.sleep(.16)
+        await reactive.flush()
+        assert observed == [('first', ('initial',)), ('second', ('initial',))]
+        source.set(('a',))
+        await reactive.flush()
+        await asyncio.sleep(.07)
+        source.set(('a', 'b'))
+        await reactive.flush()
+        await asyncio.sleep(.07)  # Past first change's deadline, before the second's.
+        await reactive.flush()
+        with reactive.isolate():
+            assert settled() == ('initial',)
+        assert len(observed) == 2
+        await asyncio.sleep(.09)
+        await reactive.flush()
+        assert observed[-2:] == [('first', ('a', 'b')), ('second', ('a', 'b'))]
+        # Returning to the committed value creates no redundant publication.
+        source.set(('temporary',))
+        await reactive.flush()
+        source.set(('a', 'b'))
+        await reactive.flush()
+        await asyncio.sleep(.16)
+        await reactive.flush()
+        assert len(observed) == 4
+    finally:
+        first_reader.destroy()
+        second_reader.destroy()

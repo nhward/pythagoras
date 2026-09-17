@@ -659,8 +659,8 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=1)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def Options():
             selected = list(input.Transform() or [])
             target = _continuous_target(incomingproxy_data())

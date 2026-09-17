@@ -107,39 +107,94 @@ def instance():
     )
 
     this.footer=lambda: ui.TagList(
-        ui.input_checkbox_group(id='Encode',label='Encode',choices=METHODS,selected=[],inline=True,
-        guide=this,title='Apply text features',position='top',text='Choose any combination independently of the active tab. All methods read the original source text. Outputs are numeric Predictors and require no Basket encoding. Adds one sklearn step; uncheck all to restore incoming data. Unavailable methods add nothing; successful methods still apply. No Target or observation importance is used.'),
+        ui.input_checkbox_group(
+            id='Encode',label='Encode',choices=METHODS,selected=[],inline=True,
+            guide=this,title='Apply text encoding',position='top',
+            text='Choose any combination independently of the active tab. All methods read the original source text. Outputs are numeric Predictors and require no Basket encoding. Adds one sklearn step; uncheck all to restore incoming data. Unavailable methods add nothing; successful methods still apply. No Target or observation importance is used.'
+        ),
         ui.output_ui('Busy'),ui.output_text('Status')
     )
     
     this.settings=lambda: ui.TagList(
         ui.input_checkbox(id='RemoveOriginal',label='Remove original variables',value=True,guide=this,position='left',
             text='Remove a text source only if all selected methods successfully produce outputs for it. Otherwise retain it for inspection. Retained text may need removal before fitting a numeric-only estimator. A missing-text indicator accompanies generated features.'),
-        ui.hr(),
-        ui.h6('Vocabulary and latent semantics'),
-        ui.input_select(id='Weighting',label='Bag-of-words weighting',choices={'tfidf':'TF–IDF','counts':'Counts','binary':'Binary presence'},selected='tfidf',guide=this,position='left',text='TF–IDF learns inverse document frequencies from nonmissing training documents and normalizes each row. Counts preserve repeated tokens; binary records presence. LSA always uses TF–IDF; the binary option also binarizes its initial counts.'),
-        ui.input_select(id='Analyzer',label='Token units',choices={'word':'Words','char':'Characters'},selected='word',guide=this,position='left',text='Words are Unicode word-character sequences, including single-character words. Characters allow subword patterns without language-specific tokenization. This affects vocabulary and LSA only.'),
-        ui.input_numeric(id='NgramMax',label='Maximum n-gram length',value=1,min=1,max=3,step=1,guide=this,position='left',text='Include single units through this many consecutive units. Word bigrams capture short phrases. Character n-grams capture spelling fragments. Longer ranges increase vocabulary and memory.'),
-        ui.input_checkbox(id='Lowercase',label='Lowercase vocabulary text',value=True,guide=this,position='left',text='Lowercase only the vocabulary/LSA input. Sentiment and text characteristics always use the original text.'),
-        ui.input_checkbox(id='StripAccents',label='Normalize accents',value=False,guide=this,position='left',text='Unicode accent normalization for vocabulary/LSA only; may merge words with distinct meanings.'),
-        ui.input_text_area(id='StopWords',label='Stop words (one per line)',value='',guide=this,position='left',text='Optional explicit language-specific words to omit, one per line. Empty means no stop-word filtering. Apply the same casing/normalization as the tokenizer. Ignored for character analysis.'),
-        ui.input_numeric(id='MinDF',label='Minimum document count',value=1,min=1,step=1,guide=this,position='left',text='Keep terms appearing in at least this many nonmissing training documents. Counts are unweighted; an empty vocabulary is reported and leaves the source unchanged.'),
-        ui.input_slider(id='MaxDF',label='Maximum document fraction',min=0.1,max=1.0,value=1.0,step=0.05,guide=this,position='left',text='Exclude terms found in more than this fraction of nonmissing training documents. One disables this filter.'),
-        ui.input_numeric(id='MaxFeatures',label='Maximum vocabulary size',value=500,min=1,max=4096,step=1,guide=this,position='left',text='Vocabulary limit per source and vocabulary method. Term outputs stay sparse. Total output is limited to 8192 features; dense and sparse output blocks are limited to 128 MiB. Each source is limited to 10 million characters. No silent row sampling or truncation.'),
-        ui.input_numeric(id='Components',label='LSA components',value=20,min=1,max=300,step=1,guide=this,position='left',text='Requested compact dimensions, capped below both training document count and vocabulary size. Requires at least two documents and two terms. Each validation fold refits its decomposition with seed 2025.'),
-        ui.input_checkbox(id='LSANormalize',label='Normalize LSA vectors',value=False,guide=this,position='left',text='Scale each nonzero document component vector to length one after projection. Missing documents remain missing; empty documents give zeros.'),
-        ui.hr(),
-        ui.h6('Pretrained word embeddings'),
-        ui.input_file(id='EmbeddingFile',label='Word2Vec text model',accept=['.txt','.vec'],multiple=False,guide=this,position='left',text='Upload a UTF-8 Word2Vec text file with count/dimension header. No binary models or automatic downloads. Limits: 50 MiB, 200,000 tokens, 300 dimensions. Use a model you have permission to use. Files must be supplied again after bookmark restoration; fitted pipelines contain vectors, while unfitted recipes require the original resource.'),
-        ui.input_checkbox(id='EmbeddingLowercase',label='Lowercase embedding tokens',value=True,guide=this,position='left',text='Match the casing used by the pretrained vocabulary. Mean pooling uses every recognized token occurrence. Exported coverage is recognized tokens divided by all tokens; unknown tokens are ignored. No recognized tokens means missing vector coordinates.')
+        ui.h5('Vocabulary and latent semantics'),
+        ui.input_select(
+            id='Weighting',label='Bag-of-words weighting',choices={'tfidf':'TF–IDF','counts':'Counts','binary':'Binary presence'},selected='tfidf',
+            guide=this,position='left',
+            text='TF–IDF learns inverse document frequencies from nonmissing training documents and normalizes each row. Counts preserve repeated tokens; binary records presence. LSA always uses TF–IDF; the binary option also binarizes its initial counts.'
+        ),
+        ui.input_select(
+            id='Analyzer',label='Token units',choices={'word':'Words','char':'Characters'},selected='word',
+            guide=this,position='left',
+            text='Words are Unicode word-character sequences, including single-character words. Characters allow subword patterns without language-specific tokenization. This affects vocabulary and LSA only.'
+        ),
+        ui.input_numeric(
+            id='NgramMax',label='Maximum n-gram length',value=1,min=1,max=3,step=1,
+            guide=this,position='left',
+            text='Include single units through this many consecutive units. Word bigrams capture short phrases. Character n-grams capture spelling fragments. Longer ranges increase vocabulary and memory.'
+            ),
+        ui.input_checkbox(
+            id='Lowercase',label='Lowercase vocabulary text',value=True,
+            guide=this,position='left',text='Lowercase only the vocabulary/LSA input. Sentiment and text characteristics always use the original text.'
+        ),
+        ui.input_checkbox(
+            id='StripAccents',label='Normalize accents',value=False,
+            guide=this,position='left',text='Unicode accent normalization for vocabulary/LSA only; may merge words with distinct meanings.'
+        ),
+        ui.input_text_area(
+            id='StopWords',label='Stop words (one per line)',value='',
+            guide=this,position='left',
+            text='Optional explicit language-specific words to omit, one per line. Empty means no stop-word filtering. Apply the same casing/normalization as the tokenizer. Ignored for character analysis.'
+        ),
+        ui.input_numeric(
+            id='MinDF',label='Minimum document count',value=1,min=1,step=1,
+            guide=this,position='left',
+            text='Keep terms appearing in at least this many nonmissing training documents. Counts are unweighted; an empty vocabulary is reported and leaves the source unchanged.'
+        ),
+        ui.input_slider(
+            id='MaxDF',label='Maximum document fraction',min=0.1,max=1.0,value=1.0,step=0.05,
+            guide=this,position='left',text='Exclude terms found in more than this fraction of nonmissing training documents. One disables this filter.'
+        ),
+        ui.input_numeric(
+            id='MaxFeatures',label='Maximum vocabulary size',value=500,min=1,max=4096,step=1,
+            guide=this,position='left',
+            text='Vocabulary limit per source and vocabulary method. Term outputs stay sparse. Total output is limited to 8192 features; dense and sparse output blocks are limited to 128 MiB. Each source is limited to 10 million characters. No silent row sampling or truncation.'
+        ),
+        ui.input_numeric(
+            id='Components',label='LSA components',value=20,min=1,max=300,step=1,
+            guide=this,position='left',
+            text='Requested compact dimensions, capped below both training document count and vocabulary size. Requires at least two documents and two terms. Each validation fold refits its decomposition with seed 2025.'
+        ),
+        ui.input_checkbox(
+            id='LSANormalize',label='Normalize LSA vectors',value=False,
+            guide=this,position='left',text='Scale each nonzero document component vector to length one after projection. Missing documents remain missing; empty documents give zeros.'
+        ),
+        ui.h5('Pretrained word embeddings'),
+        ui.input_file(
+            id='EmbeddingFile',label='Word2Vec text model',accept=['.txt','.vec'],multiple=False,
+            guide=this,position='left',
+            text='Upload a UTF-8 Word2Vec text file with count/dimension header. No binary models or automatic downloads. Limits: 50 MiB, 200,000 tokens, 300 dimensions. Use a model you have permission to use. Files must be supplied again after bookmark restoration; fitted pipelines contain vectors, while unfitted recipes require the original resource.'
+        ),
+        ui.input_checkbox(
+            id='EmbeddingLowercase',label='Lowercase embedding tokens',value=True,
+            guide=this,position='left',
+            text='Match the casing used by the pretrained vocabulary. Mean pooling uses every recognized token occurrence. Exported coverage is recognized tokens divided by all tokens; unknown tokens are ignored. No recognized tokens means missing vector coordinates.'
+        )
     )
 
     def server(input,output,session):
 
         busy=this.busy()
 
-        @this.settle(2)
         @this.suspendable(calc=True)
+        @this.settle(2)
+        def Encode():
+            return input.Encode() or []
+
+
+        @this.suspendable(calc=True)
+        @this.settle(2)
         def Options():
             upload=input.EmbeddingFile() or []
             path=upload[0]['datapath'] if upload else ''
@@ -188,7 +243,7 @@ def instance():
         @this.suspendable(calc=True)
         def Export():
             source=this.input_data()
-            selected=tuple(input.Encode() or [])
+            selected=tuple(Encode())
             if not selected:
                 return source
             return _apply(source,Analysis(), selected, bool(input.RemoveOriginal()))
@@ -229,7 +284,7 @@ def instance():
         @output
         @render.text
         def Status():
-            selected=input.Encode() or []
+            selected=Encode()
             if not selected:
                 return None
             result=Analysis()
@@ -256,7 +311,7 @@ def instance():
         @output
         @render.data_frame
         def AuditTable():
-            selected=input.Encode() or []
+            selected=Encode()
             rows=[]
             if selected:
                 result=Analysis()

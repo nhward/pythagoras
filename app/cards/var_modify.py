@@ -371,8 +371,8 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=2)
         @this.suspendable(calc = True)
+        @this.settle(2)
         def MaxObs():
             return 10**input.MaxObs()
 

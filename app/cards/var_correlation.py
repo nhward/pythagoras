@@ -879,8 +879,8 @@ def instance():
         def incomingproxy_data():
             return this.input_data()
 
-        @this.settle(seconds=0.4)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def AnalysisOptions():
             method = input.CorrType() or "pearson"
             req(method in METHODS)
@@ -890,8 +890,8 @@ def instance():
                 "maximum_observations": 10 ** int(input.MaxObs()),
             }
 
-        @this.settle(seconds=0.3)
         @this.suspendable(calc=True)
+        @this.settle(seconds=2)
         def DisplayOptions():
             return {
                 "style": str(input.Style()),
