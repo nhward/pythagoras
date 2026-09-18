@@ -800,3 +800,103 @@ async def test_settle_waits_since_last_change_and_retains_published_value():
     finally:
         first_reader.destroy()
         second_reader.destroy()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_settle_passes_proxy_with_immutable_history_without_deepcopy():
+    import asyncio
+
+    import pandas as pd
+    from proxy_data import proxy_data
+
+    module = DummyModule('settle-proxy')
+    original = proxy_data(pd.DataFrame({'x': [1, 2]}))
+    first = original.with_inactive_step(stage='Learning', card='example',
+        operation='Example', parameters={'selected': ['a']})
+    second = original.with_inactive_step(stage='Learning', card='example',
+        operation='Example', parameters={'selected': ['b']})
+    source = reactive.Value(first)
+    observed = []
+
+    @module.settle(seconds=.05, bypass_during_tests=False)
+    def settled():
+        # PreparedData-style producers can return a fresh equivalent object.
+        return source.get().clone()
+
+    @reactive.effect
+    def reader():
+        observed.append(settled())
+
+    try:
+        await reactive.flush()
+        await asyncio.sleep(.09)
+        await reactive.flush()
+        assert len(observed) == 1 and observed[0].equals(first)
+        source.set(second)
+        await reactive.flush()
+        with reactive.isolate():
+            assert settled().equals(first)
+        await asyncio.sleep(.09)
+        await reactive.flush()
+        assert len(observed) == 2 and observed[-1].equals(second)
+        assert observed[-1].processing_records == second.processing_records
+    finally:
+        reader.destroy()
+
+
+@pytest.mark.unit
+def test_settle_snapshots_plain_containers_but_preserves_opaque_values():
+    from types import MappingProxyType
+    class NotCopyable:
+        def __deepcopy__(self, memo):
+            raise TypeError('Must not copy an application value')
+    opaque = NotCopyable()
+    history = MappingProxyType({'value': 1})
+    options = {'selected': ['a'], 'nested': ({'enabled': {'x'}},),
+               'object': opaque, 'history': history}
+    snapshot = module_lib._settle_snapshot(options)
+    options['selected'].append('b')
+    options['nested'][0]['enabled'].add('y')
+    assert snapshot['selected'] == ['a']
+    assert snapshot['nested'][0]['enabled'] == {'x'}
+    assert snapshot['object'] is opaque
+    assert snapshot['history'] is history
+
+
+@pytest.mark.unit
+def test_record_code_outside_suspendable_preserves_calc_and_source():
+    module = DummyModule('record-reactive')
+    calls = []
+
+    @module.suspendable(calc=True, suspended=False)
+    def calculated():
+        calls.append('called')
+        return 42
+
+    recorded = module.record_code(calculated)
+    assert recorded is calculated
+    assert 'def calculated' in module.retrieve_code('calculated')
+    with reactive.isolate():
+        assert recorded() == recorded() == 42
+    assert calls == ['called']
+    recorded.suspend()
+    with reactive.isolate(), pytest.raises(SilentException):
+        recorded()
+    recorded.resume()
+    with reactive.isolate():
+        assert recorded() == 42
+
+
+@pytest.mark.unit
+def test_record_code_plain_shiny_calc_source_unavailable_is_benign():
+    module = DummyModule('record-plain-reactive')
+
+    @reactive.calc
+    def calculated():
+        return 7
+
+    assert module.record_code(calculated) is calculated
+    assert module.retrieve_code('calculated') == '<source not available>'
+    with reactive.isolate():
+        assert calculated() == 7

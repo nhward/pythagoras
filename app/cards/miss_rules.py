@@ -124,14 +124,13 @@ def instance():
         def MaxLength():
             return max(2, int(input.MaxLength()))
 
-        @this.record_code
         @this.suspendable(calc=True)
         def PreparedData():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.record_code
         @this.suspendable(calc=True)
+        @this.record_code
         def MissingVariables():
             frame = PreparedData().frame
             return [column for column in frame.columns if frame[column].isna().any()]

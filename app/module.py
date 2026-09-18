@@ -40,7 +40,6 @@
 ##      application(): method that creates the shiny app object
 ##      Run(): method that either runs the single-card app in the viewer
 import asyncio
-import copy
 import functools
 import html
 import inspect
@@ -71,6 +70,25 @@ from shiny import ui as _ui
 from shiny.types import SilentException
 
 _UNSET = object()
+
+
+def _settle_snapshot(value):
+    """Snapshot plain input containers without copying application objects.
+
+    proxy_data and its immutable processing records contain mappingproxy values;
+    they must travel through this generic decorator without pickling/deepcopy.
+    Reactive producers should replace application values rather than mutate them.
+    """
+    if type(value) is dict:
+        return {key: _settle_snapshot(item) for key, item in value.items()}
+    if type(value) is list:
+        return [_settle_snapshot(item) for item in value]
+    if type(value) is tuple:
+        return tuple(_settle_snapshot(item) for item in value)
+    if type(value) is set:
+        return value.copy()
+    return value
+
 _ACTIVE_CONFIGURATION_MODULE: ContextVar["Module | None"] = ContextVar(
     "active_configuration_module",
     default=None,
@@ -905,6 +923,9 @@ class Module(ABC):
                             if not enabled():
                                 return
                             func()
+            # Preserve the source-function link for introspection decorators.
+            # Shiny's Calc_ keeps the name but does not provide __wrapped__.
+            wrapped.__wrapped__ = func
             # Control methods
             def suspend():
                 enabled.set(False)
@@ -933,9 +954,15 @@ class Module(ABC):
         """
         try:
             # Grab the source, dedent so it runs cleanly
-            source = textwrap.dedent(inspect.getsource(func))
-        except OSError:
+            source = textwrap.dedent(inspect.getsource(inspect.unwrap(func)))
+        except (OSError, TypeError):
             source = "<source not available>"
+        if not inspect.isroutine(func):
+            # A reactive object is already decorated: keep its identity, caching,
+            # async behavior and lifecycle controls rather than wrapping it again.
+            name = getattr(func, "__name__", type(func).__name__)
+            self.code_registry[name] = source
+            return func
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             self.code_registry[func.__name__] = source
@@ -993,7 +1020,7 @@ class Module(ABC):
                         current = function(*call_args, **call_kwargs)
                         now = time.monotonic()
                         if candidate is _UNSET or current != candidate:
-                            candidate = copy.deepcopy(current)
+                            candidate = _settle_snapshot(current)
                             changed_at = now
                         remaining = seconds - (now - changed_at)
                         if remaining > 0:
@@ -1001,7 +1028,7 @@ class Module(ABC):
                             return
                         with reactive.isolate():
                             if not published.is_set() or published.get() != candidate:
-                                published.set(copy.deepcopy(candidate))
+                                published.set(_settle_snapshot(candidate))
                     producer = publish_when_settled
                 return published.get()
             return wrapper

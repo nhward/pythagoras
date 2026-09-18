@@ -530,9 +530,7 @@ class TestWebKitUI:
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
-        expect(by_id(page, "Significance")).to_contain_text(
-            "Potentially informative missingness: x.", timeout=30_000
-        )
+        expect(by_id(page, "Significance")).to_contain_text("Potentially informative missingness: x.", timeout=30_000)
         expect(by_id(page, "Shadow")).to_contain_text("x")
 
     @pytest.mark.ui
@@ -540,9 +538,7 @@ class TestWebKitUI:
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
-        expect(by_id(page, "Significance")).to_contain_text(
-            "Potentially informative missingness: x.", timeout=30_000
-        )
+        expect(by_id(page, "Significance")).to_contain_text("Potentially informative missingness: x.", timeout=30_000)
         by_id(page, "FlipButton").click(force=True)
         table = controller.OutputDataFrame(page, namespaced_id(page, "Table2"))
         table.expect_nrow(1)
@@ -562,11 +558,7 @@ class TestWebKitUI:
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
-        expect(by_id(page, "Significance")).to_contain_text(
-            "Potentially informative missingness: x.", timeout=30_000
-        )
+        expect(by_id(page, "Significance")).to_contain_text("Potentially informative missingness: x.", timeout=30_000)
 
         set_shiny_input(page, "MinMissProp", 0.49)
-        expect(by_id(page, "Significance")).to_contain_text(
-            "Potentially informative missingness: x.", timeout=30_000
-        )
+        expect(by_id(page, "Significance")).to_contain_text("Potentially informative missingness: x.", timeout=30_000)

@@ -547,8 +547,8 @@ def instance():
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.record_code
         @this.suspendable(calc=True)
+        @this.record_code
         def PreparedData():
             samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
