@@ -4,7 +4,7 @@ title: Data import
 
 #### 🧭 Purpose
 
-_The Data import card brings a tabular dataset into Pythagoras and establishes the source used by every downstream card. It can read local files, packaged example datasets, web resources, and—outside Shinylive — the UCI Machine Learning Repository. Data is previewed before it is committed._
+_The Data import card brings a tabular dataset into Pythagoras and establishes the source used by every downstream card. It can read local files, packaged example datasets, web resources, OpenML datasets, and—outside Shinylive — the UCI Machine Learning Repository. Data is previewed before it is committed._
 
 #### 🎯 Goals
 
@@ -14,7 +14,15 @@ _The Data import card brings a tabular dataset into Pythagoras and establishes t
 
 #### 🧠 How it works
 
-The active tab determines the source. **File based** uploads a file from the local computer. **Dataset based** loads an example supplied by a supported Python package. **Web based** reads a file from a URL. **UC Irvine** retrieves a selected repository dataset and is unavailable in Shinylive because it requires server-side capabilities.
+The active tab determines the source. 
+
+ - **File based** uploads a file from the local computer. 
+ - **Dataset based** loads an example supplied by a supported Python package. 
+ - **Web based** reads a file from a URL. 
+ - **UC Irvine** retrieves a selected repository dataset and is unavailable in Shinylive because it requires server-side capabilities.
+ _ **OpenML** browses the active dataset catalogue in pages of 100. Click **Load catalogue page**, then search the dataset selector within that page. Each entry shows its ID, name, version, row count and column count. You may also enter an exact dataset ID obtained from the OpenML website. Different versions have different IDs.
+
+Click **Download preview** to retrieve the chosen dataset in the background. Inspect the flip side, give it a short name, then click **Commit Import**. Choosing another ID requires another download; it does not silently commit the old preview. Bookmarks retain the ID and download the committed source again when restored.
 
 File and web imports support CSV, TSV, Excel, Parquet, Feather, JSON, GeoJSON, GeoPackage, GML, KML, NetCDF, GRIB, HDF5, and related formats handled by the underlying readers. Spatial files become GeoPandas data when possible. Multidimensional sources are converted to a data frame when possible.
 
@@ -48,6 +56,8 @@ After commitment, inspect the data directly and assign deliberate variable roles
 
 #### ⛔️ Limitations
 
+* OpenML needs internet access. Large datasets can require substantial download time and memory. Downloads use scikit-learn's local cache where available; browser-only environments may restrict network access, threading or caching.
+* OpenML imports include the default target, but it initially receives the Predictor role: assign the Target role explicitly downstream. OpenML columns marked as ignored or row identifiers may be omitted by scikit-learn. Sparse datasets that cannot provide a pandas frame are unsupported. Check the dataset's license and description on OpenML before use.
 * Format support depends on the installed Python readers and their optional dependencies.
 * Automatic type inference cannot reliably distinguish identifiers, nominal text, dates, and numbers stored as text.
 * Only one worksheet is imported from a multi-sheet workbook at a time.
@@ -64,6 +74,6 @@ After commitment, inspect the data directly and assign deliberate variable roles
 
 #### 🔗 Data flow
 
-* **Input:** An external file, URL, packaged dataset, or UCI dataset.
+* **Input:** An external file, URL, packaged dataset, UCI dataset, or an OpenML dataset identified by its exact ID.
 * **Output:** A newly materialized dataset with all variables assigned as predictors.
 * **Data journey:** The committed import establishes the journey’s source rather than appearing as a later cleaning or learning operation.

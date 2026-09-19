@@ -1,0 +1,80 @@
+---
+title: Observation outliers
+---
+
+#### 🧭 Purpose
+
+_The Observation outliers card compares several ways an observation can be unusual. Agreement can draw attention to observations worth investigating; disagreement can reveal that an observation is unusual in only one respect. The card uses numeric Predictor-role variables and passes the incoming dataset through unchanged._
+
+An outlier is not necessarily an error. A valid unusual observation may be especially informative. Investigating its provenance can also reveal extraction, measurement or cleaning problems that should be corrected at their source.
+
+#### 🎯 Goals
+
+1. **Primary:** Identify observations that deserve investigation using complementary outlier measures.
+1. **Secondary:** Expose disagreement between methods instead of requiring a single preferred detector.
+1. **Tertiary:** Preserve row identity so unusual values can be traced back to the data.
+
+#### 🧠 How it works
+
+Only numeric Predictors are used. Identifier, Target and Weighting roles do not enter the predictor matrix, and shadow variables are excluded. Constant and entirely missing predictors are ignored. Rows with missing or infinite values in the remaining predictors are excluded from analysis, without being removed from the dataset. No imputation is performed.
+
+Predictors are standardized to comparable scales. Above the analysis-size limit, a reproducible random sample of complete rows is used. All enabled methods assess this same sample. The footer reports coverage: observations outside the sample have not been assessed.
+
+: Table 1 - Outlier scoring
+
+| Method | What a high score indicates |
+|:-------|:----------------------------|
+| **Mahalanobis** | Distance from the multivariate center, accounting for correlations. Ledoit–Wolf shrinkage covariance stabilizes the calculation when variables are correlated. |
+| **Local Outlier Factor** | Lower density than nearby observations. |
+| **One-class SVM** | A low score under the fitted radial-basis support boundary, with the sign reversed so larger means more unusual. |
+| **Isolation Forest** | An observation that is comparatively easy to isolate using random tree splits. This is the standard, single-variable-split forest. |
+| **Cook's distance** | Influence on an ordinary least-squares regression using one numeric Target and the predictors. This measures model influence, which differs from unusual predictor values alone. |
+
+Cook's distance is unavailable for categorical Targets, incomplete Targets within the analyzed sample, rank-deficient regressions, insufficient residual degrees of freedom, or near-perfect fits. Other methods remain available; the footer explains omissions. Observation-importance weights are not used.
+
+Raw scores have incompatible units. Each available method is therefore converted to a percentile rank from 0 to 100 before combining. Ties share their average rank; a constant-score method contributes zero. Each colored segment contributes its percentile divided by the number of available methods. The total bar height is consequently the **Aggregate**, or mean percentile. It is a relative ranking, not the probability of an error or a statistical significance test.
+
+#### 🏞️ Front
+
+**Aggregate** displays the stacked comparison. The other tabs show raw scores for individual methods. Each tab shows its own highest-scoring observations in descending order. Aggregate sorts by the combined score; individual-method tabs sort by their raw scores. The observations displayed may therefore differ between tabs. Hover shows the Identifier-role value when available, the current one-based row position, the raw score and percentile. Repeated identifiers remain separate observations.
+
+Individual-method tabs can expose observations that the aggregate masks. The flip-side **Disagreement** column records the largest difference between a row's method percentiles. The number displayed affects charts only. Full-screen mode adds the legend and a vertical Plotly mode bar.
+
+#### 🔄 Flip side
+
+The table initially follows the active panel's descending score order (Aggregate if that method is unavailable). It includes every analyzed observation, its row position, optional Identifier, Aggregate, Disagreement and method percentiles. **Show raw method scores** replaces the method columns with their original scores; Aggregate and Disagreement retain their percentile-based definitions. Values display up to four decimal places. Sorting and filters support investigation without changing the dataset.
+
+#### 🛠️ Controls and actions
+
+There is no removal, correction or model-fitting action for downstream data. Calculations run as extended tasks. Changes to analysis settings settle before re-computation; switching panels or changing the displayed count does not refit the methods. Unavailable methods have an empty chart and an explanation in the footer.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+Several large contributions suggest agreement about relative unusualness. A large contribution from only one method invites a more specific explanation, such as local sparsity or regression influence. Even ordinary datasets always have highest-ranked observations. Inspect the original values, related records and collection process before deciding whether anything needs correction.
+
+#### ⛔️ Limitations
+
+* Sampling can miss rare outliers. Increasing the limit improves coverage but can make neighborhood and SVM calculations substantially slower.
+* Non-numeric variables need appropriate upstream encoding. No more than 200 numeric predictors are analyzed; high-dimensional rankings can be difficult to interpret.
+* Distances and rankings depend on scaling, neighborhood size and the analyzed population. Multiple legitimate groups can appear unusual under global methods.
+* Related detectors are not independent votes. Cook's distance additionally depends on the adequacy of its linear regression model.
+
+#### 📌 Suggested workflow
+
+1. Assign variable roles and check that the numeric predictors represent meaningful measurements.
+1. Inspect the footer for exclusions, sampling and unavailable methods.
+1. Compare Aggregate with individual-method tabs, and inspect Disagreement in the table.
+1. Locate interesting records using their identifiers and the flip-side table.
+1. Investigate their values and provenance, then correct confirmed problems upstream.
+
+#### 🔗 Data flow
+
+* **Input:** The current data, numeric Predictor roles, an optional Identifier and an optional numeric Target for Cook's distance.
+* **Output:** The same proxy data and learned pipeline, unchanged.
+* **Data journey:** No cleaning operation or learned transformation is added.
+
+The implementations follow the [scikit-learn outlier detection guide](https://scikit-learn.org/stable/modules/outlier_detection.html), [Ledoit–Wolf covariance estimator](https://scikit-learn.org/stable/modules/generated/sklearn.covariance.LedoitWolf.html), and [statsmodels Cook's distance](https://www.statsmodels.org/stable/generated/statsmodels.stats.outliers_influence.OLSInfluence.cooks_distance.html).

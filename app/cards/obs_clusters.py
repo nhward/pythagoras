@@ -301,9 +301,15 @@ def _figure(result, method, fullscreen=False):
                 marker={"color": color, "size": 7, "opacity": .8},
                 hovertemplate="%{customdata[0]}<br>x=%{x:.3g}<br>y=%{y:.3g}<extra>%{fullData.name}</extra>")
     axis = "t-SNE" if result.options["projection"] == "tsne" else "Principal component"
-    figure.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#e5ecf6",
-                         margin={"l": 15, "r": 15, "t": 15, "b": 15}, xaxis_title=f"{axis} 1", yaxis_title=f"{axis} 2",
-                         legend={"orientation": "h"})
+    figure.update_layout(
+        template="plotly_white", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="#bbd6f8",
+        margin={"l": 15, "r": 15, "t": 15, "b": 15}, 
+        xaxis_title=f"{axis} 1", 
+        yaxis_title=f"{axis} 2",
+        legend={"orientation": "h"
+    })
     if len(result.coordinates):
         for i, key in enumerate(("xaxis", "yaxis")):
             low, high = np.min(result.coordinates[:, i]), np.max(result.coordinates[:, i])

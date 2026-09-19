@@ -508,9 +508,9 @@ def instance():
                 guide=this, text="Requires the target model to reach at least this held-out balanced accuracy before shadow importance is interpreted as informative. Raising it demands stronger overall predictive performance.", position="left",
             ),
             ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Sets a logarithmic cap of 10^n observations used for cross-validated importance. Raising it improves coverage but increases random-forest fitting and permutation time.", position="left",
-            ),
+                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, step = 1, ticks=True, pre="10^",
+                guide=this, position="left", text="Sets a cap of observations used for cross-validated importance. Raising it improves coverage but increases random-forest fitting and permutation time."
+            )
         )
 
     this.settings = settings

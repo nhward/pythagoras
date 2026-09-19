@@ -40,6 +40,39 @@ import cards  # noqa: F401
 # TODO: cleanup exception handling
 # TODO: allow URL load to unzip zip files (unlikely to resolve multiple files except shp,shx,prj)
 
+def openml_catalogue(page=1):
+    """Retrieve a bounded page of active datasets without an OpenML dependency."""
+    page = max(1, int(page))
+    response = requests.get(
+        f"https://www.openml.org/api/v1/json/data/list/status/active/limit/100/offset/{(page - 1) * 100}",
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if "error" in payload:
+        raise ValueError(payload["error"].get("message", "OpenML catalogue unavailable"))
+    rows = []
+    for item in payload.get("data", {}).get("dataset", []):
+        quality = {q["name"]: q.get("value") for q in item.get("quality", [])}
+        rows.append({"id": int(item["did"]), "name": item["name"],
+                     "version": item["version"],
+                     "rows": quality.get("NumberOfInstances", "?"),
+                     "columns": quality.get("NumberOfFeatures", "?")})
+    return pd.DataFrame(rows, columns=["id", "name", "version", "rows", "columns"])
+
+
+def download_openml(dataset_id):
+    """Pin the exact OpenML version by ID and retain features and target."""
+    from sklearn.datasets import fetch_openml
+    dataset_id = int(dataset_id)
+    if dataset_id < 1:
+        raise ValueError("Choose a positive OpenML dataset ID")
+    result = fetch_openml(data_id=dataset_id, as_frame=True, parser="auto")
+    if not isinstance(result.frame, pd.DataFrame):
+        raise ValueError("This OpenML dataset cannot be represented as a data frame")
+    return result.frame
+
+
 def capture_output(function, *args, **kwargs) -> str:
     buffer=io.StringIO()
     with redirect_stdout(buffer):
@@ -197,7 +230,7 @@ def instance():
         supported_inputs = {
             "Navset", "ServerFile", "LocalFilePath", "FName", "Dataset",
             "DName", "Url", "UName", "UciDataset", "IName", "Separator",
-            "Sheet",
+            "Sheet", "OpenMLPage", "OpenMLDataset", "OName",
         }
         unknown = set(inputs) - supported_inputs
         if unknown:
@@ -209,7 +242,7 @@ def instance():
             key: value for key, value in inputs.items() if key in unknown
         }
         inputs = {key: value for key, value in inputs.items() if key in supported_inputs}
-        tabs = {"File based", "Dataset based", "Web based", "UC Irvine"}
+        tabs = {"File based", "Dataset based", "Web based", "UC Irvine", "OpenML"}
         navset = inputs.get("Navset")
         if navset is not None and navset not in tabs:
             this.log.warning(
@@ -382,6 +415,22 @@ def instance():
                     text='This is how you choose to name the dataset. Keep this name short. By default, it is initially populated with the base URL. Each of the importation styles has this field.')
             )
         ]
+        panels.append(ui.nav_panel(
+            "OpenML",
+            ui.tags.a("Browse OpenML", href="https://www.openml.org/search?type=data", target="_blank"),
+            ui.input_numeric("OpenMLPage", label="Catalogue page (100 datasets per page)",
+                             value=restored_input("OpenMLPage", 1), min=1, step=1),
+            ui.input_action_button("OpenMLBrowse", label="Load catalogue page", guide=this,
+                text="Load a page of active OpenML datasets. Search the selection within that page, or enter an exact dataset ID from the OpenML website."),
+            ui.input_selectize("OpenMLDataset", label="Dataset (or enter an exact ID)",
+                choices={str(restored_input("OpenMLDataset")): str(restored_input("OpenMLDataset"))} if restored_input("OpenMLDataset") else {},
+                selected=restored_input("OpenMLDataset"), options={"create": True},
+                guide=this, text="Catalogue labels show dataset ID, name, version, rows and columns. IDs identify a specific version. Large datasets may need substantial memory."),
+            ui.input_action_button("OpenMLDownload", label="Download preview", guide=this,
+                text="Download the selected dataset, including its target column. Inspect the flip side, then Commit Import. All columns initially have Predictor roles."),
+            ui.input_text("OName", label="Short name", value=restored_input("OName", "openml")),
+            ui.output_ui("OpenMLStatus"),
+        ))
         if not Module.IS_SHINYLIVE:
             uci_choices = UciChoices()
             restored_uci = restored_input("UciDataset")
@@ -401,7 +450,7 @@ def instance():
             )
         restored_tab = restored_input("Navset", "File based")
         available_tabs = {
-            "File based", "Dataset based", "Web based", "UC Irvine"
+            "File based", "Dataset based", "Web based", "UC Irvine", "OpenML"
         }
         if Module.IS_SHINYLIVE:
             available_tabs.remove("UC Irvine")
@@ -467,6 +516,73 @@ def instance():
             "last_committed_tab"
         )
         LastCommittedTab=reactive.Value(restored_committed_tab)
+
+        @reactive.extended_task
+        async def OpenMLCatalogueTask(page):
+            try:
+                return await asyncio.to_thread(openml_catalogue, page), None
+            except Exception as error:
+                return None, str(error)
+
+        @reactive.extended_task
+        async def OpenMLDownloadTask(dataset_id):
+            try:
+                return dataset_id, await asyncio.to_thread(download_openml, dataset_id), None
+            except Exception as error:
+                return dataset_id, None, str(error)
+
+        @this.suspendable(triggers=[lambda: input.OpenMLBrowse()])
+        def BrowseOpenML():
+            OpenMLCatalogueTask.cancel()
+            OpenMLCatalogueTask.invoke(input.OpenMLPage())
+
+        @reactive.effect
+        def UpdateOpenMLCatalogue():
+            frame, error = OpenMLCatalogueTask.result()
+            if error:
+                return
+            choices = {str(row.id): f"{row.id}: {row.name} (v{row.version}; {row.rows} rows, {row.columns} columns)"
+                       for row in frame.itertuples(index=False)}
+            with reactive.isolate():
+                selected = input.OpenMLDataset()
+            if selected:
+                choices.setdefault(str(selected), str(selected))
+            ui.update_selectize("OpenMLDataset", choices=choices, selected=selected)
+
+        @this.suspendable(triggers=[lambda: input.OpenMLDownload()])
+        def DownloadOpenML():
+            OpenMLDownloadTask.cancel()
+            OpenMLDownloadTask.invoke(str(input.OpenMLDataset() or ""))
+
+        def openml_preview():
+            try:
+                dataset_id, frame, error = OpenMLDownloadTask.result()
+            except SilentException:
+                return None
+            if dataset_id != str(input.OpenMLDataset() or ""):
+                return None
+            if error:
+                return None
+            return frame
+
+        @output
+        @render.ui
+        def OpenMLStatus():
+            messages = []
+            try:
+                frame, error = OpenMLCatalogueTask.result()
+                messages.append(error or f"Catalogue: {len(frame)} datasets on this page.")
+            except SilentException:
+                if OpenMLCatalogueTask.status() == "running":
+                    messages.append("Loading catalogue…")
+            try:
+                dataset_id, frame, error = OpenMLDownloadTask.result()
+                if dataset_id == str(input.OpenMLDataset() or ""):
+                    messages.append(error or f"Dataset {dataset_id}: {len(frame)} rows downloaded.")
+            except SilentException:
+                if OpenMLDownloadTask.status() == "running":
+                    messages.append("Downloading preview…")
+            return ui.help_text(" ".join(messages))
 
         @output
         @render.ui
@@ -571,6 +687,9 @@ def instance():
                     "IName": (
                         None if Module.IS_SHINYLIVE else input.IName()
                     ),
+                    "OpenMLPage": input.OpenMLPage(),
+                    "OpenMLDataset": input.OpenMLDataset(),
+                    "OName": input.OName(),
                     "Separator": input.Separator(),
                     "Sheet": input.Sheet(),
                 }
@@ -697,6 +816,8 @@ def instance():
                 if not source:
                     raise ValueError(f"No dataset source available for '{package}'")
                 return source["load"](name)
+            elif import_tab == "OpenML":
+                return openml_preview()
             elif import_tab == "UC Irvine":
                 if Module.runtime_mode(session) == "shinylive":
                     raise ValueError("UC Irvine imports are unavailable in Shinylive")
@@ -997,7 +1118,11 @@ def instance():
         @output
         @render.ui
         async def Check():
-            if input.Navset() == "Web based":
+            if input.Navset() == "OpenML":
+                data = openml_preview()
+                butt_disabled = data is None or not input.OName().strip()
+                message = ui.span("Download a preview to enable import" if data is None else f"OpenML import ready: {size_text(data)}")
+            elif input.Navset() == "Web based":
                 butt_disabled=input.UName().strip() == "" 
                 if Url().strip() == "":
                     message=ui.span("No URL supplied", class_="text-center text-warning")
@@ -1111,6 +1236,7 @@ def instance():
                 "Web based": input.UName,
                 "Dataset based": input.DName,
                 "UC Irvine": input.IName,
+                "OpenML": lambda: input.OName(),
             }
             name = names[import_tab]().strip()
             if not name:
@@ -1123,8 +1249,11 @@ def instance():
         async def CommitEvent():
             commit_import(input.Navset())
 
+        openml_restore_started = False
+
         def restore_committed_import():
             """Try to recreate the last import, waiting silently for inputs."""
+            nonlocal openml_restore_started
             if not restored_committed_tab:
                 return True
             try:
@@ -1152,6 +1281,13 @@ def instance():
                         "The previously uploaded temporary file is no longer "
                         "available"
                     )
+                if restored_committed_tab == "OpenML":
+                    if not openml_restore_started:
+                        OpenMLDownloadTask.invoke(str(input.OpenMLDataset()))
+                        openml_restore_started = True
+                    _, _, error = OpenMLDownloadTask.result()
+                    if error:
+                        raise ValueError(error)
                 commit_import(restored_committed_tab)
             except SilentException:
                 # Dynamically inserted UI is sent during one flush; its initial

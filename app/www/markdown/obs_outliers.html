@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Data import</title>
+<title>Observation outliers</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -844,7 +844,7 @@ fill: var(--bs-primary) !important;
 
 
 <header id="title-block-header">
-<h1 class="title">Data import</h1>
+<h1 class="title">Observation outliers</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
@@ -852,61 +852,87 @@ fill: var(--bs-primary) !important;
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Data import card brings a tabular dataset into Pythagoras and establishes the source used by every downstream card. It can read local files, packaged example datasets, web resources, OpenML datasets, and—outside Shinylive — the UCI Machine Learning Repository. Data is previewed before it is committed.</em></p>
+<p><em>The Observation outliers card compares several ways an observation can be unusual. Agreement can draw attention to observations worth investigating; disagreement can reveal that an observation is unusual in only one respect. The card uses numeric Predictor-role variables and passes the incoming dataset through unchanged.</em></p>
+<p>An outlier is not necessarily an error. A valid unusual observation may be especially informative. Investigating its provenance can also reveal extraction, measurement or cleaning problems that should be corrected at their source.</p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Import a usable dataset and give it a short, recognizable name.</li>
-<li><strong>Secondary:</strong> Check its dimensions, structure, missingness, and memory use before continuing.</li>
-<li><strong>Tertiary:</strong> Establish consistent initial roles and time-zone handling.</li>
+<li><strong>Primary:</strong> Identify observations that deserve investigation using complementary outlier measures.</li>
+<li><strong>Secondary:</strong> Expose disagreement between methods instead of requiring a single preferred detector.</li>
+<li><strong>Tertiary:</strong> Preserve row identity so unusual values can be traced back to the data.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>The active tab determines the source.</p>
-<ul>
-<li><strong>File based</strong> uploads a file from the local computer.</li>
-<li><strong>Dataset based</strong> loads an example supplied by a supported Python package.</li>
-<li><strong>Web based</strong> reads a file from a URL.</li>
-<li><strong>UC Irvine</strong> retrieves a selected repository dataset and is unavailable in Shinylive because it requires server-side capabilities. _ <strong>OpenML</strong> browses the active dataset catalogue in pages of 100. Click <strong>Load catalogue page</strong>, then search the dataset selector within that page. Each entry shows its ID, name, version, row count and column count. You may also enter an exact dataset ID obtained from the OpenML website. Different versions have different IDs.</li>
-</ul>
-<p>Click <strong>Download preview</strong> to retrieve the chosen dataset in the background. Inspect the flip side, give it a short name, then click <strong>Commit Import</strong>. Choosing another ID requires another download; it does not silently commit the old preview. Bookmarks retain the ID and download the committed source again when restored.</p>
-<p>File and web imports support CSV, TSV, Excel, Parquet, Feather, JSON, GeoJSON, GeoPackage, GML, KML, NetCDF, GRIB, HDF5, and related formats handled by the underlying readers. Spatial files become GeoPandas data when possible. Multidimensional sources are converted to a data frame when possible.</p>
-<p>The card first creates a provisional preview. <strong>Commit Import</strong> makes that preview the application’s current dataset. A new source selection does not replace the downstream dataset until it is committed.</p>
+<p>Only numeric Predictors are used. Identifier, Target and Weighting roles do not enter the predictor matrix, and shadow variables are excluded. Constant and entirely missing predictors are ignored. Rows with missing or infinite values in the remaining predictors are excluded from analysis, without being removed from the dataset. No imputation is performed.</p>
+<p>Predictors are standardized to comparable scales. Above the analysis-size limit, a reproducible random sample of complete rows is used. All enabled methods assess this same sample. The footer reports coverage: observations outside the sample have not been assessed.</p>
+<table class="caption-top">
+<caption>Table 1 - Outlier scoring</caption>
+<colgroup>
+<col style="width: 21%">
+<col style="width: 78%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">What a high score indicates</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Mahalanobis</strong></td>
+<td style="text-align: left;">Distance from the multivariate center, accounting for correlations. Ledoit–Wolf shrinkage covariance stabilizes the calculation when variables are correlated.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Local Outlier Factor</strong></td>
+<td style="text-align: left;">Lower density than nearby observations.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>One-class SVM</strong></td>
+<td style="text-align: left;">A low score under the fitted radial-basis support boundary, with the sign reversed so larger means more unusual.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Isolation Forest</strong></td>
+<td style="text-align: left;">An observation that is comparatively easy to isolate using random tree splits. This is the standard, single-variable-split forest.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Cook’s distance</strong></td>
+<td style="text-align: left;">Influence on an ordinary least-squares regression using one numeric Target and the predictors. This measures model influence, which differs from unusual predictor values alone.</td>
+</tr>
+</tbody>
+</table>
+<p>Cook’s distance is unavailable for categorical Targets, incomplete Targets within the analyzed sample, rank-deficient regressions, insufficient residual degrees of freedom, or near-perfect fits. Other methods remain available; the footer explains omissions. Observation-importance weights are not used.</p>
+<p>Raw scores have incompatible units. Each available method is therefore converted to a percentile rank from 0 to 100 before combining. Ties share their average rank; a constant-score method contributes zero. Each colored segment contributes its percentile divided by the number of available methods. The total bar height is consequently the <strong>Aggregate</strong>, or mean percentile. It is a relative ranking, not the probability of an error or a statistical significance test.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The front contains one tab for each available import method. Each method includes a short dataset name. Keep this name concise because it appears in card headings and in the Data journey.</p>
-<p>The status below the commit button reports whether a source has been recognized and whether it is ready to commit. Invalid paths, URLs, formats, or source choices prevent commitment and should be corrected before proceeding.</p>
+<p><strong>Aggregate</strong> displays the stacked comparison. The other tabs show raw scores for individual methods. Each tab shows its own highest-scoring observations in descending order. Aggregate sorts by the combined score; individual-method tabs sort by their raw scores. The observations displayed may therefore differ between tabs. Hover shows the Identifier-role value when available, the current one-based row position, the raw score and percentile. Repeated identifiers remain separate observations.</p>
+<p>Individual-method tabs can expose observations that the aggregate masks. The flip-side <strong>Disagreement</strong> column records the largest difference between a row’s method percentiles. The number displayed affects charts only. Full-screen mode adds the legend and a vertical Plotly mode bar.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side previews a source-specific summary before commitment. For tabular data it includes the data class and dimensions, memory use, column names and types, non-missing and missing counts, and categorical summaries where applicable. Use it to catch an incorrect worksheet, separator, or source before it enters the workflow.</p>
+<p>The table initially follows the active panel’s descending score order (Aggregate if that method is unavailable). It includes every analyzed observation, its row position, optional Identifier, Aggregate, Disagreement and method percentiles. <strong>Show raw method scores</strong> replaces the method columns with their original scores; Aggregate and Disagreement retain their percentile-based definitions. Values display up to four decimal places. Sorting and filters support investigation without changing the dataset.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p><strong>Commit Import</strong> publishes the currently previewed source. Importing another source and committing it replaces the current starting dataset, so downstream cards recalculate from the new source.</p>
-<p>The commit does not clean or model the data. Variables initially receive the <strong>Predictor</strong> role unless the importer recognizes a geometry column. Date and datetime values without a declared time zone are treated as UTC.</p>
+<p>There is no removal, correction or model-fitting action for downstream data. Calculations run as extended tasks. Changes to analysis settings settle before re-computation; switching panels or changing the displayed count does not refit the methods. Unavailable methods have an empty chart and an explanation in the footer.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Confirm that the observation and variable counts are plausible, names have not been mistaken for data, numeric columns have not become text, and missing values look credible. Unexpected types often indicate an incorrect separator, a header problem, or placeholder values that should be handled by later cards.</p>
-<p>After commitment, inspect the data directly and assign deliberate variable roles before relying on role-sensitive diagnostics.</p>
+<p>Several large contributions suggest agreement about relative unusualness. A large contribution from only one method invites a more specific explanation, such as local sparsity or regression influence. Even ordinary datasets always have highest-ranked observations. Inspect the original values, related records and collection process before deciding whether anything needs correction.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li>OpenML needs internet access. Large datasets can require substantial download time and memory. Downloads use scikit-learn’s local cache where available; browser-only environments may restrict network access, threading or caching.</li>
-<li>OpenML imports include the default target, but it initially receives the Predictor role: assign the Target role explicitly downstream. OpenML columns marked as ignored or row identifiers may be omitted by scikit-learn. Sparse datasets that cannot provide a pandas frame are unsupported. Check the dataset’s license and description on OpenML before use.</li>
-<li>Format support depends on the installed Python readers and their optional dependencies.</li>
-<li>Automatic type inference cannot reliably distinguish identifiers, nominal text, dates, and numbers stored as text.</li>
-<li>Only one worksheet is imported from a multi-sheet workbook at a time.</li>
-<li>A successful read does not establish that the source is complete, current, or semantically correct.</li>
-<li>Any database joining, ordering, or filtering is performed in advance.</li>
+<li>Sampling can miss rare outliers. Increasing the limit improves coverage but can make neighborhood and SVM calculations substantially slower.</li>
+<li>Non-numeric variables need appropriate upstream encoding. No more than 200 numeric predictors are analyzed; high-dimensional rankings can be difficult to interpret.</li>
+<li>Distances and rankings depend on scaling, neighborhood size and the analyzed population. Multiple legitimate groups can appear unusual under global methods.</li>
+<li>Related detectors are not independent votes. Cook’s distance additionally depends on the adequacy of its linear regression model.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">
-<li>Select the appropriate source tab and choose or enter the source.</li>
-<li>Give the dataset a short name and inspect the provisional summary.</li>
-<li>Correct the separator or worksheet when the preview is implausible.</li>
-<li>Click <strong>Commit Import</strong> only when the source is correct.</li>
-<li>Continue with Data tabulation and Role assignment.</li>
+<li>Assign variable roles and check that the numeric predictors represent meaningful measurements.</li>
+<li>Inspect the footer for exclusions, sampling and unavailable methods.</li>
+<li>Compare Aggregate with individual-method tabs, and inspect Disagreement in the table.</li>
+<li>Locate interesting records using their identifiers and the flip-side table.</li>
+<li>Investigate their values and provenance, then correct confirmed problems upstream.</li>
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> An external file, URL, packaged dataset, UCI dataset, or an OpenML dataset identified by its exact ID.</li>
-<li><strong>Output:</strong> A newly materialized dataset with all variables assigned as predictors.</li>
-<li><strong>Data journey:</strong> The committed import establishes the journey’s source rather than appearing as a later cleaning or learning operation.</li>
+<li><strong>Input:</strong> The current data, numeric Predictor roles, an optional Identifier and an optional numeric Target for Cook’s distance.</li>
+<li><strong>Output:</strong> The same proxy data and learned pipeline, unchanged.</li>
+<li><strong>Data journey:</strong> No cleaning operation or learned transformation is added.</li>
 </ul>
+<p>The implementations follow the <a href="https://scikit-learn.org/stable/modules/outlier_detection.html">scikit-learn outlier detection guide</a>, <a href="https://scikit-learn.org/stable/modules/generated/sklearn.covariance.LedoitWolf.html">Ledoit–Wolf covariance estimator</a>, and <a href="https://www.statsmodels.org/stable/generated/statsmodels.stats.outliers_influence.OLSInfluence.cooks_distance.html">statsmodels Cook’s distance</a>.</p>
 
 
 

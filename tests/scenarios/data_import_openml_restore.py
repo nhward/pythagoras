@@ -40,4 +40,8 @@ data_import.download_openml = download_fixture
 from cards.data_import import instance
 
 this = instance()
+this.restore_configuration_state({
+    "inputs": {"Navset": "OpenML", "OpenMLDataset": "61", "OName": "restored flowers", "OpenMLPage": 1},
+    "last_committed_tab": "OpenML",
+})
 app = this.application()

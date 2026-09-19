@@ -1003,58 +1003,52 @@ fill: var(--bs-primary) !important;
 <h2 id="cards-available-and-planned">Cards (available and planned)</h2>
 <h3 id="data-prep">📊 Data Prep</h3>
 <ul>
-<li><a href="app/www/markdown/data_import.html">Data importation</a></li>
-<li><a href="app/www/markdown/data_tabulation.html">Data tabulation</a></li>
-<li><a href="app/www/markdown/var_roles.html">Role assignment</a></li>
-<li><a href="app/www/markdown/var_modify.html">Variable modification</a></li>
-<li><a href="app/www/markdown/var_cardinality.html">Variable cardinality</a></li>
+<li><a href="app/www/markdown/data_import.html">Data importation</a> Where do we locate the data?</li>
+<li><a href="app/www/markdown/data_tabulation.html">Data tabulation</a> What do the raw values look like?</li>
+<li><a href="app/www/markdown/var_roles.html">Role assignment</a> What roles do the variables play?</li>
+<li><a href="app/www/markdown/var_modify.html">Variable modification</a> Are the data types appropriate?</li>
+<li><a href="app/www/markdown/var_cardinality.html">Variable cardinality</a> Is the cardinality plausible?</li>
 </ul>
 <h3 id="data-preview">📊 Data preview</h3>
 <ul>
-<li><a href="app/www/markdown/data_coverage.html">Data coverage</a></li>
+<li><a href="app/www/markdown/data_coverage.html">Data coverage</a> How well are all facets represented?</li>
 <li>Variable plots</li>
 <li>Variable summary</li>
-<li><a href="app/www/markdown/data_homogeneity.html">Data homogeneity</a></li>
-<li><a href="app/www/markdown/var_dissimilar.html">Variable dissimilarity</a></li>
-</ul>
-<h3 id="data-cleaning">🧹 Data cleaning</h3>
-<ul>
-<li><a href="app/www/markdown/obs_duplicates.html">Duplicate Observations</a></li>
-<li>Variable coverage</li>
+<li><a href="app/www/markdown/data_homogeneity.html">Data homogeneity</a> Is the data essentially similar throughout?</li>
+<li><a href="app/www/markdown/var_dissimilar.html">Variable dissimilarity</a> Are any variables near-copies of others?</li>
+<li><a href="app/www/markdown/obs_duplicates.html">Duplicate Observations</a> Are there observational duplicates and near-duplicates?</li>
 </ul>
 <h3 id="missing-values">∅ Missing values</h3>
 <ul>
-<li><a href="app/www/markdown/miss_placeholders.html">Missing Placeholders</a></li>
-<li><a href="app/www/markdown/miss_type.html">Missingness types</a></li>
-<li><a href="app/www/markdown/miss_informative.html">Informative Missingness</a></li>
-<li><a href="app/www/markdown/miss_sets.html">Missingness sets</a></li>
-<li><a href="app/www/markdown/miss_map.html">Excessive missingness</a></li>
-<li><a href="app/www/markdown/miss_rules.html">Missingness rules</a></li>
-<li><a href="app/www/markdown/miss_impute.html">Learned imputation</a></li>
+<li><a href="app/www/markdown/miss_placeholders.html">Missing Placeholders</a> Are there extra missing values?</li>
+<li><a href="app/www/markdown/miss_type.html">Missingness types</a> What type of missingness exists? - This affects its treatment</li>
+<li><a href="app/www/markdown/miss_informative.html">Informative Missingness</a> Is missingness informative?</li>
+<li><a href="app/www/markdown/miss_sets.html">Missingness sets</a> Do missing values have common causes?</li>
+<li><a href="app/www/markdown/miss_map.html">Excessive missingness</a> Is excessive missingness present?</li>
+<li><a href="app/www/markdown/miss_rules.html">Missingness rules</a> Is missingness explainable?</li>
+<li><a href="app/www/markdown/miss_impute.html">Learned imputation</a> How well does learned imputation perform?</li>
 <li>Manual imputation</li>
 </ul>
 <h3 id="preprocessing">🧠 Preprocessing</h3>
 <ul>
-<li><a href="app/www/markdown/var_transform.html">Variable transforms</a></li>
+<li><a href="app/www/markdown/var_transform.html">Variable transforms</a> Can we make variables have similar distributions?</li>
 <li><a href="app/www/markdown/data_parallel.html">Parallel coordinates</a></li>
-<li><a href="app/www/markdown/var_correlation.html">Variable correlation</a></li>
+<li><a href="app/www/markdown/var_correlation.html">Variable correlation</a> How similar are variables to each other?</li>
+<li><a href="app/www/markdown/obs_outliers.html">observation outliers</a> Which observations stand out?</li>
+<li>Observation dependence (app/www/markdown/obs_dependence.html) Are observations independent of each other?</li>
 </ul>
 <h3 id="encoding">🆘 Encoding</h3>
 <ul>
-<li><a href="app/www/markdown/var_encode.html">Variable encoding</a></li>
-<li>Embedding Datetime (Components)</li>
-<li>Embedding Text (‘word-to-vector’, topic, sentiment)</li>
+<li><a href="app/www/markdown/var_text_encode.html">Text encoding</a> What numbers can we extract from free text?</li>
+<li><a href="app/www/markdown/var_time_encode.html">Date-time encoding</a> What numbers can we extract from dates and times?</li>
+<li><a href="app/www/markdown/var_encode.html">Variable encoding</a> What numbers can we extract from Code, Nominal, Ordered, Cyclic and Logical variables.</li>
 </ul>
 <h3 id="clusters">💐 Clusters</h3>
 <ul>
-<li><a href="app/www/markdown/obs_k_clusters.html">Number of clusters</a></li>
-<li><a href="app/www/markdown/obs_clusters.html">Cluster charts</a></li>
-<li><a href="app/www/markdown/obs_cluster_profile.html">Cluster profiling</a></li>
-<li>stratifier violin charts</li>
-</ul>
-<h3 id="outliers">☢️ Outliers</h3>
-<ul>
-<li>Observation outliers</li>
+<li><a href="app/www/markdown/obs_k_clusters.html">Number of clusters</a> How many cluster does the data naturally create?</li>
+<li><a href="app/www/markdown/obs_clusters.html">Cluster charts</a> What do these clusters look like?</li>
+<li><a href="app/www/markdown/obs_cluster_profile.html">Cluster profiling</a> Can we find an explanation for the clusters?</li>
+<li><a href="app/www/markdown/data_strata.html">Strata comparisons</a> How distinct are the clusters?</li>
 </ul>
 <h3 id="spatial">🌏 Spatial</h3>
 <ul>
@@ -1065,9 +1059,9 @@ fill: var(--bs-primary) !important;
 </ul>
 <h3 id="system">🤖 System</h3>
 <ul>
-<li><a href="app/www/markdown/sys_configuration.html">Configuration</a></li>
-<li><a href="app/www/markdown/system_log.html">System log</a></li>
-<li><a href="app/www/markdown/data_provenance.html">Data journey</a></li>
+<li><a href="app/www/markdown/sys_configuration.html">Configuration</a> What environment has the analysis taken place in?</li>
+<li><a href="app/www/markdown/system_log.html">System log</a> What messages were lodged during the analysis?</li>
+<li><a href="app/www/markdown/data_provenance.html">Data journey</a> What does the data journey look like as a diagram?</li>
 </ul>
 <p>⸻</p>
 <h2 id="code-extraction">Code Extraction</h2>

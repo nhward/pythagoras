@@ -29,6 +29,7 @@ restore_app = create_app_fixture(
     app="../scenarios/data_import_restore.py",
     scope="function",
 )
+openml_restore_app = create_app_fixture(app="../scenarios/data_import_openml_restore.py", scope="function")
 _HELPER_CARDS = {}
 
 
@@ -157,6 +158,9 @@ def recorded_helpers(
         FName=lambda: "file-data",
         DName=lambda: "package-data",
         UName=lambda: "web-data",
+        OpenMLPage=lambda: 1,
+        OpenMLDataset=lambda: None,
+        OName=lambda: "openml",
         IName=lambda: "uci-data",
         Commit=lambda: 0,
     )
@@ -293,9 +297,9 @@ class TestInstance:
         assert card.hasSidebar()
 
     @pytest.mark.unit
-    def test_front_contains_four_import_modes(self, card):
+    def test_front_contains_five_import_modes(self, card):
         html = str(card.front.tagify())
-        for label in ("File based", "Dataset based", "Web based", "UC Irvine"):
+        for label in ("File based", "Dataset based", "Web based", "UC Irvine", "OpenML"):
             assert label in html
         for input_id in ("Dataset", "Url", "UciDataset"):
             assert f'id="{input_id}"' in html
@@ -400,6 +404,9 @@ class TestInstance:
             FName=lambda: "",
             DName=lambda: "restored iris",
             UName=lambda: "web draft",
+            OpenMLPage=lambda: 1,
+            OpenMLDataset=lambda: None,
+            OName=lambda: "openml",
             IName=lambda: "",
             Commit=lambda: 0,
         )
@@ -464,6 +471,9 @@ class TestFileHelpers:
             FName=lambda: "local-data",
             DName=lambda: "",
             UName=lambda: "",
+            OpenMLPage=lambda: 1,
+            OpenMLDataset=lambda: None,
+            OName=lambda: "openml",
             IName=lambda: "",
             Commit=lambda: 0,
         )
@@ -606,9 +616,9 @@ class TestWebKitInitialState:
         expect(by_id(page, "FName")).to_be_visible()
 
     @pytest.mark.ui
-    def test_four_import_tabs_are_available(self, page: Page, app: ShinyAppProc):
+    def test_five_import_tabs_are_available(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
-        for label in ("File based", "Dataset based", "Web based", "UC Irvine"):
+        for label in ("File based", "Dataset based", "Web based", "UC Irvine", "OpenML"):
             expect(page.get_by_role("tab", name=label, exact=True)).to_be_visible()
 
     @pytest.mark.ui
@@ -674,3 +684,70 @@ class TestWebKitFileWorkflow:
         expect(dialog).to_be_visible()
         dialog.get_by_role("button", name="Yes, remove").click()
         expect(page.locator('#cards-container > [id$="Card"]')).to_have_count(0)
+
+
+class TestOpenML:
+    @pytest.mark.unit
+    def test_catalogue_is_paged_and_includes_quality_metadata(self, card_module, monkeypatch):
+        calls = []
+        def get(url, **kwargs):
+            calls.append((url, kwargs))
+            return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {
+                "data": {"dataset": [{"did": 61, "name": "iris", "version": 1,
+                    "quality": [{"name": "NumberOfInstances", "value": "150"}]}]}})
+        monkeypatch.setattr(card_module.requests, "get", get)
+        frame = card_module.openml_catalogue(2)
+        assert calls[0][0].endswith("/limit/100/offset/100")
+        assert calls[0][1]["timeout"] == 30
+        assert frame.iloc[0].to_dict() == {"id": 61, "name": "iris", "version": 1, "rows": "150", "columns": "?"}
+
+    @pytest.mark.unit
+    def test_download_pins_id_and_keeps_target(self, card_module, monkeypatch):
+        import sklearn.datasets
+        frame = pd.DataFrame({"feature": [1, 2], "target": ["a", "b"]})
+        calls = []
+        def fetch(**kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(frame=frame)
+        monkeypatch.setattr(sklearn.datasets, "fetch_openml", fetch)
+        pd.testing.assert_frame_equal(card_module.download_openml("61"), frame)
+        assert calls == [{"data_id": 61, "as_frame": True, "parser": "auto"}]
+        with pytest.raises(ValueError):
+            card_module.download_openml("invalid")
+
+    @pytest.mark.unit
+    def test_openml_bookmark_ui(self, card_module):
+        card = _HELPER_CARDS.get(card_module) or card_module.instance()
+        card.restore_configuration_state({"inputs": {"Navset": "OpenML", "OpenMLDataset": "61", "OName": "flowers", "OpenMLPage": 2}, "last_committed_tab": "OpenML"})
+        assert card._restored_configuration_state["last_committed_tab"] == "OpenML"
+        html = str(card.front.tagify())
+        assert "flowers" in html
+        assert "Download preview" in html
+
+    @pytest.mark.ui
+    def test_openml_download_and_commit(self, page: Page, app: ShinyAppProc):
+        page.goto(app.url)
+        page.get_by_role("tab", name="OpenML", exact=True).click()
+        commit = page.locator("#data_import-Commit")
+        expect(commit).to_be_disabled()
+        page.get_by_role("button", name="Load catalogue page", exact=True).click()
+        expect(page.locator("#data_import-OpenMLStatus")).to_contain_text("Catalogue: 1 datasets")
+        page.evaluate("Shiny.setInputValue('data_import-OpenMLDataset', '61', {priority: 'event'})")
+        page.get_by_role("button", name="Download preview", exact=True).click()
+        expect(page.locator("#data_import-OpenMLStatus")).to_contain_text("150 rows downloaded")
+        expect(commit).to_be_enabled()
+        commit.click()
+        expect(page.locator("#data_import-Name")).to_contain_text("openml")
+        page.evaluate("Shiny.setInputValue('data_import-OpenMLDataset', '62', {priority: 'event'})")
+        expect(commit).to_be_disabled()
+        page.get_by_role("button", name="Download preview", exact=True).click()
+        expect(page.locator("#data_import-OpenMLStatus")).to_contain_text("Fixture download failed")
+        expect(commit).to_be_disabled()
+
+
+    @pytest.mark.ui
+    def test_openml_restores_committed_dataset(self, page: Page, openml_restore_app: ShinyAppProc):
+        page.goto(openml_restore_app.url)
+        expect(page.get_by_role("tab", name="OpenML", exact=True)).to_have_attribute("aria-selected", "true")
+        expect(page.locator("#data_import-Name")).to_contain_text("restored flowers")
+        expect(page.locator("#data_import-OpenMLStatus")).to_contain_text("150 rows downloaded")

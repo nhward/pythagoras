@@ -164,59 +164,52 @@ Drag-and-drop ordering is handled via:
 
 ### 📊 Data Prep
 
-* [Data importation](app/www/markdown/data_import.html) 
-* [Data tabulation](app/www/markdown/data_tabulation.html)
-* [Role assignment](app/www/markdown/var_roles.html)
-* [Variable modification](app/www/markdown/var_modify.html)
-* [Variable cardinality](app/www/markdown/var_cardinality.html)
+* [Data importation](app/www/markdown/data_import.html) Where do we locate the data?
+* [Data tabulation](app/www/markdown/data_tabulation.html) What do the raw values look like?
+* [Role assignment](app/www/markdown/var_roles.html) What roles do the variables play?
+* [Variable modification](app/www/markdown/var_modify.html) Are the data types appropriate?
+* [Variable cardinality](app/www/markdown/var_cardinality.html) Is the cardinality plausible?
 
 ### 📊 Data preview
 
-* [Data coverage](app/www/markdown/data_coverage.html)
+* [Data coverage](app/www/markdown/data_coverage.html) How well are all facets represented?
 * Variable plots
 * Variable summary
-* [Data homogeneity](app/www/markdown/data_homogeneity.html)
-* [Variable dissimilarity](app/www/markdown/var_dissimilar.html)
-
-### 🧹 Data cleaning
-
-* [Duplicate Observations](app/www/markdown/obs_duplicates.html)
-* Variable coverage
-
+* [Data homogeneity](app/www/markdown/data_homogeneity.html) Is the data essentially similar throughout?
+* [Variable dissimilarity](app/www/markdown/var_dissimilar.html) Are any variables near-copies of others?
+* [Duplicate Observations](app/www/markdown/obs_duplicates.html) Are there observational duplicates and near-duplicates? 
 
 ### ∅ Missing values
 
-* [Missing Placeholders](app/www/markdown/miss_placeholders.html)
-* [Missingness types](app/www/markdown/miss_type.html)
-* [Informative Missingness](app/www/markdown/miss_informative.html)
-* [Missingness sets](app/www/markdown/miss_sets.html)
-* [Excessive missingness](app/www/markdown/miss_map.html)
-* [Missingness rules](app/www/markdown/miss_rules.html)
-* [Learned imputation ](app/www/markdown/miss_impute.html)
+* [Missing Placeholders](app/www/markdown/miss_placeholders.html) Are there extra missing values?
+* [Missingness types](app/www/markdown/miss_type.html) What type of missingness exists? - This affects its treatment
+* [Informative Missingness](app/www/markdown/miss_informative.html) Is missingness informative?
+* [Missingness sets](app/www/markdown/miss_sets.html) Do missing values have common causes?
+* [Excessive missingness](app/www/markdown/miss_map.html) Is excessive missingness present?
+* [Missingness rules](app/www/markdown/miss_rules.html) Is missingness explainable?
+* [Learned imputation ](app/www/markdown/miss_impute.html) How well does learned imputation perform?
 * Manual imputation
 
 ### 🧠 Preprocessing
 
-* [Variable transforms](app/www/markdown/var_transform.html)
-* [Parallel coordinates](app/www/markdown/data_parallel.html)
-* [Variable correlation](app/www/markdown/var_correlation.html)
+* [Variable transforms](app/www/markdown/var_transform.html) Can we make variables have similar distributions?
+* [Parallel coordinates](app/www/markdown/data_parallel.html) 
+* [Variable correlation](app/www/markdown/var_correlation.html) How similar are variables to each other?
+* [observation outliers](app/www/markdown/obs_outliers.html) Which observations stand out? 
+* Observation dependence (app/www/markdown/obs_dependence.html) Are observations independent of each other?
 
 ### 🆘 Encoding
 
-* [Variable encoding](app/www/markdown/var_encode.html)
-* Embedding Datetime  (Components)
-* Embedding Text      ('word-to-vector', topic, sentiment)
+* [Text encoding](app/www/markdown/var_text_encode.html) What numbers can we extract from free text?
+* [Date-time encoding](app/www/markdown/var_time_encode.html) What numbers can we extract from dates and times?
+* [Variable encoding](app/www/markdown/var_encode.html) What numbers can we extract from Code, Nominal, Ordered, Cyclic and Logical variables.
 
 ### 💐 Clusters
 
-* [Number of clusters](app/www/markdown/obs_k_clusters.html)
-* [Cluster charts](app/www/markdown/obs_clusters.html)
-* [Cluster profiling](app/www/markdown/obs_cluster_profile.html)
-* stratifier violin charts
-
-### ☢️ Outliers
-
-* Observation outliers
+* [Number of clusters](app/www/markdown/obs_k_clusters.html) How many cluster does the data naturally create?
+* [Cluster charts](app/www/markdown/obs_clusters.html) What do these clusters look like?
+* [Cluster profiling](app/www/markdown/obs_cluster_profile.html) Can we find an explanation for the clusters?
+* [Strata comparisons](app/www/markdown/data_strata.html) How distinct are the clusters?
 
 ### 🌏 Spatial
 
@@ -227,9 +220,9 @@ Drag-and-drop ordering is handled via:
 
 ### 🤖 System
 
-* [Configuration](app/www/markdown/sys_configuration.html)
-* [System log](app/www/markdown/system_log.html)
-* [Data journey](app/www/markdown/data_provenance.html)
+* [Configuration](app/www/markdown/sys_configuration.html) What environment has the analysis taken place in?
+* [System log](app/www/markdown/system_log.html) What messages were lodged during the analysis?
+* [Data journey](app/www/markdown/data_provenance.html) What does the data journey look like as a diagram?
 
 ⸻
 
