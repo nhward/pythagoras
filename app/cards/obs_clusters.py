@@ -28,6 +28,7 @@ from scipy.cluster.hierarchy import cut_tree, linkage
 from scipy.sparse.csgraph import connected_components
 from scipy.spatial.distance import pdist, squareform
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.cluster import DBSCAN, KMeans, SpectralClustering
 from sklearn.manifold import TSNE
@@ -371,7 +372,19 @@ def instance():
         message = reactive.Value("")
         reset_pending = False
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Options():
             return {"limit": int(input.Limit()), "standardize": bool(input.Standardize()), "use_weights": bool(input.UseWeights()),
@@ -386,31 +399,31 @@ def instance():
                 return _analyze(source, **options)
             return await asyncio.to_thread(_analyze, source, **options)
 
-        @this.suspendable()
+        @this.reactable()
         @this.settle(seconds=2)
         def StartAnalysis():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(), Options())
+            Calculate.invoke(incomingproxy_data().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def CurrentAnalysis():
             result = Calculate.result()
             # Obsolete completions are expected while restored inputs settle.
             # Keep output cancellation out of calculations read by effects.
-            if result.source.equals(this.input_data()) and result.options == Options():
+            if result.source.equals(incomingproxy_data()) and result.options == Options():
                 return result
             return None
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
             result = CurrentAnalysis()
             req(result is not None, cancel_output=True)
             return result
 
-        @this.suspendable()
+        @this.reactable()
         def SourceChanged():
             nonlocal reset_pending
-            source = this.input_data()
+            source = incomingproxy_data()
             with reactive.isolate():
                 saved = committed.get()
                 if saved is not None and not saved[0].equals(source):
@@ -425,7 +438,7 @@ def instance():
         @render.ui
         def MembershipControl():
             saved = committed.get()
-            disabled = (this.input_data().cluster_count or 1) == 1
+            disabled = (incomingproxy_data().cluster_count or 1) == 1
             control = ui.input_checkbox_group("IncludeMembership", label=None,
                 choices={"Partition": "Add Partition members", "Mixture": "Add Mixture members", "Density": "Add DBSCAN members"},
                 selected=list(saved[1]) if saved is not None else [], inline=True,
@@ -445,14 +458,14 @@ def instance():
             )
             return ui.tags.fieldset(control, disabled=disabled, class_="d-flex justify-content-center")
 
-        @this.suspendable()
+        @this.reactable()
         def MembershipToggle():
             nonlocal reset_pending
             requested = set(input.IncludeMembership() or []) & {"Partition", "Mixture", "Density"}
-            if (this.input_data().cluster_count or 1) == 1:
+            if (incomingproxy_data().cluster_count or 1) == 1:
                 with reactive.isolate():
                     committed.set(None)
-                    OutputData.set(this.input_data())
+                    OutputData.set(incomingproxy_data())
                     if requested:
                         ui.update_checkbox_group("IncludeMembership", selected=[])
                 reset_pending = False
@@ -464,7 +477,7 @@ def instance():
                 with reactive.isolate():
                     if saved is not None:
                         committed.set(None)
-                        OutputData.set(this.input_data())
+                        OutputData.set(incomingproxy_data())
                         message.set("")
                 return
             if reset_pending or requested == set(plans):
@@ -476,7 +489,7 @@ def instance():
                 # output-only cancellation exception would close the session.
                 req(result is not None)
             with reactive.isolate():
-                source = this.input_data()
+                source = incomingproxy_data()
                 plans = {method: model for method, model in plans.items() if method in requested}
                 errors = []
                 for method in ("Partition", "Mixture", "Density"):
@@ -533,7 +546,7 @@ def instance():
         @output
         @render.text
         def TableTitle():
-            return f"{input.ClusterType()} membership — incoming K={this.input_data().cluster_count or 1}"
+            return f"{input.ClusterType()} membership — incoming K={incomingproxy_data().cluster_count or 1}"
 
         @output
         @render.data_frame

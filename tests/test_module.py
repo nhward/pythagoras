@@ -491,14 +491,14 @@ def test_capture_print_captures_stdout_and_return_value():
 
 
 # -------------------------------------------------------------------
-# suspendable decorator (calc) behaviour
+# reactable decorator (calc) behaviour
 # -------------------------------------------------------------------
 @pytest.mark.unit
-def test_suspendable_calc_respects_suspend_and_resume():
+def test_reactable_calc_respects_suspend_and_resume():
     m = DummyModule("card")
     calls = {"count": 0}
 
-    @m.suspendable(suspended=True, default=-1, calc = True)
+    @m.reactable(suspended=True, default=-1, calc = True)
     def f() -> int:
         calls["count"] += 1
         return 99
@@ -526,16 +526,16 @@ def test_suspendable_calc_respects_suspend_and_resume():
     with reactive.isolate():
         assert f() == 99
         assert calls["count"] == 2
-    # Registered as suspendable
-    assert f in m.suspendables
+    # Registered as reactable
+    assert f in m.reactables
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_async_suspendable_calc_without_default_stops_silently():
+async def test_async_reactable_calc_without_default_stops_silently():
     m = DummyModule("card")
 
-    @m.suspendable(suspended=True, calc=True)
+    @m.reactable(suspended=True, calc=True)
     async def f() -> int:
         return 99
 
@@ -549,11 +549,11 @@ async def test_async_suspendable_calc_without_default_stops_silently():
 
 
 @pytest.mark.unit
-def test_suspendable_calc_without_default_is_silent_while_suspended():
+def test_reactable_calc_without_default_is_silent_while_suspended():
     m = DummyModule("card")
     calls = {"count": 0}
 
-    @m.suspendable(suspended=True, calc=True)
+    @m.reactable(suspended=True, calc=True)
     def value():
         calls["count"] += 1
         return "available"
@@ -574,10 +574,10 @@ def test_suspendable_calc_without_default_is_silent_while_suspended():
 
 
 @pytest.mark.unit
-def test_suspendable_calc_preserves_explicit_none_default():
+def test_reactable_calc_preserves_explicit_none_default():
     m = DummyModule("card")
 
-    @m.suspendable(suspended=True, default=None, calc=True)
+    @m.reactable(suspended=True, default=None, calc=True)
     def value():
         return "available"
 
@@ -865,11 +865,11 @@ def test_settle_snapshots_plain_containers_but_preserves_opaque_values():
 
 
 @pytest.mark.unit
-def test_record_code_outside_suspendable_preserves_calc_and_source():
+def test_record_code_outside_reactable_preserves_calc_and_source():
     module = DummyModule('record-reactive')
     calls = []
 
-    @module.suspendable(calc=True, suspended=False)
+    @module.reactable(calc=True, suspended=False)
     def calculated():
         calls.append('called')
         return 42

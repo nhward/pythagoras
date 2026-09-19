@@ -20,6 +20,7 @@ from module import Module
 from proxy_data import proxy_data as Pxy
 from roles import Role, RoleMap
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 
 
 def _retained_role_state(
@@ -321,21 +322,30 @@ def instance():
         protected_columns: tuple[str, ...] | None = None
         protected_role_map: dict[str, list[str]] | None = None
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         def incomingproxy_data():
-            return this.input_data()
- 
-        @this.suspendable(calc = True)
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         def PreparedData():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.suspendable()
+        @this.reactable()
         def PxdChange():
             data = incomingproxy_data()
             # Only upstream changes trigger replay. Reading settings in isolation
@@ -355,7 +365,7 @@ def instance():
                 # Never export a stale dataset or invalid restored assignments.
                 OutputData.set(data)
 
-        @this.suspendable(triggers = [PreparedData])
+        @this.reactable(triggers = [PreparedData])
         async def PopulateRoles():
             nonlocal restored_roles_consumed, protected_columns, protected_role_map
             if not this.has_input_data():
@@ -412,10 +422,9 @@ def instance():
             orm = OutputData.get().role_map
             return orm.roles_to_frame()
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def ValidateMap():
-            this.input_data()
             req(input.role_map())
             this.log.debug("☑️ Validating changes")
             # Convert the json to the RoleMap class
@@ -426,7 +435,7 @@ def instance():
 
 
         #### Committed  event ----
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         def Committed():
             req(input.role_map())
             data = incomingproxy_data()
@@ -434,7 +443,7 @@ def instance():
             return _apply_roles(data, role_map)
 
         #### Commit event ----
-        @this.suspendable(triggers = [input.Commit])
+        @this.reactable(triggers = [input.Commit])
         def CommitEvent():
             nonlocal accepted_role_map
             req(not ValidateMap())

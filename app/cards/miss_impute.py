@@ -26,7 +26,8 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from shiny import render, ui
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
@@ -624,11 +625,20 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Options():
             return {
@@ -638,7 +648,7 @@ def instance():
                 "jobs": int(input.Jobs()),
             }
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinImprovement():
             return float(input.MinImprovement())
@@ -648,17 +658,17 @@ def instance():
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse, data, **options)
 
-        @this.suspendable()
+        @this.reactable()
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Analysis():
             return Calculate.result()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def TransformedData():
             source = incomingproxy_data()

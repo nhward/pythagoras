@@ -28,6 +28,7 @@ from plotly.colors import qualitative
 from proxy_data import proxy_data
 from roles import Role
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
@@ -273,11 +274,24 @@ def instance():
         current_tabs = ('__empty__',)
         registered = set()
 
-        @this.suspendable(calc=True)
-        def Targets():
-            return tuple(_targets(this.input_data()))
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
+        def Targets():
+            return tuple(_targets(incomingproxy_data()))
+
+        @this.reactable(calc=True)
         def SelectedTarget():
             targets = Targets()
             selected = input.Membership()
@@ -294,7 +308,7 @@ def instance():
                 widget._config = {'displayModeBar':bool(this.isFullScreen()), 'displaylogo':False}
                 return widget
 
-        @this.suspendable()
+        @this.reactable()
         def UpdateTabs():
             nonlocal current_tabs, restore_pending
             targets = Targets()
@@ -331,7 +345,7 @@ def instance():
             if targets:
                 restore_pending = False
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Options():
             return {"depth": input.Depth(), "leaf": input.Leaf(), "folds": input.Folds(), "limit": int(10**input.Limit()),
                 "use_weights": input.UseWeights(), "include_unallocated": input.Unallocated()}
@@ -344,18 +358,18 @@ def instance():
             results = calculate_all() if Module.IS_SHINYLIVE else await asyncio.to_thread(calculate_all)
             return data, options, results
 
-        @this.suspendable()
+        @this.reactable()
         def Start():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(), Options())
+            Calculate.invoke(incomingproxy_data().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Profiles():
             data, options, results = Calculate.result()
-            req(data.equals(this.input_data()) and options == Options(), cancel_output=True)
+            req(data.equals(incomingproxy_data()) and options == Options(), cancel_output=True)
             return results
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
             results = Profiles()
             return results.get(SelectedTarget(), Profile(None, message='Assign a cluster-named column the Stratifier role.'))

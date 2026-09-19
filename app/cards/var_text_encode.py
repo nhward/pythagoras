@@ -19,6 +19,7 @@ from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
 from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from text_pandas import as_text, is_text
 from TextEncodingTransformer import METHODS, TextEncodingTransformer, embedding_identity
 
@@ -187,13 +188,26 @@ def instance():
 
         busy=this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+
+        @this.reactable(calc=True)
         @this.settle(2)
         def Encode():
             return input.Encode() or []
 
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(2)
         def Options():
             upload=input.EmbeddingFile() or []
@@ -227,22 +241,22 @@ def instance():
             return source,options,result
 
 
-        @this.suspendable()
+        @this.reactable()
         def Start():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(), Options())
+            Calculate.invoke(incomingproxy_data().clone(), Options())
 
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
             source,options,result=Calculate.result()
-            req(source.equals(this.input_data()) and options==Options())
+            req(source.equals(incomingproxy_data()) and options==Options())
             return result
 
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Export():
-            source=this.input_data()
+            source=incomingproxy_data()
             selected=tuple(Encode())
             if not selected:
                 return source
@@ -302,7 +316,7 @@ def instance():
         @output
         @render.ui
         def AuditSummary():
-            source=this.input_data()
+            source=incomingproxy_data()
             out=Export()
             count=lambda data:sum(Role.PREDICTOR in data.role_map.roles_for(c) for c in data.columns)
             return ui.p(f'Predictors: {count(source)} → {count(out)}, Originals removed: {len(set(source.columns)-set(out.columns))}')

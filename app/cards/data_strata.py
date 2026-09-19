@@ -30,6 +30,7 @@ from roles import Role
 from scipy.stats import f as f_distribution
 from selection_restore import SelectionRestore
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 
@@ -289,9 +290,23 @@ def instance():
         saved_facet=this.restored_configuration_input('Stratifier')
         facet_selection=SelectionRestore(None if saved_facet is None else ([saved_facet] if saved_facet else []))
 
-        @this.suspendable()
+
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+
+        @this.reactable()
         def Choices():
-            data=this.input_data()
+            data=incomingproxy_data()
             choices=_variables(data,input.IncludeTarget())
             facets=_stratifiers(data)
             with reactive.isolate():
@@ -303,7 +318,7 @@ def instance():
             ui.update_selectize('Variables',choices=choices,selected=selected)
             ui.update_select('Stratifier',choices={**{c:c for c in facets}, '':'None'},selected=selected_facet[0] if selected_facet else '')
         
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(2)
         def Options():
             return {
@@ -322,15 +337,15 @@ def instance():
             result=_analyze(data,**options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze,data,**options)
             return data,options,result
         
-        @this.suspendable()
+        @this.reactable()
         def Start():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(),Options())
+            Calculate.invoke(incomingproxy_data().clone(),Options())
         
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
             data,options,result=Calculate.result()
-            req(data.equals(this.input_data()) and options==Options(),cancel_output=True)
+            req(data.equals(incomingproxy_data()) and options==Options(),cancel_output=True)
             return result
         
         @output

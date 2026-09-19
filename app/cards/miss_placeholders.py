@@ -23,6 +23,7 @@ from cyclic_pandas import is_cyclic
 from module import Module
 from proxy_data import proxy_data as Pxy
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from text_pandas import is_text
 from var_types import key_from_dtype
@@ -375,27 +376,36 @@ def instance():
 
     def server(input, output, session):
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc = True)
+
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def Replace():
             return input.Replace() or []
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def PreparedData():
             sample = incomingproxy_data().sample(n = MaxObs(), mode = "random", keep_geometry = False)
             return sample
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def Sentinels():
             return {
@@ -406,7 +416,7 @@ def instance():
             }
 
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Choices():
             rawstate = RawCodes()
             flat = pd.Series(rawstate["codes"].to_numpy().ravel())
@@ -421,7 +431,7 @@ def instance():
             if len(Choices())==0:
                 return ui.span("Placeholders not detected", class_="text-success")
 
-        @this.suspendable()
+        @this.reactable()
         def UpdateButtons():
             choices = Choices()
             with reactive.isolate():
@@ -619,7 +629,7 @@ def instance():
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def TransformedData():
             full  = incomingproxy_data()
@@ -642,7 +652,7 @@ def instance():
                 },
             )
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def build_summary_df():
             state = CorrectedState()
@@ -811,7 +821,7 @@ def instance():
                 )
             return df
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def RawCodes():
             sample = PreparedData()
             codes_df, legend = PlaceholderCodes(
@@ -827,7 +837,7 @@ def instance():
             }
       
         
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def CorrectedState():
             sample = PreparedData()
             sentinels = [s.removeprefix("Replace ") for s in Replace()]

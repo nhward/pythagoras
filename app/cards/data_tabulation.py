@@ -96,24 +96,24 @@ def instance():
 
     def server(input, output, session):
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         def incomingproxy_data():
             try:
                 value = this.input_data()
             except SilentOperationInProgressException:
-                # This grid does not own the upstream task's progress lifecycle.
+                # This card does not own the upstream task's progress lifecycle.
                 # Clear it normally while waiting, avoiding Shiny's persistent
                 # output state when hidden/unhidden or refreshed during that task.
                 req(False)
             req(value is not None)
             return value
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def Decimals():
             return input.Decimals()
         
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
@@ -144,7 +144,7 @@ def instance():
                 return "obj"
             return str(dtype)
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def PreparedData():
             df = incomingproxy_data() #Returns proxy_data
@@ -155,7 +155,7 @@ def instance():
                 df = df.sample(n = 10, mode = "headtail", keep_geometry = True)
             return df
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def CleanDf():
             """
@@ -302,7 +302,7 @@ def instance():
                 return "No observed values"
             return f"mode: {counts.index[0]} ({int(counts.iloc[0])})"
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.record_code
         def StructureData() -> pd.DataFrame:
             """Return one structural-summary row for each source variable."""

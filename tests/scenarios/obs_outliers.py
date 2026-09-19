@@ -2,11 +2,14 @@
 import os
 import sys
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[2] / "app"
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
+
 from cards.obs_outliers import instance
 from proxy_data import proxy_data
 from roles import Role, RoleMap

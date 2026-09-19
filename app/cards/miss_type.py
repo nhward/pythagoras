@@ -33,6 +33,7 @@ from plotly.colors import sample_colorscale
 from proxy_data import proxy_data
 from roles import Role
 from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.metrics import balanced_accuracy_score, r2_score
@@ -1289,56 +1290,65 @@ def instance():
                 cache.popitem(last=False)
             return value
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinMissProp():
             return input.MinMissProp()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinLeafSamples():
             return input.MinLeafSamples()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MaxTreeDepth():
             return input.MaxTreeDepth()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinFoldFraction():
             return input.MinFoldFraction()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinRSquared():
             return input.MinRSquared()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinImprovement():
             return input.MinImprovement()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Alpha():
             return input.Alpha()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def CVFolds():
             return input.CVFolds()
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
@@ -1349,7 +1359,7 @@ def instance():
             samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def MissingVariables():
             minimum_missing_proportion = float(MinMissProp())
             proxy = PreparedData()
@@ -1364,7 +1374,7 @@ def instance():
                 )
             ]
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def SelectedTarget() -> str:
             """Return a valid target while dynamic nav panels are binding."""
             target = input.Target()
@@ -1374,7 +1384,7 @@ def instance():
         current_tabs: tuple[str, ...] = ()
         registered_tree_outputs: set[str] = set()
 
-        @this.suspendable(triggers=[MissingVariables])
+        @this.reactable(triggers=[MissingVariables])
         def UpdateChoices():
             nonlocal current_tabs, restored_target_pending
             desired_tabs = tuple(map(str, MissingVariables()))
@@ -1470,13 +1480,13 @@ def instance():
                 ),
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Model():
             proxy = PreparedData()
             return _cached_model(proxy, SelectedTarget())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def RegressionDiagnostics():
             proxy = PreparedData()
@@ -1525,7 +1535,7 @@ def instance():
         def Busy():
             return busy.ui()
 
-        @this.suspendable()
+        @this.reactable()
         def StartTypeTable():
             """Snapshot reactive values and start a nonblocking table calculation."""
             proxy = PreparedData()
@@ -1555,7 +1565,7 @@ def instance():
             CalculateTypeTable.cancel()
             CalculateTypeTable.invoke(frame, options)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def TypeTable():
             """Return the latest table or signal that calculation is in progress."""

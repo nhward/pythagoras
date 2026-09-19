@@ -24,7 +24,8 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, ui
+from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 RESULT_COLUMNS = [
@@ -295,21 +296,30 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def SignificantFigures():
             return max(1, int(input.SignificantFigures()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MaxDifferences():
             return max(0, int(input.MaxDifferences()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def TransformedData():
             proxy = incomingproxy_data()
@@ -322,7 +332,7 @@ def instance():
             )
 
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def PreparedData():
             proxy = TransformedData()
@@ -353,7 +363,7 @@ def instance():
         def Busy():
             return busy.ui()
 
-        @this.suspendable()
+        @this.reactable()
         def StartAnalysis():
             source = incomingproxy_data()
             columns = _eligible_columns(source)
@@ -368,28 +378,28 @@ def instance():
             CalculateDuplicates.cancel()
             CalculateDuplicates.invoke(before, after, maximum)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def BeforeResults():
             return CalculateDuplicates.result()[0]
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Results():
             return CalculateDuplicates.result()[1]
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def ExactDuplicateCount():
             return int(_exact_duplicate_mask(
                 incomingproxy_data(), SignificantFigures()
             ).sum())
 
-        @this.suspendable()
+        @this.reactable()
         def SomeDupl():
             if ExactDuplicateCount() > 0:
                 ui.update_checkbox_group(id="RemoveExact", choices = [BUTTON_VALUE], selected=[BUTTON_VALUE])
 
 
-        @this.suspendable()
+        @this.reactable()
         def LimitDifferences():
             column_count = len(_eligible_columns(incomingproxy_data()))
             maximum = min(10, max(0, column_count - 1))

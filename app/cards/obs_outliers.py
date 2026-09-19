@@ -191,7 +191,7 @@ def _figure(result, *, view="Aggregate", top=30, full_screen=False):
         template="plotly_white", 
         barmode="stack", 
         showlegend=full_screen,
-        legend={"orientation": "h", "x": 0.5, "xanchor": "center", "y": 1.1, "yanchor": "top"},
+        legend={"orientation": "h", "x": 0.5, "xanchor": "center", "y": 1.0, "yanchor": "bottom"},
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="#bbd6f8",
         margin={"l": 15, "r": 25, "t": 0, "b": 35},
@@ -256,7 +256,7 @@ def instance():
         cancellation = Event()
         analyze = this.record_code(_analyze)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Options():
             return {
@@ -277,7 +277,7 @@ def instance():
                 this.log.exception("Outlier analysis failed")
                 return data, options, OutlierAnalysis(message=f"Unable to calculate outlier scores: {error}")
 
-        @this.suspendable()
+        @this.reactable()
         def Start():
             nonlocal cancellation
             try:
@@ -290,7 +290,7 @@ def instance():
             cancellation = Event()
             Calculate.invoke(data.clone() if data is not None else None, options, cancellation)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Results():
             try:
                 current = this.input_data()

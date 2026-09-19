@@ -28,6 +28,7 @@ from OrderedEncodingTransformer import OrderedEncodingTransformer
 from proxy_data import proxy_data
 from roles import Role, RoleMap
 from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from TargetEncodingTransformer import METHODS, TargetEncodingTransformer
 from var_types import var_kind
 
@@ -414,12 +415,23 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
+        def IncomingData():
+            try:
+                source = this.input_data()
+            except SilentOperationInProgressException:
+                # Outputs use the card's busy indicator, not Shiny's persistent
+                # progress state inherited from an upstream extended task.
+                req(False)
+            req(source is not None)
+            return source
+
+        @this.reactable(calc=True)
         @this.settle(2)
         def Encode():
             return tuple(input.Encode() or [])
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(2)
         def Settings():
             return {
@@ -450,7 +462,7 @@ def instance():
                 'basket':{'remove_original': bool(input.RemoveOriginal())},
             }
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Options():
             return {**Settings(), 'selected':Encode()}
 
@@ -461,20 +473,25 @@ def instance():
             return source,options,result
 
 
-        @this.suspendable()
+        @this.reactable()
         def Start():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(), Options())
+            Calculate.invoke(IncomingData().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
-            source,options,result = Calculate.result()
-            req(source.equals(this.input_data()) and options==Options())
+            try:
+                source,options,result = Calculate.result()
+            except SilentOperationInProgressException:
+                # Clear normally while fitting; a later result invalidates this
+                # calculation and redraws every dependent output.
+                req(False)
+            req(source.equals(IncomingData()) and options==Options())
             return result
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Export():
-            source = this.input_data()
+            source = IncomingData()
             selected = Encode()
             if not selected:
                 return source
@@ -484,10 +501,10 @@ def instance():
                     source = _apply(source, results[kind])
             return source
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Audit():
             selected = Encode()
-            return _encoding_audit(this.input_data(), Analysis() if selected else {}, selected)
+            return _encoding_audit(IncomingData(), Analysis() if selected else {}, selected)
 
         @output
         @render.ui

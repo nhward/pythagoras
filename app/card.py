@@ -421,7 +421,7 @@ class Card(Module):
 
 
             # isFullScreen
-            @self.suspendable(calc = True)
+            @self.reactable(calc = True)
             def isFullScreen():
                 if isinstance(input.Card_full_screen(), bool):
                     return input.Card_full_screen()
@@ -429,7 +429,7 @@ class Card(Module):
             self.isFullScreen = reactive.calc(isFullScreen)
 
             # isFront
-            @self.suspendable(calc = True)
+            @self.reactable(calc = True)
             def isFront():
                 if self.back is None:
                     return True
@@ -441,7 +441,7 @@ class Card(Module):
 
 
             # Info button event
-            @self.suspendable(triggers = [input.InfoButton])
+            @self.reactable(triggers = [input.InfoButton])
             def show_info():
                 ui.modal_show(
                     ui.modal(
@@ -464,13 +464,13 @@ class Card(Module):
 
 
             # Guide button event
-            @self.suspendable(triggers = [input.GuideButton])
+            @self.reactable(triggers = [input.GuideButton])
             async def GuideButton():
                 await self.create_run_tour(session)
 
 
             # Code button event
-            @self.suspendable(triggers = [input.CodeButton])
+            @self.reactable(triggers = [input.CodeButton])
             def show_Code():
                 ui.modal_show(
                     ui.modal(
@@ -507,7 +507,7 @@ class Card(Module):
                 )
 
 
-            @self.suspendable(triggers=[input.CloseButton])
+            @self.reactable(triggers=[input.CloseButton])
             def _confirm_remove_card():
                 ui.modal_show(
                     ui.modal(
@@ -524,7 +524,7 @@ class Card(Module):
                     )
                 )
 
-            @self.suspendable(triggers=[input.ConfirmRemove])
+            @self.reactable(triggers=[input.ConfirmRemove])
             async def _remove_card():
                 ui.modal_remove()
                 self.suspend()
@@ -543,7 +543,7 @@ class Card(Module):
                 session.on_flushed(after_flush, once=True)
 
 
-            @self.suspendable(triggers=[input.CancelRemove])
+            @self.reactable(triggers=[input.CancelRemove])
             def _cancel():
                 ui.modal_remove()
 

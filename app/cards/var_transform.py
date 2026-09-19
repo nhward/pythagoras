@@ -26,7 +26,8 @@ from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
 from roles import Role
-from shiny import render, ui
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -655,11 +656,20 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Options():
             selected = list(input.Transform() or [])
@@ -677,17 +687,17 @@ def instance():
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_distribution, data, **options)
 
-        @this.suspendable()
+        @this.reactable()
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Analysis():
             return Calculate.result()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def TransformedData():
             source = incomingproxy_data()

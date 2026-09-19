@@ -26,7 +26,7 @@ from scipy.linalg import eigh
 from scipy.sparse.csgraph import connected_components, laplacian
 from scipy.spatial.distance import pdist, squareform
 from shiny import reactive, render, req, ui
-from shiny.types import SilentException
+from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.metrics import (
@@ -689,12 +689,25 @@ def instance():
         busy = this.busy()
         previous_incoming = None
 
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+
         @output
         @render.ui
         def KControl():
             nonlocal previous_incoming
             maximum = int(input.Maximum())
-            incoming = this.input_data().cluster_count or 1
+            incoming = incomingproxy_data().cluster_count or 1
             selected = incoming
             if previous_incoming == incoming:
                 with reactive.isolate():
@@ -711,9 +724,9 @@ def instance():
                 text="Choose K to pass it downstream. K=1 means no cluster segmentation.",
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def ChosenCount():
-            incoming = this.input_data().cluster_count or 1
+            incoming = incomingproxy_data().cluster_count or 1
             try:
                 count = int(input.K() or incoming)
             except SilentException:
@@ -721,7 +734,7 @@ def instance():
             # Enforce the limit before the browser receives the updated radio group.
             return min(max(1, count), int(input.Maximum()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Options():
             return {"maximum": int(input.Maximum()), "limit": 10**int(input.MaxObs()),
@@ -740,19 +753,19 @@ def instance():
         async def Calculate(data, options):
             return await asyncio.to_thread(_analyse, data, **options)
 
-        @this.suspendable()
+        @this.reactable()
         def StartAnalysis():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(), Options())
+            Calculate.invoke(incomingproxy_data().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
             return Calculate.result()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def SelectedData():
-            source = this.input_data()
+            source = incomingproxy_data()
             count = ChosenCount()
             req(count <= len(source))
             return source if count == source.cluster_count else source.with_cluster_count(count)

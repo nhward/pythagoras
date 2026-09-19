@@ -69,7 +69,7 @@ def download_openml(dataset_id):
         raise ValueError("Choose a positive OpenML dataset ID")
     result = fetch_openml(data_id=dataset_id, as_frame=True, parser="auto")
     if not isinstance(result.frame, pd.DataFrame):
-        raise ValueError("This OpenML dataset cannot be represented as a data frame")
+        raise TypeError("This OpenML dataset cannot be represented as a data frame")
     return result.frame
 
 
@@ -521,17 +521,17 @@ def instance():
         async def OpenMLCatalogueTask(page):
             try:
                 return await asyncio.to_thread(openml_catalogue, page), None
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001
                 return None, str(error)
 
         @reactive.extended_task
         async def OpenMLDownloadTask(dataset_id):
             try:
                 return dataset_id, await asyncio.to_thread(download_openml, dataset_id), None
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001
                 return dataset_id, None, str(error)
 
-        @this.suspendable(triggers=[lambda: input.OpenMLBrowse()])
+        @this.reactable(triggers=[lambda: input.OpenMLBrowse()])
         def BrowseOpenML():
             OpenMLCatalogueTask.cancel()
             OpenMLCatalogueTask.invoke(input.OpenMLPage())
@@ -549,7 +549,7 @@ def instance():
                 choices.setdefault(str(selected), str(selected))
             ui.update_selectize("OpenMLDataset", choices=choices, selected=selected)
 
-        @this.suspendable(triggers=[lambda: input.OpenMLDownload()])
+        @this.reactable(triggers=[lambda: input.OpenMLDownload()])
         def DownloadOpenML():
             OpenMLDownloadTask.cancel()
             OpenMLDownloadTask.invoke(str(input.OpenMLDataset() or ""))
@@ -701,13 +701,13 @@ def instance():
 
         this.configuration_state = configuration_state
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def ExportedData():
             data = CommittedData()
             req(data is not None)
             return data
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def TempFilePath():
             if Module.runtime_mode(session) == "local":
                 local_path=input.LocalFilePath()
@@ -826,12 +826,12 @@ def instance():
                 return uci.data.original
             raise ValueError(f"Unknown data-import tab {import_tab!r}")
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def GetData():
             return load_data(input.Navset())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def GetPxyData():
             if GetData() is None:
@@ -1024,7 +1024,7 @@ def instance():
             "UciDataset": bool(restored_inputs.get("UciDataset")),
         }
 
-        @this.suspendable(triggers=[input.ServerFile])
+        @this.reactable(triggers=[input.ServerFile])
         def ServerFile():
             req(input.ServerFile())
             files=input.ServerFile()
@@ -1033,7 +1033,7 @@ def instance():
             stem, _=os.path.splitext(filename)  # Remove the extension
             ui.update_text(id="FName", value=stem)
 
-        @this.suspendable(triggers=[input.NativeFilePicker])
+        @this.reactable(triggers=[input.NativeFilePicker])
         async def NativeFilePicker():
             if Module.runtime_mode(session) != "local":
                 return
@@ -1058,7 +1058,7 @@ def instance():
             ui.update_text(id="FName", value=stem)
 
 
-        @this.suspendable()
+        @this.reactable()
         def DatasetName():
             req(input.Dataset())
             if (
@@ -1071,7 +1071,7 @@ def instance():
             _, stem=input.Dataset().split("::", 1)
             ui.update_text(id="DName", value=stem)
 
-        @this.suspendable()
+        @this.reactable()
         def UciDatasetName():
             req(input.UciDataset())
             if (
@@ -1084,13 +1084,13 @@ def instance():
             ui.update_text(id="IName", value=input.UciDataset())
 
                 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Url():
             return input.Url()
 
 
-        @this.suspendable(triggers=[Url])
+        @this.reactable(triggers=[Url])
         def Url2():
             req(Url())
             if (
@@ -1245,7 +1245,7 @@ def instance():
             CommittedData.set(pxd.clone())
             LastCommittedTab.set(import_tab)
 
-        @this.suspendable(triggers=[input.Commit])
+        @this.reactable(triggers=[input.Commit])
         async def CommitEvent():
             commit_import(input.Navset())
 

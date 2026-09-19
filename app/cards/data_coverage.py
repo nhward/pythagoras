@@ -5,8 +5,13 @@ These are descriptive cutoffs, not multiplicity-adjusted significance tests.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
+from dataclasses import dataclass, field
+from html import escape
+from itertools import product
+from math import prod
 from pathlib import Path
 
 if __name__ == '__main__':
@@ -14,12 +19,6 @@ if __name__ == '__main__':
     os.chdir(ROOT)
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
-
-import asyncio
-from dataclasses import dataclass, field
-from html import escape
-from itertools import product
-from math import prod
 
 import numpy as np
 import pandas as pd
@@ -31,6 +30,7 @@ from proxy_data import proxy_data
 from roles import Role, RoleMap
 from selection_restore import SelectionRestore
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 ROLES = {Role.STRATIFIER, Role.TREATMENT, Role.SENSITIVE}
@@ -269,14 +269,26 @@ def instance():
         selection = SelectionRestore(this.restored_configuration_input('Variables'))
         busy = this.busy()
 
-        @this.suspendable()
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+        @this.reactable()
         def Choices():
-            choices = _variables(this.input_data(), input.MaxLevels())
+            choices = _variables(incomingproxy_data(), input.MaxLevels())
             with reactive.isolate():
                 current = list(input.Variables() or [])
             ui.update_selectize('Variables', choices=choices, selected=selection.resolve(current, choices, choices[:2]))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(2)
         def Options():
             return {
@@ -292,15 +304,15 @@ def instance():
             result = _analyze(data, **options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze, data, **options)
             return data, options, result
 
-        @this.suspendable()
+        @this.reactable()
         def Start():
             Calculate.cancel()
-            Calculate.invoke(this.input_data().clone(), Options())
+            Calculate.invoke(incomingproxy_data().clone(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Analysis():
             data, options, result = Calculate.result()
-            req(data.equals(this.input_data()) and options == Options(), cancel_output=True)
+            req(data.equals(incomingproxy_data()) and options == Options(), cancel_output=True)
             return result
 
         @output

@@ -19,7 +19,8 @@ from card import Card
 from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
-from shiny import render, ui
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 INTERSECTION_COLUMNS = [
@@ -311,44 +312,53 @@ def instance():
 
     def server(input, output, session):
         
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MaxIntersections():
             return max(1, int(input.MaxIntersections()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MaxVariables():
             return max(2, int(input.MaxVariables()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinCount():
             return max(1, int(input.MinCount()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def PreparedData():
             return incomingproxy_data().sample(
                 n=MaxObs(), mode="random", keep_geometry=True
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def MissingVariables():
             frame = PreparedData().frame
             return _missing_variables(frame)[:MaxVariables()]
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Intersections():
             frame = PreparedData().frame
@@ -359,7 +369,7 @@ def instance():
                 minimum_count=MinCount(),
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def IntersectionTable():
             table = Intersections().drop(columns="_membership", errors="ignore").copy()

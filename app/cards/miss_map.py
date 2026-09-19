@@ -20,7 +20,8 @@ from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from shiny import render, ui
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 SPECIAL_ROLES = {
@@ -375,26 +376,35 @@ def instance():
     this.settings = settings
 
     def server(input, output, session):
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Remove():
             return input.Remove() or []
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def VariableThreshold():
             return float(input.VariableThreshold()) / 100
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def ObservationThreshold():
             return float(input.ObservationThreshold()) / 100
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def TransformedData():
             source = incomingproxy_data()
@@ -407,7 +417,7 @@ def instance():
                 observation_threshold=ObservationThreshold(),
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def DisplayFrame():
             return _display_frame(TransformedData().frame, 10 ** int(input.MaxObs()))
 

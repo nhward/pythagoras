@@ -29,6 +29,7 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from scipy.stats import skew
 from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 #TODO: expose correlation extra-weighting as a setting
@@ -118,27 +119,36 @@ def instance():
 
     def server(input, output, session):
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Qgram():
             return max(1, int(input.Qgram()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def PreparedData():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def CleanDf():
             pxd = PreparedData()
@@ -361,7 +371,7 @@ def instance():
             np.fill_diagonal(distance, 0.0)
             return distance
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def DissimilarityMatrix():
             pxd = PreparedData()

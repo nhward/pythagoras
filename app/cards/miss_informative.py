@@ -24,7 +24,8 @@ from joblib import parallel_config
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import reactive, render, ui
+from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -518,42 +519,51 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc = True)
+
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def Shadow():
             return input.Shadow()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def CVFolds():
             return input.CVFolds()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinMissProp():
             return input.MinMissProp()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def PreparedData():
             samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def Target():
             pxd = PreparedData()
             return next(
@@ -561,7 +571,7 @@ def instance():
                 None,
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def MissingVariables():
             minimum_missing_proportion = float(MinMissProp())
             proxy = PreparedData()
@@ -576,7 +586,7 @@ def instance():
                 )
             ]
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def PredictorVariables():
             proxy = PreparedData()
             frame = proxy.frame
@@ -635,7 +645,7 @@ def instance():
         def Busy():
             return busy.ui()
 
-        @this.suspendable()
+        @this.reactable()
         def StartAnalysis():
             proxy = PreparedData()
             frame = proxy.frame.copy()
@@ -652,12 +662,12 @@ def instance():
                 float(MinBalancedAccuracy()),
             )
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Analysis():
             return CalculateAnalysis.result()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def TransformedData():
             selected = Shadow() or []

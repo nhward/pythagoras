@@ -22,7 +22,8 @@ from card import Card
 from mlxtend.frequent_patterns import apriori, association_rules
 from module import Module
 from proxy_data import proxy_data
-from shiny import render, ui
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 
@@ -100,42 +101,51 @@ def instance():
     this.settings = settings
 
     def server(input, output, session):
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc = True)
+
+        @this.reactable(calc = True)
         @this.settle(seconds=2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinSupport():
             return float(input.MinSupport())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinLift():
             return float(input.MinLift())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MaxLength():
             return max(2, int(input.MaxLength()))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def PreparedData():
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def MissingVariables():
             frame = PreparedData().frame
             return [column for column in frame.columns if frame[column].isna().any()]
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def MissingTransactions():
             frame = PreparedData().frame
@@ -171,7 +181,7 @@ def instance():
                         break
             return rules.loc[keep].reset_index(drop=True)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Rules():
             transactions = MissingTransactions()
@@ -219,7 +229,7 @@ def instance():
         def _itemset_label(items) -> str:
             return ", ".join(sorted(map(str, items), key=str.casefold))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def RulesTable():
             rules = Rules()

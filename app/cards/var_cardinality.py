@@ -22,6 +22,7 @@ from module import Module
 from proxy_data import proxy_data
 from roles import Role
 from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from text_pandas import text_evidence
 from var_types import var_kind
@@ -764,11 +765,20 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc=True)
+
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
         def Options():
             thresholds = tuple(input.Thresholds() or ())
@@ -796,7 +806,7 @@ def instance():
                 _analyse_cardinality, data, **analysis_options,
             )
 
-        @this.suspendable()
+        @this.reactable()
         def StartAnalysis():
             # proxy_data frames are read-only to card consumers. Avoid cloning a
             # potentially multi-million-row frame merely to profile it.
@@ -804,7 +814,7 @@ def instance():
 
             Calculate.invoke(incomingproxy_data(), Options())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         @this.record_code
         def Analysis():
             return Calculate.result()

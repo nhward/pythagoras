@@ -23,10 +23,10 @@
 ##       call_ui(): module's ui function
 ##       call_server(): Module's server function
 ##       guidedDiv(): Wraps a div as a guidable element
-##    Suspendable
-##       @suspendable decorator to wrap @reactive.calc, @reactive.event, @reactive.effect (use calc=True for reactive.calc)
+##    reactable
+##       @reactable decorator to wrap @reactive.calc, @reactive.event, @reactive.effect (use calc=True for reactive.calc)
 ##       Instance level suspend() & resume() functions
-##       Instance level list of suspendables/resumables
+##       Instance level list of reactables/resumables
 ##    Output reactive like R's render_print style:
 ##       @capture_print decorator
 ##    Code recording:
@@ -191,7 +191,7 @@ class Module(ABC):
       - Maintains namespace,
       - Provides Guide services via shepherd (incl. patching input/output calls)
       - Add abstract interfaces (call_ui, call_server)
-      - Decorates Reactive functions (record_code, capture_print, debounce, throttle, Suspendable)
+      - Decorates Reactive functions (record_code, capture_print, debounce, throttle, reactable)
       - Provides logging services
       - Loads from "/cards" folder
       - Creates the shiny App
@@ -302,7 +302,7 @@ class Module(ABC):
         self.log = base  # or a LoggerAdapter if you want extra fields
         self.log.setLevel(Module.min_log_level)
         # instance registries
-        self.suspendables = [] # An instance-level list of all suspendable reactives
+        self.reactables = [] # An instance-level list of all reactable reactives
         # Code recording
         self.code_registry = {} # An instance-level Code-Registry
         # Generic bookmark state. Special cards may disable this and provide
@@ -845,7 +845,7 @@ class Module(ABC):
         return wrapper    
 
 
-    def suspendable(
+    def reactable(
         self,
         *,
         triggers=None,
@@ -853,9 +853,9 @@ class Module(ABC):
         default=_UNSET,
         calc: bool = False,
     ):
-        # Universal Suspendable decorator
-        #   Suspendable decorator to replace @reactive.calc, @reactive.event, @reactive.effect, @reactive.calc
-        #   Suspends all registered suspendable reactives.
+        # Universal reactable decorator
+        #   reactable decorator to replace @reactive.calc, @reactive.event, @reactive.effect, @reactive.calc
+        #   Suspends all registered reactable reactives.
         #   Auto-detects the nature of the wrapped function and applies the appropriate reactive decorators (use calc=True for @reactive.calc)
         #   Can be suspended/resumed with self.suspend() & self.resume()
         #   It handles async functions
@@ -933,17 +933,17 @@ class Module(ABC):
                 enabled.set(True)
             wrapped.suspend = suspend
             wrapped.resume = resume
-            self.suspendables.append(wrapped)
+            self.reactables.append(wrapped)
             return wrapped
         return decorator
 
 
     # Utility functions for mass control
     def suspend(self):
-        for w in self.suspendables:
+        for w in self.reactables:
             w.suspend()
     def resume(self):
-        for w in self.suspendables:
+        for w in self.reactables:
             w.resume()
 
 

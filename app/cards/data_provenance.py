@@ -21,7 +21,8 @@ import shinywidgets
 from card import Card
 from module import Module
 from proxy_data import proxy_data
-from shiny import render, ui
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 JOURNEY_COLUMNS = [
@@ -474,16 +475,26 @@ def instance():
     this.settings = settings
 
     def server(input, output, session):
-        @this.suspendable(calc=True)
-        def incomingproxy_data():
-            return this.input_data()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+
+        @this.reactable(calc=True)
         @this.record_code
         def JourneyData():
             return _journey_table(incomingproxy_data())
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def VisibleJourney():
             return _visible_journey(
                 JourneyData(), hide_inactive=bool(input.HideInactive()),

@@ -132,7 +132,7 @@ def instance():
 
 
     def server(input, output, session):
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def LogFrame():
             input.Refresh()
             if input.AutoRefresh():

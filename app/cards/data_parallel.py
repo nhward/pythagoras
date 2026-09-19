@@ -25,6 +25,7 @@ from proxy_data import proxy_data
 from roles import Role
 from selection_restore import SelectionRestore
 from shiny import reactive, render, req, ui
+from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 NO_COLOUR = "__none__"
@@ -435,11 +436,20 @@ def instance():
         saved_colour = this.restored_configuration_input("Colour")
         colour_selection = SelectionRestore(None if saved_colour is None else ([saved_colour] if saved_colour != NO_COLOUR else []))
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable()
+
+        @this.reactable()
         def UpdateChoices():
             req(incomingproxy_data())
             eligible, _ = _eligible_columns(incomingproxy_data().frame)
@@ -460,8 +470,8 @@ def instance():
                 selected=colour,
             )
 
+        @this.reactable(calc=True)
         @this.settle(seconds=2)
-        @this.suspendable(calc=True)
         def Options():
             return {
                 "variables": list(input.Variables() or []),
@@ -469,7 +479,7 @@ def instance():
                 "maximum_observations": int(10**input.MaxObs())
             }
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def PreparedData():
             options = Options()
             return _prepare_parallel_data(

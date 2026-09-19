@@ -128,7 +128,7 @@ def recorded_helpers(card_module, *, frame=None, max_obs=1000):
         return function
 
     card.record_code = record_code
-    card.suspendable = lambda **kwargs: capture
+    card.reactable = lambda **kwargs: capture
     card.throttle = lambda *args, **kwargs: capture
     card.isFullScreen = lambda: False
     source = frame if frame is not None else pd.DataFrame({
@@ -237,7 +237,7 @@ class TestInstance:
         }
         card.restore_configuration_state(state)
         card.record_code = lambda function: function
-        card.suspendable = lambda **kwargs: lambda function: function
+        card.reactable = lambda **kwargs: lambda function: function
         card.settle = lambda *args, **kwargs: lambda function: function
         with reactive.isolate():
             card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))

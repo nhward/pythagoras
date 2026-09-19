@@ -136,7 +136,7 @@ def recorded_helpers(
         return function
 
     card.record_code = record
-    card.suspendable = lambda **kwargs: record
+    card.reactable = lambda **kwargs: record
     card.throttle = lambda *args, **kwargs: lambda function: function
     card.isFullScreen = lambda: False
     uploaded = None if file_path is None else [{
@@ -388,7 +388,7 @@ class TestInstance:
             functions[function.__name__] = function
             return function
         card.record_code = record
-        card.suspendable = lambda **kwargs: record
+        card.reactable = lambda **kwargs: record
         card.isFullScreen = lambda: False
         dataset_value = reactive.Value(None)
         inputs = InputNamespace(
@@ -454,7 +454,7 @@ class TestFileHelpers:
         card.record_code = lambda function: functions.setdefault(
             function.__name__, function
         )
-        card.suspendable = lambda **kwargs: lambda function: functions.setdefault(
+        card.reactable = lambda **kwargs: lambda function: functions.setdefault(
             function.__name__, function
         )
         card.isFullScreen = lambda: False

@@ -25,7 +25,7 @@ from list_pandas import as_list, is_list, is_list_like
 from module import Module
 from proxy_data import proxy_data as pxd
 from shiny import reactive, render, req, ui
-from shiny.types import SilentException
+from shiny.types import SilentException, SilentOperationInProgressException
 from text_pandas import as_text, is_text_like
 from var_types import TYPES, var_kind
 
@@ -367,16 +367,25 @@ def instance():
         )
         restored_commit_pending = bool(restored_committed)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def incomingproxy_data():
-            return this.input_data()
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
 
-        @this.suspendable(calc = True)
+
+        @this.reactable(calc = True)
         @this.settle(2)
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def PreparedData() -> pxd:
             samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
             return samp
@@ -407,7 +416,7 @@ def instance():
                 levels[str(column)] = [str(value) for value in values]
             return levels
 
-        @this.suspendable()
+        @this.reactable()
         def PxdChange():
             nonlocal restored_commit_pending
             data = incomingproxy_data()
@@ -437,7 +446,7 @@ def instance():
             OutputData.set(data)
             CommittedPlan.set([])
 
-        @this.suspendable(calc = True)
+        @this.reactable(calc = True)
         def Schema():
             def first_role(column: str) -> str:
                 roles = px.role_map.get_roles(column)
@@ -471,7 +480,7 @@ def instance():
 
         reconciliation_warnings: set[str] = set()
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def CurrentSchema():
             schema, warnings = _reconcile_modification_plan(
                 Schema(),
@@ -520,7 +529,7 @@ def instance():
 
         selection_scheduled = False
 
-        @this.suspendable()
+        @this.reactable()
         def schedule_initial_selection():
             nonlocal selection_scheduled
             if selection_scheduled:
@@ -549,7 +558,7 @@ def instance():
 
             session.on_flushed(apply_initial_selection, once=True)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def selected_row():
             return Table.data_view(selected=True)
 
@@ -594,7 +603,7 @@ def instance():
             if plan != ProposedPlan():
                 ProposedPlan.set(plan)
 
-        @this.suspendable(calc=True)
+        @this.reactable(calc=True)
         def allowed_d_types():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -655,7 +664,7 @@ def instance():
                     sensible.append("code")
                 return sensible
 
-        @this.suspendable()
+        @this.reactable()
         async def RowChange():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -675,7 +684,7 @@ def instance():
             order = _order_as_list(row["New\norder"].iloc[0])
             ui.update_selectize(id="NewOrder", choices=order, selected=order)
             
-        @this.suspendable(triggers=[input.NewName])
+        @this.reactable(triggers=[input.NewName])
         async def validate_new_name():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -700,7 +709,7 @@ def instance():
             set_proposed_schema(df)
             await Table.update_data(df)
 
-        @this.suspendable(triggers = [input.NewDataType])
+        @this.reactable(triggers = [input.NewDataType])
         async def TypeChange():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -721,7 +730,7 @@ def instance():
             else:
                 ui.update_selectize(id = "NewOrder", choices = None, selected = None)
 
-        @this.suspendable()
+        @this.reactable()
         def AltChange():
             input.Alternatives() # create dependency that is not rejected for being the same row
             row = selected_row()
@@ -736,7 +745,7 @@ def instance():
                     selected=value,
                 )
                 
-        @this.suspendable(triggers=[input.NewOrder])
+        @this.reactable(triggers=[input.NewOrder])
         async def validate_new_order():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -838,7 +847,7 @@ def instance():
                 operation="Modify variable definitions",
             )
 
-        @this.suspendable(triggers=[input.Commit])
+        @this.reactable(triggers=[input.Commit])
         @this.record_code
         def CommitEvent():
             data = incomingproxy_data()
@@ -848,7 +857,7 @@ def instance():
                 _apply_modifications(data, table_data, converter=convert_series)
             )
 
-        @this.suspendable(triggers=[input.Reset])
+        @this.reactable(triggers=[input.Reset])
         async def Reset():
             #reset the Table's data
             df = CurrentSchema().copy()

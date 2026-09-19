@@ -107,7 +107,7 @@ def recorded_helpers(card_module, *, frame=None, inputs=None, fullscreen=False):
         return function
 
     card.record_code = capture
-    card.suspendable = lambda *args, **kwargs: capture
+    card.reactable = lambda *args, **kwargs: capture
     card.throttle = lambda *args, **kwargs: capture
     card.isFullScreen = lambda: fullscreen
     source = rule_frame() if frame is None else frame
