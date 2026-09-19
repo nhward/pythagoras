@@ -32,4 +32,21 @@ def test_empty_saved_selection_and_manual_clear_stay_empty():
     state = SelectionRestore()
     assert state.resolve([], [], []) == []
     assert state.resolve([], ["x"], ["x"]) == ["x"]
+    state.observe(["x"])
     assert state.resolve([], ["x", "y"], ["x"]) == []
+
+
+def test_saved_selection_survives_updates_before_browser_acknowledgement():
+    state = SelectionRestore(["x", "y"])
+    assert state.resolve([], ["x", "y"], ["x"]) == ["x", "y"]
+    assert state.resolve([], ["x", "y", "target"], ["x"]) == ["x", "y"]
+    state.observe(["x", "y"])
+    state.observe([])
+    assert state.resolve([], ["x", "y"], ["x"]) == []
+
+
+def test_saved_selection_survives_transient_column_loss():
+    state = SelectionRestore(["x", "y"])
+    assert state.resolve([], ["x", "y"], ["x"]) == ["x", "y"]
+    assert state.resolve(["x", "y"], ["x"], ["x"]) == ["x"]
+    assert state.resolve(["x"], ["x", "y"], ["x"]) == ["x", "y"]

@@ -575,6 +575,7 @@ def _cardinality_figure(
         x=table["Distinct value"],
         y=table["Variable"],
         orientation="h",
+        showlegend=False,
         marker_color=table["Finding"].map(STATUS_COLOURS),
         customdata=custom,
         hovertemplate=(
@@ -622,7 +623,7 @@ def _cardinality_figure(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#bbd6f8",
-        margin={"l": 120 if full_screen else 85, "r": 35, "t": 30, "b": 65},
+        margin={"l": 120 if full_screen else 85, "r": 35, "t": 0, "b": 25},
         xaxis={
             "title": f"Distinct observed values — {sample_note}",
             "type": "log" if logarithmic else "linear",
@@ -630,7 +631,7 @@ def _cardinality_figure(
             "fixedrange": not full_screen,
         },
         yaxis={"autorange": "reversed", "fixedrange": not full_screen},
-        showlegend=False,  # shows an unwanted entry for "trace 0"
+        showlegend=full_screen,
         modebar={"orientation": "v"},
         modebar_remove=[
             "select2d", "lasso2d", "toggleHover", "toggleSpikelines",

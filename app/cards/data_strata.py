@@ -135,11 +135,12 @@ class Distributions:
     normalization: str = 'none'
     note: str = ''
     error: str = ''
+    stratifier: str = ''
 
 
 def _analyze(data, variables, stratifier='', *, include_target=False, limit=5000,
              normalization='none', method='ordinary', max_strata=12):
-    result = Distributions(normalization=normalization)
+    result = Distributions(normalization=normalization, stratifier=stratifier)
     try:
         result.variables = [c for c in dict.fromkeys(variables) if c in _variables(data, include_target)]
         if not result.variables:
@@ -229,12 +230,17 @@ def _figure(result, *, kind='violin', points=False, inner_box=True, notches=Fals
         pad = max(float(high-low)*.08, abs(float(low))*.01, .01)
         for group in range(cols):
             values = result.values[variable,group]
-            common = {"y": values, "x": [result.levels[group]]*len(values),
-                "name": result.levels[group], "legendgroup": str(group), "showlegend": False,
+            common = {
+                "y": values, 
+                "x": [result.levels[group]]*len(values),
+                "name": result.levels[group], 
+                "legendgroup": str(group), 
+                "showlegend": False,
                 "marker_color": qualitative.Plotly[group % len(qualitative.Plotly)],
                 "marker_opacity": 0.35,
                 "customdata": result.hover[variable,group][:,None],
-                "hovertemplate": '%{customdata[0]}<br>Value: %{y:.5g}<extra></extra>'}
+                "hovertemplate": '%{customdata[0]}<br>Value: %{y:.5g}<extra></extra>'
+            }
             if kind == 'violin' and len(np.unique(values)) > 1:
                 trace = go.Violin(**common, box_visible=inner_box, meanline_visible=mean,
                     points='all' if points else False, spanmode='hard', scalemode='width', scalegroup=variable, jitter=.2)
@@ -249,8 +255,20 @@ def _figure(result, *, kind='violin', points=False, inner_box=True, notches=Fals
                 axis=(row-1)*cols+group+1
                 suffix='' if axis==1 else str(axis)
                 fig.add_annotation(text='No finite values',xref=f'x{suffix} domain',yref=f'y{suffix} domain',x=.5,y=.5,showarrow=False)
-    fig.update_layout(template='plotly_white',paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='#e5ecf6',
-        margin={'l':50,'r':15,'t':35,'b':15},showlegend=False,modebar={'orientation':'v'})
+    fig.update_layout(
+        title={
+            "text": f"Stratifier: {escape(str(result.stratifier))}" if str(result.stratifier) != "" else "",
+            'font':{'size':17},
+            'x': 0.5,
+            'xanchor': "center"
+        },
+        template='plotly_white',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='#e5ecf6',
+        margin={'l':50,'r':15,'t':40,'b':15},
+        showlegend=False,
+        modebar={'orientation':'v'}
+    )
     return fig
 
 
@@ -260,35 +278,84 @@ def instance():
     this.description = 'Compare numeric distributions across strata with violin or box plots and ANOVA.'
     this.defer_configuration_input('Variables')
     this.defer_configuration_input('Stratifier')
-    this.front = lambda: shinywidgets.output_widget('Plots',fill=True,guide=this,position='left',title='Strata distributions',
-        text='Rows are selected variables; columns are levels of the chosen Stratifier. Within a variable all facets share the same vertical scale. Violin widths show density, not sample size; constant or singleton groups use a box instead. Boxes show quartiles, median, and 1.5-IQR whiskers. Raw points can be shown with Identifier hover. Full screen helps when several variables or strata are selected.')
+    
+    this.front = lambda: shinywidgets.output_widget(
+        id='Plots',fill=True,guide=this,position='left',title='Strata distributions',
+        text='Rows are selected variables; columns are levels of the chosen Stratifier. Within a variable all facets share the same vertical scale. Violin widths show density, not sample size; constant or singleton groups use a box instead. Boxes show quartiles, median, and 1.5-IQR whiskers. Raw points can be shown with Identifier hover. Full screen helps when several variables or strata are selected.'
+    )
+    
     this.back = lambda: ui.navset_tab(
-        ui.nav_panel('ANOVA',ui.output_data_frame('Anova')),
-        ui.nav_panel('Group summaries',ui.output_data_frame('Summaries')))
-    this.footer = lambda: ui.TagList(ui.output_ui('Busy'),ui.output_text('Status'))
-    def settings():
-        return ui.TagList(
-            ui.input_selectize(id='Variables',label='Variables',choices=[],selected=[],multiple=True,options={'plugins':['remove_button']},guide=this,position='left',text='Initially selects only the first numeric Predictor. Select more variables or clear all. Numeric Target columns become available when enabled. Boolean, complex, identifier, weighting and shadow columns are excluded.'),
-            ui.input_checkbox(id='IncludeTarget',label='Offer numeric Target variables',value=False,guide=this,position='left',text='Add numeric Target-role columns to the variable choices. They are not selected automatically.'),
-            ui.input_select(id='Stratifier',label='Facet by Stratifier',choices={'':'None'},selected='',guide=this,position='left',text='Select an assigned Stratifier; initially the first available one is used. None shows overall distributions. Missing stratum labels are omitted. Numeric stratum values are treated as levels, not continuous measurements.'),
-            ui.input_radio_buttons(id='Kind',label='Chart type',choices={'violin':'Violin','box':'Box plot'},selected='violin',inline=True,guide=this,position='left',text='Violin shows a smoothed distribution; box plot emphasizes quartiles. Smoothing can suggest detail unsupported by small samples.'),
-            ui.input_select(id='Normalization',label='Display normalization',choices={'none':'Original units','center':'Center','zscore':'Center and scale'},selected='none',guide=this,position='left',text='Center and scale across all analyzed strata of each variable, never within strata. This changes only the display. ANOVA and summaries always use original units; constant variables map to zero with scaling.'),
-            ui.input_checkbox(id='Points',label='Show observations',value=False,guide=this,position='left',text='Overlay jittered points with Identifier-role values on hover, falling back to original row positions. Points receive equal importance.'),
-            ui.input_checkbox(id='InnerBox',label='Box inside violin',value=True,guide=this,position='left',text='Show an internal box in violin mode. Does not affect pure box plots.'),
-            ui.input_checkbox(id='Notches',label='Notched box plots',value=False,guide=this,position='left',text='Show approximate median uncertainty notches in box mode only. These are not confidence intervals for means and can extend beyond a small sample box.'),
-            ui.input_checkbox(id='Mean',label='Show mean',value=False,guide=this,position='left',text='Show a mean marker or line alongside the distribution. Means may be sensitive to outliers.'),
-            ui.input_select(id='Method',label='ANOVA method',choices={'ordinary':'Ordinary one-way ANOVA','welch':'Welch ANOVA'},selected='ordinary',guide=this,position='left',text='Compares stratum means for each selected variable. Ordinary ANOVA assumes equal variances; Welch permits unequal variances. Both assume independent observations and need distribution assumptions for p-values. Each stratum needs at least two finite values; Welch also needs positive variances. Eta squared describes between-stratum variation and is not Welch-adjusted. BH p-values adjust across valid selected-variable tests. Cluster-derived strata are exploratory: small p-values do not validate their clusters.'),
-            ui.input_slider(id='MaxStrata',label='Maximum displayed strata',min=2,max=24,value=12,step=1,guide=this,position='left',text='If there are more observed levels, show an explanation rather than silently dropping groups. Increase only if the resulting facet grid remains readable.'),
+        ui.nav_panel('ANOVA', ui.output_data_frame(id='Anova')),
+        ui.nav_panel('Group summaries', ui.output_data_frame(id='Summaries'))
+    )
+    
+    this.footer = lambda: ui.TagList(
+        ui.output_ui(id='Busy'),
+        ui.output_text(id='Status')
+    )
+    
+    this.settings = lambda: ui.TagList(
+            ui.input_selectize(
+                id='Variables',label='Variables',choices=[],selected=[],multiple=True,options={'plugins':['remove_button']},
+                guide=this,position='left',text='Initially selects only the first numeric Predictor. Select more variables or clear all. Numeric Target columns become available when enabled. Boolean, complex, identifier, weighting and shadow columns are excluded.'
+            ),
+            ui.input_checkbox(
+                id='IncludeTarget',label='Offer numeric Target variables',value=False,
+                guide=this,position='left',text='Add numeric Target-role columns to the variable choices. They are not selected automatically.'
+            ),
+            ui.input_select(
+                id='Stratifier',label='Facet by Stratifier',choices={'':'None'},selected='',
+                guide=this,position='left',text='Select an assigned Stratifier; initially the first available one is used. None shows overall distributions. Missing stratum labels are omitted. Numeric stratum values are treated as levels, not continuous measurements.'
+            ),
+            ui.input_radio_buttons(
+                id='Kind',label='Chart type',choices={'violin':'Violin','box':'Box plot'},selected='violin',inline=True,
+                guide=this,position='left',text='Violin shows a smoothed distribution; box plot emphasizes quartiles. Smoothing can suggest detail unsupported by small samples.'
+            ),
+            ui.input_select(
+                id='Normalization',label='Display normalization',choices={'none':'Original units','center':'Center','zscore':'Center and scale'},selected='none',
+                guide=this,position='left',text='Center and scale across all analyzed strata of each variable, never within strata. This changes only the display. ANOVA and summaries always use original units; constant variables map to zero with scaling.'
+            ),
+            ui.input_checkbox(
+                id='Points',label='Show observations',value=False,
+                guide=this,position='left',text='Overlay jittered points with Identifier-role values on hover, falling back to original row positions. Points receive equal importance.'
+            ),
+            ui.input_checkbox(
+                id='InnerBox',label='Box inside violin',value=True,
+                guide=this,position='left',text='Show an internal box in violin mode. Does not affect pure box plots.'
+            ),
+            ui.input_checkbox(
+                id='Notches',label='Notched box plots',value=False,
+                guide=this,position='left',text='Show approximate median uncertainty notches in box mode only. These are not confidence intervals for means and can extend beyond a small sample box.'
+            ),
+            ui.input_checkbox(
+                id='Mean',label='Show mean',value=False,
+                guide=this,position='left',text='Show a mean marker or line alongside the distribution. Means may be sensitive to outliers.'
+            ),
+            ui.input_select(
+                id='Method',label='ANOVA method',choices={'ordinary':'Ordinary one-way ANOVA','welch':'Welch ANOVA'},selected='ordinary',
+                guide=this,position='left',text='Compares stratum means for each selected variable. Ordinary ANOVA assumes equal variances; Welch permits unequal variances. Both assume independent observations and need distribution assumptions for p-values. Each stratum needs at least two finite values; Welch also needs positive variances. Eta squared describes between-stratum variation and is not Welch-adjusted. BH p-values adjust across valid selected-variable tests. Cluster-derived strata are exploratory: small p-values do not validate their clusters.'
+            ),
+            ui.input_slider(
+                id='MaxStrata',label='Maximum displayed strata',min=2,max=24,value=12,step=1,
+                guide=this,position='left',text='If there are more observed levels, show an explanation rather than silently dropping groups. Increase only if the resulting facet grid remains readable.'
+            ),
             ui.input_slider(
                 id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, position = "left", text = "Sets a cap of observations used to chart the distributions.")
-)
-    this.settings = settings
+                guide = this, position = "left", text = "Sets a cap of observations used to chart the distributions."
+            )
+    )
+
     def server(input,output,session):
         busy=this.busy()
         variable_selection=SelectionRestore(this.restored_configuration_input('Variables'))
         saved_facet=this.restored_configuration_input('Stratifier')
         facet_selection=SelectionRestore(None if saved_facet is None else ([saved_facet] if saved_facet else []))
+
+        @reactive.effect
+        def ObserveSelections():
+            variable_selection.observe(input.Variables() or [])
+            facet = input.Stratifier()
+            facet_selection.observe([facet] if facet else [])
 
 
         @this.reactable(calc=True)

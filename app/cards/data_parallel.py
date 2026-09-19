@@ -436,6 +436,12 @@ def instance():
         saved_colour = this.restored_configuration_input("Colour")
         colour_selection = SelectionRestore(None if saved_colour is None else ([saved_colour] if saved_colour != NO_COLOUR else []))
 
+        @reactive.effect
+        def ObserveSelections():
+            variable_selection.observe(input.Variables() or [])
+            colour = input.Colour()
+            colour_selection.observe([colour] if colour and colour != NO_COLOUR else [])
+
         @this.reactable(calc=True)
         def incomingproxy_data():
             try:

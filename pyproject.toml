@@ -27,9 +27,6 @@ dependencies = [
   "mlxtend>=0.23",
   "scikit-learn>=1.4",
   "shinylive==0.8.11",
-  "cards>=2.0.0",
-  "card>=0.0.1",
-  "roles>=1.0.0",
   "seaborn==0.13.2",
   "statsmodels==0.15.0",
   "vega-datasets==0.9.0",
@@ -45,7 +42,9 @@ dependencies = [
   "openml==0.15.1",
 ]
 
+# card, module, cards and roles are local source modules, not PyPI dependencies.
 [tool.hatch.build]
+dev-mode-dirs = ["app"]
 include = [
   "app/**",
 ]

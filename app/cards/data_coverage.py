@@ -269,6 +269,10 @@ def instance():
         selection = SelectionRestore(this.restored_configuration_input('Variables'))
         busy = this.busy()
 
+        @reactive.effect
+        def ObserveSelection():
+            selection.observe(input.Variables() or [])
+
         @this.reactable(calc=True)
         def incomingproxy_data():
             try:

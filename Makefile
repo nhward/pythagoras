@@ -2,6 +2,9 @@ PYTHON := .venv/bin/python
 SHINY := .venv/bin/shiny
 SHINYLIVE := .venv/bin/shinylive
 
+# Local modules must precede similarly named third-party packages.
+export PYTHONPATH := $(CURDIR)/app$(if $(PYTHONPATH),:$(PYTHONPATH))
+
 
 APP_FILES := $(wildcard app/*.py app/**/*.py)
 APP_DATA := $(wildcard app/data/*)
@@ -11,7 +14,7 @@ SHINYLIVE_STAMP := site/.shinylive-built
 
 PYTHON_FILES := $(wildcard app/*.py app/cards/*.py)
 TEST_FILES := $(wildcard tests/**/*.py)
-TEST_DEPS := $(PYTHON_FILES) $(TEST_FILES)
+TEST_DEPS := $(PYTHON_FILES) $(TEST_FILES) Makefile pyproject.toml pytest.ini
 TEST_STAMP := .make/test-passed
 
 QUARTO_CONFIG := $(wildcard _quarto.yml markdown/_quarto.yml)
@@ -24,21 +27,33 @@ app/www/markdown/%.html: markdown/%.qmd $(QUARTO_CONFIG)
 	quarto render $< --to html --output-dir app/www
 
 
-.PHONY: preview test test-force clean app shinylive shinylive-force shinylive-serve 
+.PHONY: preview install check-imports test test-force clean app shinylive shinylive-force shinylive-serve
 
 preview: $(HTML_FILES)
 
-test: $(TEST_STAMP)
+# Refresh the editable source link in the existing environment. Dependencies
+# are left alone except for legacy PyPI packages that shadow local modules.
+# Ordinary Python edits need only a process restart, not another install.
+install:
+	$(PYTHON) -m pip install --no-deps --editable .
+	$(PYTHON) -m pip uninstall --yes card cards roles
+	$(MAKE) check-imports
+
+# Diagnose which files a fresh process will load under these Make targets.
+check-imports:
+	$(PYTHON) -c 'import importlib.util, pathlib, sys; root = pathlib.Path("app").resolve(); expected = {"card": root / "card.py", "module": root / "module.py", "cards": root / "cards/__init__.py", "roles": root / "roles.py"}; actual = {name: getattr(importlib.util.find_spec(name), "origin", None) for name in expected}; print("Python:", sys.executable); [print(name + ":", path) for name, path in actual.items()]; assert all(actual[name] and pathlib.Path(actual[name]).resolve() == path for name, path in expected.items()), "Import paths do not point to this checkout"'
+
+test: check-imports $(TEST_STAMP)
 
 $(TEST_STAMP): $(TEST_DEPS)
 	mkdir -p .make
-	python -m pytest
+	$(PYTHON) -m pytest
 	touch $(TEST_STAMP)
 
-test-force:
-	python -m pytest
+test-force: check-imports
+	$(PYTHON) -m pytest
 
-app:
+app: check-imports
 	$(SHINY) run --reload --launch-browser app/app.py
 
 # Export only when application files have changed.

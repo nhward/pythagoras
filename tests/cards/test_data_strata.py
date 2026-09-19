@@ -141,6 +141,14 @@ def test_multiple_variables_target_and_no_facet(page,app):
 def test_restored_choices_and_welch(page,restored_app):
     page.goto(restored_app.url)
     expect(by_id(page,'Status')).to_contain_text('2 variables; 2 strata',timeout=60000)
+    settings(page)
+    selector=controller.InputSelectize(page,by_id(page,'Variables').get_attribute('id'))
+    selector.set([])
+    expect(by_id(page,'Status')).to_contain_text('Select at least one numeric',timeout=60000)
+    by_id(page,'IncludeTarget').check()
+    assert by_id(page,'Variables').evaluate('el=>el.selectize.getValue()') == []
+    selector.set(['x','y'])
+    expect(by_id(page,'Status')).to_contain_text('2 variables; 2 strata',timeout=60000)
     page.locator('.card').first.hover();by_id(page,'FlipButton').click(force=True)
     expect(by_id(page,'Anova')).to_contain_text('Welch')
 
