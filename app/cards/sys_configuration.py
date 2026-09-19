@@ -103,6 +103,7 @@ def instance():
                 "Python executable": sys.executable,
                 "Python version": sys.version.replace("\n", " "),
                 "Platform": platform.platform(),
+                "Shiny-live": str(this.IS_SHINYLIVE),
                 "Pixel ratio": s.clientdata.pixelratio(),
                 "Installed packages": len(list(importlib.metadata.distributions())),
                 "Loaded packages": get_loaded_packages().shape[0]

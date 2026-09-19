@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
+import tempfile
+from collections.abc import Callable, Mapping
+from copy import deepcopy
+from datetime import datetime
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -11,14 +17,6 @@ if __name__ == "__main__":
     root_string = str(ROOT)
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
-
-import json
-import re
-import tempfile
-from collections.abc import Callable, Mapping
-from copy import deepcopy
-from datetime import datetime
-from pathlib import Path
 
 from card import Card
 from faicons import icon_svg as icon
@@ -250,52 +248,37 @@ def instance(
     catalogue_version = reactive.Value(0)
 
     def front():
-        return ui.TagList(
+        return ui.div(
             ui.tags.br(),
             ui.output_text("StorageMode"),
             ui.output_ui("BookmarkDataChooser"),
             ui.output_ui("BookmarkTimeChooser"),
             ui.output_ui("BookmarkImport"),
+            style="margin: 50px 50px 50px 90px;"  # top | right | bottom | left 
         )
 
     this.front = front
 
-    def back():
-        return ui.TagList(
-            ui.p(
-                "Bookmarks restore the workflow, system settings, active "
-                "section, data source, and the inputs of each analysis card."
-            ),
-            ui.output_text_verbatim("StorageLocation"),
-        )
+    this.back=lambda: ui.TagList(
+        ui.p("Bookmarks restore the workflow, system settings, active section, data source, and the inputs of each analysis card."),
+        ui.output_text_verbatim("StorageLocation"),
+    )
 
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.input_action_button(
-                id="SaveBookmark", label="Save bookmark", icon=icon("bookmark", title="Save bookmark", a11y="sem"),
-                width="250px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
-                guide=this, position="top",
-                text="This button saves a bookmark for the current state of Pythagoras. It will use the current data 'name' and suffix this with the current timestamp."
-            ),
-
-             ui.input_action_button(
-                id="LoadBookmark", label="Load selected", icon=icon("folder-open", title="Load bookmark", a11y="sem"),
-                width="250px", class_="btn rounded-pill btn-sm btn-secondary", style="border: 0px; box-shadow: none;",
-                guide=this, position="top",
-                text="This button loads the selected bookmark by restarting Pythagoras using these settings."
-            ),
-            ui.input_action_button(
-                id="CloseManager", label="Close", icon=icon("xmark", title="Close dialogue", a11y="sem"),
-                width="250px", class_="btn rounded-pill btn-sm btn-light", style="border: 0px; box-shadow: none;",
-                guide=this, position="top",
-                text="This button closes the dialogue. The Esc key also performs this function."
-            ),
-            class_="d-flex justify-content-center gap-2",
-        )
-
-    this.footer = footer
+    this.footer=lambda: ui.div(
+        ui.input_action_button(
+            id="SaveBookmark", label="Save bookmark", icon=icon("bookmark", title="Save bookmark", a11y="sem"),
+            width="250px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
+            guide=this, position="top",
+            text="This button saves a bookmark for the current state of Pythagoras. It will use the current data 'name' and suffix this with the current timestamp."
+        ),
+        ui.input_action_button(
+            id="LoadBookmark", label="Load selected", icon=icon("folder-open", title="Load bookmark", a11y="sem"),
+            width="250px", class_="btn rounded-pill btn-sm btn-secondary", style="border: 0px; box-shadow: none;",
+            guide=this, position="top",
+            text="This button loads the selected bookmark by restarting Pythagoras using these settings."
+        ),
+        class_="d-flex justify-content-center gap-2",
+    )
 
     def server(input, output, session):
 
@@ -445,6 +428,8 @@ def instance(
                     type="error",
                     duration=None,
                 )
+            ui.modal_remove()
+
 
         async def reload_configuration(configuration):
             validate(configuration)
@@ -477,6 +462,8 @@ def instance(
                     type="error",
                     duration=None,
                 )
+            ui.modal_remove()
+
 
         @reactive.effect
         @reactive.event(input.ImportSelected)
@@ -525,11 +512,6 @@ def instance(
                 ui.notification_show(str(operation.get("message")), type="message")
             else:
                 ui.notification_show(str(operation.get("message")), type="error", duration=None)
-
-        @reactive.effect
-        @reactive.event(input.CloseManager)
-        def CloseManager():
-            ui.modal_remove()
 
     this.server = server
     return this

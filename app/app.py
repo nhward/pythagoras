@@ -1009,7 +1009,7 @@ def application():
             cardDict = {}
             cards_dir = Module.ROOT / "cards"
             for path in sorted(cards_dir.glob("*.py")):
-                if path.name in {"__init__.py", "sys_bookmark.py"}:
+                if path.name in {"__init__.py", "sys_bookmark.py", "template.py"}:
                     continue
                 cardDict[path.stem] = path
             # re-evaluate every hour

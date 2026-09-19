@@ -34,17 +34,17 @@ RESULT_COLUMNS = [
     "Count",
 ]
 MAX_COMBINATIONS = 50_000
-EXCLUDED_ROLES = {Role.NONE, Role.GEOMETRY, Role.WEIGHTING, Role.IDENTIFIER}
 BUTTON_VALUE="Remove exact duplicates"
 
-def _eligible_columns(proxy: proxy_data) -> list[str]:
+def _eligible_columns(proxy: proxy_data, use_target: bool) -> list[str]:
     """Select comparison columns, respecting roles used by the application."""
+    eligible_roles = {Role.PREDICTOR, Role.TARGET} if use_target else {Role.PREDICTOR}
     return [
         column
         for column in proxy.columns
         if (
             not str(column).startswith(Card.SHADOW_PREFIX)
-            and not (proxy.role_map.roles_for(column) & EXCLUDED_ROLES)
+            and (proxy.role_map.roles_for(column) & eligible_roles)
         )
     ]
 
@@ -103,9 +103,9 @@ def _comparison_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def _exact_duplicate_mask(proxy: proxy_data, significant_figures: int) -> np.ndarray:
+def _exact_duplicate_mask(proxy: proxy_data, significant_figures: int, use_target: bool) -> np.ndarray:
     """Identify later exact duplicates using the card's comparison policy."""
-    columns = _eligible_columns(proxy)
+    columns = _eligible_columns(proxy, use_target)
     if not columns:
         return np.zeros(len(proxy.frame), dtype=bool)
     comparison = _round_significant(
@@ -115,12 +115,9 @@ def _exact_duplicate_mask(proxy: proxy_data, significant_figures: int) -> np.nda
     return comparison.duplicated(keep="first").to_numpy()
 
 
-def _deduplicate_proxy(
-    proxy: proxy_data,
-    significant_figures: int,
-) -> proxy_data:
+def _deduplicate_proxy(proxy: proxy_data, significant_figures: int, use_target: bool) -> proxy_data:
     """Return a cloned proxy with later exact duplicates removed."""
-    duplicate = _exact_duplicate_mask(proxy, significant_figures)
+    duplicate = _exact_duplicate_mask(proxy, significant_figures, use_target)
     return proxy.with_cleaned_data(
         proxy.frame.iloc[~duplicate].copy(),
         card="obs_duplicates",
@@ -229,69 +226,61 @@ def instance():
     this.long_name = "Observation duplicates"
     this.description = "This card explores the diversity of observations of a dataset with respect to duplicates and near duplicates."
     
-    def front():
-        return ui.TagList(
-            ui.output_ui(id="FrontTitle"),
-            shinywidgets.output_widget(
-                id="BarChart",
-                fill=True,
-                guide=this,
-                title="Near-duplicate observations chart",
-                text=(
-                    "The zero bar contains exact duplicate rows. Later bars contain "
-                    "new redundant rows first detected when that many variable "
-                    "differences are tolerated."
-                ),
-                position="left",
+    this.front=lambda: ui.TagList(
+        ui.output_ui(id="FrontTitle"),
+        shinywidgets.output_widget(
+            id="BarChart",
+            fill=True,
+            guide=this,
+            title="Near-duplicate observations chart",
+            text=(
+                "The zero bar contains exact duplicate rows. Later bars contain "
+                "new redundant rows first detected when that many variable "
+                "differences are tolerated."
             ),
-        )
+            position="left",
+        ),
+    )
 
-    this.front = front
-
-    def back():
-        return ui.TagList(
-            ui.output_ui(id="BackTitle"),
-            ui.output_ui(
-                id="Table",
-                guide=this,
-                title="Near-duplicate observation table",
-                text=(
-                    "Lists the one-based row numbers classified at each minimum "
-                    "number of tolerated differences."
-                ),
-                position="left",
+    this.back=lambda: ui.TagList(
+        ui.output_ui(id="BackTitle"),
+        ui.output_ui(
+            id="Table",
+            guide=this,
+            title="Near-duplicate observation table",
+            text=(
+                "Lists the one-based row numbers classified at each minimum "
+                "number of tolerated differences."
             ),
-        )
+            position="left",
+        ),
+    )
 
-    this.back = back
+    this.footer=lambda: ui.div(
+        ui.output_ui(id="Busy"),
+        ui.output_ui(id="Check"),
+        ui.input_checkbox_group(
+            id="RemoveExact", label = None, choices=[], inline=True, selected =[],
+            guide=this, title="Remove exact duplicates", position="top",
+            text="Remove later observations that exactly duplicate an earlier observation under the current significant-figures setting.",
+        ),
+        class_="html-fill-container html-fill-item",
+    )
 
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"),
-            ui.output_ui(id="Check"),
-            ui.input_checkbox_group(
-                id="RemoveExact", label = None, choices=[], inline=True, selected =[],
-                guide=this, title="Remove exact duplicates", position="top",
-                text="Remove later observations that exactly duplicate an earlier observation under the current significant-figures setting.",
-            ),
-            class_="html-fill-container html-fill-item",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_slider(
-                id="SignificantFigures", label="Significant figures used to compare numeric values", min=1, max=16, value=16, step=1,
-                guide=this, text="Reducing this value rounds floating-point data and can make nearby numeric values compare as equal. Integers are unchanged.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxDifferences", label="Maximum number of differences tolerated", min=0, max=10, value=2, step=1,
-                guide=this, text="Increasing this searches more column subsets and can become computationally expensive for wide data.", position="left",
-            ),
-        )
-
-    this.settings = settings
+    this.settings=lambda: ui.TagList(
+        ui.input_slider(
+            id="SignificantFigures", label="Significant figures used to compare numeric values", min=1, max=16, value=16, step=1,
+            guide=this, text="Reducing this value rounds floating-point data and can make nearby numeric values compare as equal. Integers are unchanged.", position="left",
+        ),
+        ui.input_checkbox(
+            id="UseTarget", label="Include any target", value = True,
+            guide=this, text="Whether the duplicates include any target variable. Not including the target may discard contra-examples.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxDifferences", label="Maximum number of differences tolerated", min=0, max=10, value=2, step=1,
+            guide=this, text="Increasing this searches more column subsets and can become computationally expensive for wide data.", position="left",
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -324,7 +313,7 @@ def instance():
         def TransformedData():
             proxy = incomingproxy_data()
             if BUTTON_VALUE in (input.RemoveExact() or []) :
-                return _deduplicate_proxy(proxy, SignificantFigures())
+                return _deduplicate_proxy(proxy, SignificantFigures(), input.UseTarget())
             return proxy.with_inactive_step(
                 stage="Cleaning",
                 card="obs_duplicates",
@@ -336,7 +325,7 @@ def instance():
         @this.record_code
         def PreparedData():
             proxy = TransformedData()
-            columns = _eligible_columns(proxy)
+            columns = _eligible_columns(proxy, input.UseTarget())
             frame = proxy.frame.loc[:, columns]
             return _round_significant(frame, SignificantFigures())
 
@@ -366,7 +355,7 @@ def instance():
         @this.reactable()
         def StartAnalysis():
             source = incomingproxy_data()
-            columns = _eligible_columns(source)
+            columns = _eligible_columns(source, input.UseTarget())
             before = _round_significant(
                 source.frame.loc[:, columns], SignificantFigures()
             )
@@ -389,9 +378,7 @@ def instance():
 
         @this.reactable(calc=True)
         def ExactDuplicateCount():
-            return int(_exact_duplicate_mask(
-                incomingproxy_data(), SignificantFigures()
-            ).sum())
+            return int(_exact_duplicate_mask(incomingproxy_data(), SignificantFigures(), input.UseTarget()).sum())
 
         @this.reactable()
         def SomeDupl():
@@ -401,7 +388,7 @@ def instance():
 
         @this.reactable()
         def LimitDifferences():
-            column_count = len(_eligible_columns(incomingproxy_data()))
+            column_count = len(_eligible_columns(incomingproxy_data(), input.UseTarget()))
             maximum = min(10, max(0, column_count - 1))
             with reactive.isolate():
                 selected = min(int(input.MaxDifferences()), maximum)

@@ -60,6 +60,11 @@ def card_module():
     return importlib.import_module("cards.obs_duplicates")
 
 
+@pytest.fixture(params=[True, False], ids=["with_target", "predictors_only"])
+def use_target(request):
+    return request.param
+
+
 def duplicate_frame() -> pd.DataFrame:
     return pd.DataFrame({
         "A": [1, 1, 1, 1, 9],
@@ -83,14 +88,41 @@ def test_card_is_mutable_and_has_expected_regions(card_module):
     settings = str(card.settings)
     assert 'id="SignificantFigures"' in settings
     assert 'id="MaxDifferences"' in settings
+    assert 'id="UseTarget"' in settings
 
 
 @pytest.mark.unit
-def test_eligible_columns_exclude_roles_and_shadow_variables(card_module):
+@pytest.mark.parametrize("use_target, counts, retained", [
+    (True, [1, 1, 1], [0, 2, 3, 4]),
+    (False, [2, 1], [0, 3, 4]),
+])
+def test_target_controls_comparison_and_removal(card_module, use_target, counts, retained):
+    frame = duplicate_frame()
+    frame["id"] = range(5)
+    frame["stratum"] = list("abcde")
+    roles = RoleMap()
+    for column, role in [("A", Role.PREDICTOR), ("B", Role.PREDICTOR),
+                         ("C", Role.TARGET), ("id", Role.IDENTIFIER),
+                         ("stratum", Role.STRATIFIER)]:
+        roles.set_roles(column, [role])
+    proxy = proxy_data(_df=frame, _roles=roles)
+    columns = card_module._eligible_columns(proxy, use_target)
+    results = card_module._duplicate_results(frame[columns], maximum_differences=2)
+    assert results["Count"].tolist() == counts
+    mask = card_module._exact_duplicate_mask(proxy, 16, use_target)
+    assert np.flatnonzero(~mask).tolist() == retained
+    cleaned = card_module._deduplicate_proxy(proxy, 16, use_target)
+    pd.testing.assert_frame_equal(cleaned.frame, frame.iloc[retained])
+    assert cleaned.role_map == proxy.role_map
+
+
+@pytest.mark.unit
+def test_eligible_columns_exclude_roles_and_shadow_variables(card_module, use_target):
     frame = pd.DataFrame({
         "value": [1],
         "target": [2],
         "id": [3],
+        "stratum": ["a"],
         "weight": [1.0],
         "geometry": ["POINT (0 0)"],
         "unused": [4],
@@ -100,23 +132,26 @@ def test_eligible_columns_exclude_roles_and_shadow_variables(card_module):
     roles.set_roles("value", [Role.PREDICTOR])
     roles.set_roles("target", [Role.TARGET])
     roles.set_roles("id", [Role.IDENTIFIER])
+    roles.set_roles("stratum", [Role.STRATIFIER])
     roles.set_roles("weight", [Role.WEIGHTING])
     roles.set_roles("geometry", [Role.GEOMETRY])
     roles.set_roles("unused", [Role.NONE])
     roles.set_roles("shadow__value", [Role.PREDICTOR])
     proxy = proxy_data(_df=frame, _roles=roles)
 
-    assert card_module._eligible_columns(proxy) == ["value", "target"]
+    assert card_module._eligible_columns(proxy, use_target) == (
+        ["value", "target"] if use_target else ["value"]
+    )
 
 
 @pytest.mark.unit
 def test_deduplicate_proxy_removes_later_exact_rows_and_preserves_metadata(
-    card_module,
+    card_module, use_target,
 ):
     frame = duplicate_frame()
     proxy = proxy_data(_df=frame, _name="Duplicates")
 
-    result = card_module._deduplicate_proxy(proxy, significant_figures=16)
+    result = card_module._deduplicate_proxy(proxy, significant_figures=16, use_target=use_target)
 
     assert result is not proxy
     assert result.name == "Duplicates"
@@ -136,14 +171,14 @@ def test_deduplicate_proxy_removes_later_exact_rows_and_preserves_metadata(
 
 
 @pytest.mark.unit
-def test_deduplication_respects_significant_figure_rounding(card_module):
+def test_deduplication_respects_significant_figure_rounding(card_module, use_target):
     proxy = proxy_data(_df=pd.DataFrame({
         "value": [1234.4, 1234.5, 9999.0],
         "group": ["A", "A", "B"],
     }))
 
-    precise = card_module._deduplicate_proxy(proxy, significant_figures=16)
-    rounded = card_module._deduplicate_proxy(proxy, significant_figures=3)
+    precise = card_module._deduplicate_proxy(proxy, significant_figures=16, use_target=use_target)
+    rounded = card_module._deduplicate_proxy(proxy, significant_figures=3, use_target=use_target)
 
     assert len(precise.frame) == 3
     assert len(rounded.frame) == 2
@@ -189,7 +224,7 @@ def test_container_values_can_be_compared(card_module):
 
 
 @pytest.mark.unit
-def test_basket_values_can_be_compared_and_deduplicated(card_module):
+def test_basket_values_can_be_compared_and_deduplicated(card_module, use_target):
     frame = pd.DataFrame({
         "items": as_list([["apple", "milk"], ["apple", "milk"], ["bread"]]),
         "group": ["A", "A", "B"],
@@ -197,7 +232,7 @@ def test_basket_values_can_be_compared_and_deduplicated(card_module):
     proxy = proxy_data(_df=frame)
 
     comparison = card_module._comparison_frame(frame)
-    duplicate = card_module._exact_duplicate_mask(proxy, significant_figures=16)
+    duplicate = card_module._exact_duplicate_mask(proxy, significant_figures=16, use_target=use_target)
     result = card_module._duplicate_results(frame, maximum_differences=0)
 
     assert comparison["items"].dtype == object
@@ -276,6 +311,33 @@ def test_chart_is_empty_when_no_duplicates_or_near_duplicates(card_module):
 
 
 class TestWebKitUI:
+    @pytest.mark.ui
+    @pytest.mark.parametrize("use_target, count, remaining", [(True, 1, 4), (False, 2, 3)])
+    def test_use_target_controls_analysis_and_removal(
+        self, page: Page, app: ShinyAppProc, use_target, count, remaining
+    ):
+        page.goto(app.url)
+        expect(by_id(page, "UseTarget")).to_be_checked()
+        expect(by_id(page, "Check")).to_contain_text(
+            "1 redundant exact-duplicate row", timeout=15_000
+        )
+        get_card(page).hover()
+        get_card(page).locator("button.collapse-toggle").click()
+        by_id(page, "UseTarget").set_checked(use_target)
+        expect(by_id(page, "Check")).to_contain_text(
+            f"{count} redundant exact-duplicate row", timeout=15_000
+        )
+        set_shiny_input(page, "RemoveExact", ["Exact duplicates"])
+        expect(by_id(page, "Check")).to_contain_text(
+            f"Removed {count} redundant exact-duplicate", timeout=15_000
+        )
+        expect(by_id(page, "Check")).to_contain_text(f"{remaining} observations remain")
+        by_id(page, "UseTarget").set_checked(not use_target)
+        expect(by_id(page, "Check")).to_contain_text(
+            f"Removed {3 - count} redundant exact-duplicate", timeout=15_000
+        )
+        expect(by_id(page, "Check")).to_contain_text(f"{7 - remaining} observations remain")
+
     @pytest.mark.ui
     def test_chart_status_and_settings_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
