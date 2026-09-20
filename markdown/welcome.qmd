@@ -1,39 +1,60 @@
 ---
-subtitle: ""
+title: <br><br><img src="tetractys.png" alt="tetractys" width="40" height="40"> Pythagoras
+subtitle: _A modular, workflow-driven data science environment built with Shiny for Python._
 author: ""
-backgroundcolor: rgba(63, 228, 243, 0.76)
+backgroundcolor: rgba(212, 241, 244, 0.76)
 ---
+
+<div id="welcome-page" style="position: relative; display: flow-root; overflow: hidden; margin-left: 10%; margin-right: 10%; background-color: {{< meta backgroundcolor >}};">
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Pythagoras_knapp.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Portrait of Pythagoras by JA Knapp" style="position: absolute; top: 0; right: 0; height: 100%; width: auto; max-width: none; opacity: 0.65; mix-blend-mode: multiply; pointer-events: none;">
 
 # Welcome to Pythagoras
 
-***
+<br>
 
-### What you need to get started:
+```{=html}
+<button class="btn btn-default action-button rounded-pill hover-btn btn-sm guide-btn shiny-bound-input" id="GuideButton" type="button" style="border: 0px; box-shadow: none;" aria-label="Take a guided tour of the application"><span class="action-icon"><svg viewBox="0 0 576 512" preserveAspectRatio="none" aria-label="Take a guided tour of the application" role="img" class="fa" style="fill:currentColor;height:1em;width:1.12em;margin-left:auto;margin-right:0.2em;position:relative;vertical-align:-0.125em;overflow:visible;">  <title>Take a guided tour of the application</title>  <path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"></path></svg></span><span class="action-label">Guide me</span></button>
+```
 
- 1. Buttons (top, far right)
-    - Manage cards and sections using the <i class="fa-solid fa-wrench"></i> button.
-    - You can save the configuration using the <i class="fa-solid fa-bookmark"></i> button.
-    - You can request full-screen mode using the <i class="fa-solid fa-expand"></i> button.
-    - The app is can exited by pressing the <i class="fa-solid fa-stop"></i> button.
-   
- 1. Tabs - The top of the app holds a set of tabs. The first of these is called "Start". By clicking on a tab you navigate to that section. Progress sequentially through each of the tabs from left to right. What appears are sets of "cards". Each card is a data-related task that operate together as a workflow; the input of each is taken from the output of the preceding one. Workflows begin by reading-in a dataset.
+<br>
+Pythagoras is a sequence of "cards" each of which deals with some aspect of data analysis and modeling.
+
+#### Each card has a set of standard features: 
+
+   - Can be made full screen
+   - Can be reordered by dragging their handles
+   - Has a flip side with additional information
+   - Provides an explanation of its purpose
+   - Has a sidebar with card-specific settings
+   - Can reveal its code (for use in notebooks)
+   - Will guide you through the use of the card
+
+#### The workflow (i.e. the sequence of cards) allows
+
+   - Cards can be added and removed
+   - Data to flow from card to card sequentially
+   - A workflow to be saved and restored
+
+#### The variables are assigned roles that determine how downstream cards will utilize them.
+
+   - _Target:_ The feature you seek to predict
+   - _Predictor:_ The common features of observations
+   - _Identifier:_ The observation's unique reference
+   - _Partition:_ The pre-determined test/train allocation 
+   - _Weighting:_ An observation importance weighting
+   - _Stratifier:_ The features that organize observations into functional groups
+   - _Treatment:_ A causal feature that is being investigated
+   - _Sensitive:_ A observational feature that can be assessed for fairness
+   - _Geometry:_ A feature that records geographic information
+   - _Sequence:_ A feature that dictates the ordering of observations
+
+#### Everything runs within your browser - there is no installation. There are three running styles:
+
+   1. Running locally under shinylive.
+   1. Running a client browser remotely from a shiny server.
+   1. Running the code locally as both server and client.
 
 > _Pythagoras is the scaffold that holds the cards together._
 
-### Some points of difference:
-
-- Everything runs within your browser - there is no installation.
-- The variables are assigned roles that determine how downstream cards will utilize them.
-- The card approach is extensible: you can write your own in Python
-- Each card has a set of standard features 
-    - Can be made full screen
-    - Cards can be reordered by dragging their handles
-    - Has a flip side with additional information
-    - Provides an explanation of the cards purpose
-    - Has a sidebar with card-specific settings
-    - Can reveal its code (for use in notebooks)
-    - Will guide you through the use of the card
- - The workflow (i.e. sets of cards) allows
-    - Cards can be added and removed
-    - Data to flow from card to card sequentially
-    - A workflow to be saved and reused
+</div>

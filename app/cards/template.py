@@ -226,9 +226,10 @@ def instance():
                         yaxis_title="Missing cells",
                         paper_bgcolor="rgba(0,0,0,0)", 
                         margin={"l": 45, "r": 15, "t": 10, "b": 15},
-                        plot_bgcolor='#e5ecf6',
+                        plot_bgcolor='#bbd6f8',
                         showlegend=True,
-                        modebar={'orientation':'v'}
+                        modebar={'orientation':'v'},
+                        font={"size": 13 if this.FullScreen() else 10},
                     )
             except SilentException:
                 figure = Card.empty_figure("Waiting for data or calculation.")

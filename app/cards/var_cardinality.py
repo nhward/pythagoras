@@ -636,7 +636,8 @@ def _cardinality_figure(
         modebar_remove=[
             "select2d", "lasso2d", "toggleHover", "toggleSpikelines",
             "hoverClosestCartesian", "hoverCompareCartesian",
-        ]
+        ],
+        font={"size": 13 if full_screen else 10},
     )
 
     for status, colour in STATUS_COLOURS.items():

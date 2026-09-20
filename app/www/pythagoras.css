@@ -348,27 +348,27 @@ shiny-data-frame .shiny-data-grid > table
     background-color: #e2e3e5 !important;
 }
 
-/* Variable-cardinality rows use the same palette as the chart bars. */
+/* Diagnostic rows use the same palette as their chart bars. */
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
     background-color: #d95f02 !important;
     color: #000 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
     background-color: #e6ab02 !important;
     color: #000 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
     background-color: #3978a8 !important;
     color: #fff !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
     background-color: #9aa7b2 !important;
     color: #000 !important;
 }
@@ -382,13 +382,17 @@ shiny-data-frame .shiny-data-grid > table
     background-color: var(--py-table-row-hover) !important;
 }
 
-/* Cardinality foregrounds return to the standard text color on hover. */
+/* Diagnostic foregrounds return to the standard text color on hover. */
 shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
 > :is(
     .var-cardinality-strong-review-row,
     .var-cardinality-review-row,
     .var-cardinality-expected-row,
-    .var-cardinality-not-assessed-row
+    .var-cardinality-not-assessed-row,
+    .obs-dependence-flagged-row,
+    .obs-dependence-exploratory-row,
+    .obs-dependence-not-flagged-row,
+    .obs-dependence-unavailable-row
 ) {
     color: var(--bs-body-color, #212529) !important;
 }

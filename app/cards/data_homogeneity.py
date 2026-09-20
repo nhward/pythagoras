@@ -558,6 +558,8 @@ def _homogeneity_figure(
             "title": "Variables", "autorange": "reversed",
             "fixedrange": not full_screen,
         },
+        font={"size": 13 if full_screen else 10},
+
     )
     return figure
 

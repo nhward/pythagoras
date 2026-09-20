@@ -351,6 +351,7 @@ def instance():
                 },
                 showlegend=False,
                 hovermode="closest",
+                # font={"size": 13 if full_screen else 10},
             )
             return figure
 

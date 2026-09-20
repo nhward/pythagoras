@@ -233,6 +233,7 @@ def _upset_figure(
         margin={"l": 15, "r": 20, "t": 10, "b": 15},
         bargap=0.22,
         hovermode="closest",
+        font={"size": 13 if full_screen else 10},
     )
     return figure
 

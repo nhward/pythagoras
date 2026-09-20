@@ -309,7 +309,8 @@ def _figure(result, method, fullscreen=False):
         margin={"l": 15, "r": 15, "t": 15, "b": 15}, 
         xaxis_title=f"{axis} 1", 
         yaxis_title=f"{axis} 2",
-        legend={"orientation": "h"
+        legend={"orientation": "h",
+        # font={"size": 13 if full_screen else 10},
     })
     if len(result.coordinates):
         for i, key in enumerate(("xaxis", "yaxis")):

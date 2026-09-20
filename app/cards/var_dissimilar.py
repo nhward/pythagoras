@@ -536,6 +536,7 @@ def instance():
                 polar={"bgcolor":"#bbd6f8"},
                 margin={"l": 20, "r": 20, "t": 15, "b": 45},
                 showlegend=False,
+                # font={"size": 13 if full_screen else 10},
             )
             return figure
 

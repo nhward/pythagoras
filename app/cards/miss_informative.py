@@ -404,6 +404,7 @@ def _importance_figure(
         xaxis_title="Held-out permutation importance (score decrease)",
         yaxis_title=None,
         showlegend=False,
+        # font={"size": 13 if full_screen else 10},
     )
     return figure
 

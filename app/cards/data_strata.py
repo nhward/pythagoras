@@ -264,10 +264,11 @@ def _figure(result, *, kind='violin', points=False, inner_box=True, notches=Fals
         },
         template='plotly_white',
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='#e5ecf6',
+        plot_bgcolor='#bbd6f8',
         margin={'l':50,'r':15,'t':40,'b':15},
         showlegend=False,
-        modebar={'orientation':'v'}
+        modebar={'orientation':'v'},
+        #font={"size": 13 if full_screen else 10},
     )
     return fig
 

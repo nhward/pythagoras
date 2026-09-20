@@ -398,6 +398,8 @@ def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Fig
             "visible": False,
             "fixedrange": True,
         },
+        font={"size": 13 if full_screen else 10},
+
     )
     return figure
 

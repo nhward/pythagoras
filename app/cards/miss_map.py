@@ -298,7 +298,8 @@ def _missingness_figure(
         paper_bgcolor="rgba(0,0,0,0)",
         margin={"l": 15, "r": 20, "t": 10, "b": 35},
         showlegend=False,
-        modebar={"orientation": "v"}
+        modebar={"orientation": "v"},
+        font={"size": 13 if full_screen else 10},
     )
     return figure
 

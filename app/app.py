@@ -23,9 +23,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-#TODO: provide a guide button for the sections and buttons
-#TODO: provide a info button for the whole app               
-
 # Ensure local modules and packages are resolved from the app directory.
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
@@ -74,23 +71,23 @@ START_SECTION_ID = "start"
 SECTIONS_NAV_ID = "sections"
 SETTINGS_QUERY_PARAMETER = "_pythagoras_settings"
 UI_QUERY_PARAMETER = "_pythagoras_ui"
-WELCOME_ICON_TAG_PATTERN = re.compile(
-    r"<i\b(?P<attributes>[^>]*)>\s*</i>",
-    flags=re.IGNORECASE,
-)
-HTML_CLASS_PATTERN = re.compile(
-    r"\bclass\s*=\s*([\"'])(?P<classes>.*?)\1",
-    flags=re.IGNORECASE | re.DOTALL,
-)
-FONT_AWESOME_STYLE_CLASSES = frozenset({
-    "fa-brands",
-    "fa-duotone",
-    "fa-light",
-    "fa-regular",
-    "fa-sharp",
-    "fa-solid",
-    "fa-thin",
-})
+# WELCOME_ICON_TAG_PATTERN = re.compile(
+#     r"<i\b(?P<attributes>[^>]*)>\s*</i>",
+#     flags=re.IGNORECASE,
+# )
+# HTML_CLASS_PATTERN = re.compile(
+#     r"\bclass\s*=\s*([\"'])(?P<classes>.*?)\1",
+#     flags=re.IGNORECASE | re.DOTALL,
+# )
+# FONT_AWESOME_STYLE_CLASSES = frozenset({
+#     "fa-brands",
+#     "fa-duotone",
+#     "fa-light",
+#     "fa-regular",
+#     "fa-sharp",
+#     "fa-solid",
+#     "fa-thin",
+# })
 
 
 @dataclass
@@ -137,7 +134,6 @@ def configuration_from_card_state(
         if not isinstance(group, dict):
             raise TypeError("Each configuration layout entry must be an object")
         configured_groups[group.get("section")] = group
-
     ordered_sections = (
         list(section_order)
         if section_order is not None
@@ -166,7 +162,6 @@ def configuration_from_card_state(
             raise TypeError(f"Cards for section {section!r} must be a list")
         if cards_in_section:
             saved_layout.append(group)
-
     if not saved_layout:
         raise ValueError("At least one non-empty section is required")
     candidate["layout"] = saved_layout
@@ -452,59 +447,13 @@ def configuration_write_path() -> Path:
             return Path(override)
     return CONFIG_PATH
 
-
-def replace_welcome_icons(html: str) -> str:
-    """Replace decorative Font Awesome placeholders with inline SVGs."""
-    def replacement(match: re.Match[str]) -> str:
-        class_match = HTML_CLASS_PATTERN.search(match.group("attributes"))
-        if class_match is None:
-            return match.group(0)
-
-        classes = class_match.group("classes").split()
-        if "fa-solid" not in classes:
-            return match.group(0)
-        icon_class = next(
-            (
-                value
-                for value in classes
-                if value.startswith("fa-")
-                and value not in FONT_AWESOME_STYLE_CLASSES
-            ),
-            None,
-        )
-        if icon_class is None:
-            return match.group(0)
-
-        name = icon_class.removeprefix("fa-")
-        try:
-            return str(icon(name, a11y="deco"))
-        except ValueError:
-            log.warning("Welcome icon %r is not available in faicons", name)
-            return match.group(0)
-
-    return WELCOME_ICON_TAG_PATTERN.sub(replacement, html)
-
-
 def welcome():
     """Read and safely embed the body of the generated welcome document."""
     html_file = Path("www/markdown/welcome.html")
     if html_file.exists():
         try:
             text = html_file.read_text(encoding="utf-8")
-            body_match = re.search(
-                r"<body\b[^>]*>(.*?)</body\s*>",
-                text,
-                flags=re.IGNORECASE | re.DOTALL,
-            )
-            body = body_match.group(1) if body_match else text
-            body = re.sub(
-                r"<script\b[^>]*>.*?</script\s*>",
-                "",
-                body,
-                flags=re.IGNORECASE | re.DOTALL,
-            )
-            body = replace_welcome_icons(body)
-            return ui.HTML(body.strip())
+            return ui.HTML(text)
         except Exception:  # noqa: BLE001
             log.error(f"Error reading {html_file} file")
             return ""
@@ -592,24 +541,13 @@ def section_panel(
     raise ValueError(f"Unsupported section style {group_style!r}")
 
 
-def start_panel():
-    """Create the optional Start navigation panel."""
-    return ui.nav_panel(
+def start_panel(*, group_style: str = "tab"):
+    """Create the optional Start panel using the configured section style."""
+    panel = {"tab": ui.nav_panel, "accordion": ui.accordion_panel}[group_style]
+    return panel(
         "Start",
         ui.div(
             welcome(),
-            ui.input_action_button(
-                id="GuideButton",
-                label="Guide me",
-                icon=icon(
-                    "eye",
-                    title="Take a guided tour of this card",
-                    a11y="sem",
-                ),
-                class_="btn rounded-pill hover-btn btn-sm guide-btn",
-                style="border: 0px; box-shadow: none;",
-                aria_label="Take a guided tour of this card",
-            ),
             id="Start-cards-container",
             class_="",
         ),
@@ -621,9 +559,9 @@ def create_sections(configuration: Mapping[str, object] | None = None):
     configuration = configuration or config
     group_style = configuration.get("settings", {}).get("section_style")
     panels = []
-    if show_start_enabled(configuration):
-        panels.append(start_panel())
     if group_style == "tab":
+        if show_start_enabled(configuration):
+            panels.append(start_panel())
         for index, group in enumerate(configuration["layout"]):
             panels.append(section_panel(
                 configured_section_id(index),
@@ -636,6 +574,8 @@ def create_sections(configuration: Mapping[str, object] | None = None):
             ui.nav_panel(
                 "",
                 ui.accordion(
+                    *([start_panel(group_style=group_style)]
+                      if show_start_enabled(configuration) else []),
                     *[
                         section_panel(
                             configured_section_id(index),
@@ -745,12 +685,23 @@ def application_ui(configuration: Mapping[str, object]):
             *create_sections(configuration),
             ui.nav_spacer(),
             ui.nav_control(ui.input_action_button(
+                id="ApplicationGuide", label=None, icon=icon("eye"),
+                class_="btn rounded-pill btn-sm",
+                style="border: 0px; box-shadow: none; display: block;",
+                aria_label="Take a guided tour of the application",
+            )),
+            ui.nav_control(ui.input_action_button(
                 id="ManageCardSection", label=None, icon=icon("wrench", title="Manage card or section", a11y="sem"),
                 class_="btn rounded-pill btn-sm fa-xl",
                 style="border: 0px; box-shadow: none; display: block;",
             )),
             ui.nav_control(ui.input_action_button(
                 id="SaveConfiguration", label=None, icon=icon("bookmark", title="Manage bookmarks", a11y="sem"),
+                class_="btn rounded-pill btn-sm fa-xl",
+                style="border: 0px; box-shadow: none; display: block;",
+            )),
+            ui.nav_control(ui.input_action_button(
+                id="AppInfo", label=None, icon=icon("circle-info", title="About Pythagoras", a11y="sem"),
                 class_="btn rounded-pill btn-sm fa-xl",
                 style="border: 0px; box-shadow: none; display: block;",
             )),
@@ -1141,7 +1092,7 @@ def application():
                 else:
                     section = currentSection()
             else:
-                if input.Accordion() == START_SECTION_ID:
+                if START_SECTION_ID in (input.Accordion() or []):
                     section = SectionOrder()[0]
                 else:
                     section = currentSection()
@@ -1154,8 +1105,21 @@ def application():
             desired = bool(input.ShowStartSection())
             if desired == ShowStart():
                 return
-
             group_style = section_style()
+            if group_style == "accordion":
+                if desired:
+                    ui.insert_accordion_panel(
+                        id="Accordion",
+                        panel=start_panel(group_style=group_style),
+                        target=SectionOrder()[0],
+                        position="before",
+                    )
+                else:
+                    if START_SECTION_ID in (input.Accordion() or []):
+                        ui.update_accordion(id="Accordion", show=SectionOrder()[0])
+                    ui.remove_accordion_panel(id="Accordion", target=START_SECTION_ID)
+                ShowStart.set(desired)
+                return
             sections_target = (
                 SectionOrder()[0]
                 if group_style == "tab"
@@ -1206,12 +1170,8 @@ def application():
             mode = input.AddItemType()
             reference = ModalSection()
             if reference not in SectionOrder():
-                ui.notification_show(
-                    "The reference section no longer exists.",
-                    type="error",
-                )
+                ui.notification_show("The reference section no longer exists.", type="error")
                 return
-
             if mode == "section":
                 try:
                     name = validated_section_name(
@@ -1220,9 +1180,7 @@ def application():
                     )
                     position = input.SectionPosition()
                     if position not in {"before", "after"}:
-                        raise ValueError(
-                            "Section position must be 'before' or 'after'"
-                        )
+                        raise ValueError("Section position must be 'before' or 'after'")
                 except (TypeError, ValueError) as error:
                     ui.notification_show(str(error), type="error", duration=8)
                     return
@@ -1236,9 +1194,7 @@ def application():
                     position=position,
                 )
                 SectionOrder.set(new_order)
-                SectionsVisited.set(ordered_visited(
-                    (*SectionsVisited.get(), created)
-                ))
+                SectionsVisited.set(ordered_visited((*SectionsVisited.get(), created)))
                 group_style = section_style()
                 panel = section_panel(
                     created,
@@ -1273,7 +1229,6 @@ def application():
                 ui.modal_remove()
                 bump_topology()
                 return
-
             if mode == "rename":
                 try:
                     name = validated_section_name(
@@ -1287,7 +1242,6 @@ def application():
                 except (TypeError, ValueError) as error:
                     ui.notification_show(str(error), type="error", duration=8)
                     return
-
                 section_definitions[reference]["section"] = name
                 await session.send_custom_message("RenameSection", {
                     "section_id": reference,
@@ -1300,7 +1254,6 @@ def application():
                     duration=5,
                 )
                 return
-
             name = input.CardPicker_selected()
             if not name or name not in available_cards():
                 ui.notification_show("Choose a valid card.", type="error")
@@ -1308,10 +1261,7 @@ def application():
             current = reference
             instance = create_card(name)
             if instance is None:
-                ui.notification_show(
-                    f"Card {name!r} could not be created.",
-                    type="error",
-                )
+                ui.notification_show(f"Card {name!r} could not be created.", type="error")
                 return
             ui.insert_ui(ui = instance.call_ui(), selector = f"#{current}-cards-container", where = "beforeEnd")
             upstream = reactive.Value(None)
@@ -1348,24 +1298,16 @@ def application():
             if section not in order:
                 return
             if len(order) <= 1:
-                ui.notification_show(
-                    "The final section cannot be deleted.",
-                    type="error",
-                )
+                ui.notification_show("The final section cannot be deleted.", type="error")
                 return
-
             definition = section_definitions.get(section, {})
             not_instantiated = section not in SectionsVisited.get()
             if any(
                 node.card.section == section
                 for node in card_nodes.values()
             ) or (not_instantiated and definition.get("cards")):
-                ui.notification_show(
-                    "Only an empty section can be deleted.",
-                    type="error",
-                )
+                ui.notification_show("Only an empty section can be deleted.", type="error")
                 return
-
             index = order.index(section)
             neighbor = order[index - 1] if index > 0 else order[index + 1]
             group_style = section_style()
@@ -1375,12 +1317,9 @@ def application():
             else:
                 ui.update_accordion(id="Accordion", show=neighbor)
                 ui.remove_accordion_panel(id="Accordion", target=section)
-
             new_order = tuple(value for value in order if value != section)
             SectionOrder.set(new_order)
-            SectionsVisited.set(tuple(
-                value for value in SectionsVisited.get() if value != section
-            ))
+            SectionsVisited.set(tuple(value for value in SectionsVisited.get() if value != section))
             section_definitions.pop(section, None)
             bump_topology()
 
@@ -1392,14 +1331,10 @@ def application():
                 input_id = f"{section_id}_CardOrder"
                 raw_order = input[input_id]()
                 if raw_order is None:
-                    raise ValueError(
-                        "Card order is not ready for section "
-                        f"{section_name(section_id)!r}"
-                    )
+                    raise ValueError(f"Card order is not ready for section {section_name(section_id)!r}")
                 section_orders[section_id] = tuple(
                     value.removesuffix("-Card") for value in raw_order
                 )
-
             base = ActiveConfiguration()
             req(isinstance(base, Mapping))
             candidate = configuration_from_section_state(
@@ -1451,6 +1386,20 @@ def application():
 
 
         @reactive.effect
+        @reactive.event(input.AppInfo)
+        def ShowAppInfo():
+            ui.modal_show(
+                ui.modal(
+                    ui.tags.iframe(src="README.html", title="About Pythagoras", style="width: 100%; height: 70vh; border: 0;"),
+                    title="About Pythagoras",
+                    fade=True,
+                    easy_close=True,
+                    size="l",
+                )
+            )
+
+
+        @reactive.effect
         @reactive.event(input.SaveConfiguration)
         def ShowBookmarkManager():
             """Open the fixed bookmark card from the navbar."""
@@ -1468,19 +1417,13 @@ def application():
             )
 
             async def after_flush():
-                await session.send_custom_message(
-                    "init_card", {"id": bookmark_manager.ns("Card")}
-                )
+                await session.send_custom_message("init_card", {"id": bookmark_manager.ns("Card")})
                 if mode != "local":
                     await session.send_custom_message(
                         "bookmark_list",
                         {
-                            "inputId": bookmark_manager.ns(
-                                "BrowserBookmarks"
-                            ),
-                            "operationInputId": bookmark_manager.ns(
-                                "BrowserOperation"
-                            ),
+                            "inputId": bookmark_manager.ns("BrowserBookmarks"),
+                            "operationInputId": bookmark_manager.ns("BrowserOperation"),
                         },
                     )
 

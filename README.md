@@ -1,9 +1,11 @@
-
-
-# <img src="app/www/tetractys.png" alt="tetractys" width="40" height="40"> Pythagoras
-
-*A modular, workflow-driven data science environment built with Shiny for Python.*
-
+---
+title: <img src="app/www/tetractys.png" alt="tetractys" width="40" height="40"> Pythagoras
+subtitle: _A modular, workflow-driven data science environment built with Shiny for Python._
+css: app/www/pythagoras.css
+format:
+  html:
+    embed-resources: true
+    minimal: true
 ---
 
 ## Overview
@@ -21,7 +23,7 @@ The result is a system that addresses both:
 - the **data problem** (cleaning, transforming, modeling)
 - the **workflow problem** (how analysis is structured, communicated, and reproduced)
 
----
+***
 
 ## Core Concepts
 
@@ -30,6 +32,7 @@ The result is a system that addresses both:
 A **card** is the fundamental unit of computation and interaction.
 
 Each card:
+
 - Receives data from the previous card
 - Optionally transforms or augments that data
 - Passes the result downstream
@@ -49,7 +52,7 @@ Every card can support:
 - 🟰 **Consistent styling and controls**
 - 🧲 **Drag handle** (for reordering)
 
----
+***
 
 ### 🔗 Workflow = Ordered Cards
 
@@ -61,7 +64,7 @@ A workflow is defined by:
 
 This is a key architectural choice.
 
----
+***
 
 ### 🔀 Dynamic Reordering
 
@@ -77,7 +80,7 @@ This enables:
 - Multiple analytical paths
 - User-defined workflows rather than prescribed ones
 
----
+***
 
 ### 📦 Data Flow Model
 
@@ -94,20 +97,20 @@ invalidations through the resulting graph. The values are structured data wrappe
 
 Available roles:
 
-- `target`
-- `predictor`
-- `identifier`
-- `partition`
-- `weighting`
-- `stratifier`
-- `treatment`,
-- `sensitive`
-- `geometry`
-- `sequence`
+- _Target:_ The feature you seek to predict
+- _Predictor:_ The common features of observations
+- _Identifier:_ The observation's unique reference
+- _Partition:_ The pre-determined test/train allocation 
+- _Weighting:_ An observation importance weighting
+- _Stratifier:_ The features that organize observations into functional groups
+- _Treatment:_ A causal feature that is being investigated
+- _Sensitive:_ A observational feature that can be assessed for fairness
+- _Geometry:_ A feature that records geographic information
+- _Sequence:_ A feature that dictates the ordering of observations
 
 Cards validate, chart, and transform data according to these roles.
 
----
+***
 
 ## Architecture
 
@@ -119,7 +122,7 @@ Pythagoras leverages Shiny’s reactive system:
 - Cards recompute only when required
 - Expensive operations can be suspended
 
----
+***
 
 ### 🧱 Module System
 
@@ -142,7 +145,7 @@ Cards inherit from base classes:
 * Module: implements shiny modules
 * Card: implements a common look and feel for the cards
 
-⸻
+***
 
 🧩 UI Composition
 
@@ -158,7 +161,7 @@ Drag-and-drop ordering is handled via:
 * Custom JS bindings
 * Shiny input events (CardOrder)
 
-⸻
+***
 
 ## Cards (available and planned)
 
@@ -187,7 +190,7 @@ Drag-and-drop ordering is handled via:
 * [Missingness sets](app/www/markdown/miss_sets.html) Do missing values have common causes?
 * [Excessive missingness](app/www/markdown/miss_map.html) Is excessive missingness present?
 * [Missingness rules](app/www/markdown/miss_rules.html) Is missingness explainable?
-* [Learned imputation ](app/www/markdown/miss_impute.html) How well does learned imputation perform?
+* [Learned imputation](app/www/markdown/miss_impute.html) How well does learned imputation perform?
 * Manual imputation
 
 ### 🧠 Preprocessing
@@ -222,9 +225,9 @@ Drag-and-drop ordering is handled via:
 
 * [Configuration](app/www/markdown/sys_configuration.html) What environment has the analysis taken place in?
 * [System log](app/www/markdown/system_log.html) What messages were lodged during the analysis?
-* [Data journey](app/www/markdown/data_provenance.html) What does the data journey look like as a diagram?
+* [Data journey](app/www/markdown/data_provenance.html) What is the data pathway?
 
-⸻
+***
 
 ## Code Extraction
 
@@ -241,7 +244,7 @@ This bridges the gap between:
 * interactive analysis
 * reproducible pipelines
 
-⸻
+***
 
 State Management
 
@@ -257,7 +260,7 @@ Future work includes:
 * Bookmarking state
 * Session persistence
 
-⸻
+***
 
 Testing
 
@@ -273,7 +276,7 @@ Challenges addressed include:
 * dynamic UI insertion
 * drag-and-drop behavior
 
-⸻
+***
 
 Design Philosophy
 
@@ -295,7 +298,7 @@ Users should be able to explore and extract code.
 
 Users can reorder, insert, and remove steps freely.
 
-⸻
+***
 
 Limitations & Considerations
 
@@ -304,7 +307,7 @@ Limitations & Considerations
 * Performance with many active cards
 * Shinylive compatibility (no runtime filesystem access)
 
-⸻
+***
 
 Future Directions
 
@@ -315,7 +318,7 @@ Future Directions
 * Better state inspection tools
 * Shinylive-compatible architecture
 
-⸻
+***
 
 Name
 
@@ -325,7 +328,7 @@ Pythagoras reflects:
 * Geometry and distance (central to data science concepts)
 * A system for understanding complex spaces through composition
 
-⸻
+***
 
 Summary
 
@@ -334,5 +337,3 @@ Pythagoras is not just a Shiny app.
 It is an attempt to build:
 
 A modular, inspectable, reorder-able "visual language" for data analysis.
-
-⸻

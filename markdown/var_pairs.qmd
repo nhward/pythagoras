@@ -1,0 +1,51 @@
+---
+title: Variable pairs
+---
+
+#### 🧭 Purpose
+
+Explore associations between original variables before encoding expands the dataset. Select up to twelve variables to create an N × N grid. Every unordered pair appears once; diagonal cells name the variables. The lower triangle is the default. **Checkerboard (alternating sides)** moves alternating diagonals to the opposite half: no pairs are duplicated or omitted.
+
+#### 🧠 How it works
+
+Eligible roles are **Predictor**, **Treatment** and optionally **Target**. Semantic **code** and **geometry** variables and shadow columns are excluded. Unsupported complex, basket and unknown types are also excluded. Datetime is treated as numeric elapsed days with date-formatted ticks; durations use seconds. Ordered variables are categorical and retain declared order. Cyclic variables use the period or category cycle stored in their dtype, never an inferred period.
+
+Column variables ordinarily supply x and row variables y. For polar cells the cyclic variable always supplies the angle, whichever side of the pair it occupies.
+
+| Pair | Display and interpretation |
+|---|---|
+| Numeric × numeric | Scatter plot |
+| Numeric x × categorical y | Vertical histogram bars in horizontal category bands |
+| Categorical x × numeric y | Horizontal histogram bars in vertical category bands |
+| Categorical × categorical | Mosaic: x-category width is its marginal share; each y tile's conditional height makes its area the joint share |
+| Cyclic × numeric | Polar scatter, with cyclic phase as angle and numeric value as radius |
+| Cyclic × categorical | Polar histogram bars in category rings |
+| Cyclic × cyclic | Cartesian scatter of the two phases; opposite wrap boundaries represent neighbouring values |
+
+Mixed-type bars count observations in twelve equal-width numeric or angular bins within each category. Bars are scaled to fit category bands using the largest stacked bin count in that panel. They show **counts, not means**; hover shows the bin counts. Equal heights within a panel represent equal counts. Heights in different panels need not use the same count scale.
+
+Polar numeric radii are offset when needed to accommodate negative values; radial labels and hover report original values. Mosaic axes show cumulative shares, not common category coordinates; mosaics therefore do not share axes with category-band panels. Numeric and category-band axes for the same variable and coordinate direction are linked where their meanings agree. In compact mode, ticks and axes appear only at the left and bottom grid edges; polar interior axes are hidden. In full-screen checkerboard mode, every populated panel shows its own axes and tick labels. The lower-triangle layout keeps edge-only axes. Variable names remain on the diagonal.
+
+#### 🎨 Faceting
+
+Choose one assigned **Stratifier**. It colours scatter points and stacks counts within bars, rings or mosaic tiles, without adding extra subplots. Its colours are consistent across the grid. Without a facet, mosaic colours distinguish y categories locally. Legends and hover are available **only in full-screen mode**. Missing facet values form a separate group rather than removing otherwise valid observations.
+
+#### ⚙️ Settings and limits
+
+* **Variables:** select 2–12. Their selection order defines the grid. The initial selection uses the first six eligible variables.
+* **Include targets:** controls whether Target-role columns can be selected.
+* **Colour by stratifier:** one optional facet variable.
+* **Grid layout:** lower triangle or alternating sides, always one display per pair.
+* **Maximum observations:** logarithmic slider, from 10² to 10⁴, default 10³. A fixed-seed random sample of rows is reused across all pairs. This bounds browser cost; it is not a representative-sampling guarantee for rare groups.
+
+To bound rendering, nominal variables with more than twelve observed levels retain the eleven most frequent plus **Other (pooled)**. Ordered variables with more than twelve observed levels are grouped into twelve adjacent bands, preserving order. Facet levels use the same policy with an eight-level cap, plus a separate missing group if needed. The footer reports aggregation. Category groupings are based on the sampled data and can change with the sampling limit.
+
+#### 🔎 Coverage and interpretation
+
+The footer reports the overall sampling count. Missing and infinite values are omitted pairwise, so one incomplete variable does not remove observations from every panel. There is no imputation. An empty panel can indicate no jointly observed values. Non-scalar object values cannot be charted and are reported in the footer.
+
+Patterns are exploratory associations, not causal effects. Overplotting, category pooling and sampling can hide detail. Increase the observation limit or narrow the selection to investigate a particular pair. For large grids, use full-screen mode. Observation weights are not used.
+
+#### 🔗 Data flow
+
+This diagnostic passes the incoming data, roles and learned pipeline through unchanged. It creates no data-journey transformation. Place it before encoding to keep the variables interpretable and the grid compact.

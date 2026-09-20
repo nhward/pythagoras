@@ -824,7 +824,8 @@ def instance():
                     "y": 1.1,
                     "yanchor": "top",
                 },
-                #showlegend=bool(this.isFullScreen()),
+                # font={"size": 13 if full_screen else 10},
+                # showlegend=full_screen,
             )
             widget = go.FigureWidget(figure)
             widget._config = getattr(widget, "_config", {}) | {"displayModeBar": bool(this.isFullScreen()), "displaylogo": False}

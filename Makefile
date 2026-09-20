@@ -21,15 +21,20 @@ QUARTO_CONFIG := $(wildcard _quarto.yml markdown/_quarto.yml)
 QMD_FILES := $(wildcard markdown/*.qmd)
 HTML_FILES := $(patsubst markdown/%.qmd,app/www/markdown/%.html,$(QMD_FILES))
 
-preview: $(HTML_FILES)
+preview: $(HTML_FILES) app/www/README.html
+
+README.html: README.md $(QUARTO_CONFIG) app/www/pythagoras.css app/www/tetractys.png
+	quarto render $< --to html
+
+app/www/README.html: README.html Makefile
+	mkdir -p $(@D)
+	sed 's|href="app/www/|href="|g' $< > $@
 
 app/www/markdown/%.html: markdown/%.qmd $(QUARTO_CONFIG)
 	quarto render $< --to html --output-dir app/www
 
 
 .PHONY: preview install check-imports test test-force clean app shinylive shinylive-force shinylive-serve
-
-preview: $(HTML_FILES)
 
 # Refresh the editable source link in the existing environment. Dependencies
 # are left alone except for legacy PyPI packages that shadow local modules.
@@ -72,9 +77,8 @@ shinylive-force:
 	$(SHINYLIVE) export app site
 	touch $(SHINYLIVE_STAMP)
 
-
-
 clean:
 	rm -f app/www/markdown/*.html
+	rm -f app/www/README.html
 	rm -f $(TEST_STAMP)
 	rm -f $(SHINYLIVE_STAMP)

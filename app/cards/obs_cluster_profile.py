@@ -235,7 +235,9 @@ def _figure(result):
         modebar={"orientation": "v"},
         margin={'l':25,'r':25,'t':30,'b':25},
         xaxis={'visible':False,'range':[-1, max(leaves, 1)]},
-        yaxis={'visible':False,'range':[-result.model.get_depth()-.6,.6]})
+        yaxis={'visible':False,'range':[-result.model.get_depth()-.6,.6]},
+        # font={"size": 13 if full_screen else 10},
+    )
     return fig
 
 

@@ -33,7 +33,23 @@ document.addEventListener("DOMContentLoaded", () => {
             flipToggle(card);
         });
         publishCardFace(card);
+        initCardSidebar(card);
     });
+
+    function initCardSidebar(card) {
+        const layout = card.querySelector(".bslib-sidebar-layout");
+        const inputId = card.id.replace(/-Card$/, "-Sidebar");
+        const publish = () => window.Shiny?.setInputValue?.(
+            inputId,
+            Boolean(layout && !layout.classList.contains("sidebar-collapsed")),
+            { priority: "event" }
+        );
+        publish();
+        if (!layout || layout.dataset.sidebarObserverInitialized === "true") return;
+        layout.dataset.sidebarObserverInitialized = "true";
+        const observer = new MutationObserver(publish);
+        observer.observe(layout, { attributes: true, attributeFilter: ["class"] });
+    }
 
 
     function publishCardFace(card) {

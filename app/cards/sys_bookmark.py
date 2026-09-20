@@ -390,12 +390,10 @@ def instance(
         @reactive.effect
         @reactive.event(input.SaveBookmark)
         async def SaveBookmark():
-            if configuration_provider is None:
-                ui.notification_show(
-                    "No configuration provider is available.", type="error"
-                )
-                return
             try:
+                if configuration_provider is None:
+                    ui.notification_show("No configuration provider is available.", type="error")
+                    return
                 created_at = datetime.now().astimezone()
                 snapshot = dict(configuration_provider())
                 filename = bookmark_filename(snapshot, created_at)
@@ -408,9 +406,7 @@ def instance(
                 if Module.runtime_mode(session) == "local":
                     path = save_local_bookmark(candidate)
                     catalogue_version.set(catalogue_version() + 1)
-                    ui.notification_show(
-                        f"Bookmark saved as {path.name}.", type="message"
-                    )
+                    ui.notification_show(f"Bookmark saved as {path.name}.", type="message")
                     return
                 await session.send_custom_message(
                     "bookmark_save",
@@ -423,12 +419,9 @@ def instance(
                     },
                 )
             except Exception as error:  # noqa: BLE001
-                ui.notification_show(
-                    f"Bookmark was not saved: {error}",
-                    type="error",
-                    duration=None,
-                )
-            ui.modal_remove()
+                ui.notification_show(f"Bookmark was not saved: {error}", type="error", duration=None)
+            finally:
+                ui.modal_remove()
 
 
         async def reload_configuration(configuration):

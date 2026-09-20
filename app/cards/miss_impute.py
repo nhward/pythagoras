@@ -554,6 +554,7 @@ def _missingness_figure(summary: pd.DataFrame, applied: bool, full_screen: bool 
         },
         xaxis={"rangemode": "tozero", "fixedrange": not full_screen},
         yaxis={"fixedrange": not full_screen},
+        font={"size": 13 if full_screen else 10},
     )
     return figure
 

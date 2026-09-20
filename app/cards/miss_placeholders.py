@@ -548,7 +548,8 @@ def instance():
                     "itemsizing": "constant",
                     "font": {"size": 16}
                 },
-                modebar={"orientation": "v"}
+                modebar={"orientation": "v"},
+                # font={"size": 13 if full_screen else 10},
             )
             fw = go.FigureWidget(fig)
             fw._config = (getattr(fw, "_config", {}) | {

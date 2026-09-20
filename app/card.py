@@ -22,6 +22,7 @@
 ##    Reactive helpers:
 ##        isFullScreen
 ##        isFront
+##        SidebarActive
 ##        hasSidebar
 ##        hasFlipSide
 ##        hasFooter
@@ -38,8 +39,6 @@ from faicons import icon_svg as icon
 from module import Module
 from shiny import module, reactive, render, ui
 from shiny.types import SilentException
-
-# TODO: add a SibebarActive reactive
 
 class Card(Module):
     
@@ -438,6 +437,14 @@ class Card(Module):
                     return is_front
                 return True
             self.isFront = reactive.calc(isFront)
+
+            @self.reactable(calc = True)
+            def SidebarActive() -> bool:
+                if not self.hasSidebar():
+                    return False
+                active = input.Sidebar()
+                return active if isinstance(active, bool) else False
+            self.SidebarActive = reactive.calc(SidebarActive)
 
 
             # Info button event

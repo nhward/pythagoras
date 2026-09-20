@@ -216,6 +216,7 @@ def _duplicates_figure(
             "y": -0.28,
             "yanchor": "top",
         },
+        font={"size": 13 if full_screen else 10},
     )
     return figure
 

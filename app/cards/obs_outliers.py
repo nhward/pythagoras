@@ -197,7 +197,9 @@ def _figure(result, *, view="Aggregate", top=30, full_screen=False):
         margin={"l": 15, "r": 25, "t": 0, "b": 35},
         xaxis={"type": "category", "categoryorder": "array", "categoryarray": rows, "tickmode": "array", "tickvals": rows, "ticktext": labels, "title": "Observation", "fixedrange": not full_screen},
         yaxis={"title": "Percentile" if view == "Aggregate" else "Raw outlier score", "fixedrange": not full_screen},
-        modebar={"orientation": "v"})
+        modebar={"orientation": "v"},
+        font={"size": 13 if full_screen else 10},
+    )
     if view == "Aggregate":
         figure.update_yaxes(range=[0, 100])
     return figure

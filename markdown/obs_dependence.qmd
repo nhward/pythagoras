@@ -1,0 +1,61 @@
+---
+title: Observation dependence
+---
+
+#### 🧭 Purpose
+
+Does prediction need to respect earlier observations or repeated measurements of the same entity? This diagnostic separates **the observation design** from **evidence of serial dependence**. A time series can have no detectable autocorrelation; cross-sectional data can still be dependent through households, sites or other shared causes. No test can classify these designs reliably from values alone.
+
+#### 🧠 How it works
+
+Assign one numeric or datetime **Sequence** variable upstream. For longitudinal data, assign stable entity keys as **Identifiers**: all Identifier columns jointly define an entity. The entity key plus sequence must uniquely identify observations. Do not include a unique row ID in the entity key. Repeated entities with unique entity–sequence keys confirm longitudinal structure, conditional on the meaning of those roles; they do not prove a particular statistical dependence.
+
+Each entity is sorted and tested separately, never concatenated with another entity. Without entity grouping, the data form one ordered series. Explicit exploratory row order is available, but cannot establish temporal design. Date strings must first be converted to datetime. Missing keys and duplicate sequence values within entities block analysis.
+
+Numeric Predictors and optionally Targets receive two complementary diagnostics:
+
+: Table 1 - Diagnostic detection
+
+| Diagnostic | What it detects              |
+|:-----------|:-----------------------------|
+| Ljung–Box on levels | Linear autocorrelation across lags 1 through the selected maximum |
+| Ljung–Box on squared deviations from the entity mean | Serial correlation in magnitude, including some changing-variability patterns missed by the levels test |
+
+The second diagnostic is a screening extension, not a general nonlinear independence test or a fitted ARCH model. The calculations use demeaned sample autocorrelations and the usual chi-square reference distribution with the actual lag count as degrees of freedom. Each series needs at least 20 originally observed finite values; the maximum lag is capped at one fifth of its length. No models are fitted and no degrees of freedom are deducted for fitted model parameters.
+
+Holm adjustment covers **every available test across variables, entities and both diagnostics**. The table's adjusted p-value is the smaller of the two adjusted values for that entity-variable series. It is not a probability of independence. For imputed series it is an exploratory nominal value, not a calibrated significance level. The chart displays at most 30 series, ordered by strongest evidence; the table retains every assessed series, including unavailable results.
+
+#### 🔎 Interpretation and next steps
+
+A flagged result supports serial dependence, potentially caused by trend, seasonality or changing variability. A non-flagged result means insufficient evidence from these tests, not independent observations. Some variables or entities may be flagged while others are not. Longitudinal structure still matters when series are short or autocorrelation is absent: measurements may share entity effects that these tests do not assess.
+
+For future observations, compare predictive models using chronological holdouts or rolling-origin validation. For new entities, hold out entire entities. If both apply, design a split that respects both constraints. Compare models with and without history features on those held-out observations to establish whether earlier observations actually improve predictions. Full-data screening here does not substitute for fold-specific preprocessing or validation.
+
+#### ⛔️ Limitations
+
+* Tests require regular sequence spacing. Unequal-intervals, including calendar month lengths represented as dates, produce unavailable tests; an appropriate numeric period index may express a regular calendar cadence. Numeric sequences express intervals in their supplied units.
+* By default, missing or infinite values are filled with a **trailing rolling mean** for this diagnostic only. The window defaults to the preceding five sequence positions, using only originally observed values within the same entity. Filled values are never reused as history. Observed values are preserved. Leading missing positions are trimmed and counted; internal/trailing gaps with no observed value in the window remain unavailable. No future values are used.
+* Choose **No imputation** for the original complete-series requirement. The table reports total Rows, Observed values, Imputed values, Leading trimmed positions and Analyzed rows. At least 20 genuinely observed values are required, even after filling. Constants and short series remain unavailable.
+* **Rolling-imputed results are exploratory.** Smoothing can introduce the autocorrelation being tested. The reported p-values are nominal: neither the chi-square reference nor Holm adjustment accounts for imputation uncertainty. A flag after imputation is not confirmation of dependence in the original observations. Compare window sizes and the no-imputation setting; substantial missingness weakens interpretation.
+* These are approximate exploratory p-values. Non-stationarity, heavy tails and small samples affect calibration. Squared-deviation diagnostics can be driven by dependence already present in levels. Cross-variable, spatial and general nonlinear dependence can remain undetected.
+* Only numeric Predictors and enabled Targets are tested; booleans, complex values, identifiers, sequences, weights, geometry and shadow columns are excluded. Observation weights are not used.
+* The card refuses more than 100,000 rows, 2,000 entity-variable series or 20 million row-variable-lag products. It does not randomly sample or truncate sequences. Holm correction can have low power for many short panels. Repeated changes of settings are not included in the correction.
+
+#### 📌 Suggested workflow
+
+1. Verify what one observation represents, and assign Sequence and entity Identifier roles.
+2. Check uniqueness, cadence and repeated-entity counts in the status.
+3. Inspect flagged and unavailable entity-variable series on the reverse side.
+4. Investigate trends, seasonality, entity effects and data quality before choosing a model.
+5. Validate the contribution of history with a split matching the intended prediction task.
+
+#### 🔗 Data flow
+
+The card is diagnostic only. It passes the incoming proxy, roles and learned pipeline through unchanged, has no data-changing action and adds no transformation to the data journey. Use Variable roles upstream to change the observation design.
+
+#### 📚 References
+
+* [Ljung–Box definition and lag-selection, statsmodels](https://www.statsmodels.org/dev/generated/statsmodels.stats.diagnostic.acorr_ljungbox.html)
+* [Autocorrelation, Forecasting: Principles and Practice](https://otexts.com/fpp3/acf.html)
+* [Squared-residual correlograms, EViews](https://eviews.com/help/content/testing-Residual_Diagnostics.html)
+* [Grouped and time-series validation, scikit-learn](https://scikit-learn.org/stable/modules/cross_validation.html)

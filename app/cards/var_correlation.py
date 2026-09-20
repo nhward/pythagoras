@@ -955,7 +955,8 @@ def instance():
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="#bbd6f8",
                 modebar={"orientation": "v"},
-                margin={"l": 200, "r": 200, "t": 0, "b": 0} if this.isFullScreen() else {"l": 100, "r": 100, "t": 0, "b": 0}
+                margin={"l": 200, "r": 200, "t": 0, "b": 0} if this.isFullScreen() else {"l": 100, "r": 100, "t": 0, "b": 0},
+                # font={"size": 13 if full_screen else 10},
             )
             widget = go.FigureWidget(figure)
             widget._config = getattr(widget, "_config", {}) | {

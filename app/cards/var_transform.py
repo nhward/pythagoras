@@ -577,6 +577,7 @@ def _distribution_figure(
             "y": -0.22, "yanchor": "top",
         },
         modebar={"orientation": "v"},
+        font={"size": 13 if full_screen else 10},
     )
     return figure
 

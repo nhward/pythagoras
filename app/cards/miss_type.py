@@ -1116,6 +1116,7 @@ def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
                 max(y_values) + 0.5,
             ],
         },
+        # font={"size": 13 if full_screen else 10},
     )
     return figure
 
