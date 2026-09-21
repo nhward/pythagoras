@@ -687,7 +687,7 @@ class TestApplicationBrowser:
     ):
         page.goto(start_app.url)
         wait_for_shiny_ready(page)
-        start_tab = page.get_by_role("tab", name="Start", exact=True)
+        start_tab = page.get_by_role("tab", name="Welcome", exact=True)
         expect(start_tab).to_be_visible()
         expect(start_tab).to_have_attribute("aria-selected", "true")
         expect(page.locator("#welcome-to-pythagoras")).to_be_visible()
@@ -726,7 +726,7 @@ class TestApplicationBrowser:
         checkbox = page.locator("#ShowStartSection")
         expect(checkbox).not_to_be_checked()
         checkbox.check()
-        start_tab = page.get_by_role("tab", name="Start", exact=True)
+        start_tab = page.get_by_role("tab", name="Welcome", exact=True)
         expect(start_tab).to_be_visible()
         page.locator("#CardPicker_cancel").click()
 
