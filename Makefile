@@ -5,7 +5,6 @@ SHINYLIVE := .venv/bin/shinylive
 # Local modules must precede similarly named third-party packages.
 export PYTHONPATH := $(CURDIR)/app$(if $(PYTHONPATH),:$(PYTHONPATH))
 
-
 APP_FILES := $(wildcard app/*.py app/**/*.py)
 APP_DATA := $(wildcard app/data/*)
 APP_CONFIG := $(wildcard app/requirements.txt)
@@ -70,7 +69,7 @@ $(SHINYLIVE_STAMP): $(SHINYLIVE_DEPS)
 
 # Export if necessary, then serve the static Shinylive version.
 shinylive-serve: shinylive
-	$(PYTHON) -m http.server 8000 --directory site
+	python3.14 -m http.server 8000 --directory site --tls-cert ~/.local-certs/site.pem --tls-key ~/.local-certs/site-key.pem
 
 # Export regardless of file timestamps.
 shinylive-force:

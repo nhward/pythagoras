@@ -82,6 +82,11 @@ bookmark_restore_app = create_app_fixture(
     scope="function",
     env=BOOKMARK_RESTORE_ENV,
 )
+workflow_restore_app = create_app_fixture(
+    app="../app/app.py",
+    scope="function",
+    env={**BOOKMARK_RESTORE_ENV, "PYTHAGORAS_TEST_SHOW_START": "true"},
+)
 server_bookmark_app = create_app_fixture(
     app="scenarios/bookmark_server.py",
     scope="function",
@@ -1275,8 +1280,9 @@ class TestApplicationBrowser:
             shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
 
     @pytest.mark.ui
+    @pytest.mark.parametrize("restore_last", [False, True])
     def test_generic_card_inputs_are_saved_and_restored(
-        self, page: Page, save_app: ShinyAppProc
+        self, page: Page, save_app: ShinyAppProc, restore_last
     ):
         shutil.rmtree(BOOKMARK_TEST_DIR, ignore_errors=True)
         try:
@@ -1297,6 +1303,11 @@ class TestApplicationBrowser:
                 timeout=20_000
             )
 
+            page.locator("#ManageCardSection").click()
+            settings = page.get_by_role("dialog")
+            settings.get_by_label("Restore last active section", exact=True).set_checked(restore_last)
+            settings.get_by_role("button", name="Cancel", exact=True).click()
+
             page.locator("#SaveConfiguration").click()
             dialog = page.get_by_role("dialog")
             dialog.locator("[id$='-SaveBookmark']").click()
@@ -1307,6 +1318,7 @@ class TestApplicationBrowser:
             saved = list(BOOKMARK_TEST_DIR.glob("*.pythagoras.json"))
             assert len(saved) == 1
             written = json.loads(saved[0].read_text(encoding="utf-8"))
+            assert written["settings"]["restore_last_active_section"] is restore_last
             assert written["version"] == 2
             assert written["active_section"] == "Data cleaning"
             tabulation = next(
@@ -1320,7 +1332,7 @@ class TestApplicationBrowser:
             page.reload()
             wait_for_shiny_ready(page)
             restored_section = page.get_by_role(
-                "tab", name="Data cleaning", exact=True
+                "tab", name="Data cleaning" if restore_last else "Data prep", exact=True
             )
             expect(restored_section).to_have_attribute("aria-selected", "true")
             page.get_by_role("tab", name="Data prep", exact=True).click()
@@ -1421,3 +1433,81 @@ class TestApplicationBrowser:
         # page.locator("#data_import-Commit").click()
 
         # expect(page.locator("#var_modify-Name")).to_contain_text("after-removal", timeout=20_000)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("restore_last", [True, False, None])
+@pytest.mark.parametrize("active", ["Missing values", "Deleted", None])
+def test_restore_section_policy(app_module, sample_config, restore_last, active):
+    saved = json.loads(json.dumps(sample_config))
+    saved["settings"]["show_start"] = True
+    if restore_last is not None:
+        saved["settings"]["restore_last_active_section"] = restore_last
+    if active is not None:
+        saved["active_section"] = active
+    restored = app_module.restore_configuration(sample_config, saved)
+    expected = "Missing values" if restore_last and active == "Missing values" else "Data prep"
+    assert restored["active_section"] == expected
+    assert saved.get("active_section") == active
+
+
+@pytest.mark.ui
+@pytest.mark.parametrize("style", ["tab", "accordion"])
+@pytest.mark.parametrize("restore_last", [False, True])
+def test_skipped_sections_run_before_results(page, workflow_restore_app, tmp_path, style, restore_last):
+    shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+    BOOKMARK_RESTORE_DIR.mkdir(parents=True)
+    data = tmp_path / "duplicates.csv"
+    data.write_text("value\n1\n1\n2\n2\n3\n")
+    candidate = json.loads(CONFIG_FILE.read_text())
+    candidate["settings"].update(section_style=style, show_start=True,
+                                 restore_last_active_section=restore_last)
+    candidate["active_section"] = "Results"
+    candidate["layout"] = [
+        {"section": "Source", "cards": [{"module": "data_import", "state": {
+            "last_committed_tab": "File based",
+            "inputs": {"LocalFilePath": str(data), "FName": "duplicates", "Separator": ","},
+        }}]},
+        {"section": "Cleaning", "cards": [{"module": "obs_duplicates", "state": {
+            "inputs": {"RemoveExact": ["Remove exact duplicates"], "SignificantFigures": 16, "UseTarget": True},
+        }}]},
+        {"section": "Results", "cards": [{"module": "data_tabulation"}]},
+        {"section": "Later", "cards": [{"module": "sys_configuration"}]},
+    ]
+    bookmark = BOOKMARK_RESTORE_DIR / "duplicates--20260921T090000+1200.pythagoras.json"
+    bookmark.write_text(json.dumps(candidate))
+    def navigate(name):
+        page.get_by_role("tab" if style == "tab" else "button", name=name, exact=True).click()
+    try:
+        page.goto(workflow_restore_app.url)
+        wait_for_shiny_ready(page)
+        if not restore_last:
+            expect(page.locator("#data_import-Card")).to_be_visible()
+            expect(page.locator("#obs_duplicates-Card")).to_have_count(0)
+            expect(page.locator("#data_tabulation-Card")).to_have_count(0)
+            navigate("Results")
+        expect(page.locator("#data_tabulation-Card")).to_be_visible(timeout=20000)
+        expect(page.locator("#obs_duplicates-Card")).to_be_attached()
+        expect(page.locator("#sys_configuration-Card")).to_have_count(0)
+        rows = page.locator("#data_tabulation-DataTable2 tbody tr")
+        expect(rows).to_have_count(3, timeout=30000)
+        before = rows.all_text_contents()
+        navigate("Cleaning")
+        navigate("Results")
+        expect(rows).to_have_count(3)
+        assert rows.all_text_contents() == before
+        expect(page.locator("#obs_duplicates-Card")).to_have_count(1)
+        expect(page.locator("#sys_configuration-Card")).to_have_count(0)
+    finally:
+        shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+
+
+@pytest.mark.unit
+def test_legacy_bookmark_inherits_restore_section_default(app_module, sample_config):
+    saved = json.loads(json.dumps(sample_config))
+    saved["active_section"] = "Missing values"
+    sample_config["settings"]["restore_last_active_section"] = True
+    restored = app_module.restore_configuration(sample_config, saved)
+    assert restored["active_section"] == "Missing values"
+    assert restored["settings"]["restore_last_active_section"] is True
+    assert "restore_last_active_section" not in saved["settings"]

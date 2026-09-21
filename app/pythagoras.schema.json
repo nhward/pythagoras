@@ -51,6 +51,12 @@
           "type": "boolean"
         },
 
+        "restore_last_active_section": {
+          "type": "boolean",
+          "default": false,
+          "description": "Restore the bookmarked active section; otherwise open the first workflow section."
+        },
+
         "reuse_cards": {
           "type": "boolean"
         },

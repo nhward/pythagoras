@@ -801,6 +801,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const systemSettingNames = [
         "section_style",
         "show_start",
+        "restore_last_active_section",
         "reuse_cards",
         "max_card_height",
         "max_dupl_cards",
@@ -820,17 +821,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return content ? systemSettings({ settings: JSON.parse(content) }) : {};
     };
 
-    const bookmarkUiConfiguration = (configuration) => ({
-        version: 2,
-        settings: configuration?.settings || {},
-        layout: (configuration?.layout || []).map((group) => ({
-            section: group.section,
-            cards: (group.cards || []).map((card) => ({ module: card.module })),
-        })),
-        ...(typeof configuration?.active_section === "string"
-            ? { active_section: configuration.active_section }
-            : {}),
-    });
+    const bookmarkUiConfiguration = (configuration, restoring = false) => {
+        let activeSection = configuration?.active_section;
+        if (restoring) {
+            const restoreLast = configuration?.settings?.restore_last_active_section
+                ?? renderedSystemSettings().restore_last_active_section
+                ?? false;
+            const exists = (configuration?.layout || []).some(
+                (group) => group.section === activeSection,
+            );
+            if (!restoreLast || !exists) {
+                activeSection = configuration?.layout?.[0]?.section;
+            }
+        }
+        return {
+            version: 2,
+            settings: configuration?.settings || {},
+            layout: (configuration?.layout || []).map((group) => ({
+                section: group.section,
+                cards: (group.cards || []).map((card) => ({ module: card.module })),
+            })),
+            ...(typeof activeSection === "string"
+                ? { active_section: activeSection }
+                : {}),
+        };
+    };
 
     const renderedUiConfiguration = () => {
         const content = document.querySelector(
@@ -1042,7 +1057,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const latest = records[0];
             if (
                 latest
-                && JSON.stringify(bookmarkUiConfiguration(latest.configuration))
+                && JSON.stringify(bookmarkUiConfiguration(latest.configuration, true))
                     !== JSON.stringify(renderedUiConfiguration())
             ) {
                 stageBookmarkAndReload(latest.configuration);

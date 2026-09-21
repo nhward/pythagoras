@@ -4,6 +4,7 @@
   "settings": {
     "section_style": "tab",
     "show_start": true,
+    "restore_last_active_section": false,
     "reuse_cards": true,
     "max_card_height": "450px",
     "max_dupl_cards": 10

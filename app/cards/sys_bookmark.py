@@ -260,7 +260,7 @@ def instance(
     this.front = front
 
     this.back=lambda: ui.TagList(
-        ui.p("Bookmarks restore the workflow, system settings, active section, data source, and the inputs of each analysis card."),
+        ui.p("Bookmarks restore the workflow, system settings, data source, and the inputs of each analysis card. The Restore last active section setting controls whether to reopen the saved section or the first workflow section."),
         ui.output_text_verbatim("StorageLocation"),
     )
 

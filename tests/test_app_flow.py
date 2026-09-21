@@ -10,7 +10,7 @@ path = Path(__file__).resolve().parents[1] / "app"
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
-from app import CardNode, wire_card_nodes
+from app import CardNode, required_sections, wire_card_nodes
 
 
 class FakeCard:
@@ -89,3 +89,21 @@ def test_wiring_skips_removed_nodes_and_bridges_the_gap():
     with reactive.isolate():
         assert final.upstream() is root.output
         assert final.output() == 4
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("current, expected", [
+    ("source", ("source",)),
+    ("result", ("source", "empty", "transform", "result")),
+])
+def test_required_sections_preserves_workflow_prefix(current, expected):
+    assert required_sections(("source", "empty", "transform", "result", "later"), current) == expected
+
+
+@pytest.mark.unit
+def test_wiring_resumes_every_upstream_card_without_evaluating_outputs():
+    def unread_output():
+        raise AssertionError("Wiring must remain lazy")
+    nodes = {name: make_node(unread_output) for name in ("source", "transform", "result")}
+    wire_card_nodes(tuple(nodes), nodes)
+    assert all(node.card.resume_count == 1 for node in nodes.values())

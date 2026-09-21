@@ -138,3 +138,15 @@ def test_card_state_must_be_an_object(schema, configuration):
 
     with pytest.raises(ValidationError, match="is not of type 'object'"):
         validate(instance=candidate, schema=schema)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", [True, False, "false", 0, None])
+def test_restore_last_active_section_requires_boolean(schema, configuration, value):
+    candidate = deepcopy(configuration)
+    candidate["settings"]["restore_last_active_section"] = value
+    if isinstance(value, bool):
+        validate(instance=candidate, schema=schema)
+    else:
+        with pytest.raises(ValidationError):
+            validate(instance=candidate, schema=schema)

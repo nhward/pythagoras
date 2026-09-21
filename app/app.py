@@ -71,23 +71,6 @@ START_SECTION_ID = "start"
 SECTIONS_NAV_ID = "sections"
 SETTINGS_QUERY_PARAMETER = "_pythagoras_settings"
 UI_QUERY_PARAMETER = "_pythagoras_ui"
-# WELCOME_ICON_TAG_PATTERN = re.compile(
-#     r"<i\b(?P<attributes>[^>]*)>\s*</i>",
-#     flags=re.IGNORECASE,
-# )
-# HTML_CLASS_PATTERN = re.compile(
-#     r"\bclass\s*=\s*([\"'])(?P<classes>.*?)\1",
-#     flags=re.IGNORECASE | re.DOTALL,
-# )
-# FONT_AWESOME_STYLE_CLASSES = frozenset({
-#     "fa-brands",
-#     "fa-duotone",
-#     "fa-light",
-#     "fa-regular",
-#     "fa-sharp",
-#     "fa-solid",
-#     "fa-thin",
-# })
 
 
 @dataclass
@@ -95,6 +78,11 @@ class CardNode:
     card: Module
     upstream: reactive.Value
     output: Callable[[], object]
+
+
+def required_sections(order: Sequence[str], current: str) -> tuple[str, ...]:
+    """Return the workflow prefix required to evaluate the current section."""
+    return tuple(order[:order.index(current) + 1])
 
 
 def wire_card_nodes(
@@ -128,7 +116,6 @@ def configuration_from_card_state(
     layout = candidate.get("layout")
     if not isinstance(layout, list):
         raise TypeError("Configuration layout must be a list")
-
     configured_groups = {}
     for group in layout:
         if not isinstance(group, dict):
@@ -186,12 +173,12 @@ def configuration_from_section_state(
     card_states: Mapping[str, Mapping[str, object]] | None = None,
     show_start: bool,
     section_style: str | None = None,
+    restore_last_active_section: bool | None = None,
 ) -> dict[str, object]:
     """Serialize live ID-keyed sections, including their current names."""
     candidate = deepcopy(dict(base_config))
     visited = set(visited_sections)
     saved_layout: list[dict[str, object]] = []
-
     for section_id in section_order:
         definition = section_definitions.get(section_id)
         if definition is None:
@@ -200,7 +187,6 @@ def configuration_from_section_state(
         name = group.get("section")
         if not isinstance(name, str) or not name:
             raise TypeError(f"Section {section_id!r} has no valid name")
-
         if section_id in visited:
             if section_id not in section_orders:
                 raise ValueError(f"Card order is not ready for section {name!r}")
@@ -213,13 +199,11 @@ def configuration_from_section_state(
                 if state is not None:
                     card_definition["state"] = deepcopy(dict(state))
                 group["cards"].append(card_definition)
-
         cards_in_section = group.get("cards")
         if not isinstance(cards_in_section, list):
             raise TypeError(f"Cards for section {name!r} must be a list")
         if cards_in_section:
             saved_layout.append(group)
-
     if not saved_layout:
         raise ValueError("At least one non-empty section is required")
     if not isinstance(show_start, bool):
@@ -231,7 +215,10 @@ def configuration_from_section_state(
         if section_style not in {"tab", "accordion"}:
             raise ValueError("Unknown section style")
         settings["section_style"] = section_style
-
+    if restore_last_active_section is not None:
+        if not isinstance(restore_last_active_section, bool):
+            raise TypeError("restore_last_active_section must be a boolean")
+        settings["restore_last_active_section"] = restore_last_active_section
     settings["show_start"] = show_start
     candidate["layout"] = saved_layout
     return candidate
@@ -251,7 +238,6 @@ def validated_section_name(
         raise ValueError("Use letters, numbers and single spaces only")
     if name.casefold() in RESERVED_SECTION_NAMES:
         raise ValueError(f"{name!r} is reserved")
-
     normalized = Module.section_normalise(name).casefold()
     for existing in existing_sections:
         if name.casefold() == existing.casefold():
@@ -405,6 +391,11 @@ def restore_configuration(
             active_section,
         )
         candidate.pop("active_section", None)
+    if (
+        not settings.get("restore_last_active_section", False)
+        or "active_section" not in candidate
+    ):
+        candidate["active_section"] = candidate["layout"][0]["section"]
     if "_runtime_mode" in base:
         candidate["_runtime_mode"] = base["_runtime_mode"]
     return candidate
@@ -470,7 +461,6 @@ def show_start_enabled(configuration: Mapping[str, object] | None = None) -> boo
     )
     if os.environ.get("SHINY_TESTMODE") != "1":
         return configured
-
     override = os.environ.get(TEST_SHOW_START_ENV)
     if override is None:
         return configured
@@ -545,7 +535,7 @@ def start_panel(*, group_style: str = "tab"):
     """Create the optional Start panel using the configured section style."""
     panel = {"tab": ui.nav_panel, "accordion": ui.accordion_panel}[group_style]
     return panel(
-        "Start",
+        "Welcome",
         ui.div(
             welcome(),
             id="Start-cards-container",
@@ -632,7 +622,6 @@ def configuration_for_ui_request(request) -> dict[str, object]:
             candidate["settings"] = settings
             validate_configuration(candidate)
             return candidate
-
         if local_request:
             saved = sys_bookmark.latest_local_bookmark(validator=validate_configuration)
             if isinstance(saved, Mapping):
@@ -742,7 +731,6 @@ def application():
     # main server function for the app
     def server(input, output, session):
         Module.ModSession = session
-
         ActiveConfiguration = reactive.Value(None)
         card_nodes: dict[str, CardNode] = {}
         section_definitions = {
@@ -756,6 +744,7 @@ def application():
         PendingSectionStyle = reactive.value(
             str(config.get("settings", {}).get("section_style", "tab"))
         )
+        RestoreLastActiveSection = reactive.value(False)
         next_section_number = len(section_definitions)
 
         def apply_configuration_layout(candidate: Mapping[str, object]) -> None:
@@ -766,6 +755,9 @@ def application():
                 configured_section_id(index): deepcopy(group)
                 for index, group in enumerate(candidate.get("layout", []))
             })
+            RestoreLastActiveSection.set(
+                bool(candidate.get("settings", {}).get("restore_last_active_section", False))
+            )
             SectionOrder.set(tuple(section_definitions))
             SectionsVisited.set(())
             next_section_number = len(section_definitions)
@@ -908,10 +900,12 @@ def application():
 
         @reactive.effect
         def create_section_cards():
+            """Instantiate the entire required prefix, including hidden sections."""
             active_configuration = ActiveConfiguration()
             req(isinstance(active_configuration, Mapping))
-            current = currentSection()
-            if current not in SectionsVisited.get():
+            for current in required_sections(SectionOrder(), currentSection()):
+                if current in SectionsVisited.get():
+                    continue
                 model_group = section_definitions.get(current)
                 req(model_group is not None)
                 for card in model_group["cards"]:
@@ -920,7 +914,10 @@ def application():
                         state = data_import_state(active_configuration)
                     instance = create_card( card["module"], state=state )
                     if instance is None:
-                        continue
+                        # Never silently bypass a failed upstream transformation.
+                        raise RuntimeError(
+                            f"Cannot evaluate workflow: failed to create {card['module']}"
+                        )
                     ui.insert_ui(ui = instance.call_ui(), selector = f"#{current}-cards-container", where = "beforeEnd")
                     upstream = reactive.Value(None)
                     card_output = instance.call_server(
@@ -975,6 +972,7 @@ def application():
             current_name: str,
             show_start: bool,
             selected_section_style: str,
+            restore_last_active_section: bool,
             selected="card",
         ):
             """Build the card and section management modal."""
@@ -994,6 +992,12 @@ def application():
                     label='Show "Start" section',
                     value=show_start,
                 ),
+                ui.input_checkbox(
+                    id="RestoreLastActiveSection",
+                    label="Restore last active section",
+                    value=restore_last_active_section,
+                ),
+                ui.help_text("When disabled, bookmarks open the first workflow section, skipping Start."),
                 ui.input_radio_buttons(
                     id="SectionStyleSetting",
                     label="Section style (applies after save & restart)",
@@ -1079,6 +1083,7 @@ def application():
                 current_name=section_name(section),
                 show_start=ShowStart(),
                 selected_section_style=PendingSectionStyle(),
+                restore_last_active_section=RestoreLastActiveSection(),
                 selected=selected,
             ))
 
@@ -1138,6 +1143,11 @@ def application():
                     ui.update_navset(id="Navbar", selected=sections_target)
                 ui.remove_nav_panel(id="Navbar", target=START_SECTION_ID)
             ShowStart.set(desired)
+
+        @reactive.effect
+        @reactive.event(input.RestoreLastActiveSection)
+        def remember_restore_last_active_section():
+            RestoreLastActiveSection.set(input.RestoreLastActiveSection())
 
         @reactive.effect
         @reactive.event(input.SectionStyleSetting)
@@ -1360,6 +1370,7 @@ def application():
                 },
                 show_start=ShowStart(),
                 section_style=PendingSectionStyle(),
+                restore_last_active_section=RestoreLastActiveSection(),
             )
             candidate["version"] = 2
             try:

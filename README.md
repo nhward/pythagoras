@@ -74,6 +74,10 @@ Cards can be:
 - Inserted into a section from a library of available cards
 - Removed from a section
 
+Opening a workflow section creates and resumes every card in that section and all preceding sections, in workflow order. Skipping a section therefore still applies its transformations. Later sections remain uninstantiated until reached; hidden charts retain Shiny's normal output suspension behavior.
+
+Bookmarks open the first workflow section by default, skipping Start. Enable **Restore last active section** in the card and section management dialog to reopen the bookmarked section instead. This preference is saved as `settings.restore_last_active_section` in the configuration JSON. Older bookmarks inherit the application's default for this setting.
+
 This enables:
 
 - Rapid experimentation
