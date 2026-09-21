@@ -92,6 +92,23 @@ class TestPairs:
         assert m._build(source(0), ["x", "y"]).table.empty
         assert m._build(data, []).table.empty
 
+    @pytest.mark.parametrize("values", [["high", None, "low", "high"], [None, None], []])
+    def test_categorical_unused_levels_preserve_order_missingness_and_source(self, values):
+        import warnings
+
+        series = pd.Series(pd.Categorical(
+            values, categories=["unused", "low", "middle", "high"], ordered=True,
+        ))
+        before = series.copy()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            codes, labels, note = m._categorical(series)
+        expected = [1., np.nan, 0., 1.] if values and values[0] == "high" else [np.nan] * len(values)
+        np.testing.assert_allclose(codes, expected, equal_nan=True)
+        assert labels == (["low", "high"] if values and values[0] == "high" else [])
+        assert not note
+        pd.testing.assert_series_equal(series, before)
+
     def test_checkerboard_unique_pairs_and_grouping(self):
         cells = list(m._cells(12, "checker"))
         assert len(cells) == 66 and len({frozenset(c) for c in cells}) == 66

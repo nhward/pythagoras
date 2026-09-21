@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from dataclasses import dataclass
@@ -12,13 +13,12 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from cyclic_pandas import is_cyclic
 from geometry_pandas import is_geometry
 from list_pandas import is_list
@@ -42,6 +42,7 @@ FULL_SCREEN_HORIZONTAL_SPACING = 0.025
 FULL_SCREEN_VERTICAL_SPACING = 0.06
 
 
+@recordable
 class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     """Give each feature unit spread without changing its fitted mean."""
 
@@ -63,6 +64,7 @@ class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return self.scaler_.inverse_transform(standard)
 
 
+@recordable
 class VariableTransformStep(TransformerMixin, BaseEstimator):
     """DataFrame-preserving learned transformations for selected variables."""
 
@@ -108,6 +110,7 @@ class VariableTransformStep(TransformerMixin, BaseEstimator):
         )
 
 
+@recordable
 @dataclass
 class DistributionAnalysis:
     frame: pd.DataFrame
@@ -127,6 +130,7 @@ class DistributionAnalysis:
         restored = self.pipelines[self.target].inverse_transform(series.to_frame())
         return np.asarray(restored).reshape(-1)
 
+@recordable
 def _kind(series: pd.Series) -> str:
     if is_cyclic(series.dtype):
         return "cyclic"
@@ -147,6 +151,7 @@ def _kind(series: pd.Series) -> str:
     return "unsupported"
 
 
+@recordable
 def _role_label(data: proxy_data, column: str) -> str:
     """Return every assigned role in a stable, user-facing form."""
     roles = data.role_map.roles_for(column)
@@ -155,10 +160,12 @@ def _role_label(data: proxy_data, column: str) -> str:
     return ", ".join(sorted(role.value.replace("_", " ").title() for role in roles))
 
 
+@recordable
 def _has_role_label(label: str, role: str) -> bool:
     return role in {value.strip() for value in str(label).split(",")}
 
 
+@recordable
 def _continuous_target(data: proxy_data) -> str | None:
     """Return the sole transformable continuous target, if there is one."""
     frame = data.frame
@@ -179,6 +186,7 @@ def _continuous_target(data: proxy_data) -> str | None:
     return candidates[0] if len(candidates) == 1 else None
 
 
+@recordable
 def _eligible_columns(
     data: proxy_data,
     *,
@@ -221,6 +229,7 @@ def _eligible_columns(
     return eligible, excluded
 
 
+@recordable
 def _build_pipeline(transforms: list[str] | tuple[str, ...]) -> Pipeline | None:
     """Build the selected scikit-learn workflow in its required order."""
     selected = set(transforms)
@@ -250,6 +259,7 @@ def _build_pipeline(transforms: list[str] | tuple[str, ...]) -> Pipeline | None:
     return Pipeline(steps).set_output(transform="pandas")
 
 
+@recordable
 def _describe(values: pd.Series) -> dict[str, float]:
     numeric = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
     return {
@@ -262,6 +272,7 @@ def _describe(values: pd.Series) -> dict[str, float]:
     }
 
 
+@recordable
 def _transform_name(transforms: list[str] | tuple[str, ...]) -> str:
     selected = set(transforms)
     return " → ".join(
@@ -271,6 +282,7 @@ def _transform_name(transforms: list[str] | tuple[str, ...]) -> str:
     ) or "None"
 
 
+@recordable
 def _analyse_distribution(
     data: proxy_data,
     transforms: list[str] | tuple[str, ...],
@@ -352,6 +364,7 @@ def _analyse_distribution(
     )
 
 
+@recordable
 def _apply_analysis(
     source: proxy_data,
     analysis: DistributionAnalysis,
@@ -374,6 +387,7 @@ def _apply_analysis(
     )
 
 
+@recordable
 def _axis_range(
     values: pd.Series,
     *,
@@ -397,6 +411,7 @@ def _axis_range(
     return [lower, upper]
 
 
+@recordable
 def _add_distribution_panel(
     figure: go.Figure,
     eligible: pd.DataFrame,
@@ -494,6 +509,7 @@ def _add_distribution_panel(
         ), row=row, col=col)
 
 
+@recordable
 def _distribution_figure(
     statistics: pd.DataFrame,
     *,
@@ -658,6 +674,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -672,6 +689,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             selected = list(input.Transform() or [])
             target = _continuous_target(incomingproxy_data())
@@ -685,21 +703,23 @@ def instance():
 
         @busy.track("Transforming continuous numeric predictors…")
         @this.extended_task
+        @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_distribution, data, **options)
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Analysis():
             return Calculate.result()
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def TransformedData():
             source = incomingproxy_data()
             analysis = Analysis()
@@ -712,11 +732,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render_widget
+        @this.record_context
         def DistributionChart():
             full_screen = bool(this.isFullScreen())
             analysis = Analysis()
@@ -736,11 +758,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Statistics():
             return ui.output_data_frame(id="StatisticsTable")
 
         @output
         @render.data_frame
+        @this.record_context
         def StatisticsTable():
             digits = int(input.Digits())
             table = Analysis().statistics.copy()
@@ -750,6 +774,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             analysis = Analysis()
             target_count = int(analysis.target is not None)

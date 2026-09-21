@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import warnings
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -12,7 +13,6 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -102,6 +102,7 @@ def instance():
 
     def server(input, output, session):
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -116,44 +117,60 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinSupport():
             return float(input.MinSupport())
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinLift():
             return float(input.MinLift())
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxLength():
             return max(2, int(input.MaxLength()))
 
-        @this.reactable(calc=True)
-        def PreparedData():
-            samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
+        @this.record_code
+        def _prepare_data(source, maximum):
+            samp = source.sample(n=maximum, mode="random", keep_geometry=True)
             return samp
 
         @this.reactable(calc=True)
+        @this.record_context
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
         @this.record_code
-        def MissingVariables():
-            frame = PreparedData().frame
+        def _missing_variables(data):
+            frame = data.frame
             return [column for column in frame.columns if frame[column].isna().any()]
 
         @this.reactable(calc=True)
+        @this.record_context
+        def MissingVariables():
+            return _missing_variables(PreparedData())
+
         @this.record_code
-        def MissingTransactions():
-            frame = PreparedData().frame
-            variables = MissingVariables()
+        def _missing_transactions(data, variables):
+            frame = data.frame
             if not variables:
                 return pd.DataFrame(index=frame.index, dtype=bool)
             transactions = frame.loc[:, variables].isna()
             return transactions.loc[transactions.any(axis=1)].astype(bool)
+
+        @this.reactable(calc=True)
+        @this.record_context
+        def MissingTransactions():
+            return _missing_transactions(PreparedData(), MissingVariables())
 
         @this.record_code
         def _remove_redundant(rules: pd.DataFrame) -> pd.DataFrame:
@@ -181,10 +198,8 @@ def instance():
                         break
             return rules.loc[keep].reset_index(drop=True)
 
-        @this.reactable(calc=True)
         @this.record_code
-        def Rules():
-            transactions = MissingTransactions()
+        def _association_rules(transactions, min_support, min_lift, max_length, remove_redundant):
             columns = [
                 "antecedents", "consequents", "antecedent support",
                 "consequent support", "support", "confidence", "lift",
@@ -194,9 +209,9 @@ def instance():
                 return pd.DataFrame(columns=columns)
             frequent = apriori(
                 transactions,
-                min_support=MinSupport(),
+                min_support=min_support,
                 use_colnames=True,
-                max_len=min(MaxLength(), transactions.shape[1]),
+                max_len=min(max_length, transactions.shape[1]),
                 low_memory=transactions.shape[1] > 30,
             )
             if frequent.empty or not frequent["itemsets"].map(lambda x: len(x) > 1).any():
@@ -211,34 +226,36 @@ def instance():
                 rules = association_rules(
                     frequent,
                     metric="lift",
-                    min_threshold=MinLift(),
+                    min_threshold=min_lift,
                     num_itemsets=len(transactions),
                 )
             if rules.empty:
                 return pd.DataFrame(columns=columns)
             length = rules["antecedents"].map(len) + rules["consequents"].map(len)
-            rules = rules.loc[length <= MaxLength()].copy()
-            if bool(input.RemoveRedundant()):
+            rules = rules.loc[length <= max_length].copy()
+            if bool(remove_redundant):
                 rules = _remove_redundant(rules)
             return rules.sort_values(
                 ["lift", "confidence", "support"],
                 ascending=[False, False, False],
             ).reset_index(drop=True)
 
+        @this.reactable(calc=True)
+        @this.record_context
+        def Rules():
+            return _association_rules(MissingTransactions(), MinSupport(), MinLift(), MaxLength(), input.RemoveRedundant())
+
         @this.record_code
         def _itemset_label(items) -> str:
             return ", ".join(sorted(map(str, items), key=str.casefold))
 
-        @this.reactable(calc=True)
         @this.record_code
-        def RulesTable():
-            rules = Rules()
+        def _rules_table(rules, transactions):
             if rules.empty:
                 return pd.DataFrame(columns=[
                     "LHS", "RHS", "Support", "Confidence", "Lift",
                     "Leverage", "Conviction", "Count",
                 ])
-            transactions = MissingTransactions()
             table = pd.DataFrame({
                 "LHS": rules["antecedents"].map(_itemset_label),
                 "RHS": rules["consequents"].map(_itemset_label),
@@ -254,6 +271,11 @@ def instance():
             ]
             table.loc[:, numeric] = table.loc[:, numeric].round(3)
             return table
+
+        @this.reactable(calc=True)
+        @this.record_context
+        def RulesTable():
+            return _rules_table(Rules(), MissingTransactions())
 
         @this.record_code
         def _network_figure(rules: pd.DataFrame, *, limit: int = 50) -> go.Figure:
@@ -357,6 +379,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Network():
             figure = _network_figure(Rules(), limit=50)
             figure.update_layout(
@@ -377,16 +400,19 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             return render.DataTable(RulesTable(), width="100%", height="98%")
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             missing_count = len(MissingVariables())
             rule_count = len(Rules())

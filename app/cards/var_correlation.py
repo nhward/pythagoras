@@ -18,6 +18,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -51,6 +52,7 @@ SECTOR_COLOURS = (
 )
 
 
+@recordable
 @dataclass(frozen=True)
 class CorrelationMethod:
     key: str
@@ -61,6 +63,7 @@ class CorrelationMethod:
     description: str
 
 
+@recordable
 @dataclass(frozen=True)
 class CorrelationAnalysis:
     method: CorrelationMethod
@@ -142,10 +145,12 @@ METHODS = {
 }
 
 
+@recordable
 def _empty_matrix(columns: list[object]) -> pd.DataFrame:
     return pd.DataFrame(np.nan, index=columns, columns=columns, dtype=float)
 
 
+@recordable
 def _finite_pair(left: pd.Series, right: pd.Series) -> tuple[np.ndarray, np.ndarray]:
     x = pd.to_numeric(left, errors="coerce").to_numpy(dtype=float, na_value=np.nan)
     y = pd.to_numeric(right, errors="coerce").to_numpy(dtype=float, na_value=np.nan)
@@ -153,6 +158,7 @@ def _finite_pair(left: pd.Series, right: pd.Series) -> tuple[np.ndarray, np.ndar
     return x[keep], y[keep]
 
 
+@recordable
 def _weighted_correlation(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> float:
     keep = np.isfinite(x) & np.isfinite(y) & np.isfinite(weights) & (weights > 0)
     x, y, weights = x[keep], y[keep], weights[keep]
@@ -171,6 +177,7 @@ def _weighted_correlation(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> 
     return float(np.clip(np.sum(weights * x_centred * y_centred) / denominator, -1, 1))
 
 
+@recordable
 def _weighted_matrix(
     frame: pd.DataFrame,
     weights: pd.Series,
@@ -202,12 +209,14 @@ def _weighted_matrix(
     return matrix
 
 
+@recordable
 def _ordinary_correlation(frame: pd.DataFrame, method: str) -> pd.DataFrame:
     return frame.corr(method=method, min_periods=2).reindex(
         index=frame.columns, columns=frame.columns
     )
 
 
+@recordable
 def _mutual_information(frame: pd.DataFrame) -> pd.DataFrame:
     columns = list(frame.columns)
     matrix = _empty_matrix(columns)
@@ -239,6 +248,7 @@ def _mutual_information(frame: pd.DataFrame) -> pd.DataFrame:
     return matrix
 
 
+@recordable
 def _distance_correlation_pair(x: np.ndarray, y: np.ndarray) -> float:
     if len(x) < 3 or np.all(x == x[0]) or np.all(y == y[0]):
         return np.nan
@@ -265,6 +275,7 @@ def _distance_correlation_pair(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.clip(np.sqrt(max(0.0, covariance_squared) / denominator), 0, 1))
 
 
+@recordable
 def _distance_correlation(frame: pd.DataFrame) -> pd.DataFrame:
     columns = list(frame.columns)
     matrix = _empty_matrix(columns)
@@ -278,6 +289,7 @@ def _distance_correlation(frame: pd.DataFrame) -> pd.DataFrame:
     return matrix
 
 
+@recordable
 def _predictive_power_pair(x: np.ndarray, y: np.ndarray) -> float:
     if len(x) < 6 or np.all(x == x[0]) or np.all(y == y[0]):
         return np.nan
@@ -299,6 +311,7 @@ def _predictive_power_pair(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.clip(1 - model_error / baseline_error, 0, 1))
 
 
+@recordable
 def _predictive_power(frame: pd.DataFrame) -> pd.DataFrame:
     columns = list(frame.columns)
     matrix = _empty_matrix(columns)
@@ -313,12 +326,14 @@ def _predictive_power(frame: pd.DataFrame) -> pd.DataFrame:
     return matrix
 
 
+@recordable
 def _normal_scores(values: np.ndarray) -> np.ndarray:
     ranks = rankdata(values, method="average")
     probabilities = (ranks - 0.5) / len(values)
     return norm.ppf(probabilities)
 
 
+@recordable
 def _latent_correlation(frame: pd.DataFrame) -> pd.DataFrame:
     columns = list(frame.columns)
     matrix = _empty_matrix(columns)
@@ -334,6 +349,7 @@ def _latent_correlation(frame: pd.DataFrame) -> pd.DataFrame:
     return matrix
 
 
+@recordable
 def _xi_pair(x: np.ndarray, y: np.ndarray) -> float:
     """Estimate Chatterjee's directional xi: dependence of y on x."""
     if len(x) < 3 or np.all(x == x[0]) or np.all(y == y[0]):
@@ -351,6 +367,7 @@ def _xi_pair(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.clip(estimate, 0, 1))
 
 
+@recordable
 def _xi_correlation(frame: pd.DataFrame) -> pd.DataFrame:
     columns = list(frame.columns)
     matrix = _empty_matrix(columns)
@@ -365,6 +382,7 @@ def _xi_correlation(frame: pd.DataFrame) -> pd.DataFrame:
     return matrix
 
 
+@recordable
 def _eligible_columns(data: proxy_data, include_target: bool) -> list[object]:
     roles = {Role.PREDICTOR, Role.TREATMENT}
     if include_target:
@@ -383,6 +401,7 @@ def _eligible_columns(data: proxy_data, include_target: bool) -> list[object]:
     ]
 
 
+@recordable
 def _sample_limit(method: str, requested: int) -> int:
     if method == "distance_correlation":
         return min(requested, DISTANCE_CORRELATION_LIMIT)
@@ -391,6 +410,7 @@ def _sample_limit(method: str, requested: int) -> int:
     return requested
 
 
+@recordable
 def _analysis_frame(
     data: proxy_data,
     columns: list[object],
@@ -425,6 +445,7 @@ def _analysis_frame(
     return frame, weights, sampled
 
 
+@recordable
 def _calculate_matrix(
     frame: pd.DataFrame,
     method: str,
@@ -457,6 +478,7 @@ def _calculate_matrix(
     raise ValueError(f"Unknown correlation method: {method}")
 
 
+@recordable
 def _analyse_correlation(
     data: proxy_data,
     *,
@@ -481,6 +503,7 @@ def _analyse_correlation(
     )
 
 
+@recordable
 def _matrix_order(matrix: pd.DataFrame, ordering: str) -> list[object]:
     columns = list(matrix.columns)
     if len(columns) < 3 or ordering == "original":
@@ -502,6 +525,7 @@ def _matrix_order(matrix: pd.DataFrame, ordering: str) -> list[object]:
     return [columns[index] for index in leaves_list(tree)]
 
 
+@recordable
 def _display_matrix(
     analysis: CorrelationAnalysis,
     *,
@@ -520,6 +544,7 @@ def _display_matrix(
     return pd.DataFrame(values, index=shown.index, columns=shown.columns)
 
 
+@recordable
 def _heatmap_figure(
     analysis: CorrelationAnalysis,
     *,
@@ -574,11 +599,13 @@ def _heatmap_figure(
     return figure
 
 
+@recordable
 def _svg_path(x: np.ndarray, y: np.ndarray) -> str:
     points = " ".join(f"L {xv:.6f},{yv:.6f}" for xv, yv in zip(x[1:], y[1:]))
     return f"M {x[0]:.6f},{y[0]:.6f} {points} Z"
 
 
+@recordable
 def _bezier(radius: float, start: float, stop: float, points: int = 40) -> tuple[np.ndarray, np.ndarray]:
     t = np.linspace(0, 1, points)
     p0 = radius * np.array([np.cos(start), np.sin(start)])
@@ -593,6 +620,7 @@ def _bezier(radius: float, start: float, stop: float, points: int = 40) -> tuple
     return curve[:, 0], curve[:, 1]
 
 
+@recordable
 def _chord_figure(
     analysis: CorrelationAnalysis,
     *,
@@ -730,6 +758,7 @@ def _chord_figure(
     return figure
 
 
+@recordable
 def _values_table(analysis: CorrelationAnalysis, threshold: float) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     matrix = analysis.matrix
@@ -877,6 +906,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -891,6 +921,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def AnalysisOptions():
             method = input.CorrType() or "pearson"
             req(method in METHODS)
@@ -902,6 +933,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def DisplayOptions():
             return {
                 "style": str(input.Style()),
@@ -912,21 +944,24 @@ def instance():
 
         @busy.track("Calculating variable associations…")
         @this.extended_task
+        @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_correlation, data, **options)
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data(), AnalysisOptions())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Analysis():
             return Calculate.result()
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
@@ -968,46 +1003,55 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Chart_pearson():
             return chart("pearson")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_spearman():
             return chart("spearman")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_kendall():
             return chart("kendall")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_mutual_information():
             return chart("mutual_information")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_distance_correlation():
             return chart("distance_correlation")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_pps():
             return chart("pps")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_latent():
             return chart("latent")
 
         @output
         @render_widget
+        @this.record_context
         def Chart_xi():
             return chart("xi")
 
         @output
         @render.ui
+        @this.record_context
         def TableTitle():
             analysis = Analysis()
             qualifier = "directional " if analysis.method.directional else ""
@@ -1018,12 +1062,14 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             req(Analysis() is not None)
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             analysis = Analysis()
             table = _values_table(analysis, DisplayOptions()["threshold"])
@@ -1031,6 +1077,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             analysis = Analysis()
             variables = analysis.matrix.shape[0]

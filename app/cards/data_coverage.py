@@ -25,6 +25,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
@@ -43,6 +44,7 @@ BANDS = [
 ]
 
 
+@recordable
 def _variables(data, max_levels=15):
     result = []
     for c in data.columns:
@@ -56,10 +58,12 @@ def _variables(data, max_levels=15):
     return result
 
 
+@recordable
 def _band(residual):
     return 0 if residual <= -4 else 1 if residual <= -2 else 4 if residual >= 4 else 3 if residual >= 2 else 2
 
 
+@recordable
 @dataclass
 class Coverage:
     variables: list = field(default_factory=list)
@@ -73,6 +77,7 @@ class Coverage:
     error: str = ''
 
 
+@recordable
 def _analyze(data, variables, *, max_levels=15, max_cells=256, missing=False):
     result = Coverage(variables=list(dict.fromkeys(variables)))
     try:
@@ -137,6 +142,7 @@ def _analyze(data, variables, *, max_levels=15, max_cells=256, missing=False):
     return result
 
 
+@recordable
 def _rectangles(masses):
     """Alternate horizontal/vertical splits; positive tile area is mass/total."""
     result = {}
@@ -160,6 +166,7 @@ def _rectangles(masses):
     return result
 
 
+@recordable
 def _figure(result, *, area='observed', shade=True, labels=True, full_screen=False):
     if result.error:
         return Card.empty_figure(result.error)
@@ -270,10 +277,12 @@ def instance():
         busy = this.busy()
 
         @reactive.effect
+        @this.record_context
         def ObserveSelection():
             selection.observe(input.Variables() or [])
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -286,6 +295,7 @@ def instance():
             return value
 
         @this.reactable()
+        @this.record_context
         def Choices():
             choices = _variables(incomingproxy_data(), input.MaxLevels())
             with reactive.isolate():
@@ -294,6 +304,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(2)
+        @this.record_context
         def Options():
             return {
                 'variables':list(input.Variables() or []), 
@@ -304,16 +315,19 @@ def instance():
 
         @busy.track('Assessing coverage…')
         @this.extended_task
+        @this.record_context
         async def Calculate(data, options):
             result = _analyze(data, **options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze, data, **options)
             return data, options, result
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             data, options, result = Calculate.result()
             req(data.equals(incomingproxy_data()) and options == Options(), cancel_output=True)
@@ -321,6 +335,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Mosaic():
             full_screen = bool(this.isFullScreen())
             widget = go.FigureWidget(_figure(Analysis(), area=input.Area(), shade=input.Shade(), labels=input.Labels(), full_screen=full_screen))
@@ -329,16 +344,19 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def Table():
             return render.DataTable(Analysis().table.round(4), width='100%', height='auto', filters=True)
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.text
+        @this.record_context
         def Status():
             result = Analysis()
             if result.error:

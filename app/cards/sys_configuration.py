@@ -88,7 +88,7 @@ def instance():
 
         @output
         @render.table
-        @this.record_code
+        @this.record_context
         def Summary():
             input.Refresh()
             s = Module.ModSession
@@ -113,6 +113,7 @@ def instance():
         @output
         @render.table
         #Do not record code as this is all shiny specific
+        @this.record_context
         def Url():
             input.Refresh()
             s = Module.ModSession
@@ -129,11 +130,8 @@ def instance():
             return pd.DataFrame(list(data.items()), columns=["Property", "Value"])
 
 
-        @output
-        @render.table
         @this.record_code
-        def Folders():
-            input.Refresh()
+        def _folder_table():
             dirs = ["." , "./www", "./www/markdown", "./cards", "./config"]
             rows = []
             for label, d in zip(["home", "www", "markdown", "cards"], dirs):
@@ -145,19 +143,32 @@ def instance():
 
         @output
         @render.table
-        @this.record_code
+        @this.record_context
+        def Folders():
+            input.Refresh()
+            return _folder_table()
+
+
+        @output
+        @render.table
+        @this.record_context
         def Packages():
             input.Refresh()
             return get_loaded_packages()
 
 
+        @this.record_code
+        def _session_info(full_screen=False):
+            session_info.show(cpu=True, dependencies=full_screen, std_lib=full_screen,
+                              private=full_screen, html=False)
+
         @output
         @render.text
         @this.capture_print
-        @this.record_code
+        @this.record_context
         def Session():
             input.Refresh()
-            session_info.show(cpu = True, dependencies = this.isFullScreen(), std_lib = this.isFullScreen(), private = this.isFullScreen(), html = False)  # writes to stdout
+            _session_info(full_screen=bool(this.isFullScreen()))
 
 
     this.server = server

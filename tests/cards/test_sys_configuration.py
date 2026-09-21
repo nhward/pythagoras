@@ -71,6 +71,7 @@ def recorded_helpers(card_module):
         return function
 
     card.record_code = record_code
+    card.record_context = record_code
     card.capture_print = lambda function: function
     inputs = SimpleNamespace(Refresh=lambda: 0)
     card.server(inputs, lambda function: function, None)

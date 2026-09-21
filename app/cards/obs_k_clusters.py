@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import os
 import sys
 from functools import lru_cache
@@ -11,13 +12,12 @@ if __name__ == "__main__":
     os.chdir(ROOT)
     sys.path.insert(0, str(ROOT))
 
-import itertools
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -38,6 +38,7 @@ from sklearn.mixture import GaussianMixture
 
 FAMILIES = ("Agglomerative", "Divisive", "Partition", "Mixture", "Topology", "Density", "Spectral", "Stability", "Gap statistic")
 
+@recordable
 def _importance_weights(weights):
     weights = np.asarray(weights, dtype=float)
     if not np.isfinite(weights).all() or np.any(weights < 0) or not np.any(weights > 0):
@@ -46,6 +47,7 @@ def _importance_weights(weights):
     return scaled / scaled.mean()
 
 
+@recordable
 def _weighted_metrics(x, distance, labels, weights):
     # Importance-weight extensions: retain actual observation count in CH's
     # degrees-of-freedom factor and equal cluster contributions in DB.
@@ -90,6 +92,7 @@ def _weighted_metrics(x, distance, labels, weights):
             ("Davies–Bouldin", float(db), "minimize"))
 
 
+@recordable
 def _diana(distance: np.ndarray, maximum: int) -> dict[int, np.ndarray]:
     # Kaufman & Rousseeuw's DIANA: split the greatest-diameter cluster;
     # move points to the splinter while their mean-distance difference is positive.
@@ -121,6 +124,7 @@ def _diana(distance: np.ndarray, maximum: int) -> dict[int, np.ndarray]:
     return results
 
 
+@recordable
 def _pam(distance: np.ndarray, k: int, weights=None, *, return_medoids=False) -> np.ndarray:
     # https://stat.ethz.ch/CRAN/web/packages/cluster/refman/cluster.html
     # PAM BUILD followed by best-improving SWAP (Kaufman & Rousseeuw).
@@ -154,6 +158,7 @@ def _pam(distance: np.ndarray, k: int, weights=None, *, return_medoids=False) ->
     raise ValueError("PAM did not converge within 100 swaps")
 
 
+@recordable
 def _spectral_scores(distance: np.ndarray, maximum: int, neighbours: int):
     # von Luxburg (2007), sections 2.2, 3.2 and 8.3:
     # https://arxiv.org/html/0711.0189v1
@@ -198,6 +203,7 @@ def _spectral_scores(distance: np.ndarray, maximum: int, neighbours: int):
     ], notes
 
 
+@recordable
 def _pair_prediction_strength(labels, predicted, k, weights=None):
     weights = np.ones(len(labels)) if weights is None else weights
     strengths = []
@@ -215,6 +221,7 @@ def _pair_prediction_strength(labels, predicted, k, weights=None):
     return min(strengths)
 
 
+@recordable
 def _evaluation_kmeans(x, k, seed, weights=None):
     model = KMeans(n_clusters=k, n_init=5, max_iter=200, random_state=seed).fit(x, sample_weight=weights)
     if len(np.unique(model.labels_)) != k:
@@ -224,6 +231,7 @@ def _evaluation_kmeans(x, k, seed, weights=None):
     return model
 
 
+@recordable
 @lru_cache(maxsize=4)
 def _stability_cached(data_bytes, shape, maximum, repeats, weight_bytes=None):
     # Tibshirani & Walther (2005): predict within-test-cluster pairs from
@@ -256,6 +264,7 @@ def _stability_cached(data_bytes, shape, maximum, repeats, weight_bytes=None):
     return tuple(scores), tuple(notes)
 
 
+@recordable
 @lru_cache(maxsize=4)
 def _gap_cached(data_bytes, shape, maximum, references, weight_bytes=None):
     # Tibshirani, Walther & Hastie (2001): squared Euclidean within-cluster
@@ -292,6 +301,7 @@ def _gap_cached(data_bytes, shape, maximum, references, weight_bytes=None):
     return tuple(scores), tuple(notes)
 
 
+@recordable
 def _resampling_evidence(x, maximum, *, stability=True, gap=True, limit=300,
                          repeats=10, references=20, threshold=0.8, weights=None):
     scores, votes, notes = [], [], []
@@ -365,6 +375,7 @@ def _resampling_evidence(x, maximum, *, stability=True, gap=True, limit=300,
     return scores, votes, notes
 
 
+@recordable
 def _analyse(data: proxy_data, *, maximum=10, limit=500, metric="euclidean",
              method="average", centre="centroids", min_points=10, standardize=True,
              graph_neighbours=10, stability=True, gap=True, evaluation_limit=300,
@@ -538,6 +549,48 @@ def _analyse(data: proxy_data, *, maximum=10, limit=500, metric="euclidean",
     return result()
 
 
+@recordable
+def _figure(analysis, *, maximum, full_screen=False):
+    maximum = int(maximum)
+    categories = [str(k) for k in range(1, maximum + 1)]
+    votes = analysis["votes"]
+    votes = votes[votes.K.between(1, maximum)]
+    figure = go.Figure()
+    for family in FAMILIES:
+        selected = votes[votes.Family == family]
+        if selected.empty:
+            continue
+        counts = selected.K.value_counts().reindex(range(1, maximum + 1), fill_value=0)
+        figure.add_bar(x=categories, y=counts.values / len(selected), name=family, width=0.8)
+    if not figure.data:
+        figure.add_annotation(text="No usable recommendations for this evidence", showarrow=False)
+    figure.update_layout(
+        barmode="stack", xaxis_title="Number of clusters (K)",
+        yaxis_title="Support (normalized within family)" if full_screen else "Support",
+        template="plotly_white",
+        modebar={"orientation": "v"},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#bbd6f8",
+        margin={"l": 20, "r": 30, "t": 0, "b": 0},
+        xaxis={
+            "type": "category", "categoryorder": "array", "categoryarray": categories,
+            "range": [-0.5, maximum - 0.5], "autorange": False,
+            "tickmode": "array", "tickvals": categories,
+            "fixedrange": True,
+            },
+        legend={
+            "orientation": "h",
+            "x": 0.5,
+            "xanchor": "center",
+            "y": 1.1,
+            "yanchor": "top",
+        },
+        # font={"size": 13 if full_screen else 10},
+        # showlegend=full_screen,
+    )
+    return figure
+
+
 def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = "Number of clusters"
@@ -690,6 +743,7 @@ def instance():
         previous_incoming = None
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -704,6 +758,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def KControl():
             nonlocal previous_incoming
             maximum = int(input.Maximum())
@@ -725,6 +780,7 @@ def instance():
             )
 
         @this.reactable(calc=True)
+        @this.record_context
         def ChosenCount():
             incoming = incomingproxy_data().cluster_count or 1
             try:
@@ -736,6 +792,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             return {"maximum": int(input.Maximum()), "limit": 10**int(input.MaxObs()),
                         "metric": input.Metric(), "method": input.Method(), "centre": input.Centre(),
@@ -750,94 +807,69 @@ def instance():
 
         @busy.track("Assessing the number of clusters…")
         @this.extended_task
+        @this.record_context
         async def Calculate(data, options):
             return await asyncio.to_thread(_analyse, data, **options)
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             return Calculate.result()
 
-        @this.reactable(calc=True)
         @this.record_code
+        def _select_cluster_count(source, count):
+            return source if count == source.cluster_count else source.with_cluster_count(count)
+
+        @this.reactable(calc=True)
+        @this.record_context
         def SelectedData():
             source = incomingproxy_data()
             count = ChosenCount()
             req(count <= len(source))
-            return source if count == source.cluster_count else source.with_cluster_count(count)
+            return _select_cluster_count(source, count)
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.text
+        @this.record_context
         def Summary():
             return " ".join(Analysis()["notes"][:2])
 
         @output
         @render.ui
+        @this.record_context
         def Notes():
             return ui.TagList(*(ui.p(note) for note in Analysis()["notes"][2:]))
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
-            maximum = int(input.Maximum())
-            categories = [str(k) for k in range(1, maximum + 1)]
-            votes = Analysis()["votes"]
-            votes = votes[votes.K.between(1, maximum)]
-            figure = go.Figure()
-            for family in FAMILIES:
-                # if input.Family() not in ("Aggregate", family):
-                #     continue
-                selected = votes[votes.Family == family]
-                if selected.empty:
-                    continue
-                counts = selected.K.value_counts().reindex(range(1, maximum + 1), fill_value=0)
-                figure.add_bar(x=categories, y=counts.values / len(selected), name=family, width=0.8)
-            if not figure.data:
-                figure.add_annotation(text="No usable recommendations for this evidence", showarrow=False)
-            figure.update_layout(
-                barmode="stack", xaxis_title="Number of clusters (K)",
-                yaxis_title="Support (normalized within family)" if bool(this.isFullScreen()) else "Support", 
-                template="plotly_white",
-                modebar={"orientation": "v"},
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="#bbd6f8",
-                margin={"l": 20, "r": 30, "t": 0, "b": 0},
-                xaxis={
-                    "type": "category", "categoryorder": "array", "categoryarray": categories,
-                    "range": [-0.5, maximum - 0.5], "autorange": False,
-                    "tickmode": "array", "tickvals": categories,
-                    "fixedrange": True,
-                    },
-                legend={
-                    "orientation": "h",
-                    "x": 0.5,
-                    "xanchor": "center",
-                    "y": 1.1,
-                    "yanchor": "top",
-                },
-                # font={"size": 13 if full_screen else 10},
-                # showlegend=full_screen,
-            )
+            figure = _figure(Analysis(), maximum=int(input.Maximum()), full_screen=bool(this.isFullScreen()))
             widget = go.FigureWidget(figure)
             widget._config = getattr(widget, "_config", {}) | {"displayModeBar": bool(this.isFullScreen()), "displaylogo": False}
             return widget
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame("EvidenceTable")
 
         @output
         @render.data_frame
+        @this.record_context
         def EvidenceTable():
             analysis = Analysis()
             table = analysis["scores"].copy()

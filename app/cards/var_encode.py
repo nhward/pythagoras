@@ -1,8 +1,10 @@
 """Learned encoding panels for Nominal, Code, Ordered, Cyclic, Logical and Basket predictors."""
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 if __name__ == '__main__':
@@ -11,12 +13,11 @@ if __name__ == '__main__':
     if str(ROOT) not in sys.path:
         sys.path.insert(0,str(ROOT))
 
-import asyncio
-from dataclasses import dataclass, field
 
 import pandas as pd
 from BasketEncodingTransformer import BasketEncodingTransformer
 from card import Card
+from code_recording import recordable
 from cyclic_pandas import as_cyclic
 from CyclicEncodingTransformer import CyclicEncodingTransformer
 from list_pandas import as_list
@@ -33,11 +34,13 @@ from TargetEncodingTransformer import METHODS, TargetEncodingTransformer
 from var_types import var_kind
 
 
+@recordable
 def _nominal_predictors(data):
     return [c for c in data.columns if Role.PREDICTOR in data.role_map.roles_for(c)
         and not str(c).startswith(Card.SHADOW_PREFIX) and var_kind(data.frame[c]) == 'nominal']
 
 
+@recordable
 @dataclass
 class Encoding:
     transformer: NominalEncodingTransformer | TargetEncodingTransformer | OrderedEncodingTransformer | CyclicEncodingTransformer | LogicalEncodingTransformer | BasketEncodingTransformer | None = None
@@ -46,6 +49,7 @@ class Encoding:
     error: str = ''
 
 
+@recordable
 def _analyze(source, *, remove_original=True, min_frequency=1, max_categories=0, handle_unknown='ignore'):
     columns = _nominal_predictors(source)
     if not columns:
@@ -61,12 +65,14 @@ def _analyze(source, *, remove_original=True, min_frequency=1, max_categories=0,
         return Encoding(error=str(error))
 
 
+@recordable
 def _code_predictors(data):
     return [c for c in data.columns if Role.PREDICTOR in data.role_map.roles_for(c)
         and Role.TARGET not in data.role_map.roles_for(c)
         and not str(c).startswith(Card.SHADOW_PREFIX) and var_kind(data.frame[c]) == 'code']
 
 
+@recordable
 def _analyze_code(source, *, remove_original=True, method='auto', smoothing=10., cv=5, target_type='auto'):
     columns = _code_predictors(source)
     table = pd.DataFrame([{'Variable':str(c), 'Cardinality':int(source.frame[c].nunique(dropna=True)),
@@ -96,12 +102,14 @@ def _analyze_code(source, *, remove_original=True, method='auto', smoothing=10.,
         return Encoding(table=table,error=str(error))
 
 
+@recordable
 def _ordered_predictors(data):
     return [c for c in data.columns if Role.PREDICTOR in data.role_map.roles_for(c)
         and Role.TARGET not in data.role_map.roles_for(c)
         and not str(c).startswith(Card.SHADOW_PREFIX) and var_kind(data.frame[c]) == 'ordered']
 
 
+@recordable
 def _analyze_ordered(source, *, remove_original=True, method='ordinal', degree=0, handle_unknown='missing'):
     columns = _ordered_predictors(source)
     if not columns:
@@ -115,12 +123,14 @@ def _analyze_ordered(source, *, remove_original=True, method='ordinal', degree=0
         return Encoding(error=str(error))
 
 
+@recordable
 def _cyclic_predictors(data):
     return [c for c in data.columns if Role.PREDICTOR in data.role_map.roles_for(c)
         and Role.TARGET not in data.role_map.roles_for(c)
         and not str(c).startswith(Card.SHADOW_PREFIX) and var_kind(data.frame[c]) == 'cyclic']
 
 
+@recordable
 def _analyze_cyclic(source, *, remove_original=True, handle_unknown='missing'):
     columns=_cyclic_predictors(source)
     if not columns:
@@ -133,12 +143,14 @@ def _analyze_cyclic(source, *, remove_original=True, handle_unknown='missing'):
         return Encoding(error=str(error))
 
 
+@recordable
 def _logical_predictors(data):
     return [c for c in data.columns if Role.PREDICTOR in data.role_map.roles_for(c)
         and Role.TARGET not in data.role_map.roles_for(c)
         and not str(c).startswith(Card.SHADOW_PREFIX) and var_kind(data.frame[c]) == 'logical']
 
 
+@recordable
 def _analyze_logical(source, *, remove_original=True):
     columns = _logical_predictors(source)
     if not columns:
@@ -151,12 +163,14 @@ def _analyze_logical(source, *, remove_original=True):
         return Encoding(error=str(error))
 
 
+@recordable
 def _basket_predictors(data):
     return [c for c in data.columns if Role.PREDICTOR in data.role_map.roles_for(c)
         and Role.TARGET not in data.role_map.roles_for(c)
         and not str(c).startswith(Card.SHADOW_PREFIX) and var_kind(data.frame[c]) == 'basket']
 
 
+@recordable
 def _analyze_basket(source, *, remove_original=True):
     columns = _basket_predictors(source)
     if not columns:
@@ -169,6 +183,7 @@ def _analyze_basket(source, *, remove_original=True):
         return Encoding(error=str(error))
 
 
+@recordable
 def _analyze_panels(source, options):
     results = {}
     intermediate = source
@@ -180,6 +195,7 @@ def _analyze_panels(source, options):
     return results
 
 
+@recordable
 def _apply(source, result):
     if result.error:
         raise ValueError(result.error)
@@ -205,6 +221,7 @@ def _apply(source, result):
         preview_frame=result.frame, added_roles=roles, removed_columns=transformer.removed_columns_)
 
 
+@recordable
 def _encoding_audit(source, results, selected):
     """Describe only enabled encodings and the data actually passed downstream."""
     rows = []
@@ -416,6 +433,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def IncomingData():
             try:
                 source = this.input_data()
@@ -428,11 +446,13 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(2)
+        @this.record_context
         def Encode():
             return tuple(input.Encode() or [])
 
         @this.reactable(calc=True)
         @this.settle(2)
+        @this.record_context
         def Settings():
             return {
                 'nominal': {
@@ -463,22 +483,26 @@ def instance():
             }
 
         @this.reactable(calc=True)
+        @this.record_context
         def Options():
             return {**Settings(), 'selected':Encode()}
 
         @busy.track('Preparing variable encodings…')
         @this.extended_task
+        @this.record_context
         async def Calculate(source,options):
             result = _analyze_panels(source, options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze_panels,source,options)
             return source,options,result
 
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(IncomingData().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             try:
                 source,options,result = Calculate.result()
@@ -490,6 +514,7 @@ def instance():
             return result
 
         @this.reactable(calc=True)
+        @this.record_context
         def Export():
             source = IncomingData()
             selected = Encode()
@@ -502,12 +527,14 @@ def instance():
             return source
 
         @this.reactable(calc=True)
+        @this.record_context
         def Audit():
             selected = Encode()
             return _encoding_audit(IncomingData(), Analysis() if selected else {}, selected)
 
         @output
         @render.ui
+        @this.record_context
         def AuditSummary():
             summary, _table = Audit()
             return ui.TagList(
@@ -516,16 +543,19 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def AuditTable():
             return render.DataTable(Audit()[1], width='100%', height='auto')
 
         @output
         @render.data_frame
+        @this.record_context
         def NominalTable():
             return render.DataTable(Analysis()['nominal'].table, width='100%', height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def NominalMessage():
             result = Analysis()['nominal']
             if result.error:
@@ -536,11 +566,13 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def CodeTable():
             return render.DataTable(Analysis()['code'].table,width='100%',height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def CodeMessage():
             result = Analysis()['code']
             if result.error:
@@ -552,11 +584,13 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def OrderedTable():
             return render.DataTable(Analysis()['ordered'].table,width='100%',height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def OrderedMessage():
             result = Analysis()['ordered']
             if result.error:
@@ -568,11 +602,13 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def CyclicTable():
             return render.DataTable(Analysis()['cyclic'].table,width='100%',height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def CyclicMessage():
             result=Analysis()['cyclic']
             if result.error:
@@ -583,11 +619,13 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def LogicalTable():
             return render.DataTable(Analysis()['logical'].table,width='100%',height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def LogicalMessage():
             result = Analysis()['logical']
             if result.error:
@@ -598,11 +636,13 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def BasketTable():
             return render.DataTable(Analysis()['basket'].table,width='100%',height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def BasketMessage():
             result = Analysis()['basket']
             if result.error:
@@ -701,12 +741,14 @@ def instance():
 
         @output
         @render.text
+        @this.record_context
         def Status():
             print("\n".join(filter(None, [NominalStatus(), CodeStatus(), OrderedStatus(), CyclicStatus(), LogicalStatus(), BasketStatus()])))
             return "\n".join(filter(None, [NominalStatus(), CodeStatus(), OrderedStatus(), CyclicStatus(), LogicalStatus(), BasketStatus()]))
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 

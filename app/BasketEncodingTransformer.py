@@ -3,17 +3,19 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from list_pandas import is_list
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 
+@recordable
 def _items(value):
     """Return distinct nonmissing scalar items, or None for a missing basket."""
     if pd.api.types.is_scalar(value) and pd.isna(value):
         return None
     if not isinstance(value, (list, tuple, set, frozenset, np.ndarray)):
-        raise ValueError('Basket values must be collections of scalar items, or missing.')
+        raise TypeError('Basket values must be collections of scalar items, or missing.')
     items = {}
     for item in value:
         if not pd.api.types.is_scalar(item):
@@ -27,6 +29,7 @@ def _items(value):
     return items
 
 
+@recordable
 class BasketEncodingTransformer(TransformerMixin, BaseEstimator):
     """One binary feature per fitted item; ignore unknown items at transform time.
 

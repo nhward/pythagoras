@@ -136,6 +136,7 @@ def recorded_helpers(
         return function
 
     card.record_code = record
+    card.record_context = record
     card.reactable = lambda **kwargs: record
     card.throttle = lambda *args, **kwargs: lambda function: function
     card.isFullScreen = lambda: False
@@ -388,6 +389,7 @@ class TestInstance:
             functions[function.__name__] = function
             return function
         card.record_code = record
+        card.record_context = record
         card.reactable = lambda **kwargs: record
         card.isFullScreen = lambda: False
         dataset_value = reactive.Value(None)

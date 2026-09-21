@@ -97,6 +97,7 @@ def instance():
     def server(input, output, session):
 
         @this.reactable(calc = True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -110,11 +111,13 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def Decimals():
             return input.Decimals()
         
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
@@ -144,31 +147,34 @@ def instance():
                 return "obj"
             return str(dtype)
 
-        @this.reactable(calc = True)
         @this.record_code
-        def PreparedData():
-            df = incomingproxy_data() #Returns proxy_data
-            req(df is not None)
-            if this.isFullScreen():
-                df = df.sample(n = MaxObs(), mode = "random", keep_geometry = True)
+        def _prepare_data(source, maximum, full_screen):
+            df = source #Returns proxy_data
+            if full_screen:
+                df = df.sample(n = maximum, mode = "random", keep_geometry = True)
             else:
                 df = df.sample(n = 10, mode = "headtail", keep_geometry = True)
             return df
 
         @this.reactable(calc = True)
+        @this.record_context
+        def PreparedData():
+            req(incomingproxy_data() is not None)
+            return _prepare_data(incomingproxy_data(), MaxObs(), this.isFullScreen())
+
         @this.record_code
-        def CleanDf():
+        def _clean_frame(data, decimals, bounded):
             """
             Returns a Pandas DataFrame ready for Shiny DataTable:
             - Convert to native
             - Geometries reformatted
             - Numeric data rounded
             """
-            px = PreparedData().clone() #Returns proxy_data
+            px = data.clone() #Returns proxy_data
             df = px.frame
             if hasattr(df, "to_pandas"):     # e.g., Polars
                 df = df.to_pandas()
-            long_geom = not input.Bounded()
+            long_geom = not bounded
             add_type_header = True,    # add "\n<type>" in headers
             include_crs_in_header = True,
             def _format_geometry_series_for_display(ser: gpd.GeoSeries, long: bool) -> pd.Series:
@@ -227,15 +233,20 @@ def instance():
                         new_cols.append(f"{c}\n{_dtype_label_from_dtype(dt)}")
                 df.columns = new_cols
             # rounding: numeric columns only
-            if Decimals() is not None:
+            if decimals is not None:
                 try:
                     num_cols = df.select_dtypes(include=["float"]).columns
                     if len(num_cols) > 0:
-                        df.loc[:, num_cols] = df.loc[:, num_cols].round(int(Decimals()))
+                        df.loc[:, num_cols] = df.loc[:, num_cols].round(int(decimals))
                 except Exception:  # noqa: BLE001, S110
                     # be forgiving if any backend oddities slip through
                     pass
             return df
+
+        @this.reactable(calc = True)
+        @this.record_context
+        def CleanDf():
+            return _clean_frame(PreparedData(), Decimals(), input.Bounded())
 
         @this.record_code
         def _safe_unique_count(series: pd.Series) -> int | None:
@@ -302,12 +313,10 @@ def instance():
                 return "No observed values"
             return f"mode: {counts.index[0]} ({int(counts.iloc[0])})"
 
-        @this.reactable(calc = True)
         @this.record_code
-        def StructureData() -> pd.DataFrame:
+        def _structure_data(source):
             """Return one structural-summary row for each source variable."""
-            px = incomingproxy_data()
-            req(px is not None)
+            px = source
             df = px.frame
             if hasattr(df, "to_pandas"):
                 df = df.to_pandas()
@@ -334,8 +343,15 @@ def instance():
                 "Missing", "Missing %", "Unique", "Summary",
             ])
 
+        @this.reactable(calc = True)
+        @this.record_context
+        def StructureData() -> pd.DataFrame:
+            req(incomingproxy_data() is not None)
+            return _structure_data(incomingproxy_data())
+
         @output
         @render.ui
+        @this.record_context
         def DataTable():
             # Bind the grid once. Upstream invalidation belongs to its renderer,
             # not this container (which would unbind/rebind an in-flight output).
@@ -343,6 +359,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def DataTable2():
             req(PreparedData() is not None)
             full = this.isFullScreen()
@@ -357,12 +374,14 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def StructTable():
             # Keep the metadata grid mounted through temporary upstream gaps.
             return ui.output_data_frame(id = "Structure")
 
         @output
         @render.data_frame
+        @this.record_context
         def Structure():
             req(incomingproxy_data() is not None)
             return render.DataTable(

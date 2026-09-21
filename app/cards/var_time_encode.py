@@ -15,6 +15,7 @@ if __name__ == '__main__':
 
 import pandas as pd
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
@@ -23,6 +24,7 @@ from shiny.types import SilentOperationInProgressException
 from TimeEncodingTransformer import FEATURES, TimeEncodingTransformer, inspect_time
 
 
+@recordable
 @dataclass
 class AnalysisResult:
     transformer: TimeEncodingTransformer | None = None
@@ -31,6 +33,7 @@ class AnalysisResult:
     error: str = ''
 
 
+@recordable
 def _analyze(source, *, features=tuple(FEATURES), remove_original=True):
     schemas={}
     for c in source.columns:
@@ -47,6 +50,7 @@ def _analyze(source, *, features=tuple(FEATURES), remove_original=True):
         return AnalysisResult(error=str(error))
 
 
+@recordable
 def _apply(source,result):
     if result.error:raise ValueError(result.error)
     model=result.transformer
@@ -106,6 +110,7 @@ def instance():
         busy=this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -120,26 +125,31 @@ def instance():
 
         @this.settle(1)
         @this.reactable(calc=True)
+        @this.record_context
         def Options():
             return {'features':tuple(input.Features() or []),'remove_original':bool(input.RemoveOriginal())}
 
         @busy.track('Preparing time features…')
         @this.extended_task
+        @this.record_context
         async def Calculate(source,options):
             result=_analyze(source,**options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze,source,**options)
             return source,options,result
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel();Calculate.invoke(incomingproxy_data().clone(),Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             source,options,result=Calculate.result()
             req(source.equals(incomingproxy_data()) and options==Options())
             return result
 
         @this.reactable(calc=True)
+        @this.record_context
         def Export():
             source=incomingproxy_data()
             if 'time' not in (input.Encode() or []):return source
@@ -148,10 +158,12 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def TimeTable():return render.DataTable(Analysis().table,width='100%',height='auto')
 
         @output
         @render.ui
+        @this.record_context
         def Message():
             result=Analysis()
             if result.error:return ui.p(result.error,class_='text-danger')
@@ -161,6 +173,7 @@ def instance():
 
         @output
         @render.text
+        @this.record_context
         def Status():
             if 'time' not in (input.Encode() or []):
                 return None
@@ -173,6 +186,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def AuditSummary():
             source=incomingproxy_data()
             out=Export()
@@ -182,6 +196,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def AuditMessage():
             result=Analysis()
             enabled='time' in (input.Encode() or [])
@@ -192,6 +207,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def FeatureTable():
             rows=[]
             result=Analysis()
@@ -212,6 +228,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():return busy.ui()
         session.on_ended(Calculate.cancel)
         return Export

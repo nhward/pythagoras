@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.utils.validation import check_is_fitted
@@ -10,6 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 METHODS = {'ordinal':'Ordinal ranks', 'polynomial':'Orthogonal polynomial contrasts'}
 
 
+@recordable
 def polynomial_contrasts(levels, degree=None):
     """Orthonormal contrasts on equally spaced ranks (R contr.poly convention).
 
@@ -32,6 +34,7 @@ def polynomial_contrasts(levels, degree=None):
     return basis[:,1:]
 
 
+@recordable
 class OrderedEncodingTransformer(TransformerMixin, BaseEstimator):
     """Preserve the declared order, including levels absent in a training fold.
 

@@ -17,6 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from cyclic_pandas import is_cyclic
 from geometry_pandas import is_geometry
 from list_pandas import is_list
@@ -34,6 +35,7 @@ DEFAULT_AXES = 8
 SAMPLE_SEED = 1729
 
 
+@recordable
 @dataclass(frozen=True)
 class ParallelData:
     frame: pd.DataFrame
@@ -44,6 +46,7 @@ class ParallelData:
     source_observations: int
 
 
+@recordable
 def _column_kind(series: pd.Series) -> str:
     """Classify scalar columns according to their parallel-axis encoding."""
     dtype = series.dtype
@@ -66,6 +69,7 @@ def _column_kind(series: pd.Series) -> str:
     return "unsupported"
 
 
+@recordable
 def _eligible_columns(
     frame: pd.DataFrame,
     *,
@@ -98,6 +102,7 @@ def _eligible_columns(
     return eligible, excluded
 
 
+@recordable
 def _finite_complete_cases(frame: pd.DataFrame) -> pd.DataFrame:
     """Drop missing values and non-finite numeric values from selected columns."""
     if frame.empty:
@@ -113,6 +118,7 @@ def _finite_complete_cases(frame: pd.DataFrame) -> pd.DataFrame:
     return frame.loc[keep].copy()
 
 
+@recordable
 def _categorical_values(series: pd.Series) -> tuple[np.ndarray, list[str]]:
     if isinstance(series.dtype, pd.CategoricalDtype):
         observed = set(series.dropna().tolist())
@@ -129,6 +135,7 @@ def _categorical_values(series: pd.Series) -> tuple[np.ndarray, list[str]]:
     return series.map(lookup).to_numpy(dtype=float), [str(value) for value in levels]
 
 
+@recordable
 def _datetime_values(series: pd.Series) -> tuple[np.ndarray, list[float], list[str]]:
     timestamps = pd.to_datetime(series)
     # Pandas may retain second, millisecond, microsecond, or nanosecond storage.
@@ -150,6 +157,7 @@ def _datetime_values(series: pd.Series) -> tuple[np.ndarray, list[float], list[s
     return values, tick_values, tick_labels
 
 
+@recordable
 def _encode_series(series: pd.Series, label: str) -> tuple[dict[str, object], np.ndarray]:
     """Build one Plotly parcoords dimension and return its numeric values."""
     kind = _column_kind(series)
@@ -174,6 +182,7 @@ def _encode_series(series: pd.Series, label: str) -> tuple[dict[str, object], np
     return dimension, values
 
 
+@recordable
 def _colour_line(
     series: pd.Series,
     label: str,
@@ -231,6 +240,7 @@ def _colour_line(
     return line
 
 
+@recordable
 def _observation_identities(
     data: proxy_data,
     positions: list[int] | np.ndarray | None = None,
@@ -262,6 +272,7 @@ def _observation_identities(
     return labels
 
 
+@recordable
 def _prepare_parallel_data(
     data: proxy_data,
     variables: list[str],
@@ -311,6 +322,7 @@ def _prepare_parallel_data(
     )
 
 
+@recordable
 def _parallel_figure(
     data: ParallelData,
     *,
@@ -437,12 +449,14 @@ def instance():
         colour_selection = SelectionRestore(None if saved_colour is None else ([saved_colour] if saved_colour != NO_COLOUR else []))
 
         @reactive.effect
+        @this.record_context
         def ObserveSelections():
             variable_selection.observe(input.Variables() or [])
             colour = input.Colour()
             colour_selection.observe([colour] if colour and colour != NO_COLOUR else [])
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -456,6 +470,7 @@ def instance():
 
 
         @this.reactable()
+        @this.record_context
         def UpdateChoices():
             req(incomingproxy_data())
             eligible, _ = _eligible_columns(incomingproxy_data().frame)
@@ -478,6 +493,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             return {
                 "variables": list(input.Variables() or []),
@@ -486,6 +502,7 @@ def instance():
             }
 
         @this.reactable(calc=True)
+        @this.record_context
         def PreparedData():
             options = Options()
             return _prepare_parallel_data(
@@ -498,6 +515,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
             full_screen = bool(this.isFullScreen())
             figure = _parallel_figure(
@@ -515,6 +533,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             prepared = PreparedData()
             variables = Options()["variables"]

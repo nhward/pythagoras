@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils.validation import check_is_fitted
 
 
+@recordable
 class NominalEncodingTransformer(TransformerMixin, BaseEstimator):
     """Encode explicitly selected nominal predictors using only fitted levels.
 

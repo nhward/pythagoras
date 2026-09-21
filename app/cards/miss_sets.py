@@ -16,6 +16,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
@@ -31,6 +32,7 @@ INTERSECTION_COLUMNS = [
 ]
 
 
+@recordable
 def _missing_variables(frame: pd.DataFrame) -> list[str]:
     """Return incomplete columns, ordered by missing count then name."""
     counts = frame.isna().sum()
@@ -38,6 +40,7 @@ def _missing_variables(frame: pd.DataFrame) -> list[str]:
     return sorted(columns, key=lambda column: (-int(counts[column]), str(column).casefold()))
 
 
+@recordable
 def _intersection_counts(
     frame: pd.DataFrame,
     variables: list[str],
@@ -75,6 +78,7 @@ def _intersection_counts(
     )
 
 
+@recordable
 def _select_intersections(
     intersections: pd.DataFrame,
     *,
@@ -88,6 +92,7 @@ def _select_intersections(
     ].head(max(1, int(maximum))).reset_index(drop=True)
 
 
+@recordable
 def _upset_figure(
     frame: pd.DataFrame,
     variables: list[str],
@@ -314,6 +319,7 @@ def instance():
     def server(input, output, session):
         
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -328,39 +334,47 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxIntersections():
             return max(1, int(input.MaxIntersections()))
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxVariables():
             return max(2, int(input.MaxVariables()))
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinCount():
             return max(1, int(input.MinCount()))
 
-        @this.reactable(calc=True)
         @this.record_code
-        def PreparedData():
-            return incomingproxy_data().sample(
-                n=MaxObs(), mode="random", keep_geometry=True
+        def _prepare_data(source, maximum):
+            return source.sample(
+                n=maximum, mode="random", keep_geometry=True
             )
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
+        @this.reactable(calc=True)
+        @this.record_context
         def MissingVariables():
             frame = PreparedData().frame
             return _missing_variables(frame)[:MaxVariables()]
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Intersections():
             frame = PreparedData().frame
             counts = _intersection_counts(frame, MissingVariables())
@@ -371,7 +385,7 @@ def instance():
             )
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def IntersectionTable():
             table = Intersections().drop(columns="_membership", errors="ignore").copy()
             if not table.empty:
@@ -380,6 +394,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Upset():
             frame = PreparedData().frame
             full_screen = bool(this.isFullScreen())
@@ -406,11 +421,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             return render.DataTable(
                 IntersectionTable(), width="100%", height="98%"
@@ -418,6 +435,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             all_missing = _missing_variables(PreparedData().frame)
             shown = MissingVariables()

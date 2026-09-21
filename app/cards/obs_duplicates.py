@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
+import math
 import os
 import sys
+from itertools import combinations
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -11,15 +14,13 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
-import math
-from itertools import combinations
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
@@ -36,6 +37,7 @@ RESULT_COLUMNS = [
 MAX_COMBINATIONS = 50_000
 BUTTON_VALUE="Remove exact duplicates"
 
+@recordable
 def _eligible_columns(proxy: proxy_data, use_target: bool) -> list[str]:
     """Select comparison columns, respecting roles used by the application."""
     eligible_roles = {Role.PREDICTOR, Role.TARGET} if use_target else {Role.PREDICTOR}
@@ -49,6 +51,7 @@ def _eligible_columns(proxy: proxy_data, use_target: bool) -> list[str]:
     ]
 
 
+@recordable
 def _round_significant(frame: pd.DataFrame, figures: int) -> pd.DataFrame:
     """Round floating-point columns to significant figures; preserve integers."""
     result = frame.copy()
@@ -69,11 +72,13 @@ def _round_significant(frame: pd.DataFrame, figures: int) -> pd.DataFrame:
     return result
 
 
+@recordable
 def _combination_count(column_count: int, maximum_differences: int) -> int:
     maximum = min(max(0, int(maximum_differences)), max(0, column_count - 1))
     return sum(math.comb(column_count, difference) for difference in range(maximum + 1))
 
 
+@recordable
 def _freeze(value):
     """Make common container values hashable without changing equality meaning."""
     if isinstance(value, list):
@@ -85,6 +90,7 @@ def _freeze(value):
     return value
 
 
+@recordable
 def _comparison_frame(frame: pd.DataFrame) -> pd.DataFrame:
     result = frame.copy()
     for column in result.columns:
@@ -103,6 +109,7 @@ def _comparison_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+@recordable
 def _exact_duplicate_mask(proxy: proxy_data, significant_figures: int, use_target: bool) -> np.ndarray:
     """Identify later exact duplicates using the card's comparison policy."""
     columns = _eligible_columns(proxy, use_target)
@@ -115,6 +122,7 @@ def _exact_duplicate_mask(proxy: proxy_data, significant_figures: int, use_targe
     return comparison.duplicated(keep="first").to_numpy()
 
 
+@recordable
 def _deduplicate_proxy(proxy: proxy_data, significant_figures: int, use_target: bool) -> proxy_data:
     """Return a cloned proxy with later exact duplicates removed."""
     duplicate = _exact_duplicate_mask(proxy, significant_figures, use_target)
@@ -126,6 +134,7 @@ def _deduplicate_proxy(proxy: proxy_data, significant_figures: int, use_target: 
     )
 
 
+@recordable
 def _duplicate_results(
     frame: pd.DataFrame,
     *,
@@ -165,6 +174,7 @@ def _duplicate_results(
     return pd.DataFrame(rows, columns=RESULT_COLUMNS)
 
 
+@recordable
 def _duplicates_figure(
     before: pd.DataFrame,
     after: pd.DataFrame,
@@ -287,6 +297,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -301,16 +312,18 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def SignificantFigures():
             return max(1, int(input.SignificantFigures()))
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxDifferences():
             return max(0, int(input.MaxDifferences()))
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def TransformedData():
             proxy = incomingproxy_data()
             if BUTTON_VALUE in (input.RemoveExact() or []) :
@@ -323,7 +336,7 @@ def instance():
 
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def PreparedData():
             proxy = TransformedData()
             columns = _eligible_columns(proxy, input.UseTarget())
@@ -332,6 +345,7 @@ def instance():
 
         @busy.track("Searching for (near) duplicate observations…")
         @this.extended_task
+        @this.record_context
         async def CalculateDuplicates(
             before: pd.DataFrame,
             after: pd.DataFrame,
@@ -350,10 +364,12 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             source = incomingproxy_data()
             columns = _eligible_columns(source, input.UseTarget())
@@ -369,25 +385,29 @@ def instance():
             CalculateDuplicates.invoke(before, after, maximum)
 
         @this.reactable(calc=True)
+        @this.record_context
         def BeforeResults():
             return CalculateDuplicates.result()[0]
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Results():
             return CalculateDuplicates.result()[1]
 
         @this.reactable(calc=True)
+        @this.record_context
         def ExactDuplicateCount():
             return int(_exact_duplicate_mask(incomingproxy_data(), SignificantFigures(), input.UseTarget()).sum())
 
         @this.reactable()
+        @this.record_context
         def SomeDupl():
             if ExactDuplicateCount() > 0:
                 ui.update_checkbox_group(id="RemoveExact", choices = [BUTTON_VALUE], selected=[BUTTON_VALUE])
 
 
         @this.reactable()
+        @this.record_context
         def LimitDifferences():
             column_count = len(_eligible_columns(incomingproxy_data(), input.UseTarget()))
             maximum = min(10, max(0, column_count - 1))
@@ -405,16 +425,19 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def FrontTitle():
             return _title("chart")
 
         @output
         @render.ui
+        @this.record_context
         def BackTitle():
             return _title("table")
 
         @output
         @render_widget
+        @this.record_context
         def BarChart():
             full_screen = bool(this.isFullScreen())
             figure = _duplicates_figure(
@@ -437,17 +460,20 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             return render.DataTable(Results(), width="100%", height="98%")
 
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             results = Results()
             source = incomingproxy_data()

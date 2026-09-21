@@ -18,6 +18,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -50,6 +51,7 @@ STATUS_ROW_CLASSES = {
 }
 
 
+@recordable
 @dataclass(frozen=True)
 class CardinalityAnalysis:
     profiles: pd.DataFrame
@@ -58,6 +60,7 @@ class CardinalityAnalysis:
     sampled: bool
 
 
+@recordable
 def _freeze(value):
     """Return a stable, hashable representation of common structured values."""
     if isinstance(value, np.ndarray):
@@ -75,6 +78,7 @@ def _freeze(value):
     return value
 
 
+@recordable
 def _observed(series: pd.Series) -> pd.Series:
     """Drop scalar missing values without interpreting containers as missing."""
     try:
@@ -90,10 +94,12 @@ def _observed(series: pd.Series) -> pd.Series:
         return series.loc[keep]
 
 
+@recordable
 def _frozen_values(series: pd.Series) -> pd.Series:
     return _observed(series).map(_freeze)
 
 
+@recordable
 def _bounded_cardinality(series: pd.Series, limit: int) -> tuple[int, bool]:
     """Count distinct values until ``limit`` is exceeded.
 
@@ -109,6 +115,7 @@ def _bounded_cardinality(series: pd.Series, limit: int) -> tuple[int, bool]:
     return len(distinct), True
 
 
+@recordable
 def _sample_positions(length: int, maximum: int) -> np.ndarray:
     if length <= maximum:
         return np.arange(length, dtype=int)
@@ -119,6 +126,7 @@ def _sample_positions(length: int, maximum: int) -> np.ndarray:
     )
 
 
+@recordable
 def _safe_frequency_summary(series: pd.Series) -> tuple[float, int]:
     values = _frozen_values(series)
     if values.empty:
@@ -127,6 +135,7 @@ def _safe_frequency_summary(series: pd.Series) -> tuple[float, int]:
     return float(counts.iloc[0] / len(values)), int(counts.eq(1).sum())
 
 
+@recordable
 def _abbreviate(value: object, limit: int = 25) -> str:
     """Keep chart hover text compact; the flip-side retains the full text."""
     text = str(value)
@@ -135,6 +144,7 @@ def _abbreviate(value: object, limit: int = 25) -> str:
     return f"{text[:limit].rstrip()}..."
 
 
+@recordable
 def _role_label(data: proxy_data, column: object) -> str:
     """Return every current role in a stable, user-facing form."""
     roles = data.role_map.roles_for(column)
@@ -145,6 +155,7 @@ def _role_label(data: proxy_data, column: object) -> str:
     )
 
 
+@recordable
 def _assessment(
     *,
     kind: str,
@@ -384,6 +395,7 @@ def _assessment(
 
 
 
+@recordable
 def _profile_column(
     name: str,
     full: pd.Series,
@@ -478,6 +490,7 @@ def _profile_column(
     }
 
 
+@recordable
 def _analyse_cardinality(
     data: proxy_data,
     *,
@@ -514,6 +527,7 @@ def _analyse_cardinality(
     )
 
 
+@recordable
 def _ordered_profiles(profiles: pd.DataFrame, ordering: str) -> pd.DataFrame:
     if profiles.empty:
         return profiles.copy()
@@ -546,6 +560,7 @@ def _profile_row_styles(table: pd.DataFrame) -> list[dict[str, object]]:
     return styles
 
 
+@recordable
 def _cardinality_figure(
     analysis: CardinalityAnalysis,
     *,
@@ -768,6 +783,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -782,6 +798,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             thresholds = tuple(input.Thresholds() or ())
             req(len(thresholds) == 2)
@@ -797,6 +814,7 @@ def instance():
 
         @busy.track("Profiling variable cardinality…")
         @this.extended_task
+        @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
             analysis_options = {
                 key: options[key]
@@ -809,6 +827,7 @@ def instance():
             )
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             # proxy_data frames are read-only to card consumers. Avoid cloning a
             # potentially multi-million-row frame merely to profile it.
@@ -817,17 +836,19 @@ def instance():
             Calculate.invoke(incomingproxy_data(), Options())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Analysis():
             return Calculate.result()
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
             analysis = Analysis()
             options = Options()
@@ -851,6 +872,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Profile():
             # Keep the data-frame output dynamic. Static data-frame bindings can
             # be initialized a second time when Sortable moves and rebinds a
@@ -861,6 +883,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def ProfileTable():
             table = _ordered_profiles(Analysis().profiles, "finding")
             visible = table.drop(columns=["Distinct value"], errors="ignore")
@@ -873,6 +896,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             analysis = Analysis()
             table = analysis.profiles

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from dataclasses import dataclass
@@ -12,13 +13,13 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import collect_job_code, recordable, recorded_job
 from cyclic_pandas import is_cyclic
 from geometry_pandas import is_geometry
 from joblib import Parallel, delayed
@@ -46,6 +47,7 @@ IMPUTATION_ROW_CLASSES = {
 }
 
 
+@recordable
 def _kind(series: pd.Series) -> str:
     if is_cyclic(series.dtype):
         return "cyclic"
@@ -66,6 +68,7 @@ def _kind(series: pd.Series) -> str:
     return "unsupported"
 
 
+@recordable
 def _eligible_columns(frame: pd.DataFrame, role_map: RoleMap) -> tuple[list[str], dict[str, str]]:
     predictors = role_map.columns_with_role(Role.PREDICTOR)
     eligible: list[str] = []
@@ -90,6 +93,7 @@ def _eligible_columns(frame: pd.DataFrame, role_map: RoleMap) -> tuple[list[str]
     return eligible, excluded
 
 
+@recordable
 def _predictor_columns(frame: pd.DataFrame, role_map: RoleMap) -> list[str]:
     """Return supported predictor columns that may inform an imputation."""
     predictors = role_map.columns_with_role(Role.PREDICTOR)
@@ -102,6 +106,7 @@ def _predictor_columns(frame: pd.DataFrame, role_map: RoleMap) -> list[str]:
     ]
 
 
+@recordable
 def _simple_fill(series: pd.Series) -> tuple[pd.Series, str]:
     """Impute one Series using scikit-learn's SimpleImputer."""
     kind = _kind(series)
@@ -123,6 +128,7 @@ def _simple_fill(series: pd.Series) -> tuple[pd.Series, str]:
     return result, "Mode"
 
 
+@recordable
 def _encode_continuous(series: pd.Series) -> tuple[np.ndarray, dict[str, object]]:
     kind = _kind(series)
     if kind == "ordered":
@@ -140,6 +146,7 @@ def _encode_continuous(series: pd.Series) -> tuple[np.ndarray, dict[str, object]
     return values, {"kind": kind}
 
 
+@recordable
 def _restore_continuous(original: pd.Series, values: np.ndarray) -> pd.Series:
     kind = _kind(original)
     result = original.copy()
@@ -158,6 +165,7 @@ def _restore_continuous(original: pd.Series, values: np.ndarray) -> pd.Series:
     return result
 
 
+@recordable
 class ImputationStep(TransformerMixin, BaseEstimator):
     """A DataFrame-preserving sklearn imputation step for Pythagoras."""
 
@@ -303,6 +311,7 @@ class ImputationStep(TransformerMixin, BaseEstimator):
         )
 
 
+@recordable
 @dataclass
 class ImputationResult:
     frame: pd.DataFrame
@@ -311,6 +320,7 @@ class ImputationResult:
     transformer: ImputationStep
 
 
+@recordable
 def _simple_impute(frame: pd.DataFrame, eligible: list[str]) -> tuple[pd.DataFrame, dict[str, str]]:
     result = frame.copy()
     methods = {}
@@ -319,6 +329,7 @@ def _simple_impute(frame: pd.DataFrame, eligible: list[str]) -> tuple[pd.DataFra
     return result, methods
 
 
+@recordable
 def _continuous_impute(
     frame: pd.DataFrame,
     eligible: list[str],
@@ -350,6 +361,7 @@ def _continuous_impute(
     return result, methods
 
 
+@recordable
 def _knn_impute(frame: pd.DataFrame, eligible: list[str], predictors: list[str], neighbours: int) -> tuple[pd.DataFrame, dict[str, str]]:
     count = min(max(1, int(neighbours)), max(1, len(frame) - 1))
     return _continuous_impute(
@@ -359,6 +371,7 @@ def _knn_impute(frame: pd.DataFrame, eligible: list[str], predictors: list[str],
     )
 
 
+@recordable
 def _iterative_impute(frame: pd.DataFrame, eligible: list[str], predictors: list[str], iterations: int, seed: int) -> tuple[pd.DataFrame, dict[str, str]]:
     count = max(1, int(iterations))
     return _continuous_impute(
@@ -373,6 +386,7 @@ def _iterative_impute(frame: pd.DataFrame, eligible: list[str], predictors: list
     )
 
 
+@recordable
 def _impute_frame(frame: pd.DataFrame, eligible: list[str], predictors: list[str], method: str, neighbours: int, iterations: int, seed: int) -> tuple[pd.DataFrame, dict[str, str]]:
     if method == "knn":
         return _knn_impute(frame, eligible, predictors, neighbours)
@@ -381,6 +395,7 @@ def _impute_frame(frame: pd.DataFrame, eligible: list[str], predictors: list[str
     return _simple_impute(frame, eligible)
 
 
+@recordable
 def _score(truth: pd.Series, prediction: pd.Series, kind: str) -> tuple[str, float]:
     if kind in {"numeric", "datetime", "ordered"}:
         if kind == "datetime":
@@ -398,6 +413,7 @@ def _score(truth: pd.Series, prediction: pd.Series, kind: str) -> tuple[str, flo
     return "Accuracy", float(np.mean(truth.astype("string").to_numpy() == prediction.astype("string").to_numpy()))
 
 
+@recordable
 def _random_donor_baseline(
     trial: pd.Series,
     held_positions: np.ndarray,
@@ -413,6 +429,7 @@ def _random_donor_baseline(
     return result
 
 
+@recordable
 def _evaluate_column(frame: pd.DataFrame, eligible: list[str], predictors: list[str], column: str, method: str, neighbours: int, iterations: int, repeats: int, holdout: float, seed: int) -> dict[str, object]:
     observed_positions = np.flatnonzero(frame[column].notna().to_numpy())
     kind = _kind(frame[column])
@@ -442,6 +459,7 @@ def _evaluate_column(frame: pd.DataFrame, eligible: list[str], predictors: list[
     return {"Predictor": str(column), "Type": kind.title(), "Metric": metric, "Score": score, "Random baseline": baseline, "Improvement": improvement, "Status": "Assessed"}
 
 
+@recordable
 def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, repeats: int, holdout: float, seed: int, jobs: int) -> ImputationResult:
     frame = data.frame.copy()
     eligible, excluded = _eligible_columns(frame, data.role_map)
@@ -451,10 +469,10 @@ def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, re
     ).fit(frame)
     imputed = transformer.transform(frame)
     methods = transformer.methods_
-    assessed = Parallel(n_jobs=max(1, int(jobs)), prefer="threads")(
-        delayed(_evaluate_column)(frame, eligible, predictors, column, method, neighbours, iterations, repeats, holdout, seed)
+    assessed = collect_job_code(Parallel(n_jobs=max(1, int(jobs)), prefer="threads")(
+        delayed(recorded_job)(_evaluate_column, frame, eligible, predictors, column, method, neighbours, iterations, repeats, holdout, seed)
         for column in eligible
-    )
+    ))
     evaluation = pd.DataFrame(assessed)
     if not evaluation.empty:
         evaluation.insert(2, "Missing", [int(frame[column].isna().sum()) for column in eligible])
@@ -475,6 +493,7 @@ def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, re
     return ImputationResult(imputed, pd.DataFrame(rows), evaluation, transformer)
 
 
+@recordable
 def _apply_analysis(
     source: proxy_data,
     analysis: ImputationResult,
@@ -491,6 +510,7 @@ def _apply_analysis(
     )
 
 
+@recordable
 def _performance_table(
     evaluation: pd.DataFrame,
     minimum_improvement: float,
@@ -523,6 +543,7 @@ def _performance_row_styles(table: pd.DataFrame) -> list[dict[str, object]]:
     return styles
 
 
+@recordable
 def _missingness_figure(summary: pd.DataFrame, applied: bool, full_screen: bool = False) -> go.Figure:
     if summary.empty:
         return Card.empty_figure("The data contains no missing values")
@@ -627,6 +648,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -641,6 +663,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             return {
                 "method": str(input.Method()), "neighbours": int(input.Neighbours()),
@@ -651,26 +674,29 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinImprovement():
             return float(input.MinImprovement())
 
         @busy.track("Imputing and cross-validating missing values…")
         @this.extended_task
+        @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse, data, **options)
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Analysis():
             return Calculate.result()
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def TransformedData():
             source = incomingproxy_data()
             if "Apply" not in (input.Apply() or []):
@@ -690,11 +716,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render_widget
+        @this.record_context
         def MissingChart():
             full_screen = bool(this.isFullScreen())
             applied = "Apply" in (input.Apply() or [])
@@ -705,11 +733,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Performance():
             return ui.output_data_frame(id="PerformanceTable")
 
         @output
         @render.data_frame
+        @this.record_context
         def PerformanceTable():
             table = _performance_table(
                 Analysis().evaluation,
@@ -724,6 +754,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             analysis = Analysis()
             eligible = int((analysis.summary["Before"] > analysis.summary["After"]).sum()) if not analysis.summary.empty else 0

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -12,14 +14,13 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
-from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from joblib import parallel_config
 from module import Module
 from proxy_data import proxy_data
@@ -38,6 +39,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils.multiclass import type_of_target
 
 
+@recordable
 @dataclass
 class ForestAnalysis:
     """Cross-validated Random Forest performance and permutation importance."""
@@ -64,6 +66,7 @@ IMPORTANCE_COLUMNS = [
     "Interpretation",
 ]
 
+@recordable
 def _empty_analysis(target: str | None, message: str) -> ForestAnalysis:
     return ForestAnalysis(
         target=target,
@@ -78,6 +81,7 @@ def _empty_analysis(target: str | None, message: str) -> ForestAnalysis:
     )
 
 
+@recordable
 def _feature_frame(
     frame: pd.DataFrame,
     columns: list[str],
@@ -115,6 +119,7 @@ def _feature_frame(
     return pd.DataFrame(converted, index=frame.index), numeric, categorical
 
 
+@recordable
 def _forest_pipeline(
     *,
     task: str,
@@ -152,6 +157,7 @@ def _forest_pipeline(
     ])
 
 
+@recordable
 def _fit_forest_importance(
     frame: pd.DataFrame,
     *,
@@ -331,6 +337,7 @@ def _fit_forest_importance(
     )
 
 
+@recordable
 def _importance_figure(
     analysis: ForestAnalysis,
     *,
@@ -409,6 +416,7 @@ def _importance_figure(
     return figure
 
 
+@recordable
 def _add_shadow_variables(
     data: proxy_data,
     columns: list[str] | tuple[str, ...],
@@ -521,6 +529,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -535,36 +544,46 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def Shadow():
             return input.Shadow()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def CVFolds():
             return input.CVFolds()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinMissProp():
             return input.MinMissProp()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
-        @this.reactable(calc=True)
         @this.record_code
-        def PreparedData():
-            samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
+        def _prepare_data(source, maximum):
+            samp =  source.sample(n=maximum, mode="random", keep_geometry=True)
             return samp
 
         @this.reactable(calc=True)
+        @this.record_context
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
+        @this.reactable(calc=True)
+        @this.record_context
         def Target():
             pxd = PreparedData()
             return next(
@@ -572,10 +591,10 @@ def instance():
                 None,
             )
 
-        @this.reactable(calc=True)
-        def MissingVariables():
-            minimum_missing_proportion = float(MinMissProp())
-            proxy = PreparedData()
+        @this.record_code
+        def _selected_missing_variables(minimum, data):
+            minimum_missing_proportion = float(minimum)
+            proxy = data
             frame = proxy.frame
             predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
             return [
@@ -588,6 +607,12 @@ def instance():
             ]
 
         @this.reactable(calc=True)
+        @this.record_context
+        def MissingVariables():
+            return _selected_missing_variables(MinMissProp(), PreparedData())
+
+        @this.reactable(calc=True)
+        @this.record_context
         def PredictorVariables():
             proxy = PreparedData()
             frame = proxy.frame
@@ -599,6 +624,7 @@ def instance():
             return columns[0] if columns else None
 
         @reactive.effect
+        @this.record_context
         def UpdateShadowChoices():
             eligible = MissingVariables()
             importance = Analysis().importance
@@ -621,6 +647,7 @@ def instance():
             ui.update_checkbox_group(id="Shadow", choices=choices, selected=selected)
         @busy.track("Analysing informative missingness…")
         @this.extended_task
+        @this.record_context
         async def CalculateAnalysis(
             frame,
             target,
@@ -643,10 +670,12 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             proxy = PreparedData()
             frame = proxy.frame.copy()
@@ -664,12 +693,12 @@ def instance():
             )
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Analysis():
             return CalculateAnalysis.result()
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def TransformedData():
             selected = Shadow() or []
             if selected:
@@ -678,6 +707,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Importance():
             figure = _importance_figure(Analysis())
             figure.update_layout(
@@ -697,11 +727,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             table = Analysis().importance.copy()
             table = table.loc[
@@ -732,6 +764,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Significance():
             analysis = Analysis()
             if analysis.message:  

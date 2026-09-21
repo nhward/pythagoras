@@ -17,6 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -44,6 +45,7 @@ FINDING_CLASSES = dict(zip(FINDING_COLOURS, [
 ]))
 
 
+@recordable
 def _display_table(table, alpha):
     table = table.copy().reset_index(drop=True)
     table["Finding"] = [
@@ -61,18 +63,21 @@ def _row_styles(table):
             if table["Finding"].eq(finding).any()]
 
 
+@recordable
 @dataclass
 class Result:
     table: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=COLUMNS))
     notes: list[str] = field(default_factory=list)
 
 
+@recordable
 def _numeric(series):
     return pd.api.types.is_numeric_dtype(series.dtype) and not (
         pd.api.types.is_bool_dtype(series.dtype) or pd.api.types.is_complex_dtype(series.dtype)
     )
 
 
+@recordable
 def _ljung_box(values, lags):
     """Direct bounded-lag ACF avoids computing an entire quadratic correlation."""
     # Scaling first prevents overflow on large finite values.
@@ -87,6 +92,7 @@ def _ljung_box(values, lags):
     return float(chi2.sf(q, lags)), float(acf[0])
 
 
+@recordable
 def _rolling_impute(values, window):
     """Fill from original finite observations in the preceding window positions.
 
@@ -108,6 +114,7 @@ def _rolling_impute(values, window):
     return filled, count, start
 
 
+@recordable
 def _analyze(source, lags=10, row_order=False, use_entities=True, use_target=True,
              imputation="rolling", window=5):
     result = Result()
@@ -216,6 +223,7 @@ def _analyze(source, lags=10, row_order=False, use_entities=True, use_target=Tru
     return result
 
 
+@recordable
 def _summary(result, alpha):
     valid = result.table["Adjusted p"].notna()
     count = int((result.table["Adjusted p"] < alpha).sum())
@@ -223,6 +231,36 @@ def _summary(result, alpha):
                   if count else "No serial dependence detected in tested series; this does not establish independence."
                   if valid.any() else "No series could be tested.")
     return " ".join([conclusion, *result.notes])
+
+
+@recordable
+def _figure(result, *, alpha=.05, full_screen=False):
+    table = _display_table(result.table, alpha).dropna(subset=["Adjusted p"]).sort_values("Adjusted p").head(30)
+    if table.empty:
+        figure = Card.empty_figure("No testable series")
+    else:
+        figure = go.Figure(go.Bar(
+            x=-np.log10(table["Adjusted p"].clip(lower=1e-300)),
+            y=table["Entity"] + " / " + table["Variable"], orientation="h",
+            marker_color=table["Finding"].map(FINDING_COLOURS), showlegend=False,
+            customdata=table[["Adjusted p", "Imputed", "Finding"]].to_numpy(), hovertemplate="%{y}<br>Nominal adjusted p=%{customdata[0]:.4g}<br>Imputed=%{customdata[1]}<br>%{customdata[2]}<extra></extra>"))
+        for finding, colour in FINDING_COLOURS.items():
+            if table["Finding"].eq(finding).any():
+                figure.add_trace(go.Bar(x=[None], y=[None], name=finding,
+                                       marker_color=colour, hoverinfo="skip"))
+        figure.update_layout(showlegend=full_screen, legend={"orientation": "h", "y": -0.22})
+        figure.add_vline(x=-np.log10(alpha), line_dash="dash")
+        figure.update_layout(
+            template="plotly_white",
+            xaxis_title="−log₁₀ adjusted p (larger = stronger evidence)",
+            yaxis={"autorange": "reversed", "type": "category"},
+            # title="Up to 30 strongest entity-variable results",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor='#bbd6f8',
+            margin={"l": 15, "r": 15, "t": 35, "b": 35},
+            # font={"size": 13 if full_screen else 10},
+        )
+    return figure
 
 
 def instance():
@@ -290,9 +328,10 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
-        analyze = this.record_code(_analyze)
+        analyze = _analyze
 
         @this.reactable(calc=True)
+        @this.record_context
         def Incoming():
             try:
                 source = this.input_data()
@@ -303,21 +342,25 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=1)
+        @this.record_context
         def Options():
             return (int(input.Lags()), input.Order() == "row", bool(input.Entities()), bool(input.Target()), input.Imputation(), int(input.Window()))
 
         @busy.track("Checking observation dependence…")
         @this.extended_task
+        @this.record_context
         async def Calculate(source, options):
             result = analyze(source, *options) if Module.IS_SHINYLIVE else await asyncio.to_thread(analyze, source, *options)
             return source, options, result
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(Incoming().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Results():
             try:
                 source, options, result = Calculate.result()
@@ -328,50 +371,30 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.text
+        @this.record_context
         def Status():
             return _summary(Results(), float(input.Alpha()))
 
         @output
         @render.data_frame
+        @this.record_context
         def Table():
             table = _display_table(Results().table, float(input.Alpha()))
             return render.DataTable(table, width="100%", height=None, styles=_row_styles(table))
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
             full = bool(this.isFullScreen())
             try:
-                table = _display_table(Results().table, float(input.Alpha())).dropna(subset=["Adjusted p"]).sort_values("Adjusted p").head(30)
-                if table.empty:
-                    figure = Card.empty_figure("No testable series")
-                else:
-                    figure = go.Figure(go.Bar(
-                        x=-np.log10(table["Adjusted p"].clip(lower=1e-300)),
-                        y=table["Entity"] + " / " + table["Variable"], orientation="h",
-                        marker_color=table["Finding"].map(FINDING_COLOURS), showlegend=False,
-                        customdata=table[["Adjusted p", "Imputed", "Finding"]].to_numpy(), hovertemplate="%{y}<br>Nominal adjusted p=%{customdata[0]:.4g}<br>Imputed=%{customdata[1]}<br>%{customdata[2]}<extra></extra>"))
-                    for finding, colour in FINDING_COLOURS.items():
-                        if table["Finding"].eq(finding).any():
-                            figure.add_trace(go.Bar(x=[None], y=[None], name=finding,
-                                                   marker_color=colour, hoverinfo="skip"))
-                    figure.update_layout(showlegend=full, legend={"orientation": "h", "y": -0.22})
-                    figure.add_vline(x=-np.log10(float(input.Alpha())), line_dash="dash")
-                    figure.update_layout(
-                        template="plotly_white", 
-                        xaxis_title="−log₁₀ adjusted p (larger = stronger evidence)",
-                        yaxis={"autorange": "reversed", "type": "category"}, 
-                        # title="Up to 30 strongest entity-variable results",
-                        paper_bgcolor="rgba(0,0,0,0)", 
-                        plot_bgcolor='#bbd6f8',
-                        margin={"l": 15, "r": 15, "t": 35, "b": 35},
-                        # font={"size": 13 if full_screen else 10},
-                    )
+                figure = _figure(Results(), alpha=float(input.Alpha()), full_screen=full)
             except SilentException:
                 figure = Card.empty_figure("Waiting for data or calculation.")
             widget = go.FigureWidget(figure)

@@ -128,6 +128,7 @@ def recorded_helpers(card_module, *, frame=None, max_obs=1000):
         return function
 
     card.record_code = record_code
+    card.record_context = record_code
     card.reactable = lambda **kwargs: capture
     card.throttle = lambda *args, **kwargs: capture
     card.isFullScreen = lambda: False

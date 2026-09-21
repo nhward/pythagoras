@@ -19,6 +19,7 @@ if __name__ == "__main__":
         sys.path.insert(0, root_string)
 
 from card import Card
+from code_recording import recordable
 from faicons import icon_svg as icon
 from module import Module
 from shiny import reactive, render, req, ui
@@ -28,6 +29,7 @@ BOOKMARK_DIRECTORY_ENV = "PYTHAGORAS_BOOKMARK_DIR"
 TEST_BOOKMARK_DIRECTORY_ENV = "PYTHAGORAS_TEST_BOOKMARK_DIR"
 
 
+@recordable
 def bookmark_directory() -> Path:
     """Return the directory used for immutable bookmarks in local mode."""
     configured = os.environ.get(BOOKMARK_DIRECTORY_ENV)
@@ -41,6 +43,7 @@ def bookmark_directory() -> Path:
     return Path.home() / "Documents" / "Pythagoras" / "Bookmarks"
 
 
+@recordable
 def data_source_name(configuration: Mapping[str, object]) -> str:
     """Derive a filesystem-safe bookmark stem from data-import state."""
     for group in configuration.get("layout", []):
@@ -68,6 +71,7 @@ def data_source_name(configuration: Mapping[str, object]) -> str:
     return "analysis"
 
 
+@recordable
 def bookmark_filename(
     configuration: Mapping[str, object],
     created_at: datetime,
@@ -79,6 +83,7 @@ def bookmark_filename(
     return f"{slug}--{timestamp}{BOOKMARK_SUFFIX}"
 
 
+@recordable
 def split_bookmark_filename(filename: str) -> tuple[str, str]:
     """Return the data-name and timestamp components of a bookmark filename."""
     if Path(filename).name != filename or not filename.endswith(BOOKMARK_SUFFIX):
@@ -93,6 +98,7 @@ def split_bookmark_filename(filename: str) -> tuple[str, str]:
     return data_name, timestamp
 
 
+@recordable
 def bookmark_filename_from_parts(data_name: str, timestamp: str) -> str:
     """Reconstruct a validated bookmark filename from selector values."""
     filename = f"{data_name}--{timestamp}{BOOKMARK_SUFFIX}"
@@ -102,6 +108,7 @@ def bookmark_filename_from_parts(data_name: str, timestamp: str) -> str:
     return filename
 
 
+@recordable
 def format_bookmark_time(timestamp: str, created: float) -> str:
     """Format a bookmark timestamp using the host's locale conventions."""
     try:
@@ -111,6 +118,7 @@ def format_bookmark_time(timestamp: str, created: float) -> str:
     return value.strftime("%c")
 
 
+@recordable
 def with_bookmark_metadata(
     configuration: Mapping[str, object],
     *,
@@ -125,12 +133,14 @@ def with_bookmark_metadata(
     return candidate
 
 
+@recordable
 def filesystem_creation_time(path: Path) -> float:
     """Return birth time where available, with ctime as the Unix fallback."""
     status = path.stat()
     return float(getattr(status, "st_birthtime", status.st_ctime))
 
 
+@recordable
 def list_local_bookmarks(directory: Path | None = None) -> list[dict[str, object]]:
     """List local bookmarks newest-first using filesystem creation time."""
     directory = Path(directory or bookmark_directory())
@@ -168,6 +178,7 @@ def list_local_bookmarks(directory: Path | None = None) -> list[dict[str, object
     return sorted(records, key=lambda item: item["created"], reverse=True)
 
 
+@recordable
 def load_local_bookmark(
     filename: str,
     *,
@@ -183,6 +194,7 @@ def load_local_bookmark(
     return value
 
 
+@recordable
 def latest_local_bookmark(
     *,
     directory: Path | None = None,
@@ -202,6 +214,7 @@ def latest_local_bookmark(
     return None
 
 
+@recordable
 def save_local_bookmark(
     configuration: Mapping[str, object],
     *,
@@ -288,6 +301,7 @@ def instance(
 
         @output
         @render.text
+        @this.record_context
         def StorageMode():
             mode = Module.runtime_mode(session)
             if mode == "local":
@@ -296,12 +310,14 @@ def instance(
 
         @output
         @render.text
+        @this.record_context
         def StorageLocation():
             if Module.runtime_mode(session) == "local":
                 return str(bookmark_directory())
             return "Configurations are catalogued within this browser and are also downloaded as JSON files when saved."
 
         @reactive.calc
+        @this.record_context
         def BookmarkRecords():
             catalogue_version()
             if Module.runtime_mode(session) == "local":
@@ -327,6 +343,7 @@ def instance(
 
         @output
         @render.ui
+        @this.record_context
         def BookmarkDataChooser():
             names = list(
                 dict.fromkeys(
@@ -342,6 +359,7 @@ def instance(
 
         @output
         @render.ui
+        @this.record_context
         def BookmarkTimeChooser():
             records = BookmarkRecords()
             selectable_records = [
@@ -373,6 +391,7 @@ def instance(
 
         @output
         @render.ui
+        @this.record_context
         def BookmarkImport():
             if Module.runtime_mode(session) == "local":
                 return None
@@ -389,6 +408,7 @@ def instance(
 
         @reactive.effect
         @reactive.event(input.SaveBookmark)
+        @this.record_context
         async def SaveBookmark():
             try:
                 if configuration_provider is None:
@@ -433,6 +453,7 @@ def instance(
 
         @reactive.effect
         @reactive.event(input.LoadBookmark)
+        @this.record_context
         async def LoadBookmark():
             data_name = input.SelectedDataName()
             timestamp = input.SelectedBookmarkTime()
@@ -460,6 +481,7 @@ def instance(
 
         @reactive.effect
         @reactive.event(input.ImportSelected)
+        @this.record_context
         async def ImportSelected():
             files = input.ImportBookmark()
             req(files)
@@ -497,6 +519,7 @@ def instance(
 
         @reactive.effect
         @reactive.event(input.BrowserOperation)
+        @this.record_context
         def BrowserOperation():
             operation = input.BrowserOperation()
             if not isinstance(operation, Mapping):

@@ -104,6 +104,7 @@ def recorded_helpers(card_module, *, data=None, decimals=2, bounded=True, fullsc
         return function
 
     card.record_code = record_code
+    card.record_context = record_code
     card.reactable = lambda **kwargs: lambda function: function
     card.throttle = lambda *args, **kwargs: lambda function: function
     card.isFullScreen = lambda: fullscreen

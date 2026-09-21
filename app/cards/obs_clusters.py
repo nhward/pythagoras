@@ -20,6 +20,7 @@ import plotly.graph_objects as go
 import shinywidgets
 from card import Card
 from ClusterMembershipTransformer import ClusterMembershipTransformer
+from code_recording import recordable
 from module import Module
 from plotly.colors import qualitative
 from proxy_data import proxy_data
@@ -42,6 +43,7 @@ from cards.obs_k_clusters import _diana, _importance_weights, _pam
 
 METHODS = ("Partition", "Agglomerative", "Divisive", "Mixture", "Density", "Spectral")
 
+@recordable
 @dataclass
 class ClusterViews:
     source: proxy_data
@@ -55,6 +57,7 @@ class ClusterViews:
     error: str = ""
 
 
+@recordable
 def _prepare(data, *, limit, standardize, use_weights):
     predictors = data.role_map.columns_with_role(Role.PREDICTOR)
     weight_columns = data.role_map.columns_with_role(Role.WEIGHTING)
@@ -97,6 +100,7 @@ def _prepare(data, *, limit, standardize, use_weights):
     return x, positions, weights, list(frame.columns[keep])
 
 
+@recordable
 def _density(distance, k, min_points, weights, border, *, return_model=False):
     # Cluster count is not monotonic in epsilon: noise can first become clusters,
     # then clusters merge. Search a bounded grid rather than binary-searching K.
@@ -124,6 +128,7 @@ def _density(distance, k, min_points, weights, border, *, return_model=False):
     return (labels, note, model) if return_model else (labels, note)
 
 
+@recordable
 def _fit(method, x, distance, k, weights, options):
     if weights is not None and method not in ("Partition", "Density"):
         raise ValueError("Unavailable with unequal observation importance. Disable weighting to use this method.")
@@ -178,6 +183,7 @@ def _fit(method, x, distance, k, weights, options):
     return labels, note
 
 
+@recordable
 def _analyze(data, *, limit=1000, standardize=True, use_weights=True, metric="euclidean",
              centre="centroids", linkage="average", min_points=5, border=True,
              neighbours=10, projection="tsne", perplexity=30):
@@ -234,6 +240,7 @@ def _analyze(data, *, limit=1000, standardize=True, use_weights=True, metric="eu
     return result
 
 
+@recordable
 def _membership_name(columns, base="cluster"):
     name, suffix = base, 2
     while name in columns:
@@ -242,6 +249,7 @@ def _membership_name(columns, base="cluster"):
     return name
 
 
+@recordable
 def _export(result, method, name):
     name = name.strip()
     if not name or name.startswith(Card.SHADOW_PREFIX):
@@ -261,6 +269,7 @@ def _export(result, method, name):
         operation="Add cluster membership", preview_frame=preview, added_roles=roles)
 
 
+@recordable
 def _export_memberships(source, transformers):
     """Rebuild only this card's selected steps, preserving earlier pipeline steps."""
     result = source
@@ -276,6 +285,7 @@ def _export_memberships(source, transformers):
     return result
 
 
+@recordable
 def _figure(result, method, fullscreen=False):
     figure = go.Figure()
     labels = result.labels.get(method)
@@ -374,6 +384,7 @@ def instance():
         reset_pending = False
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -387,6 +398,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             return {"limit": int(input.Limit()), "standardize": bool(input.Standardize()), "use_weights": bool(input.UseWeights()),
                         "metric": input.Metric(), "centre": input.Centre(), "linkage": input.Linkage(), "min_points": int(input.MinPoints()),
@@ -395,6 +407,7 @@ def instance():
 
         @busy.track("Calculating cluster memberships…")
         @this.extended_task
+        @this.record_context
         async def Calculate(source, options):
             if Module.IS_SHINYLIVE:
                 return _analyze(source, **options)
@@ -402,11 +415,13 @@ def instance():
 
         @this.reactable()
         @this.settle(seconds=2)
+        @this.record_context
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def CurrentAnalysis():
             result = Calculate.result()
             # Obsolete completions are expected while restored inputs settle.
@@ -416,12 +431,14 @@ def instance():
             return None
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             result = CurrentAnalysis()
             req(result is not None, cancel_output=True)
             return result
 
         @this.reactable()
+        @this.record_context
         def SourceChanged():
             nonlocal reset_pending
             source = incomingproxy_data()
@@ -437,6 +454,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def MembershipControl():
             saved = committed.get()
             disabled = (incomingproxy_data().cluster_count or 1) == 1
@@ -460,6 +478,7 @@ def instance():
             return ui.tags.fieldset(control, disabled=disabled, class_="d-flex justify-content-center")
 
         @this.reactable()
+        @this.record_context
         def MembershipToggle():
             nonlocal reset_pending
             requested = set(input.IncludeMembership() or []) & {"Partition", "Mixture", "Density"}
@@ -523,11 +542,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.text
+        @this.record_context
         def Status():
             result = Analysis()
             method = input.ClusterType()
@@ -537,6 +558,7 @@ def instance():
         def register_chart(method):
             @output(id=f"Chart_{method}")
             @render_widget
+            @this.record_context
             def chart():
                 widget = go.FigureWidget(_figure(Analysis(), method, bool(this.isFullScreen())))
                 widget._config = {"displayModeBar": bool(this.isFullScreen()), "displaylogo": False}
@@ -546,11 +568,13 @@ def instance():
 
         @output
         @render.text
+        @this.record_context
         def TableTitle():
             return f"{input.ClusterType()} membership — incoming K={incomingproxy_data().cluster_count or 1}"
 
         @output
         @render.data_frame
+        @this.record_context
         def Membership():
             result = Analysis()
             labels = result.labels.get(input.ClusterType())

@@ -19,6 +19,7 @@ import plotly.colors as pc
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from cyclic_pandas import is_cyclic
 from module import Module
 from proxy_data import proxy_data as Pxy
@@ -37,6 +38,7 @@ SPECIAL_PLACEHOLDER_COLOURS = {
 }
 
 
+@recordable
 def _placeholder_colour_map(present_codes: list[int]) -> dict[int, str]:
     """Assign semantic base colours and presence-based placeholder colours."""
     colours = {
@@ -53,6 +55,7 @@ def _placeholder_colour_map(present_codes: list[int]) -> dict[int, str]:
     return colours
 
 
+@recordable
 def _columns_by_placeholder_kind(df: pd.DataFrame) -> dict[str, list[str]]:
     columns = {"int": [], "dec": [], "str": [], "dte": [], "bkt": []}
     for column in df.columns:
@@ -67,11 +70,13 @@ def _columns_by_placeholder_kind(df: pd.DataFrame) -> dict[str, list[str]]:
     return columns
 
 
+@recordable
 def _normalise_placeholder_text(value: object, *, case_sensitive: bool) -> str:
     text = str(value)
     return text if case_sensitive else text.casefold()
 
 
+@recordable
 def _scalar_placeholder_mask(
     series: pd.Series,
     kind: str,
@@ -123,6 +128,7 @@ def _scalar_placeholder_mask(
     return np.zeros(len(series), dtype=bool)
 
 
+@recordable
 def _apply_list_placeholder_codes(
     df: pd.DataFrame,
     columns: list[str],
@@ -150,11 +156,13 @@ def _apply_list_placeholder_codes(
                     break
 
 
+@recordable
 def _rebuild_custom_series(series: pd.Series, values: list[object]) -> pd.Series:
     array = type(series.array)._from_sequence(values, dtype=series.dtype)
     return pd.Series(array, index=series.index, name=series.name)
 
 
+@recordable
 def _replace_scalar_matches(series: pd.Series, mask: np.ndarray) -> pd.Series:
     if not mask.any():
         return series
@@ -168,6 +176,7 @@ def _replace_scalar_matches(series: pd.Series, mask: np.ndarray) -> pd.Series:
     return result
 
 
+@recordable
 def _remove_list_placeholders(
     series: pd.Series,
     placeholders: set[str],
@@ -377,6 +386,7 @@ def instance():
     def server(input, output, session):
 
         @this.reactable(calc = True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -391,22 +401,28 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def Replace():
             return input.Replace() or []
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.reactable(calc = True)
         @this.record_code
-        def PreparedData():
-            sample = incomingproxy_data().sample(n = MaxObs(), mode = "random", keep_geometry = False)
+        def _prepare_data(source, maximum):
+            sample = source.sample(n = maximum, mode = "random", keep_geometry = False)
             return sample
 
         @this.reactable(calc = True)
-        @this.record_code
+        @this.record_context
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
+        @this.reactable(calc = True)
+        @this.record_context
         def Sentinels():
             return {
                 "int":    input.NA_Integers(),
@@ -417,6 +433,7 @@ def instance():
 
 
         @this.reactable(calc=True)
+        @this.record_context
         def Choices():
             rawstate = RawCodes()
             flat = pd.Series(rawstate["codes"].to_numpy().ravel())
@@ -427,11 +444,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Message():
             if len(Choices())==0:
                 return ui.span("Placeholders not detected", class_="text-success")
 
         @this.reactable()
+        @this.record_context
         def UpdateButtons():
             choices = Choices()
             with reactive.isolate():
@@ -453,7 +472,7 @@ def instance():
         @this.record_code
         def _placeholder_chart(codes_df: pd.DataFrame, legend: dict, *, fs: bool) -> go.Figure:
             if codes_df.empty:
-                return this.empty_figure(message="No data to display")
+                return Card.empty_figure(message="No data to display")
             y = codes_df.columns.astype(str).tolist()
             # Keep codes compact. No NaNs should exist: 0 = missing, 1 = not missing.
             z = codes_df.to_numpy(dtype=np.int16, copy=False).T
@@ -561,7 +580,7 @@ def instance():
 
         @output
         @render_widget
-        @this.record_code
+        @this.record_context
         def AllChart():
             state = CorrectedState()
             codes_df = state["codes"]
@@ -572,7 +591,7 @@ def instance():
 
         @output
         @render_widget
-        @this.record_code
+        @this.record_context
         def IntegerChart():
             state = CorrectedState()
             codes_df = state["codes"]
@@ -587,7 +606,7 @@ def instance():
 
         @output
         @render_widget
-        @this.record_code
+        @this.record_context
         def FloatChart():
             state = CorrectedState()
             codes_df = state["codes"]
@@ -602,7 +621,7 @@ def instance():
 
         @output
         @render_widget
-        @this.record_code
+        @this.record_context
         def CharacterChart():
             state = CorrectedState()
             codes_df = state["codes"]
@@ -617,7 +636,7 @@ def instance():
 
         @output
         @render_widget
-        @this.record_code
+        @this.record_context
         def DateChart():
             state = CorrectedState()
             codes_df = state["codes"]
@@ -630,33 +649,35 @@ def instance():
                 return _placeholder_chart(codes_df[cols], legend, fs=this.isFullScreen())
 
 
-        @this.reactable(calc = True)
         @this.record_code
-        def TransformedData():
-            full  = incomingproxy_data()
-            sentinels = [s.removeprefix("Replace ") for s in Replace()]
+        def _transform_data(source, replacements, extrema, case_sensitive):
+            full  = source
+            sentinels = [s.removeprefix("Replace ") for s in replacements]
             if not sentinels:
                 return full.with_inactive_step(
                     stage="Cleaning",
                     card="miss_placeholders",
                     operation="Replace missing-value placeholders",
                 )
-            df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=input.NA_Extrema(), case_sensitive=input.NA_CaseSensitive(), drop_geometry = False)
+            df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=extrema, case_sensitive=case_sensitive, drop_geometry = False)
             return full.with_cleaned_data(
                 df,
                 card="miss_placeholders",
                 operation="Replace missing-value placeholders",
                 parameters={
                     "sentinels": sentinels,
-                    "extrema_only": bool(input.NA_Extrema()),
-                    "case_sensitive": bool(input.NA_CaseSensitive()),
+                    "extrema_only": bool(extrema),
+                    "case_sensitive": bool(case_sensitive),
                 },
             )
 
         @this.reactable(calc = True)
+        @this.record_context
+        def TransformedData():
+            return _transform_data(incomingproxy_data(), Replace(), input.NA_Extrema(), input.NA_CaseSensitive())
+
         @this.record_code
-        def build_summary_df():
-            state = CorrectedState()
+        def _summary_frame(state):
             codes_df = state["codes"]
             legend = state["legend"]
             # counts per variable for all codes at once
@@ -675,9 +696,15 @@ def instance():
             counts = counts.rename(columns=lambda c: label_map.get(int(c), f"Code {int(c)}"))
             return counts.rename_axis("Variable").reset_index()
 
+        @this.reactable(calc = True)
+        @this.record_context
+        def build_summary_df():
+            return _summary_frame(CorrectedState())
+
 
         @output
         @render.ui
+        @this.record_context
         def Summary():
             df = build_summary_df()   # your table of counts
             def fmt(val):
@@ -696,6 +723,7 @@ def instance():
             return ui.HTML(html)
 
         
+        @this.record_code
         def PlaceholderCodes(data, sentinels: dict[str, list[any]], float_eps: float = 1e-9, drop_geometry: bool = True, 
         extrema: bool = True, case_sensitive: bool = False) -> tuple[pd.DataFrame, dict[int, str]]:
             req(data is not None)
@@ -823,6 +851,7 @@ def instance():
             return df
 
         @this.reactable(calc=True)
+        @this.record_context
         def RawCodes():
             sample = PreparedData()
             codes_df, legend = PlaceholderCodes(
@@ -839,6 +868,7 @@ def instance():
       
         
         @this.reactable(calc=True)
+        @this.record_context
         def CorrectedState():
             sample = PreparedData()
             sentinels = [s.removeprefix("Replace ") for s in Replace()]

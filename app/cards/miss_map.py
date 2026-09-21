@@ -16,6 +16,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
@@ -37,6 +38,7 @@ SPECIAL_ROLES = {
 }
 
 
+@recordable
 def _variable_summary(
     frame: pd.DataFrame,
     role_map: RoleMap,
@@ -68,6 +70,7 @@ def _variable_summary(
     return pd.DataFrame(rows)
 
 
+@recordable
 def _excessive_observation_mask(
     frame: pd.DataFrame,
     threshold: float,
@@ -78,6 +81,7 @@ def _excessive_observation_mask(
     return frame.isna().mean(axis=1) > threshold
 
 
+@recordable
 def _remove_excessive_observations(
     data: proxy_data,
     threshold: float,
@@ -91,6 +95,7 @@ def _remove_excessive_observations(
     )
 
 
+@recordable
 def _remove_excessive_variables(
     data: proxy_data,
     threshold: float,
@@ -106,6 +111,7 @@ def _remove_excessive_variables(
     )
 
 
+@recordable
 def _transform_data(
     data: proxy_data,
     *,
@@ -158,6 +164,7 @@ def _transform_data(
     )
 
 
+@recordable
 def _issues_table(
     frame: pd.DataFrame,
     role_map: RoleMap,
@@ -200,6 +207,7 @@ def _issues_table(
     )
 
 
+@recordable
 def _display_frame(frame: pd.DataFrame, maximum: int) -> pd.DataFrame:
     if len(frame) <= maximum:
         return frame
@@ -207,6 +215,7 @@ def _display_frame(frame: pd.DataFrame, maximum: int) -> pd.DataFrame:
     return frame.sample(n=maximum, random_state=1729).sort_index()
 
 
+@recordable
 def _missingness_figure(
     frame: pd.DataFrame,
     *,
@@ -378,6 +387,7 @@ def instance():
 
     def server(input, output, session):
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -392,21 +402,24 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Remove():
             return input.Remove() or []
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def VariableThreshold():
             return float(input.VariableThreshold()) / 100
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def ObservationThreshold():
             return float(input.ObservationThreshold()) / 100
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def TransformedData():
             source = incomingproxy_data()
             selected = Remove()
@@ -419,11 +432,13 @@ def instance():
             )
 
         @this.reactable(calc=True)
+        @this.record_context
         def DisplayFrame():
             return _display_frame(TransformedData().frame, 10 ** int(input.MaxObs()))
 
         @output
         @render_widget
+        @this.record_context
         def Map():
             full_screen = bool(this.isFullScreen())
             figure = _missingness_figure(
@@ -445,11 +460,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             proxy = TransformedData()
             return render.DataTable(
@@ -459,6 +476,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             source = incomingproxy_data()
             original = source.frame

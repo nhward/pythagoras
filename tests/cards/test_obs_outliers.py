@@ -7,13 +7,14 @@ from threading import Event
 ROOT = Path(__file__).resolve().parents[2] / "app"
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
+
 import numpy as np
 import pandas as pd
 import pytest
 from cards import obs_outliers as m
+from playwright.sync_api import expect
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
 
 app = create_app_fixture(app="../scenarios/obs_outliers.py", scope="function")
@@ -129,6 +130,14 @@ def test_chart_tables_controls_and_unchanged_output(page, app):
     page.goto(app.url)
     expect(by_id(page, "Status")).to_contain_text("100 of 100 observations analyzed", timeout=60000)
     expect(by_id(page, "PassThrough")).to_have_text("unchanged=True")
+    page.locator(".card").first.hover()
+    by_id(page, "CodeButton").click(force=True)
+    modal = page.locator(".modal.show")
+    expect(modal).to_contain_text("def _analyze(")
+    expect(modal).to_contain_text("def _percentiles(")
+    expect(modal).to_contain_text("def _figure(")
+    expect(modal).not_to_contain_text("@record_code")
+    modal.get_by_role("button", name="Dismiss", exact=True).click()
     plot = by_id(page, "Chart0").locator(".js-plotly-plot")
     expect(plot).to_be_visible()
     assert plot.evaluate("el => el.data.length") == 5
@@ -173,3 +182,42 @@ def test_method_controls_without_order_setting(page, app):
     by_id(page, "Methods").locator('input[value="Isolation Forest"]').check()
     expect(by_id(page, "Status")).to_contain_text("1 methods", timeout=60000)
     expect(by_id(page, "PassThrough")).to_have_text("unchanged=True")
+
+
+@pytest.mark.unit
+def test_recorded_helpers_are_run_scoped_and_replayable():
+    from module import Module
+
+    # Use the production recorder without constructing a Shiny session.
+    class Recorder:
+        record_code = Module.record_code
+
+        def __init__(self):
+            self.code_registry = {}
+
+    recorder, other = Recorder(), Recorder()
+    analyze, table, figure, _ = m._code_functions(recorder.record_code)
+    m._code_functions(other.record_code)
+    assert not recorder.code_registry
+    data = source()
+    result = analyze(data, methods=["Isolation Forest"], trees=25)
+    assert set(recorder.code_registry) == {"_analyze", "_predictors", "_numeric", "_percentiles"}
+    expected = figure(result, top=8)
+    table(result)
+    assert {"_figure", "_table"} <= recorder.code_registry.keys()
+    assert "_cooks" not in recorder.code_registry
+    assert not other.code_registry
+
+    analyze(data, methods=["Cook's distance"])
+    assert "_cooks" in recorder.code_registry
+    # The displayed definitions can execute with the module's imports, constants
+    # and result container, without the factory, recorder, or a reactive context.
+    namespace = {name: value for name, value in vars(m).items()
+                 if not name.startswith("_")}
+    for code in recorder.code_registry.values():
+        cleaned = Module.clean_code(code)
+        assert "@record_code" not in cleaned
+        exec(cleaned, namespace)  # noqa: S102
+    replay = namespace["_analyze"](data, methods=["Isolation Forest"], trees=25)
+    pd.testing.assert_frame_equal(replay.raw, result.raw)
+    assert namespace["_figure"](replay, top=8).to_json() == expected.to_json()

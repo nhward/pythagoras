@@ -10,7 +10,6 @@ os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
-
 import pandas as pd
 import pytest
 from playwright.sync_api import Page, expect
@@ -109,6 +108,7 @@ def recorded_helpers(card_module, *, frame=None, role_map=None, max_obs=3, resto
         return function
 
     card.record_code = capture
+    card.record_context = capture
     card.reactable = lambda **kwargs: capture
     card.throttle = lambda *args, **kwargs: capture
     card.isFullScreen = lambda: False
@@ -506,7 +506,7 @@ class TestUpstreamChanges:
         roles["weighting"] = ["x1"]
         frame = seeded_frame()
         frame["x1"] = frame.x1.astype(str)
-        card, inputs, functions = recorded_helpers(card_module, frame=frame, role_map=roles, restored=roles)
+        card, _, functions = recorded_helpers(card_module, frame=frame, role_map=roles, restored=roles)
         with reactive.isolate():
             functions["PxdChange"]()
             assert card.output_data() is card._imports.get()

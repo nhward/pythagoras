@@ -1,8 +1,12 @@
 """Explain fixed cluster labels with a cross-validated, interpretable surrogate tree."""
 from __future__ import annotations
 
+import asyncio
 import os
+import re
 import sys
+from dataclasses import dataclass, field
+from html import escape
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -13,16 +17,12 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
-import re
-from dataclasses import dataclass, field
-from html import escape
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from plotly.colors import qualitative
 from proxy_data import proxy_data
@@ -44,11 +44,13 @@ from cards.miss_informative import _feature_frame
 MEMBERSHIP = re.compile(r"^cluster_(?:partition|mixture|density)(?:_\d+)?$")
 
 
+@recordable
 def _targets(data):
     return [c for c in data.columns if MEMBERSHIP.fullmatch(str(c))
             and Role.STRATIFIER in data.role_map.roles_for(c)]
 
 
+@recordable
 @dataclass
 class Profile:
     target: str | None
@@ -70,6 +72,7 @@ class Profile:
     recall: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
+@recordable
 def _pipeline(numeric, categorical, depth, leaf):
     transforms = []
     if numeric:
@@ -85,6 +88,7 @@ def _pipeline(numeric, categorical, depth, leaf):
     ])
 
 
+@recordable
 def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
              use_weights=True, include_unallocated=True):
     result = Profile(target)
@@ -164,6 +168,7 @@ def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
     return result
 
 
+@recordable
 def _rules(result):
     tree = result.model.tree_
     rows = []
@@ -185,6 +190,7 @@ def _rules(result):
     return pd.DataFrame(rows)
 
 
+@recordable
 def _figure(result):
     if result.message or result.model is None:
         return Card.empty_figure(result.message or 'No fitted tree')
@@ -277,6 +283,7 @@ def instance():
         registered = set()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -290,10 +297,12 @@ def instance():
 
 
         @this.reactable(calc=True)
+        @this.record_context
         def Targets():
             return tuple(_targets(incomingproxy_data()))
 
         @this.reactable(calc=True)
+        @this.record_context
         def SelectedTarget():
             targets = Targets()
             selected = input.Membership()
@@ -303,6 +312,7 @@ def instance():
             output_id = 'Tree_' + target
             @output(id=output_id)
             @render_widget
+            @this.record_context
             def tree():
                 results = Profiles()
                 req(target in results, cancel_output=True)
@@ -311,6 +321,7 @@ def instance():
                 return widget
 
         @this.reactable()
+        @this.record_context
         def UpdateTabs():
             nonlocal current_tabs, restore_pending
             targets = Targets()
@@ -348,12 +359,14 @@ def instance():
                 restore_pending = False
 
         @this.reactable(calc=True)
+        @this.record_context
         def Options():
             return {"depth": input.Depth(), "leaf": input.Leaf(), "folds": input.Folds(), "limit": int(10**input.Limit()),
                 "use_weights": input.UseWeights(), "include_unallocated": input.Unallocated()}
 
         @busy.track('Profiling cluster memberships…')
         @this.extended_task
+        @this.record_context
         async def Calculate(data, options):
             def calculate_all():
                 return {target: _analyze(data, target=target, **options) for target in _targets(data)}
@@ -361,23 +374,27 @@ def instance():
             return data, options, results
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Profiles():
             data, options, results = Calculate.result()
             req(data.equals(incomingproxy_data()) and options == Options(), cancel_output=True)
             return results
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             results = Profiles()
             return results.get(SelectedTarget(), Profile(None, message='Assign a cluster-named column the Stratifier role.'))
 
         @output
         @render_widget
+        @this.record_context
         def EmptyTree():
             widget = go.FigureWidget(Card.empty_figure('No cluster membership columns.'))
             widget._config = {'displayModeBar':False, 'displaylogo':False}
@@ -385,11 +402,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.data_frame
+        @this.record_context
         def Comparison():
             rows = [{'Membership':target.removeprefix("cluster_").title(), 'CV Accuracy':r.accuracy, 'CV Balanced Accuracy':r.balanced,
                      'Majority baseline':r.baseline, 'Balanced baseline':r.baseline_balanced,
@@ -402,12 +421,14 @@ def instance():
             def register_title(output_id):
                 @output(id=output_id)
                 @render.text
+                @this.record_context
                 def title():
                     return SelectedTarget() or 'No membership selected'
             register_title(output_id)
 
         @output
         @render.text
+        @this.record_context
         def Accuracy():
             r = Analysis()
             if r.message:
@@ -419,14 +440,17 @@ def instance():
                 'Fidelity to existing labels, not cluster validity.')
         @output
         @render.data_frame
+        @this.record_context
         def Rules():
             return render.DataTable(Analysis().rules.round(4), height='auto', width='100%')
         @output
         @render.data_frame
+        @this.record_context
         def Recall():
             return render.DataTable(Analysis().recall.round(4), height='auto', width='100%')
         @output
         @render.data_frame
+        @this.record_context
         def Confusion():
             return render.DataTable(Analysis().confusion.round(4), height='auto', width='100%')
         

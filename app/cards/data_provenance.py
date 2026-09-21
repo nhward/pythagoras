@@ -19,6 +19,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from shiny import render, req, ui
@@ -60,10 +61,12 @@ FULL_SCREEN_STEPS_PER_ROW = 12
 JOURNEY_ROW_HEIGHT = 175
 
 
+@recordable
 def _shape_text(shape: tuple[int, int]) -> str:
     return f"{shape[0]:,} × {shape[1]:,}"
 
 
+@recordable
 def _display_value(value: object) -> object:
     """Return a compact JSON-compatible representation for the table."""
     if isinstance(value, np.generic):
@@ -81,6 +84,7 @@ def _display_value(value: object) -> object:
     return str(value)
 
 
+@recordable
 def _parameters_text(parameters: Mapping[str, object]) -> str:
     if not parameters:
         return ""
@@ -116,6 +120,7 @@ def _parameters_text(parameters: Mapping[str, object]) -> str:
     )
 
 
+@recordable
 def _cleaning_variables(parameters: Mapping[str, object]) -> str:
     variables: list[str] = []
     direct = parameters.get("variable")
@@ -129,6 +134,7 @@ def _cleaning_variables(parameters: Mapping[str, object]) -> str:
     return ", ".join(dict.fromkeys(variables)) or "Dataset"
 
 
+@recordable
 def _learning_variables(estimator: object) -> str:
     for attribute in ("columns", "eligible"):
         values = getattr(estimator, attribute, None)
@@ -137,6 +143,7 @@ def _learning_variables(estimator: object) -> str:
     return "Dataset"
 
 
+@recordable
 def _learning_parameters(estimator: object) -> dict[str, object]:
     if not hasattr(estimator, "get_params"):
         return {}
@@ -148,6 +155,7 @@ def _learning_parameters(estimator: object) -> dict[str, object]:
     }
 
 
+@recordable
 def _journey_table(data: proxy_data) -> pd.DataFrame:
     """Describe the source, cleaning, learning, and current preview in order."""
     records = data.cleaning_records
@@ -245,6 +253,7 @@ def _journey_table(data: proxy_data) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=JOURNEY_COLUMNS)
 
 
+@recordable
 def _visible_journey(table: pd.DataFrame, *, hide_inactive: bool) -> pd.DataFrame:
     """Optionally hide disabled steps without mistaking no-ops for inactivity."""
     if not hide_inactive or "Attempted" not in table.columns:
@@ -252,11 +261,13 @@ def _visible_journey(table: pd.DataFrame, *, hide_inactive: bool) -> pd.DataFram
     return table.loc[~table["Attempted"].eq("No")].reset_index(drop=True)
 
 
+@recordable
 def _short_label(value: str, width: int = 18) -> str:
     lines = textwrap.wrap(str(value), width=width, max_lines=2, placeholder="…")
     return "<br>".join(lines)
 
 
+@recordable
 def _hover_value(
     value: object,
     max_length: int = HOVER_VALUE_MAX_LENGTH,
@@ -268,6 +279,7 @@ def _hover_value(
     return f"{text[:max_length - 3].rstrip()}..."
 
 
+@recordable
 def _journey_positions(
     step_count: int,
     *,
@@ -281,6 +293,7 @@ def _journey_positions(
     return x.astype(float), -rows.astype(float)
 
 
+@recordable
 def _journey_figure(table: pd.DataFrame, *, full_screen: bool = False) -> go.Figure:
     """Draw a responsive processing flow that snakes across multiple rows."""
     if table.empty:
@@ -479,6 +492,7 @@ def instance():
     def server(input, output, session):
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -492,11 +506,12 @@ def instance():
 
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def JourneyData():
             return _journey_table(incomingproxy_data())
 
         @this.reactable(calc=True)
+        @this.record_context
         def VisibleJourney():
             return _visible_journey(
                 JourneyData(), hide_inactive=bool(input.HideInactive()),
@@ -504,6 +519,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def JourneyChart():
             full_screen = bool(this.isFullScreen())
             figure = _journey_figure(VisibleJourney(), full_screen=full_screen)
@@ -517,6 +533,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def JourneyTable():
             table = VisibleJourney()
             return render.DataGrid(
@@ -530,6 +547,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Status():
             table = VisibleJourney()
             cleaning = int(table["Stage"].eq("Cleaning").sum())

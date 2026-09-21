@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from dataclasses import dataclass
@@ -12,13 +13,13 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from cyclic_pandas import is_cyclic
 from geometry_pandas import is_geometry
 from list_pandas import is_list
@@ -47,6 +48,7 @@ SUMMARY_ROW_CLASSES = {
 }
 
 
+@recordable
 @dataclass
 class HomogeneityAnalysis:
     scores: pd.DataFrame
@@ -57,6 +59,7 @@ class HomogeneityAnalysis:
     sequence_label: str
 
 
+@recordable
 def _kind(series: pd.Series) -> str:
     if is_cyclic(series.dtype):
         return "cyclic"
@@ -77,6 +80,7 @@ def _kind(series: pd.Series) -> str:
     return "unsupported"
 
 
+@recordable
 def _sequence_candidates(data: proxy_data) -> dict[str, str]:
     """Return role-assigned or unique scalar sequence choices.
 
@@ -117,6 +121,7 @@ def _sequence_candidates(data: proxy_data) -> dict[str, str]:
     }
 
 
+@recordable
 def _eligible_columns(
     data: proxy_data,
     *,
@@ -145,6 +150,7 @@ def _eligible_columns(
     return eligible, excluded
 
 
+@recordable
 def _order_frame(frame: pd.DataFrame, sequence: str) -> pd.DataFrame:
     result = frame.copy()
     result["__original_position__"] = np.arange(len(result))
@@ -165,6 +171,7 @@ def _order_frame(frame: pd.DataFrame, sequence: str) -> pd.DataFrame:
     return result.drop(columns="__original_position__").reset_index(drop=True)
 
 
+@recordable
 def _assign_groups(length: int, requested: int, minimum_size: int = 5) -> np.ndarray:
     if length == 0:
         return np.array([], dtype=int)
@@ -176,6 +183,7 @@ def _assign_groups(length: int, requested: int, minimum_size: int = 5) -> np.nda
     return groups
 
 
+@recordable
 def _numeric_values(series: pd.Series) -> np.ndarray:
     if pd.api.types.is_datetime64_any_dtype(series.dtype):
         values = series.astype("datetime64[ns]").astype("int64").to_numpy(dtype=float)
@@ -184,6 +192,7 @@ def _numeric_values(series: pd.Series) -> np.ndarray:
     return pd.to_numeric(series, errors="coerce").to_numpy(dtype=float)
 
 
+@recordable
 def _numeric_drift(sample: pd.Series, reference: pd.Series) -> float:
     left = _numeric_values(sample)
     right = _numeric_values(reference)
@@ -205,6 +214,7 @@ def _numeric_drift(sample: pd.Series, reference: pd.Series) -> float:
     return float(1.0 - np.exp(-distance / scale))
 
 
+@recordable
 def _categorical_drift(sample: pd.Series, reference: pd.Series) -> float:
     # Missingness is measured separately so it cannot inflate both components.
     left = sample.dropna().astype("string")
@@ -227,12 +237,14 @@ def _categorical_drift(sample: pd.Series, reference: pd.Series) -> float:
     return float(np.sqrt(max(0.0, js) / np.log(2)))
 
 
+@recordable
 def _distribution_drift(sample: pd.Series, reference: pd.Series, kind: str) -> float:
     if kind in {"numeric", "datetime"}:
         return _numeric_drift(sample, reference)
     return _categorical_drift(sample, reference)
 
 
+@recordable
 def _pair_raw_drift(left: pd.Series, right: pd.Series, kind: str) -> tuple[float, float, float]:
     """Return distribution, missingness, and combined raw discrepancies."""
     distribution = _distribution_drift(left, right, kind)
@@ -245,6 +257,7 @@ def _pair_raw_drift(left: pd.Series, right: pd.Series, kind: str) -> tuple[float
     return distribution, missingness, combined
 
 
+@recordable
 def _raw_group_scores(
     series: pd.Series,
     groups: np.ndarray,
@@ -272,6 +285,7 @@ def _raw_group_scores(
     )
 
 
+@recordable
 def _chance_correct(raw, boundary: float, random_scale: float | None = None):
     """Scale excess beyond a random-order boundary by random variability."""
     values = np.asarray(raw, dtype=float)
@@ -287,6 +301,7 @@ def _chance_correct(raw, boundary: float, random_scale: float | None = None):
     return corrected
 
 
+@recordable
 def _series_summary(series: pd.Series, kind: str) -> str:
     missing = float(series.isna().mean()) if len(series) else np.nan
     observed = series.dropna()
@@ -303,6 +318,7 @@ def _series_summary(series: pd.Series, kind: str) -> str:
     return f"{detail}; {missing:.0%} missing"
 
 
+@recordable
 def _sequence_interval(frame: pd.DataFrame, positions: np.ndarray, sequence: str) -> str:
     if sequence == ROW_ORDER or sequence not in frame.columns:
         return f"Rows {int(positions[0]) + 1}–{int(positions[-1]) + 1}"
@@ -312,6 +328,7 @@ def _sequence_interval(frame: pd.DataFrame, positions: np.ndarray, sequence: str
     return f"{values.iloc[0]} – {values.iloc[-1]}"
 
 
+@recordable
 def _reference_series(
     frame: pd.DataFrame,
     groups: np.ndarray,
@@ -327,6 +344,7 @@ def _reference_series(
     return frame[column]
 
 
+@recordable
 def _trend_label(frame: pd.DataFrame, groups: np.ndarray, column: str, kind: str) -> str:
     if kind not in {"numeric", "datetime"}:
         return "Not applicable"
@@ -346,6 +364,7 @@ def _trend_label(frame: pd.DataFrame, groups: np.ndarray, column: str, kind: str
     return f"{'Increasing' if correlation > 0 else 'Decreasing'} ({abs(correlation):.2f})"
 
 
+@recordable
 def _status(score: float, threshold: float) -> str:
     if not np.isfinite(score):
         return "Excluded"
@@ -358,6 +377,7 @@ def _status(score: float, threshold: float) -> str:
     return "Stable"
 
 
+@recordable
 def _analyse_homogeneity(
     data: proxy_data,
     *,
@@ -500,6 +520,7 @@ def _analyse_homogeneity(
     )
 
 
+@recordable
 def _homogeneity_figure(
     analysis: HomogeneityAnalysis,
     *,
@@ -650,6 +671,7 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -663,6 +685,7 @@ def instance():
 
 
         @reactive.effect
+        @this.record_context
         def UpdateSequenceChoices():
             choices = _sequence_candidates(incomingproxy_data())
             keys = list(choices)
@@ -674,6 +697,7 @@ def instance():
             ui.update_select("Sequence", choices=choices, selected=selected)
 
         @reactive.effect
+        @this.record_context
         def UpdateVariableChoices():
             choices, _ = _eligible_columns(incomingproxy_data())
             with reactive.isolate():
@@ -685,6 +709,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Options():
             req(input.Sequence() is not None)
             return {
@@ -697,26 +722,30 @@ def instance():
 
         @busy.track("Comparing distributions through the observation sequence…")
         @this.extended_task
+        @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
             return await asyncio.to_thread(_analyse_homogeneity, data, **options)
 
         @this.reactable()
+        @this.record_context
         def StartAnalysis():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Analysis():
             return Calculate.result()
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render_widget
+        @this.record_context
         def DriftChart():
             full_screen = bool(this.isFullScreen())
             figure = _homogeneity_figure(
@@ -731,11 +760,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Summary():
             return ui.output_data_frame(id="SummaryTable")
 
         @output
         @render.data_frame
+        @this.record_context
         def SummaryTable():
             table = Analysis().summary
             return render.DataTable(
@@ -744,6 +775,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Check():
             analysis = Analysis()
             strong = int(analysis.summary["Status"].eq("Strong").sum()) if not analysis.summary.empty else 0

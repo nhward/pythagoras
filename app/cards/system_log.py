@@ -13,6 +13,7 @@ if __name__ == "__main__":
 
 import pandas as pd
 from card import Card
+from code_recording import recordable
 from faicons import icon_svg as icon
 from module import Module
 from shiny import reactive, render, ui
@@ -29,6 +30,7 @@ MESSAGE_COLUMN_STYLE = {
 }
 
 
+@recordable
 def _log_frame(
     records: list[dict[str, object]],
     *,
@@ -133,6 +135,7 @@ def instance():
 
     def server(input, output, session):
         @this.reactable(calc=True)
+        @this.record_context
         def LogFrame():
             input.Refresh()
             if input.AutoRefresh():
@@ -146,6 +149,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def LogTable():
             return render.DataGrid(
                 LogFrame(),
@@ -157,6 +161,7 @@ def instance():
 
         @output
         @render.text
+        @this.record_context
         def Status():
             count = len(LogFrame())
             noun = "record" if count == 1 else "records"

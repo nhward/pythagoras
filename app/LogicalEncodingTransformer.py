@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 
+@recordable
 class LogicalEncodingTransformer(TransformerMixin, BaseEstimator):
     """Encode False as 0 and True as 1, preserving missing observations."""
 

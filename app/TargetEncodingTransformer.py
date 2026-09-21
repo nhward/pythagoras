@@ -5,9 +5,10 @@ from inspect import signature
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import TargetEncoder
 from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.preprocessing import TargetEncoder
 from sklearn.utils.validation import check_is_fitted
 
 METHODS = {
@@ -17,6 +18,7 @@ METHODS = {
 }
 
 
+@recordable
 class TargetEncodingTransformer(TransformerMixin, BaseEstimator):
     """Learn only from fit-time outcomes; transform never reads the target.
 

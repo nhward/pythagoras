@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
+import re
 import sys
+from collections import OrderedDict
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -12,19 +18,13 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import asyncio
-import logging
-import os
-import re
-from collections import OrderedDict
-from collections.abc import Callable
-from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import collect_job_code, recordable, recorded_job
 from cyclic_pandas import is_cyclic
 from joblib import Parallel, delayed
 from list_pandas import is_list
@@ -66,6 +66,7 @@ def _navbar_changes(
     return removed, added
 
 
+@recordable
 @dataclass
 class TreeAnalysis:
     """The fitted tree and the quantities used to assess it."""
@@ -78,6 +79,7 @@ class TreeAnalysis:
     branches: int
 
 
+@recordable
 def _benjamini_hochberg(p_values: pd.Series) -> pd.Series:
     """Adjust finite p-values using the Benjamini-Hochberg FDR procedure."""
     values = pd.to_numeric(p_values, errors="coerce").to_numpy(dtype=float)
@@ -97,15 +99,18 @@ def _benjamini_hochberg(p_values: pd.Series) -> pd.Series:
     return pd.Series(adjusted, index=p_values.index, dtype=float)
 
 
+@recordable
 def _missing_variables(frame: pd.DataFrame) -> list[str]:
     """Return columns containing at least one missing value."""
     return [column for column in frame.columns if frame[column].isna().any()]
 
 
+@recordable
 def _is_geometry(series: pd.Series) -> bool:
     return getattr(series.dtype, "name", None) == "geometry"
 
 
+@recordable
 def _eligible_predictors(
     frame: pd.DataFrame,
     *,
@@ -153,12 +158,14 @@ def _eligible_predictors(
     return columns
 
 
+@recordable
 def _mode_or_default(series: pd.Series, default: object) -> object:
     """Return a deterministic non-missing mode, or a supplied default."""
     modes = series.dropna().mode()
     return modes.iloc[0] if not modes.empty else default
 
 
+@recordable
 def _circular_median(series: pd.Series) -> float:
     """Return the observed position minimizing total circular distance."""
     values = series.cyclic.codes().dropna().to_numpy(dtype=float)
@@ -173,6 +180,7 @@ def _circular_median(series: pd.Series) -> float:
     return float(candidates[np.argmin(distances.sum(axis=1))])
 
 
+@recordable
 def _list_items(donors: list[list[object]]) -> list[object]:
     """Return stable, representation-distinct items found in donor lists."""
     items: dict[tuple[str, str], object] = {}
@@ -183,6 +191,7 @@ def _list_items(donors: list[list[object]]) -> list[object]:
     return [items[key] for key in sorted(items)]
 
 
+@recordable
 def _impute_list_values(
     series: pd.Series,
     donors: list[list[object]],
@@ -203,6 +212,7 @@ def _impute_list_values(
     return result
 
 
+@recordable
 def _encode_list_values(
     values: list[list[object]],
     items: list[object],
@@ -221,6 +231,7 @@ def _encode_list_values(
     return converted
 
 
+@recordable
 def _fit_design_matrix(
     frame: pd.DataFrame,
     columns: list[str],
@@ -305,6 +316,7 @@ def _fit_design_matrix(
     return matrix, specifications
 
 
+@recordable
 def _transform_design_matrix(
     frame: pd.DataFrame,
     specifications: list[dict[str, object]],
@@ -357,12 +369,14 @@ def _transform_design_matrix(
     return pd.DataFrame(converted, index=frame.index, dtype=float)
 
 
+@recordable
 def _design_matrix(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Convert mixed Pandas columns using encodings learned from the frame."""
     matrix, _ = _fit_design_matrix(frame, columns)
     return matrix
 
 
+@recordable
 def _prepare_tree_data(
     frame: pd.DataFrame,
     *,
@@ -407,6 +421,7 @@ def _prepare_tree_data(
     return matrix, truth, task, weights, working, predictors
 
 
+@recordable
 def _fit_missingness_tree(
     frame: pd.DataFrame,
     *,
@@ -453,6 +468,7 @@ def _fit_missingness_tree(
     )
 
 
+@recordable
 def _fold_balanced_accuracies(
     working: pd.DataFrame,
     predictors: list[str],
@@ -500,6 +516,7 @@ def _fold_balanced_accuracies(
     )
 
 
+@recordable
 def _classification_diagnostics(
     frame: pd.DataFrame,
     *,
@@ -597,6 +614,7 @@ def _classification_diagnostics(
     return result
 
 
+@recordable
 def _fold_r_squared_scores(
     working: pd.DataFrame,
     predictors: list[str],
@@ -644,6 +662,7 @@ def _fold_r_squared_scores(
     )
 
 
+@recordable
 def _regression_diagnostics(
     frame: pd.DataFrame,
     *,
@@ -732,6 +751,7 @@ def _regression_diagnostics(
     return result
 
 
+@recordable
 def _interpret_regression_model(
     diagnostics: dict[str, object],
     *,
@@ -763,6 +783,7 @@ def _interpret_regression_model(
     return "Random"
 
 
+@recordable
 def _interpret_missingness_models(
     table: pd.DataFrame,
     *,
@@ -802,6 +823,7 @@ def _interpret_missingness_models(
     return result
 
 
+@recordable
 def _classification_diagnostics_chunk(
     payload: tuple[
         pd.DataFrame,
@@ -840,6 +862,7 @@ def _classification_diagnostics_chunk(
     return rows
 
 
+@recordable
 def _missingness_table(
     frame: pd.DataFrame,
     *,
@@ -909,13 +932,13 @@ def _missingness_table(
     else:
         # Loky's reusable process backend is safe to invoke from Shiny's server
         # thread and reuses workers across subsequent reactive evaluations.
-        chunk_rows = Parallel(
+        chunk_rows = collect_job_code(Parallel(
             n_jobs=process_count,
             backend="loky",
         )(
-            delayed(_classification_diagnostics_chunk)(payload)
+            delayed(recorded_job)(_classification_diagnostics_chunk, payload)
             for payload in payloads
-        )
+        ))
 
     rows = [row for chunk in chunk_rows for row in chunk]
     table = pd.DataFrame(rows, columns=columns)
@@ -950,6 +973,7 @@ def _missingness_row_styles(table: pd.DataFrame) -> list[dict[str, object]]:
             })
     return styles
 
+@recordable
 def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
     """Draw a fitted scikit-learn decision tree using Plotly annotations."""
     if analysis.model is None or analysis.branches == 0:
@@ -1292,6 +1316,7 @@ def instance():
             return value
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -1306,64 +1331,78 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinMissProp():
             return input.MinMissProp()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinLeafSamples():
             return input.MinLeafSamples()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxTreeDepth():
             return input.MaxTreeDepth()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinFoldFraction():
             return input.MinFoldFraction()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinRSquared():
             return input.MinRSquared()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def MinImprovement():
             return input.MinImprovement()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Alpha():
             return input.Alpha()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def CVFolds():
             return input.CVFolds()
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
             
         @this.record_code
-        @this.settle(seconds=2)
-        def PreparedData():
-            samp =  incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
+        def _prepare_data(source, maximum):
+            samp =  source.sample(n=maximum, mode="random", keep_geometry=True)
             return samp
 
-        @this.reactable(calc=True)
-        def MissingVariables():
-            minimum_missing_proportion = float(MinMissProp())
-            proxy = PreparedData()
+        @this.record_context
+        @this.settle(seconds=2)
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
+        @this.record_code
+        def _selected_missing_variables(minimum, data):
+            minimum_missing_proportion = float(minimum)
+            proxy = data
             frame = proxy.frame
             predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
             return [
@@ -1376,6 +1415,12 @@ def instance():
             ]
 
         @this.reactable(calc=True)
+        @this.record_context
+        def MissingVariables():
+            return _selected_missing_variables(MinMissProp(), PreparedData())
+
+        @this.reactable(calc=True)
+        @this.record_context
         def SelectedTarget() -> str:
             """Return a valid target while dynamic nav panels are binding."""
             target = input.Target()
@@ -1386,6 +1431,7 @@ def instance():
         registered_tree_outputs: set[str] = set()
 
         @this.reactable(triggers=[MissingVariables])
+        @this.record_context
         def UpdateChoices():
             nonlocal current_tabs, restored_target_pending
             desired_tabs = tuple(map(str, MissingVariables()))
@@ -1482,13 +1528,13 @@ def instance():
             )
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def Model():
             proxy = PreparedData()
             return _cached_model(proxy, SelectedTarget())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def RegressionDiagnostics():
             proxy = PreparedData()
             _activate_cache(proxy)
@@ -1520,6 +1566,7 @@ def instance():
 
         @busy.track("Classifying missingness types…")
         @this.extended_task
+        @this.record_context
         async def CalculateTypeTable(
             frame: pd.DataFrame,
             options: dict[str, object],
@@ -1533,10 +1580,12 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @this.reactable()
+        @this.record_context
         def StartTypeTable():
             """Snapshot reactive values and start a nonblocking table calculation."""
             proxy = PreparedData()
@@ -1567,7 +1616,7 @@ def instance():
             CalculateTypeTable.invoke(frame, options)
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def TypeTable():
             """Return the latest table or signal that calculation is in progress."""
             return CalculateTypeTable.result()
@@ -1576,6 +1625,7 @@ def instance():
         def register_tree(output_id):
             @output(id=output_id)
             @render_widget
+            @this.record_context
             def _():
                 figure = _tree_figure(Model())
                 figure.update_layout(
@@ -1595,6 +1645,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Tree():
             if not MissingVariables():
                 return Card.empty_figure("There are no significantly missing variables")
@@ -1616,11 +1667,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             return ui.output_data_frame(id="Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             req(TypeTable() is not None)
             table = TypeTable().copy()
@@ -1638,6 +1691,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Summary():
             req(this.isFront())
             if not MissingVariables():

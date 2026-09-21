@@ -1,14 +1,17 @@
 """DataFrame-preserving text features fitted inside sklearn training pipelines."""
 from __future__ import annotations
+
 import copy
 import hashlib
-from pathlib import Path
 import re
 import string
 import warnings
 from functools import lru_cache
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from scipy import sparse
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import TruncatedSVD
@@ -25,12 +28,14 @@ TOKEN=re.compile(r'(?u)\b\w+\b')
 MAX_TEXT_CHARS=10_000_000
 
 
+@recordable
 @lru_cache(maxsize=1)
 def sentiment_model():
     from vendor.vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
     return SentimentIntensityAnalyzer()
 
 
+@recordable
 def embedding_identity(path):
     p=Path(path)
     if not p.is_file():raise ValueError('Load a pretrained Word2Vec text file to enable embeddings.')
@@ -38,6 +43,7 @@ def embedding_identity(path):
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
+@recordable
 @lru_cache(maxsize=2)
 def _load_vectors(path,digest):
     if embedding_identity(path)!=digest:raise ValueError('Embedding resource changed; reload the model.')
@@ -61,6 +67,7 @@ def _load_vectors(path,digest):
     return vectors,width
 
 
+@recordable
 def _texts(series):
     values=[]; missing=[]
     for value in series:
@@ -72,6 +79,7 @@ def _texts(series):
     return values,np.asarray(missing,dtype=bool)
 
 
+@recordable
 def characteristics(text):
     words=TOKEN.findall(text);length=len(text);den=max(length,1)
     return [length,len(words),np.mean(list(map(len,words))) if words else 0,
@@ -80,6 +88,7 @@ def characteristics(text):
         sum(c.isspace() for c in text)/den,text.count('?'),text.count('!')]
 
 
+@recordable
 class TextEncodingTransformer(TransformerMixin,BaseEstimator):
     def __init__(self,columns,*,methods=('bow',),remove_original=True,weighting='tfidf',
                  analyzer='word',ngram_max=1,lowercase=True,strip_accents=False,stop_words=None,
@@ -127,8 +136,8 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
                      'Missing':int(missing.sum()),'Empty':sum(not t.strip() for t in valid),'Outputs':0,
                      'Generated columns':'','Notes':''}
                 try:
-                    if not valid or not any(t.strip() for t in valid):
-                        if method!='characteristics':raise ValueError('No nonempty documents; no features generated.')
+                    if not valid or not any(t.strip() for t in valid) and method!='characteristics':
+                        raise ValueError('No nonempty documents; no features generated.')
                     model={}
                     if method in ('bow','lsa'):
                         vectorizer=self._vectorizer();matrix=vectorizer.fit_transform(valid)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -11,8 +12,6 @@ if __name__ == "__main__":
     root_string = str(ROOT)
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
-
-from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -121,10 +120,12 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -139,19 +140,23 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Qgram():
             return max(1, int(input.Qgram()))
 
-        @this.reactable(calc=True)
         @this.record_code
-        def PreparedData():
-            samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
+        def _prepare_data(source, maximum):
+            samp = source.sample(n=maximum, mode="random", keep_geometry=True)
             return samp
 
         @this.reactable(calc=True)
+        @this.record_context
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
         @this.record_code
-        def CleanDf():
-            pxd = PreparedData()
+        def _clean_frame(data):
+            pxd = data
             predictors = pxd.role_map.columns_with_role(Role.PREDICTOR)
             frame = pxd.frame
             if not isinstance(frame, pd.DataFrame):
@@ -171,6 +176,11 @@ def instance():
                 if str(column).startswith(Card.SHADOW_PREFIX)
             )
             return pd.DataFrame(frame.drop(columns=list(excluded), errors="ignore")).copy()
+
+        @this.reactable(calc=True)
+        @this.record_context
+        def CleanDf():
+            return _clean_frame(PreparedData())
 
         @this.record_code
         def _safe_scale(values: np.ndarray) -> np.ndarray:
@@ -309,14 +319,14 @@ def instance():
             return result
 
         @this.record_code
-        def _value_correlation_distance(frame: pd.DataFrame) -> np.ndarray:
+        def _correlation_distance(frame, robust):
             count = frame.shape[1]
             result = np.full((count, count), np.nan, dtype=float)
             np.fill_diagonal(result, 0.0)
             numeric = frame.select_dtypes(include=["number"]).select_dtypes(exclude=["bool"])
             if numeric.empty:
                 return result
-            if input.Robust():
+            if robust:
                 correlation = numeric.corr(method="spearman", min_periods=2).abs()
             else:
                 correlation = numeric.corr(method="pearson", min_periods=2).abs()
@@ -327,6 +337,10 @@ def instance():
                     if pd.notna(value):
                         result[positions[left], positions[right]] = 1 - float(value)
             return result
+
+        @this.record_context
+        def _value_correlation_distance(frame: pd.DataFrame) -> np.ndarray:
+            return _correlation_distance(frame, input.Robust())
 
         @this.record_code
         def _missingness_distance(frame: pd.DataFrame, *, min_events: int = 1) -> np.ndarray:
@@ -371,10 +385,9 @@ def instance():
             np.fill_diagonal(distance, 0.0)
             return distance
 
-        @this.reactable(calc=True)
         @this.record_code
-        def DissimilarityMatrix():
-            pxd = PreparedData()
+        def _dissimilarity_matrix(data, robust, qgram):
+            pxd = data
             predictors = pxd.role_map.columns_with_role(Role.PREDICTOR)
             frame = pxd.frame
             if not isinstance(frame, pd.DataFrame):
@@ -388,11 +401,11 @@ def instance():
             count = len(names)
             if count == 0:
                 return pd.DataFrame(dtype=float)
-            stats = _numeric_stats(frame, robust=bool(input.Robust()))
+            stats = _numeric_stats(frame, robust=bool(robust))
             matrices = [
                 _cosine_rows(stats.to_numpy()),
-                _string_cosine(names, Qgram()),
-                _value_correlation_distance(frame),
+                _string_cosine(names, qgram),
+                _correlation_distance(frame, robust),
                 _missingness_distance(frame)
             ]
             weights = np.asarray([1, 1, 5, 1], dtype=float)  # Herein lies the BIG assumption (heavy weighting to correlation)
@@ -411,6 +424,11 @@ def instance():
             result = np.clip((result + result.T) / 2, 0, 2)
             np.fill_diagonal(result, 0.0)
             return pd.DataFrame(result, index=names, columns=names)
+
+        @this.reactable(calc=True)
+        @this.record_context
+        def DissimilarityMatrix():
+            return _dissimilarity_matrix(PreparedData(), input.Robust(), Qgram())
 
         @this.record_code
         def _divisive_linkage(distance: np.ndarray) -> np.ndarray:
@@ -542,6 +560,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
             matrix = DissimilarityMatrix()
             fig = _hierarchy_figure(
@@ -578,12 +597,14 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Table():
             req(PreparedData() is not None)
             return ui.output_data_frame(id = "Table2")
 
         @output
         @render.data_frame
+        @this.record_context
         def Table2():
             req(DissimilarityMatrix() is not None)
             matrix = DissimilarityMatrix().round(3)

@@ -22,6 +22,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from plotly.colors import qualitative
 from plotly.subplots import make_subplots
@@ -34,6 +35,7 @@ from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 
 
+@recordable
 def _variables(data, include_target=False):
     roles = {Role.PREDICTOR, Role.TARGET} if include_target else {Role.PREDICTOR}
     return [c for c in data.columns if data.role_map.roles_for(c) & roles
@@ -43,12 +45,14 @@ def _variables(data, include_target=False):
             and not pd.api.types.is_complex_dtype(data.frame[c].dtype)]
 
 
+@recordable
 def _stratifiers(data):
     allowed_roles = {Role.STRATIFIER, Role.TREATMENT, Role.SENSITIVE}
     return [c for c in data.columns if allowed_roles.intersection(data.role_map.roles_for(c))
             and not data.frame[c].map(lambda x: isinstance(x, (list, dict, set, tuple, np.ndarray))).any()]
 
 
+@recordable
 def _sample(codes, limit):
     """Proportional deterministic sample, retaining at least one row per stratum."""
     if len(codes) <= limit:
@@ -66,6 +70,7 @@ def _sample(codes, limit):
     return np.sort(np.concatenate([rng.choice(g, size=int(n + 1), replace=False) for g, n in zip(groups, extra)]))
 
 
+@recordable
 def _anova(groups, method):
     groups = [np.asarray(g, dtype=float) for g in groups]
     k = len(groups)
@@ -111,6 +116,7 @@ def _anova(groups, method):
     return result
 
 
+@recordable
 def _adjust_p(values):
     result = np.full(len(values), np.nan)
     positions = np.flatnonzero(np.isfinite(values))
@@ -121,6 +127,7 @@ def _adjust_p(values):
     return result
 
 
+@recordable
 @dataclass
 class Distributions:
     variables: list = field(default_factory=list)
@@ -138,6 +145,7 @@ class Distributions:
     stratifier: str = ''
 
 
+@recordable
 def _analyze(data, variables, stratifier='', *, include_target=False, limit=5000,
              normalization='none', method='ordinary', max_strata=12):
     result = Distributions(normalization=normalization, stratifier=stratifier)
@@ -217,6 +225,7 @@ def _analyze(data, variables, stratifier='', *, include_target=False, limit=5000
     return result
 
 
+@recordable
 def _figure(result, *, kind='violin', points=False, inner_box=True, notches=False, mean=False):
     if result.error:
         return Card.empty_figure(result.error)
@@ -353,6 +362,7 @@ def instance():
         facet_selection=SelectionRestore(None if saved_facet is None else ([saved_facet] if saved_facet else []))
 
         @reactive.effect
+        @this.record_context
         def ObserveSelections():
             variable_selection.observe(input.Variables() or [])
             facet = input.Stratifier()
@@ -360,6 +370,7 @@ def instance():
 
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -373,6 +384,7 @@ def instance():
 
 
         @this.reactable()
+        @this.record_context
         def Choices():
             data=incomingproxy_data()
             choices=_variables(data,input.IncludeTarget())
@@ -388,6 +400,7 @@ def instance():
         
         @this.reactable(calc=True)
         @this.settle(2)
+        @this.record_context
         def Options():
             return {
                 "variables": list(input.Variables() or []),
@@ -401,16 +414,19 @@ def instance():
 
         @busy.track('Comparing strata distributions…')
         @this.extended_task
+        @this.record_context
         async def Calculate(data,options):
             result=_analyze(data,**options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze,data,**options)
             return data,options,result
         
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(),Options())
         
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             data,options,result=Calculate.result()
             req(data.equals(incomingproxy_data()) and options==Options(),cancel_output=True)
@@ -418,11 +434,13 @@ def instance():
         
         @output
         @render.ui
+        @this.record_context
         def Busy(): 
             return busy.ui()
         
         @output
         @render_widget
+        @this.record_context
         def Plots():
             widget=go.FigureWidget(_figure(Analysis(),kind=input.Kind(),points=input.Points(),inner_box=input.InnerBox(),notches=input.Notches(),mean=input.Mean()))
             widget._config={'displayModeBar':bool(this.isFullScreen()),'displaylogo':False}
@@ -430,17 +448,20 @@ def instance():
 
         @output
         @render.text
+        @this.record_context
         def Status():
             r=Analysis()
             return r.error or f'{r.rows} of {r.eligible} eligible rows; {len(r.variables)} variables; {len(r.levels)} strata. Missing stratum labels: {r.missing_strata}. '+r.note
         
         @output
         @render.data_frame
+        @this.record_context
         def Anova(): 
             return render.DataTable(Analysis().anova.round(4),width='100%',height='auto')
         
         @output
         @render.data_frame
+        @this.record_context
         def Summaries(): 
             return render.DataTable(Analysis().summary.round(5),width='100%',height='auto')
         

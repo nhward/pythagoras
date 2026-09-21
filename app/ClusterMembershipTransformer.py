@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from scipy.spatial.distance import cdist, pdist, squareform
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.cluster import KMeans
@@ -10,6 +11,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.utils.validation import check_is_fitted
 
 
+@recordable
 class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
     """Append an unordered categorical feature without refitting in transform.
 

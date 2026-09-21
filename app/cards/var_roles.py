@@ -15,6 +15,7 @@ if __name__ == "__main__":
 
 import pandas as pd  # needed for test / solo modes
 from card import Card
+from code_recording import recordable
 from faicons import icon_svg as icon
 from module import Module
 from proxy_data import proxy_data as Pxy
@@ -167,6 +168,7 @@ def _reconcile_restored_role_map(
     return restored, warnings
 
 
+@recordable
 def _apply_roles(data: Pxy, role_map: RoleMap) -> Pxy:
     """Apply committed roles to the latest input, retaining its current metadata."""
     retained, retained_roles, removed = _retained_role_state(
@@ -323,6 +325,7 @@ def instance():
         protected_role_map: dict[str, list[str]] | None = None
 
         @this.reactable(calc = True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -337,15 +340,22 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.reactable(calc = True)
-        def PreparedData():
-            samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
+        @this.record_code
+        def _prepare_data(source, maximum):
+            samp = source.sample(n=maximum, mode="random", keep_geometry=True)
             return samp
 
+        @this.reactable(calc = True)
+        @this.record_context
+        def PreparedData():
+            return _prepare_data(incomingproxy_data(), MaxObs())
+
         @this.reactable()
+        @this.record_context
         def PxdChange():
             data = incomingproxy_data()
             # Only upstream changes trigger replay. Reading settings in isolation
@@ -366,6 +376,7 @@ def instance():
                 OutputData.set(data)
 
         @this.reactable(triggers = [PreparedData])
+        @this.record_context
         async def PopulateRoles():
             nonlocal restored_roles_consumed, protected_columns, protected_role_map
             if not this.has_input_data():
@@ -417,25 +428,30 @@ def instance():
 
         @output
         @render.table
-        @this.record_code
+        @this.record_context
         def Assignments():
             orm = OutputData.get().role_map
             return orm.roles_to_frame()
 
-        @this.reactable(calc = True)
         @this.record_code
+        def _validate_roles(data, role_map, separator, low_cardinality):
+            return data.validate(role_map=role_map, separator=separator,
+                                 low_cardinality=low_cardinality)
+
+        @this.reactable(calc = True)
+        @this.record_context
         def ValidateMap():
             req(input.role_map())
             this.log.debug("☑️ Validating changes")
-            # Convert the json to the RoleMap class
-            rm = RoleMap.from_primitive(input.role_map())
-            pxd = PreparedData()
-            msgs = pxd.validate(role_map = rm, separator = input.Separator(), low_cardinality = input.CardinalityThreshold()) 
-            return msgs
+            return _validate_roles(
+                PreparedData(), RoleMap.from_primitive(input.role_map()),
+                input.Separator(), input.CardinalityThreshold(),
+            )
 
 
         #### Committed  event ----
         @this.reactable(calc = True)
+        @this.record_context
         def Committed():
             req(input.role_map())
             data = incomingproxy_data()
@@ -444,6 +460,7 @@ def instance():
 
         #### Commit event ----
         @this.reactable(triggers = [input.Commit])
+        @this.record_context
         def CommitEvent():
             nonlocal accepted_role_map
             req(not ValidateMap())
@@ -453,6 +470,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         async def Check():
             messages = ValidateMap()
             ok = len(messages) == 0

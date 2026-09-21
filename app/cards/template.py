@@ -14,6 +14,13 @@ DESIGN CHECKLIST
   position in the current input, not necessarily the original source file.
 * Separate analysis from plotting so full-screen, tab and display-only changes
   do not retrain models. Pure helpers should be testable without Shiny.
+* Mark reusable computations and transformer classes with @recordable. Put
+  @this.record_context INSIDE Shiny render/reactive/extended-task decorators.
+  It scopes shared-helper recordings to this card without displaying callbacks.
+  For local helpers use @this.record_code. Read controls in callbacks and pass
+  explicit arguments to recorded helpers; keep UI updates and task results out.
+  Only functions actually called are listed. For joblib workers use recorded_job
+  and collect_job_code (see miss_impute/miss_type); to_thread inherits context.
 * Explain methods, units, denominators and uncertainty. A ranking is not a
   probability. Make disagreement and unavailable results visible.
 * Add markdown/<new_name>.qmd from markdown/template.qmd and render its HTML
@@ -45,6 +52,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from shiny import render, req, ui
@@ -55,6 +63,7 @@ MUTABLE = False  # Change to True only when this card exports modified proxy dat
 ACTION = "Remove completely empty rows"  # Example only; replace for a real card.
 
 
+@recordable
 def _analyze(source: proxy_data) -> pd.DataFrame:
     """Pure analysis: no reactive reads, UI updates or mutation of source here."""
     frame = source.frame
@@ -64,6 +73,7 @@ def _analyze(source: proxy_data) -> pd.DataFrame:
     }).sort_values("Missing cells", ascending=False, kind="stable")
 
 
+@recordable
 def _apply(source: proxy_data, *, enabled: bool, card_name: str) -> proxy_data:
     """Example mutable boundary. Never assign into source.frame or its roles."""
     if not enabled or source.has_pipeline:
@@ -88,6 +98,34 @@ def _apply(source: proxy_data, *, enabled: bool, card_name: str) -> proxy_data:
     # Supply roles for added columns, avoid naming collisions, handle unseen
     # categories, and preserve row order. Do not replace the incoming pipeline.
     # For metadata-only changes, clone the proxy and use its supported setters.
+
+
+@recordable
+def _figure(result, *, top=10, full_screen=False):
+    table = result.head(int(top))
+    if table.empty:
+        figure = Card.empty_figure("No variables to display.")
+    else:
+        figure = go.Figure(go.Bar(x=table["Variable"], y=table["Missing cells"]))
+        figure.update_layout(
+            title={
+                "text": "my title",
+                'font':{'size':17},
+                'x': 0.5,
+                'xanchor': "center"
+            },
+            template="plotly_white",
+            xaxis_type="category",
+            xaxis_title="Variable",
+            yaxis_title="Missing cells",
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin={"l": 45, "r": 15, "t": 10, "b": 15},
+            plot_bgcolor='#bbd6f8',
+            showlegend=True,
+            modebar={'orientation':'v'},
+            font={"size": 13 if full_screen else 10},
+        )
+    return figure
 
 
 def instance():
@@ -142,9 +180,10 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
-        analyze = this.record_code(_analyze)
+        analyze = _analyze
 
         @this.reactable(calc=True)
+        @this.record_context
         def Incoming():
             try:
                 source = this.input_data()
@@ -157,6 +196,7 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Enabled():
             return MUTABLE and ACTION in (input.Apply() or [])
         # Put expensive-analysis settings in a similarly settled Options calc.
@@ -165,6 +205,7 @@ def instance():
         # Keep display-only settings out of analysis options.
 
         @this.reactable(calc=True)
+        @this.record_context
         def Export():
             source = Incoming()
             if not MUTABLE:
@@ -178,6 +219,7 @@ def instance():
         # Decorator order matters: busy.track goes ABOVE this.extended_task.
         @busy.track("Calculating example summary…")
         @this.extended_task
+        @this.record_context
         async def Calculate(source):
             # Background work must use arguments, never input.* or reactive reads.
             # Pyodide does not provide ordinary Python worker threads. A direct
@@ -187,6 +229,7 @@ def instance():
             return source, table
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(Export().clone())
@@ -194,6 +237,7 @@ def instance():
             # For long work use cooperative cancellation between bounded steps.
 
         @this.reactable(calc=True)
+        @this.record_context
         def Results():
             try:
                 source, table = Calculate.result()
@@ -205,32 +249,11 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
             full = bool(this.isFullScreen())
             try:
-                table = Results().head(int(input.Top()))
-                if table.empty:
-                    figure = Card.empty_figure("No variables to display.")
-                else:
-                    figure = go.Figure(go.Bar(x=table["Variable"], y=table["Missing cells"]))
-                    figure.update_layout(
-                        title={
-                            "text": "my title",
-                            'font':{'size':17},
-                            'x': 0.5,
-                            'xanchor': "center"
-                        },
-                        template="plotly_white", 
-                        xaxis_type="category",
-                        xaxis_title="Variable", 
-                        yaxis_title="Missing cells",
-                        paper_bgcolor="rgba(0,0,0,0)", 
-                        margin={"l": 45, "r": 15, "t": 10, "b": 15},
-                        plot_bgcolor='#bbd6f8',
-                        showlegend=True,
-                        modebar={'orientation':'v'},
-                        font={"size": 13 if this.FullScreen() else 10},
-                    )
+                figure = _figure(Results(), top=int(input.Top()), full_screen=full)
             except SilentException:
                 figure = Card.empty_figure("Waiting for data or calculation.")
             # Use the framework's empty figure for unavailable plots. Do not
@@ -245,17 +268,20 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def Table():
             # Let the card own scrolling; avoid nested fixed-height containers.
             return render.DataTable(Results().round(4), width="100%", height=None)
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.text
+        @this.record_context
         def Status():
             if MUTABLE and Enabled() and Incoming().has_pipeline:
                 return "Cannot remove rows after learning has begun; move this example before the learned pipeline."

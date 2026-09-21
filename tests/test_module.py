@@ -900,3 +900,28 @@ def test_record_code_plain_shiny_calc_source_unavailable_is_benign():
     assert module.retrieve_code('calculated') == '<source not available>'
     with reactive.isolate():
         assert calculated() == 7
+
+
+@pytest.mark.unit
+def test_code_cleanup_preserves_python_and_removes_multiline_framework_decorators():
+    source = '''@output(id="chart")
+@render.plot
+@this.reactable(
+    calc=True,
+)
+@this.record_code
+@cache
+def chart():
+    # Keep @output and @render.plot in explanations.
+    text = "@this.record_code <chart>"
+    return text
+'''
+    cleaned = DummyModule.clean_code(source)
+    assert cleaned.startswith("@cache\ndef chart():")
+    assert '# Keep @output and @render.plot' in cleaned
+    assert '"@this.record_code <chart>"' in cleaned
+    compile(cleaned, "<recorded>", "exec")
+    module = DummyModule("clean-code")
+    module.code_registry["chart"] = source
+    assert "&lt;chart&gt;" in str(module.code_text())
+    assert module.retrieve_code("chart") == source

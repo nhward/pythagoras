@@ -22,12 +22,13 @@ from urllib.parse import urlparse
 import geopandas as gpd
 import pandas as pd
 import requests
-import seaborn  # noqa: F401
+import seaborn
 import sklearn  # noqa: F401
 import statsmodels  # noqa: F401
 import vega_datasets  # noqa: F401
 import xarray as xr
 from card import Card
+from code_recording import recordable
 from faicons import icon_svg as icon
 from module import Module
 from proxy_data import proxy_data as Pxy
@@ -40,6 +41,7 @@ import cards  # noqa: F401
 # TODO: cleanup exception handling
 # TODO: allow URL load to unzip zip files (unlikely to resolve multiple files except shp,shx,prj)
 
+@recordable
 def openml_catalogue(page=1):
     """Retrieve a bounded page of active datasets without an OpenML dependency."""
     page = max(1, int(page))
@@ -61,6 +63,7 @@ def openml_catalogue(page=1):
     return pd.DataFrame(rows, columns=["id", "name", "version", "rows", "columns"])
 
 
+@recordable
 def download_openml(dataset_id):
     """Pin the exact OpenML version by ID and retain features and target."""
     from sklearn.datasets import fetch_openml
@@ -268,6 +271,7 @@ def instance():
         inputs = this._restored_configuration_state.get("inputs", {})
         return inputs.get(name, default)
 
+    @this.record_code
     def _load_sm(name):
         """
         Robust loader for statsmodels datasets.
@@ -325,27 +329,43 @@ def instance():
             )
 
 
+    @this.record_code
+    def _load_seaborn(name):
+        return seaborn.load_dataset(name)
+
+    @this.record_code
+    def _load_xarray(name):
+        import xarray
+        return xarray.tutorial.load_dataset(name)
+
+    @this.record_code
+    def _load_sklearn(name):
+        from sklearn import datasets
+        return getattr(datasets, f"load_{name}")(as_frame=True).frame
+
+    @this.record_code
+    def _load_vega(name):
+        from vega_datasets import data
+        dataset = data(name)
+        return dataset() if callable(dataset) else dataset
+
     DATA_SOURCES={
         "seaborn": {
             "fetch": lambda: __import__("seaborn").get_dataset_names(),
-            "load":  lambda name: __import__("seaborn").load_dataset(name)
+            "load":  _load_seaborn
         },
         "xarray": {
             # "fetch": lambda: sorted(getattr(__import__("xarray").tutorial, "DATASETS", {}).keys()),
             "fetch": lambda: ['air_temperature', 'rasm'],
-            "load":  lambda name: __import__("xarray").tutorial.load_dataset(name)
+            "load":  _load_xarray
         },
         "sklearn": {
             "fetch": lambda: ["iris", "digits", "wine", "breast_cancer"],
-            "load":  lambda name: getattr(__import__("sklearn").datasets, f"load_{name}")(as_frame=True).frame
+            "load":  _load_sklearn
         },
         "vega_datasets": {
             "fetch": lambda: __import__("vega_datasets").data.list_datasets(),
-            "load":  lambda name: (
-                __import__("vega_datasets").data(name)()
-                if callable(__import__("vega_datasets").data(name))
-                else __import__("vega_datasets").data(name)
-            )
+            "load":  _load_vega
         },
         "statsmodels": {
             "fetch": lambda: [
@@ -518,6 +538,7 @@ def instance():
         LastCommittedTab=reactive.Value(restored_committed_tab)
 
         @reactive.extended_task
+        @this.record_context
         async def OpenMLCatalogueTask(page):
             try:
                 return await asyncio.to_thread(openml_catalogue, page), None
@@ -525,6 +546,7 @@ def instance():
                 return None, str(error)
 
         @reactive.extended_task
+        @this.record_context
         async def OpenMLDownloadTask(dataset_id):
             try:
                 return dataset_id, await asyncio.to_thread(download_openml, dataset_id), None
@@ -532,11 +554,13 @@ def instance():
                 return dataset_id, None, str(error)
 
         @this.reactable(triggers=[lambda: input.OpenMLBrowse()])
+        @this.record_context
         def BrowseOpenML():
             OpenMLCatalogueTask.cancel()
             OpenMLCatalogueTask.invoke(input.OpenMLPage())
 
         @reactive.effect
+        @this.record_context
         def UpdateOpenMLCatalogue():
             frame, error = OpenMLCatalogueTask.result()
             if error:
@@ -550,6 +574,7 @@ def instance():
             ui.update_selectize("OpenMLDataset", choices=choices, selected=selected)
 
         @this.reactable(triggers=[lambda: input.OpenMLDownload()])
+        @this.record_context
         def DownloadOpenML():
             OpenMLDownloadTask.cancel()
             OpenMLDownloadTask.invoke(str(input.OpenMLDataset() or ""))
@@ -567,6 +592,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def OpenMLStatus():
             messages = []
             try:
@@ -586,6 +612,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def FilePickerUI():
             if Module.runtime_mode(session) == "local":
                 if not native_file_picker_available():
@@ -702,12 +729,14 @@ def instance():
         this.configuration_state = configuration_state
 
         @this.reactable(calc=True)
+        @this.record_context
         def ExportedData():
             data = CommittedData()
             req(data is not None)
             return data
 
         @this.reactable(calc=True)
+        @this.record_context
         def TempFilePath():
             if Module.runtime_mode(session) == "local":
                 local_path=input.LocalFilePath()
@@ -735,6 +764,7 @@ def instance():
             html += "</ul>"
             return html
 
+        @this.record_code
         def read_file(path, sep=",", sheet=None , **kwargs):
             """Dispatch a file source to its format-specific reader."""
             ext=os.path.splitext(path)[1].lower()
@@ -792,6 +822,10 @@ def instance():
                 return d
             raise ValueError(f"Unsupported file extension: {ext}")
 
+        @this.record_code
+        def _load_uci(name):
+            return fetch_ucirepo(name=name).data.original
+
         def load_data(import_tab):
             if import_tab == "File based":
                 if TempFilePath() is None:
@@ -822,17 +856,16 @@ def instance():
                 if Module.runtime_mode(session) == "shinylive":
                     raise ValueError("UC Irvine imports are unavailable in Shinylive")
                 req(input.UciDataset())
-                uci=fetch_ucirepo(name=input.UciDataset())
-                return uci.data.original
+                return _load_uci(input.UciDataset())
             raise ValueError(f"Unknown data-import tab {import_tab!r}")
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def GetData():
             return load_data(input.Navset())
 
         @this.reactable(calc=True)
-        @this.record_code
+        @this.record_context
         def GetPxyData():
             if GetData() is None:
                 return None
@@ -841,7 +874,7 @@ def instance():
         ###Generic summary for the type of dataset ----
         @output
         @render.ui
-        @this.record_code
+        @this.record_context
         def Summary():
 
             def pd_basic_html(df: pd.DataFrame, isFullScreen=False) -> str:
@@ -1025,6 +1058,7 @@ def instance():
         }
 
         @this.reactable(triggers=[input.ServerFile])
+        @this.record_context
         def ServerFile():
             req(input.ServerFile())
             files=input.ServerFile()
@@ -1034,6 +1068,7 @@ def instance():
             ui.update_text(id="FName", value=stem)
 
         @this.reactable(triggers=[input.NativeFilePicker])
+        @this.record_context
         async def NativeFilePicker():
             if Module.runtime_mode(session) != "local":
                 return
@@ -1059,6 +1094,7 @@ def instance():
 
 
         @this.reactable()
+        @this.record_context
         def DatasetName():
             req(input.Dataset())
             if (
@@ -1072,6 +1108,7 @@ def instance():
             ui.update_text(id="DName", value=stem)
 
         @this.reactable()
+        @this.record_context
         def UciDatasetName():
             req(input.UciDataset())
             if (
@@ -1086,11 +1123,13 @@ def instance():
                 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
+        @this.record_context
         def Url():
             return input.Url()
 
 
         @this.reactable(triggers=[Url])
+        @this.record_context
         def Url2():
             req(Url())
             if (
@@ -1117,6 +1156,7 @@ def instance():
         #### Check ----
         @output
         @render.ui
+        @this.record_context
         async def Check():
             if input.Navset() == "OpenML":
                 data = openml_preview()
@@ -1246,6 +1286,7 @@ def instance():
             LastCommittedTab.set(import_tab)
 
         @this.reactable(triggers=[input.Commit])
+        @this.record_context
         async def CommitEvent():
             commit_import(input.Navset())
 
@@ -1319,6 +1360,7 @@ def instance():
 
         if restored_committed_tab:
             @reactive.effect
+            @this.record_context
             def RestoreCommittedImport():
                 nonlocal restore_finished
                 if restore_finished:

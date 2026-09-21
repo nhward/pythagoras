@@ -15,6 +15,7 @@ if __name__=='__main__':
 import numpy as np
 import pandas as pd
 from card import Card
+from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
@@ -30,6 +31,7 @@ GUIDES={
  'lsa':'TF–IDF followed by TruncatedSVD, fitted inside training folds. Components are capped by available documents and vocabulary. Displays explained variance and strongest positive/negative terms. Components are associations, not named topics; signs and axes can change between fits. Sparse term matrices remain sparse until the compact component output.',
  'characteristics':'Non-learned counts of characters, Unicode word tokens, lines, questions and exclamations; mean word length and proportions of digits, uppercase letters, ASCII punctuation and whitespace. Fractions use all characters as denominator. Empty text yields zeros; missing text remains missing. Distributions and example measurements are shown.'}
 
+@recordable
 @dataclass
 class AnalysisResult:
     model:TextEncodingTransformer|None=None
@@ -37,12 +39,14 @@ class AnalysisResult:
     error:str=''
 
 
+@recordable
 def _predictors(source):
     return [c for c in source.columns if Role.PREDICTOR in source.role_map.roles_for(c)
         and Role.TARGET not in source.role_map.roles_for(c) and not str(c).startswith(Card.SHADOW_PREFIX)
         and is_text(source.frame[c])]
 
 
+@recordable
 def _analyze(source,**options):
     columns=_predictors(source)
     if not columns:return AnalysisResult()
@@ -52,6 +56,7 @@ def _analyze(source,**options):
     except (ValueError,TypeError,OSError) as error:return AnalysisResult(error=str(error))
 
 
+@recordable
 def _apply(source,result,selected,remove_original=True):
     if result.error or result.model is None or not selected:return source
     model=result.model.select(selected,remove_original)
@@ -67,6 +72,7 @@ def _apply(source,result,selected,remove_original=True):
         preview_frame=frame,added_roles=roles,removed_columns=model.removed_columns_)
 
 
+@recordable
 def _detail(result,method):
     if result.model is None:return pd.DataFrame()
     if method in ('bow','lsa'):return pd.DataFrame(result.model.details_[method])
@@ -189,6 +195,7 @@ def instance():
         busy=this.busy()
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -203,12 +210,14 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(2)
+        @this.record_context
         def Encode():
             return input.Encode() or []
 
 
         @this.reactable(calc=True)
         @this.settle(2)
+        @this.record_context
         def Options():
             upload=input.EmbeddingFile() or []
             path=upload[0]['datapath'] if upload else ''
@@ -236,18 +245,21 @@ def instance():
 
         @busy.track('Preparing text features…')
         @this.extended_task
+        @this.record_context
         async def Calculate(source, options):
             result=_analyze(source, **options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze,source, **options)
             return source,options,result
 
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(incomingproxy_data().clone(), Options())
 
 
         @this.reactable(calc=True)
+        @this.record_context
         def Analysis():
             source,options,result=Calculate.result()
             req(source.equals(incomingproxy_data()) and options==Options())
@@ -255,6 +267,7 @@ def instance():
 
 
         @this.reactable(calc=True)
+        @this.record_context
         def Export():
             source=incomingproxy_data()
             selected=tuple(Encode())
@@ -267,6 +280,7 @@ def instance():
 
             @output(id=f'Message_{method}')
             @render.ui
+            @this.record_context
             def message():
                 result=Analysis()
                 if result.error:
@@ -280,6 +294,7 @@ def instance():
 
             @output(id=f'Summary_{method}')
             @render.data_frame
+            @this.record_context
             def summary():
                 result=Analysis()
                 rows=[r for r in result.model.summary_ if r['Method']==METHODS[method]] if result.model else []
@@ -288,6 +303,7 @@ def instance():
 
             @output(id=f'Detail_{method}')
             @render.data_frame
+            @this.record_context
             def detail():
                 return render.DataTable(_detail(Analysis(),method), width='100%', height='auto')
 
@@ -297,6 +313,7 @@ def instance():
 
         @output
         @render.text
+        @this.record_context
         def Status():
             selected=Encode()
             if not selected:
@@ -315,6 +332,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def AuditSummary():
             source=incomingproxy_data()
             out=Export()
@@ -324,6 +342,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def AuditTable():
             selected=Encode()
             rows=[]
@@ -349,6 +368,7 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
         

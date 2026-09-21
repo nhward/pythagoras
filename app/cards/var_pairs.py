@@ -17,6 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from code_recording import recordable
 from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
@@ -37,6 +38,7 @@ PALETTE = ["#3978a8", "#e6ab02", "#d95f02", "#1b9e77", "#7570b3", "#e7298a", "#6
 PAIR_COLUMNS = ["X", "Y", "Chart", "Sampled rows", "Plotted rows", "Omitted rows", "Note"]
 
 
+@recordable
 def _kind(series):
     kind = var_kind(series)
     if kind in {"integer", "decimal", "date-time", "duration"}:
@@ -46,6 +48,7 @@ def _kind(series):
     return kind
 
 
+@recordable
 def _eligible(source, target=True):
     allowed = {Role.PREDICTOR, Role.TREATMENT} | ({Role.TARGET} if target else set())
     return [c for c in source.frame if not str(c).startswith(Card.SHADOW_PREFIX)
@@ -54,12 +57,14 @@ def _eligible(source, target=True):
             and _kind(source.frame[c]) in {"numeric", "categorical", "cyclic"}]
 
 
+@recordable
 def _facets(source):
     return [c for c in source.frame if source.role_map.has_role(c, Role.STRATIFIER)
             and not str(c).startswith(Card.SHADOW_PREFIX)
             and var_kind(source.frame[c]) not in {"geometry", "basket", "complex", "unknown"}]
 
 
+@recordable
 @dataclass
 class Column:
     name: str
@@ -72,6 +77,7 @@ class Column:
     ticktext: list | None = None
 
 
+@recordable
 @dataclass
 class Pairs:
     figure: go.Figure
@@ -81,6 +87,7 @@ class Pairs:
     notes: list[str]
 
 
+@recordable
 def _limits(values):
     finite = values[np.isfinite(values)]
     if not len(finite):
@@ -92,15 +99,15 @@ def _limits(values):
     return lo, hi
 
 
+@recordable
 def _categorical(series, maximum=MAX_LEVELS):
     """Preserve declared ordering; bound levels without dropping observations."""
     if not all(pd.api.types.is_scalar(value) for value in series):
         return np.full(len(series), np.nan), [], "Non-scalar values cannot be charted."
     if isinstance(series.dtype, pd.CategoricalDtype):
-        levels = list(series.cat.categories)
-        observed = series.dropna().unique()
-        levels = [v for v in levels if v in observed]
-        codes = pd.Categorical(series, categories=levels).codes.astype(float)
+        observed = series.cat.remove_unused_categories()
+        levels = list(observed.cat.categories)
+        codes = observed.cat.codes.to_numpy(dtype=float)
     else:
         raw, levels = pd.factorize(series, sort=False)
         codes = raw.astype(float)
@@ -130,6 +137,7 @@ def _categorical(series, maximum=MAX_LEVELS):
     return codes, labels, note
 
 
+@recordable
 def _column(name, series):
     kind = _kind(series)
     labels, note, ticks, text = [], "", None, None
@@ -165,6 +173,7 @@ def _column(name, series):
     return Column(str(name), kind, values, labels, limits, note, ticks, text)
 
 
+@recordable
 def _cells(n, layout):
     """Exactly one orientation of every unordered pair, no symmetric repeats."""
     for row in range(1, n):
@@ -172,6 +181,7 @@ def _cells(n, layout):
             yield (col, row) if layout == "checker" and (row + col) % 2 == 0 else (row, col)
 
 
+@recordable
 def _chart_type(x, y):
     if "cyclic" in (x.kind, y.kind) and x.kind != y.kind:
         return "Polar scatter" if "numeric" in (x.kind, y.kind) else "Polar bars"
@@ -184,6 +194,7 @@ def _chart_type(x, y):
     return "Scatter"
 
 
+@recordable
 def _build(source, variables, facet=NONE, limit=1000, target=True, layout="lower"):
     names = list(dict.fromkeys(c for c in variables if c in _eligible(source, target)))[:MAX_VARIABLES]
     total = len(source.frame)
@@ -363,6 +374,7 @@ def _build(source, variables, facet=NONE, limit=1000, target=True, layout="lower
     return Pairs(fig, pd.DataFrame(records, columns=PAIR_COLUMNS), len(frame), total, notes)
 
 
+@recordable
 def _display(result, full):
     fig = go.Figure(result.figure)
     fig.update_layout(showlegend=full, hovermode="closest" if full else False,
@@ -430,15 +442,17 @@ def instance():
         selection = SelectionRestore(this.restored_configuration_input("Variables"))
         saved = this.restored_configuration_input("Facet")
         facet_selection = SelectionRestore(None if saved is None else [] if saved == NONE else [saved])
-        build = this.record_code(_build)
+        build = _build
 
         @reactive.effect
+        @this.record_context
         def ObserveSelections():
             selection.observe(input.Variables() or [])
             value = input.Facet()
             facet_selection.observe([value] if value and value != NONE else [])
 
         @this.reactable(calc=True)
+        @this.record_context
         def Incoming():
             try:
                 source = this.input_data()
@@ -448,6 +462,7 @@ def instance():
             return source
 
         @this.reactable()
+        @this.record_context
         def Choices():
             source = Incoming()
             eligible = _eligible(source, bool(input.Target()))
@@ -461,22 +476,26 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=1)
+        @this.record_context
         def Options():
             return (tuple(input.Variables() or [])[:MAX_VARIABLES], input.Facet() or NONE,
                     int(10 ** input.Limit()), bool(input.Target()), input.Layout())
 
         @busy.track("Drawing variable pairs…")
         @this.extended_task
+        @this.record_context
         async def Calculate(source, options):
             result = build(source, *options) if Module.IS_SHINYLIVE else await asyncio.to_thread(build, source, *options)
             return source, options, result
 
         @this.reactable()
+        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(Incoming().clone(), Options())
 
         @this.reactable(calc=True)
+        @this.record_context
         def Results():
             try:
                 source, options, result = Calculate.result()
@@ -487,6 +506,7 @@ def instance():
 
         @output
         @render_widget
+        @this.record_context
         def Chart():
             full = bool(this.isFullScreen())
             try:
@@ -499,11 +519,13 @@ def instance():
 
         @output
         @render.ui
+        @this.record_context
         def Busy():
             return busy.ui()
 
         @output
         @render.text
+        @this.record_context
         def Status():
             r = Results()
             return f"{r.sampled:,} of {r.total:,} rows sampled; {len(r.table)} pairs. Pairwise missing values omitted. " + " ".join(r.notes)

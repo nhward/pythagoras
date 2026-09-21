@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from cyclic_pandas import is_cyclic
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 
+@recordable
 class CyclicEncodingTransformer(TransformerMixin,BaseEstimator):
     """Map each cyclic predictor to sin(theta), cos(theta), theta=2*pi*x/P.
 

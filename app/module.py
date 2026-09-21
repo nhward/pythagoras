@@ -39,6 +39,7 @@
 ##    Create cards method that looks for files in "cards" and imports them and calls their instance() method
 ##      application(): method that creates the shiny app object
 ##      Run(): method that either runs the single-card app in the viewer
+import ast
 import asyncio
 import functools
 import html
@@ -47,9 +48,7 @@ import io
 import json
 import logging
 import numbers
-import re
 import sys
-import textwrap
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -63,6 +62,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import shinywidgets as _sw
+from code_recording import recordable, recording_context, source_for
 from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
 from shiny import App, reactive, req, ui
@@ -947,44 +947,117 @@ class Module(ABC):
             w.resume()
 
 
+    def record_context(self, func):
+        """Scope helper recording to this card; do not display UI/task plumbing.
+
+        Place inside reactive, render, settle and extended-task decorators so the
+        context is entered when the callback executes, including after awaits.
+        """
+        return recording_context(self.code_registry, func)
+
     def record_code(self, func):
-        """
-        Decorator to record source code of a function and store 
-        this on the instance.
-        """
-        try:
-            # Grab the source, dedent so it runs cleanly
-            source = textwrap.dedent(inspect.getsource(inspect.unwrap(func)))
-        except (OSError, TypeError):
-            source = "<source not available>"
+        """Record a computational function when called, including its helpers."""
         if not inspect.isroutine(func):
-            # A reactive object is already decorated: keep its identity, caching,
-            # async behavior and lifecycle controls rather than wrapping it again.
+            # Preserve already-created reactive objects and lifecycle controls.
+            # Prefer record_code INSIDE the reactive decorator for run-only capture.
             name = getattr(func, "__name__", type(func).__name__)
-            self.code_registry[name] = source
+            self.code_registry[name] = source_for(func)
             return func
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            self.code_registry[func.__name__] = source
-            return func(*args, **kwargs)
-        return wrapper
-    
+        return recording_context(self.code_registry, recordable(func))
+
     def retrieve_code(self, func_name):
         # Retrieve recorded code
         if func_name not in self.code_registry:
             raise ValueError(f"{func_name} not recorded")
         return self.code_registry[func_name]
 
-    # be careful of html in comments as this will be enacted
+    @staticmethod
+    def clean_code(source):
+        """Prepare script-oriented source without changing the live functions.
+
+        Parse decorator boundaries rather than matching arbitrary text: decorators
+        can span lines, and comments/strings may contain the same spellings.
+        Computational decorators (for example dataclass or cache) are retained.
+        Shiny readiness guards become ordinary assertions, and application log
+        statements become pass statements (so suites remain valid). Inputs and
+        async bodies are not rewritten: record helpers beneath those layers.
+        """
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return source
+        removed = set()
+        framework = {
+            "record_code", "record_context", "recordable", "reactable", "settle", "extended_task",
+            "capture_print", "capture.print", "busy.track",
+        }
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            for decorator in node.decorator_list:
+                expression = decorator.func if isinstance(decorator, ast.Call) else decorator
+                name = ast.unparse(expression)
+                owner, _, member = name.partition(".")
+                if (name in {"output", "render_widget", "record_code", "recordable"}
+                        or owner in {"render", "reactive"}
+                        or member in framework):
+                    removed.update(range(decorator.lineno, decorator.end_lineno + 1))
+        lines = source.splitlines(keepends=True)
+        offsets = [0]
+        for line in lines:
+            offsets.append(offsets[-1] + len(line))
+
+        def position(line, column):
+            # AST column offsets are UTF-8 byte offsets, not character offsets.
+            return offsets[line - 1] + len(lines[line - 1].encode()[:column].decode())
+
+        edits = [(offsets[line - 1], offsets[line], "") for line in removed]
+        for node in ast.walk(tree):
+            # Worker recordings are transport metadata, not part of the analysis.
+            # Unwrap their collection while leaving the Parallel expression intact.
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == "collect_job_code" and len(node.args) == 1
+                    and not node.keywords):
+                argument = node.args[0]
+                edits.extend([
+                    (position(node.lineno, node.col_offset),
+                     position(argument.lineno, argument.col_offset), ""),
+                    (position(argument.end_lineno, argument.end_col_offset),
+                     position(node.end_lineno, node.end_col_offset), ""),
+                ])
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Call)
+                    and isinstance(node.func.func, ast.Name) and node.func.func.id == "delayed"
+                    and len(node.func.args) == 1 and isinstance(node.func.args[0], ast.Name)
+                    and node.func.args[0].id == "recorded_job" and node.args):
+                plain = ast.Call(
+                    func=ast.Call(func=ast.Name(id="delayed", ctx=ast.Load()),
+                                  args=[node.args[0]], keywords=[]),
+                    args=node.args[1:], keywords=node.keywords,
+                )
+                edits.append((position(node.lineno, node.col_offset),
+                              position(node.end_lineno, node.end_col_offset), ast.unparse(plain)))
+            if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+                continue
+            call = node.value
+            name = ast.unparse(call.func)
+            if name in {"req", "ui.req", "shiny.req"} and call.args:
+                conditions = " and ".join(f"({ast.unparse(arg)})" for arg in call.args)
+                replacement = f"assert {conditions}"
+            elif name.startswith("this.log."):
+                replacement = "pass"
+            else:
+                continue
+            edits.append((position(node.lineno, node.col_offset),
+                          position(node.end_lineno, node.end_col_offset), replacement))
+        for start, end, replacement in sorted(edits, reverse=True):
+            source = source[:start] + replacement + source[end:]
+        return source.strip() + "\n"
+
     def code_text(self):
         lines = []
-        for name, code in self.code_registry.items():
-            code = re.sub(r"@render\.(\w+)", r"# returns a \1", code)
-            code = re.sub("@output", "", code)
-            code = re.sub(r"@this\.record_code\s*", "", code)
-            code = re.sub(r"@this\.capture\.print\s*", "", code)
-            code = html.escape(code)
-            lines.append(f'<h3># {name}</h3><pre>{code}</pre>')
+        for name, code in list(self.code_registry.items()):
+            code = html.escape(self.clean_code(code))
+            lines.append(f'<h3># {html.escape(name)}</h3><pre>{code}</pre>')
         return _ui.HTML("<hr>".join(lines))
 
     def settle(self, seconds: float = 2, bypass_during_tests: bool = True):

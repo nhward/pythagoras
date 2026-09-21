@@ -5,6 +5,7 @@ from datetime import date, datetime, time
 
 import numpy as np
 import pandas as pd
+from code_recording import recordable
 from cyclic_pandas import as_cyclic
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -30,6 +31,7 @@ LUNAR_PERIOD = 29.530588
 LUNAR_ORIGIN = pd.Timestamp('2001-01-24 13:07:00')
 
 
+@recordable
 def inspect_time(series):
     """Return (kind, timezone, warning); no strings or durations are parsed."""
     values = list(series.dropna())
@@ -62,6 +64,7 @@ def inspect_time(series):
     return kind, zone, warning
 
 
+@recordable
 class TimeEncodingTransformer(TransformerMixin, BaseEstimator):
     """Append numeric and cyclic features; preserve the schema chosen at fitting.
 

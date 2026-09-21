@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import difflib
 import os
 import sys
+from collections.abc import Hashable, Mapping, Sequence
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -12,12 +14,10 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import difflib
-from collections.abc import Hashable, Mapping, Sequence
-
 import numpy as np
 import pandas as pd
 from card import Card
+from code_recording import recordable
 from cyclic_pandas import as_cyclic, is_cyclic_like
 from faicons import icon_svg as icon
 from geometry_pandas import as_geometry, is_geometry_like
@@ -54,6 +54,7 @@ _CONVERTIBLE_TYPES = {
 }
 
 
+@recordable
 def _order_as_list(value) -> list[str]:
     """Return the table's legacy comma-separated order as JSON-safe values."""
     if value is None or value == "":
@@ -65,6 +66,7 @@ def _order_as_list(value) -> list[str]:
     return []
 
 
+@recordable
 def _modification_plan(schema: pd.DataFrame) -> list[dict[str, object]]:
     """Serialize only rows whose proposed definition differs from its source."""
     plan: list[dict[str, object]] = []
@@ -368,6 +370,7 @@ def instance():
         restored_commit_pending = bool(restored_committed)
 
         @this.reactable(calc=True)
+        @this.record_context
         def incomingproxy_data():
             try:
                 value = this.input_data()
@@ -382,13 +385,19 @@ def instance():
 
         @this.reactable(calc = True)
         @this.settle(2)
+        @this.record_context
         def MaxObs():
             return 10**input.MaxObs()
 
-        @this.reactable(calc=True)
-        def PreparedData() -> pxd:
-            samp = incomingproxy_data().sample(n=MaxObs(), mode="random", keep_geometry=True)
+        @this.record_code
+        def _prepare_data(source, maximum):
+            samp = source.sample(n=maximum, mode="random", keep_geometry=True)
             return samp
+
+        @this.reactable(calc=True)
+        @this.record_context
+        def PreparedData() -> pxd:
+            return _prepare_data(incomingproxy_data(), MaxObs())
 
         def current_levels(plan) -> dict[str, list[str]]:
             """Return stable text levels for restored ordered conversions."""
@@ -417,6 +426,7 @@ def instance():
             return levels
 
         @this.reactable()
+        @this.record_context
         def PxdChange():
             nonlocal restored_commit_pending
             data = incomingproxy_data()
@@ -447,6 +457,7 @@ def instance():
             CommittedPlan.set([])
 
         @this.reactable(calc = True)
+        @this.record_context
         def Schema():
             def first_role(column: str) -> str:
                 roles = px.role_map.get_roles(column)
@@ -481,6 +492,7 @@ def instance():
         reconciliation_warnings: set[str] = set()
 
         @this.reactable(calc=True)
+        @this.record_context
         def CurrentSchema():
             schema, warnings = _reconcile_modification_plan(
                 Schema(),
@@ -519,6 +531,7 @@ def instance():
 
         @output
         @render.data_frame
+        @this.record_context
         def Table():
             schema = CurrentSchema()
             req(schema is not None)
@@ -530,6 +543,7 @@ def instance():
         selection_scheduled = False
 
         @this.reactable()
+        @this.record_context
         def schedule_initial_selection():
             nonlocal selection_scheduled
             if selection_scheduled:
@@ -559,6 +573,7 @@ def instance():
             session.on_flushed(apply_initial_selection, once=True)
 
         @this.reactable(calc=True)
+        @this.record_context
         def selected_row():
             return Table.data_view(selected=True)
 
@@ -604,6 +619,7 @@ def instance():
                 ProposedPlan.set(plan)
 
         @this.reactable(calc=True)
+        @this.record_context
         def allowed_d_types():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -665,6 +681,7 @@ def instance():
                 return sensible
 
         @this.reactable()
+        @this.record_context
         async def RowChange():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -685,6 +702,7 @@ def instance():
             ui.update_selectize(id="NewOrder", choices=order, selected=order)
             
         @this.reactable(triggers=[input.NewName])
+        @this.record_context
         async def validate_new_name():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -710,6 +728,7 @@ def instance():
             await Table.update_data(df)
 
         @this.reactable(triggers = [input.NewDataType])
+        @this.record_context
         async def TypeChange():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -731,6 +750,7 @@ def instance():
                 ui.update_selectize(id = "NewOrder", choices = None, selected = None)
 
         @this.reactable()
+        @this.record_context
         def AltChange():
             input.Alternatives() # create dependency that is not rejected for being the same row
             row = selected_row()
@@ -746,6 +766,7 @@ def instance():
                 )
                 
         @this.reactable(triggers=[input.NewOrder])
+        @this.record_context
         async def validate_new_order():
             row = selected_row()
             req(row is not None, not row.empty)
@@ -774,6 +795,7 @@ def instance():
         @output
 
         @render.ui
+        @this.record_context
         def DFDiff():
             old_lines = _dataframe_structure_text(incomingproxy_data().frame)
             new_lines = _dataframe_structure_text(OutputData.get().frame)
@@ -799,9 +821,11 @@ def instance():
                 return []
             return [item.strip() for item in value.split(",") if item.strip()]
 
-        def _apply_modifications(
+        @this.record_code
+        def _modify_data(
             data: pxd,
             table_data: pd.DataFrame,
+            formats: list[str],
             converter=None,
         ) -> pxd:
             """Apply one complete reconciled schema to incoming proxy data."""
@@ -817,7 +841,7 @@ def instance():
                         series=d[name],
                         new_type=newType,
                         order=newOrder,
-                        formats=_configured_formats(),
+                        formats=formats,
                     )
                     changes.append({
                         "variable": name,
@@ -847,8 +871,11 @@ def instance():
                 operation="Modify variable definitions",
             )
 
+        def _apply_modifications(data, table_data, converter=None):
+            return _modify_data(data, table_data, _configured_formats(), converter)
+
         @this.reactable(triggers=[input.Commit])
-        @this.record_code
+        @this.record_context
         def CommitEvent():
             data = incomingproxy_data()
             table_data = CurrentSchema()
@@ -858,6 +885,7 @@ def instance():
             )
 
         @this.reactable(triggers=[input.Reset])
+        @this.record_context
         async def Reset():
             #reset the Table's data
             df = CurrentSchema().copy()
@@ -876,6 +904,7 @@ def instance():
             await Table.update_data(df)
 
 
+        @this.record_code
         def _unique_non_na(series: pd.Series) -> pd.Series:
             """
             Return unique non-missing values as a Series.
@@ -883,6 +912,7 @@ def instance():
             return pd.Series(series.dropna().unique())
 
 
+        @this.record_code
         def is_numeric_like(
             series: pd.Series,
             *,
@@ -935,6 +965,7 @@ def instance():
             return bool(valid.mean() >= threshold)
 
 
+        @this.record_code
         def is_integer_like(
             series: pd.Series,
             *,
@@ -1035,6 +1066,7 @@ def instance():
             return bool(valid.mean() >= threshold)
 
 
+        @this.record_code
         def is_date_like(
             series: pd.Series,
             *,
@@ -1169,6 +1201,7 @@ def instance():
             return bool(parsed.notna().mean() >= threshold)
 
 
+        @this.record_code
         def is_nominal_like(
             series: pd.Series,
             *,
@@ -1264,6 +1297,7 @@ def instance():
             )
 
 
+        @this.record_code
         def is_ordered_like(
             series: pd.Series,
             *,
