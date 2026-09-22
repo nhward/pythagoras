@@ -901,7 +901,7 @@ fill: var(--bs-primary) !important;
 <p>The result is a system that addresses both: - the <strong>data problem</strong> (cleaning, transforming, modeling) - the <strong>workflow problem</strong> (how analysis is structured, communicated, and reproduced)</p>
 <hr>
 <h2 id="core-concepts">Core Concepts</h2>
-<h3 id="cards">🧩 Cards</h3>
+<h3 id="cards">🏞️ Cards</h3>
 <p>A <strong>card</strong> is the fundamental unit of computation and interaction.</p>
 <p>Each card:</p>
 <ul>
@@ -913,7 +913,7 @@ fill: var(--bs-primary) !important;
 <h4 id="standard-features">Standard Features</h4>
 <p>Every card can support:</p>
 <ul>
-<li>🔄 <strong>Flip view</strong> (front = visualization, back = summary/metadata)</li>
+<li>🔄 <strong>Flip view</strong> (front = visualization, back = summary/raw-data)</li>
 <li>⚙️ <strong>Settings sidebar</strong> (there when you need them)</li>
 <li>🧾 <strong>Code extraction</strong> (view and collect executable snippets)</li>
 <li>📖 <strong>Documentation</strong> (quarto-driven modal window)</li>
@@ -926,9 +926,9 @@ fill: var(--bs-primary) !important;
 <h3 id="workflow-ordered-cards">🔗 Workflow = Ordered Cards</h3>
 <p>A workflow is defined by:</p>
 <ol type="1">
-<li><strong>Initial dataset</strong></li>
-<li><strong>Ordered linear sequence of cards</strong></li>
-<li><strong>User interactions within each card</strong></li>
+<li><strong>Initial dataset</strong> of tabular data (i.e. rows and columns)</li>
+<li><strong>Ordered linear sequence of cards</strong> each configured with settings</li>
+<li><strong>User interactions within each card</strong> that modify the dataset</li>
 </ol>
 <p>This is a key architectural choice.</p>
 <hr>
@@ -1015,15 +1015,16 @@ fill: var(--bs-primary) !important;
 <li><a href="app/www/markdown/var_roles.html">Role assignment</a> What roles do the variables play?</li>
 <li><a href="app/www/markdown/var_modify.html">Variable modification</a> Are the data types appropriate?</li>
 <li><a href="app/www/markdown/var_cardinality.html">Variable cardinality</a> Is the cardinality plausible?</li>
+<li><a href="app/www/markdown/var_pairs.html">Variable pairs plots</a> What does a grid of plots show us?</li>
 </ul>
 <h3 id="data-preview">📊 Data preview</h3>
 <ul>
 <li><a href="app/www/markdown/data_coverage.html">Data coverage</a> How well are all facets represented?</li>
-<li>Variable plots</li>
 <li>Variable summary</li>
 <li><a href="app/www/markdown/data_homogeneity.html">Data homogeneity</a> Is the data essentially similar throughout?</li>
 <li><a href="app/www/markdown/var_dissimilar.html">Variable dissimilarity</a> Are any variables near-copies of others?</li>
 <li><a href="app/www/markdown/obs_duplicates.html">Duplicate Observations</a> Are there observational duplicates and near-duplicates?</li>
+<li><a href="app/www/markdown/var_continuous.html">variable continuity</a> Are there gaps in continuous data?</li>
 </ul>
 <h3 id="missing-values">∅ Missing values</h3>
 <ul>
@@ -1042,7 +1043,7 @@ fill: var(--bs-primary) !important;
 <li><a href="app/www/markdown/data_parallel.html">Parallel coordinates</a></li>
 <li><a href="app/www/markdown/var_correlation.html">Variable correlation</a> How similar are variables to each other?</li>
 <li><a href="app/www/markdown/obs_outliers.html">observation outliers</a> Which observations stand out?</li>
-<li>Observation dependence (app/www/markdown/obs_dependence.html) Are observations independent of each other?</li>
+<li><a href="app/www/markdown/obs_dependence.html">Observation dependence</a> Are observations not independent of each other?</li>
 </ul>
 <h3 id="encoding">🆘 Encoding</h3>
 <ul>
@@ -1057,7 +1058,8 @@ fill: var(--bs-primary) !important;
 <li><a href="app/www/markdown/obs_cluster_profile.html">Cluster profiling</a> Can we find an explanation for the clusters?</li>
 <li><a href="app/www/markdown/data_strata.html">Strata comparisons</a> How distinct are the clusters?</li>
 </ul>
-<h3 id="spatial">🌏 Spatial</h3>
+<h3 id="temporal-information">📆 Temporal information</h3>
+<h3 id="spatial-information">🌏 Spatial information</h3>
 <ul>
 <li>Feature roles</li>
 <li>Partitioning</li>

@@ -65,6 +65,7 @@ import shinywidgets as _sw
 from code_recording import recordable, recording_context, source_for
 from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
+from session_task import SessionExtendedTask
 from shiny import App, reactive, req, ui
 from shiny import ui as _ui
 from shiny.types import SilentException
@@ -731,7 +732,7 @@ class Module(ABC):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError("@extended_task requires an async function")
 
-        @reactive.extended_task
+        @SessionExtendedTask
         @functools.wraps(func)
         async def wrapped(*args, **kwargs):
             task_name = func.__name__

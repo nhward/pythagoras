@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from shiny.pytest import create_app_fixture
 
 APP_ROOT = Path(__file__).resolve().parents[2] / "app"
 os.chdir(APP_ROOT)
@@ -200,3 +201,92 @@ def test_manager_card_cannot_be_removed_or_dragged(bookmark_module):
     assert "CloseButton" not in markup
     assert "drag-handle" not in markup
     assert "Save bookmark" in markup
+
+
+@pytest.mark.unit
+def test_purge_matches_dataset_exactly_and_keeps_newest_created(bookmark_module, tmp_path, monkeypatch):
+    names = [
+        'Accounts--20260920T100000+0000.pythagoras.json',
+        'Accounts--20260921T100000+0000.pythagoras.json',
+        'Accounts--20260922T100000+0000.pythagoras.json',
+        'Accounts-extra--20260920T100000+0000.pythagoras.json',
+        'other.json',
+        'invalid.pythagoras.json',
+    ]
+    for name in names:
+        (tmp_path / name).write_text('{}')
+    # Creation order, not lexical timestamps or modification times, is authoritative.
+    created = dict(zip(names, [3, 1, 2, 4, 5, 6]))
+    monkeypatch.setattr(bookmark_module, 'filesystem_creation_time', lambda path: created[path.name])
+    candidates = bookmark_module.purge_candidates('Accounts', tmp_path)
+    assert [p.name for p in candidates] == [names[2], names[1]]
+    assert bookmark_module.purge_local_bookmarks('Accounts', candidates, tmp_path) == 2
+    assert {p.name for p in tmp_path.iterdir()} == set(names) - {names[1], names[2]}
+    assert bookmark_module.purge_candidates('Accounts', tmp_path) == []
+    assert bookmark_module.purge_candidates('missing', tmp_path) == []
+
+
+@pytest.mark.unit
+def test_purge_rechecks_latest_and_never_expands_confirmed_set(bookmark_module, tmp_path, monkeypatch):
+    paths = [tmp_path / f'Data--2026092{i}T100000+0000.pythagoras.json' for i in range(4)]
+    monkeypatch.setattr(bookmark_module, 'filesystem_creation_time', lambda path: paths.index(path))
+    for path in paths[:3]:
+        path.write_text('{}')
+    confirmed = bookmark_module.purge_candidates('Data', tmp_path)
+    paths[3].write_text('{}')
+    assert bookmark_module.purge_local_bookmarks('Data', confirmed, tmp_path) == 2
+    assert paths[2].exists() and paths[3].exists()
+    confirmed = bookmark_module.purge_candidates('Data', tmp_path)
+    paths[3].unlink()
+    assert bookmark_module.purge_local_bookmarks('Data', confirmed, tmp_path) == 0
+    assert paths[2].exists()
+
+
+@pytest.mark.unit
+def test_purge_ignores_symlinks(bookmark_module, tmp_path):
+    target = tmp_path / 'original.json'
+    target.write_text('{}')
+    (tmp_path / 'Data--20260921T100000+0000.pythagoras.json').symlink_to(target)
+    assert bookmark_module.purge_candidates('Data', tmp_path) == []
+    assert target.exists()
+
+
+purge_app = create_app_fixture(app='../scenarios/bookmark_purge.py', scope='function')
+
+
+@pytest.mark.ui
+def test_purge_confirmation_cancel_and_single_file_noop(page, tmp_path, monkeypatch, request, bookmark_module):
+    from playwright.sync_api import expect
+
+    paths = [tmp_path / f'Accounts--2026092{i}T100000+0000.pythagoras.json' for i in range(3)]
+    for path in paths:
+        path.write_text('{}')
+    other = tmp_path / 'Accounts-extra--20260922T100000+0000.pythagoras.json'
+    other.write_text('{}')
+    older = bookmark_module.purge_candidates('Accounts', tmp_path)
+    latest = next(path for path in paths if path not in older)
+    monkeypatch.setenv(bookmark_module.BOOKMARK_DIRECTORY_ENV, str(tmp_path))
+    app = request.getfixturevalue('purge_app')
+    page.goto(app.url)
+    by_id = lambda name: page.locator(f'[id$="-{name}"]')
+    by_id('SelectedDataName').select_option('Accounts')
+    by_id('Purge').click()
+    dialog = page.get_by_role('dialog')
+    expect(dialog).to_contain_text("Delete 2 bookmarks of 'Accounts'?")
+    assert all(path.exists() for path in paths)
+    dialog.get_by_role('button', name='Cancel', exact=True).click()
+    expect(dialog).to_have_count(0)
+    assert all(path.exists() for path in paths)
+    by_id('Purge').click()
+    expect(dialog).to_contain_text("Delete 2 bookmarks of 'Accounts'?")
+    dialog.get_by_role('button', name='Okay', exact=True).click()
+    expect(dialog).to_have_count(0)
+    expect(page.locator('.shiny-notification')).to_contain_text("Deleted 2 bookmarks of 'Accounts'.")
+    assert latest.exists() and other.exists()
+    assert all(not path.exists() for path in older)
+    by_id('SelectedDataName').select_option('Accounts')
+    expect(by_id('SelectedBookmarkTime').locator('option')).to_have_count(1)
+    by_id('Purge').click()
+    page.wait_for_timeout(300)
+    expect(dialog).to_have_count(0)
+    assert latest.exists() and other.exists()

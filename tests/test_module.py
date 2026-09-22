@@ -661,7 +661,7 @@ async def test_extended_task_logs_start_and_elapsed_completion(monkeypatch):
     )
     clock = iter((10.0, 12.3456))
     monkeypatch.setattr(module_lib.time, "perf_counter", lambda: next(clock))
-    monkeypatch.setattr(reactive, "extended_task", lambda function: function)
+    monkeypatch.setattr(module_lib, "SessionExtendedTask", lambda function: function)
 
     @module.extended_task
     async def Calculate(value):
@@ -689,7 +689,7 @@ async def test_extended_task_logs_completion_without_hiding_failure(monkeypatch)
     )
     clock = iter((20.0, 20.5))
     monkeypatch.setattr(module_lib.time, "perf_counter", lambda: next(clock))
-    monkeypatch.setattr(reactive, "extended_task", lambda function: function)
+    monkeypatch.setattr(module_lib, "SessionExtendedTask", lambda function: function)
 
     @module.extended_task
     async def Calculate():

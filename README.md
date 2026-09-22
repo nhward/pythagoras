@@ -27,7 +27,7 @@ The result is a system that addresses both:
 
 ## Core Concepts
 
-### 🧩 Cards
+### 🏞️ Cards
 
 A **card** is the fundamental unit of computation and interaction.
 
@@ -43,7 +43,7 @@ Cards are implemented as Shiny modules with a consistent interface and UI.
 
 Every card can support:
 
-- 🔄 **Flip view** (front = visualization, back = summary/metadata)
+- 🔄 **Flip view** (front = visualization, back = summary/raw-data)
 - ⚙️ **Settings sidebar** (there when you need them)
 - 🧾 **Code extraction** (view and collect executable snippets)
 - 📖 **Documentation** (quarto-driven modal window)
@@ -58,9 +58,9 @@ Every card can support:
 
 A workflow is defined by:
 
-1. **Initial dataset**
-2. **Ordered linear sequence of cards**
-3. **User interactions within each card**
+1. **Initial dataset** of tabular data (i.e. rows and columns)
+2. **Ordered linear sequence of cards** each configured with settings
+3. **User interactions within each card** that modify the dataset
 
 This is a key architectural choice.
 
@@ -176,15 +176,17 @@ Drag-and-drop ordering is handled via:
 * [Role assignment](app/www/markdown/var_roles.html) What roles do the variables play?
 * [Variable modification](app/www/markdown/var_modify.html) Are the data types appropriate?
 * [Variable cardinality](app/www/markdown/var_cardinality.html) Is the cardinality plausible?
+* [Variable pairs plots](app/www/markdown/var_pairs.html) What does a grid of plots show us?
 
 ### 📊 Data preview
 
 * [Data coverage](app/www/markdown/data_coverage.html) How well are all facets represented?
-* Variable plots
 * Variable summary
 * [Data homogeneity](app/www/markdown/data_homogeneity.html) Is the data essentially similar throughout?
 * [Variable dissimilarity](app/www/markdown/var_dissimilar.html) Are any variables near-copies of others?
 * [Duplicate Observations](app/www/markdown/obs_duplicates.html) Are there observational duplicates and near-duplicates? 
+* [variable continuity](app/www/markdown/var_continuous.html) Are there gaps in continuous data? 
+
 
 ### ∅ Missing values
 
@@ -195,15 +197,15 @@ Drag-and-drop ordering is handled via:
 * [Excessive missingness](app/www/markdown/miss_map.html) Is excessive missingness present?
 * [Missingness rules](app/www/markdown/miss_rules.html) Is missingness explainable?
 * [Learned imputation](app/www/markdown/miss_impute.html) How well does learned imputation perform?
-* Manual imputation
+* &&& [Manual imputation]() Values in {variable} are missing when {reason} because the missing values should actually be {value}.
 
 ### 🧠 Preprocessing
 
 * [Variable transforms](app/www/markdown/var_transform.html) Can we make variables have similar distributions?
 * [Parallel coordinates](app/www/markdown/data_parallel.html) 
 * [Variable correlation](app/www/markdown/var_correlation.html) How similar are variables to each other?
-* [observation outliers](app/www/markdown/obs_outliers.html) Which observations stand out? 
-* Observation dependence (app/www/markdown/obs_dependence.html) Are observations independent of each other?
+* [Observation outliers](app/www/markdown/obs_outliers.html) Which observations stand out? 
+* [Observation dependence](app/www/markdown/obs_dependence.html) Are observations not independent of each other?
 
 ### 🆘 Encoding
 
@@ -218,7 +220,11 @@ Drag-and-drop ordering is handled via:
 * [Cluster profiling](app/www/markdown/obs_cluster_profile.html) Can we find an explanation for the clusters?
 * [Strata comparisons](app/www/markdown/data_strata.html) How distinct are the clusters?
 
-### 🌏 Spatial
+### 📆 Temporal information
+* What kind of time series data is this?  (constant interval)
+* Can the missing values be imputed? 
+
+### 🌏 Spatial information
 
 * Feature roles
 * Partitioning

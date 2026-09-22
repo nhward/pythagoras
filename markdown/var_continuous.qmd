@@ -1,0 +1,72 @@
+---
+title: Continuous variables
+---
+
+#### 🧭 Purpose
+
+_The Continuous variables card helps you inspect decimal variables for gaps that histogram bins can conceal. It draws the observed values directly, without bins, and passes the data and learned pipeline through unchanged._
+
+A variable stored as a decimal is not necessarily continuous. It may contain rounded measurements, category codes, fixed increments, or a mixture of populations. This card makes those patterns easier to inspect before deciding how to treat the variable.
+
+#### 🎯 Goals
+
+1. **Primary:** Reveal intervals between observed values without choosing histogram bins.
+1. **Secondary:** Compare the shapes of several decimal variables on one chart.
+1. **Tertiary:** Describe large observed gaps while distinguishing them from repeated-value steps.
+
+#### 🧠 How it works
+
+Eligible variables have the decimal semantic type and either the Predictor or Treatment role. Decimal Target-role variables are also eligible when **Include target** is enabled (off by default), including variables also marked Predictor. Identifier and Weighting roles and shadow variables remain excluded. Integer, logical, categorical, cyclic, and other semantic types are excluded even if their underlying storage is numeric.
+
+When the dataset exceeds **Limit**, the card selects a reproducible random sample of rows before extracting or sorting values. All variables use the same sampled row positions. It then removes missing and infinite values separately for each variable; an incomplete observation in one variable does not remove a valid value from another.
+
+Each variable's finite values are sorted from smallest to largest. The chart plots range-standardized value, (x − min)/(max − min), on the vertical axis and cumulative rank on the horizontal axis. Each nonconstant variable spans 0 to 1; vertical ticks are hidden. Constant variables and single observations are placed at zero. For a variable with *n* finite values, sorted position *i* is plotted at 100 × *i* / *n*. This percentage keeps curves comparable when their finite-value counts differ. Each observed value contributes equally; assigned observation weights are not used.
+
+#### 🏞️ Front
+
+Each variable has a colored line joining its sorted observations. Hover retains original measurement values while the vertical axis standardizes each variable to its observed range. A steep segment spans a gap between consecutive observed values. A horizontal segment reflects repeated values. These are connected rank curves, rather than smoothed density estimates or binned histograms.
+
+Hover identifies the variable, value, cumulative percentage, and ranking position. A variable with only one finite value is shown as a point; a variable with no finite values has no line. The footer reports the number of plotted variables, assessed rows, sampling, and omissions.
+
+Full screen shows the variable legend and enables zoom. Click a legend item to hide or restore its line; double-click to isolate it. Use **Variables** or the legend to focus on a smaller group. Range standardization lets curves with different measurement units share the vertical axis.
+
+#### 🔄 Flip side
+
+The table has one row per selected variable, with targets first, treatments second, and predictors last; source-column order is retained within each group. Floating-point values are displayed to four significant figures. **Finite values**, **Omitted**, **Distinct values**, and **Distinct %** describe the assessed sample, not necessarily the full dataset. Omitted values are missing or infinite entries among the sampled rows.
+
+**Gap from** and **Gap to** bound the largest difference between consecutive sorted values. **Largest gap** is that difference in the variable's original units. **Gap / range %** divides it by the observed maximum minus minimum. If several gaps are equally large, the first is reported.
+
+Gap summaries are withheld when fewer than 90% of finite values are distinct. This is an explicit display rule to avoid emphasizing steps in heavily repeated or rounded data, not a significance threshold. Such variables remain visible in the chart and in the table's count columns. Fewer than two finite values cannot supply a gap summary.
+
+#### 🛠️ Controls and actions
+
+This is a diagnostic card. It has no Apply or Commit action, does not remove observations, and does not add a transformation. Clearing **Variables** leaves an empty chart. Changing the selected variables or **Limit** recalculates the diagnostics; flipping the card or expanding it does not re-sort the data.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting. Initially, **Variables** selects the first 15 eligible variables, prioritizing targets (when enabled), then treatments, then predictors. **Include target** adds decimal targets to the picker; decimal treatments require no setting. Changing this setting preserves existing eligible selections, so newly available targets can be selected in **Variables**. **Limit** is logarithmic: 10^4 means at most 10,000 sampled rows, with a maximum setting of 100,000.
+
+#### 🔎 Interpretation and next steps
+
+A large gap is a description of the observed data, not proof of a discontinuity, data error, or separate population. Sparse tails and ordinary sampling variation can produce gaps. Investigate the reported interval against the original observations, measurement precision, and collection process before changing anything.
+
+#### ⛔️ Limitations
+
+* Sampling can miss intermediate values, exaggerate gaps, or overlook rare groups. Increase **Limit** when investigating a particular interval.
+* Distinct-value percentages also depend on sample size. A sample may appear less repetitive than the full dataset.
+* Chart positions show relative location within each observed range. Hover values and the table's gap widths retain original units, so raw gap widths should not be compared directly across incompatible scales.
+* No distributional model or statistical significance test is fitted. Very large finite magnitudes may exceed the numeric range available for reporting gap widths.
+
+#### 📌 Suggested workflow
+
+1. Check that roles and decimal types reflect the intended measurements.
+1. Choose a manageable set of variables and inspect the sampling message.
+1. Expand the chart, hover over interesting stretches, and isolate individual lines.
+1. Compare the flip-side gap bounds and distinct-value percentages.
+1. Increase the limit and investigate original records before making corrections upstream.
+
+#### 🔗 Data flow
+
+* **Input:** The current dataset, semantic types, and variable roles.
+* **Output:** The same data and learned pipeline, unchanged.
+* **Data journey:** No cleaning operation or learned transformation is added.

@@ -537,7 +537,7 @@ def instance():
         )
         LastCommittedTab=reactive.Value(restored_committed_tab)
 
-        @reactive.extended_task
+        @this.extended_task
         @this.record_context
         async def OpenMLCatalogueTask(page):
             try:
@@ -545,7 +545,7 @@ def instance():
             except Exception as error:  # noqa: BLE001
                 return None, str(error)
 
-        @reactive.extended_task
+        @this.extended_task
         @this.record_context
         async def OpenMLDownloadTask(dataset_id):
             try:

@@ -179,6 +179,26 @@ def list_local_bookmarks(directory: Path | None = None) -> list[dict[str, object
 
 
 @recordable
+def purge_candidates(data_name: str, directory: Path | None = None) -> list[Path]:
+    """Return older bookmarks for exactly this dataset, newest retained."""
+    records = [record for record in list_local_bookmarks(directory)
+               if record["data_name"] == data_name and not record["path"].is_symlink()]
+    return [record["path"] for record in records[1:]]
+
+
+@recordable
+def purge_local_bookmarks(data_name: str, confirmed: list[Path], directory: Path) -> int:
+    """Delete only confirmed files that are still older dataset bookmarks."""
+    candidates = set(purge_candidates(data_name, directory))
+    deleted = 0
+    for path in confirmed:
+        if path in candidates and path.is_file() and not path.is_symlink():
+            path.unlink()
+            deleted += 1
+    return deleted
+
+
+@recordable
 def load_local_bookmark(
     filename: str,
     *,
@@ -290,10 +310,78 @@ def instance(
             guide=this, position="top",
             text="This button loads the selected bookmark by restarting Pythagoras using these settings."
         ),
+        ui.output_ui("PurgeControl"),
         class_="d-flex justify-content-center gap-2",
     )
 
     def server(input, output, session):
+        pending_purge = None
+
+        @output
+        @render.ui
+        def PurgeControl():
+            if Module.runtime_mode(session) != "local":
+                return None
+            return ui.input_action_button(
+                id="Purge", label="Purge", icon=icon("trash"),
+                class_="btn rounded-pill btn-sm btn-outline-danger",
+                guide=this, position="top",
+                text="Delete older bookmarks for the selected data name, keeping the latest.",
+            )
+
+        @reactive.effect
+        @reactive.event(input.Purge)
+        @this.record_context
+        def Purge():
+            nonlocal pending_purge
+            pending_purge = None
+            if Module.runtime_mode(session) != "local":
+                return
+            data_name = input.SelectedDataName()
+            if not data_name:
+                return
+            try:
+                directory = bookmark_directory()
+                candidates = purge_candidates(data_name, directory)
+                if not candidates:
+                    return
+                pending_purge = (data_name, directory, candidates)
+                ui.modal_show(ui.modal(
+                    f"Delete {len(candidates)} bookmarks of '{data_name}'?",
+                    footer=ui.TagList(
+                        ui.input_action_button(id="ConfirmPurge", label="Okay", class_="btn-danger"),
+                        ui.input_action_button(id="CancelPurge", label="Cancel"),
+                    ),
+                    easy_close=False,
+                ))
+            except OSError as error:
+                ui.notification_show(f"Bookmarks could not be listed: {error}", type="error")
+
+        @reactive.effect
+        @reactive.event(input.CancelPurge)
+        def CancelPurge():
+            nonlocal pending_purge
+            pending_purge = None
+            ui.modal_remove()
+
+        @reactive.effect
+        @reactive.event(input.ConfirmPurge)
+        @this.record_context
+        def ConfirmPurge():
+            nonlocal pending_purge
+            pending = pending_purge
+            pending_purge = None
+            if pending is None or Module.runtime_mode(session) != "local":
+                return
+            data_name, directory, candidates = pending
+            try:
+                deleted = purge_local_bookmarks(data_name, candidates, directory)
+                ui.notification_show(f"Deleted {deleted} bookmarks of '{data_name}'.", type="message")
+            except OSError as error:
+                ui.notification_show(f"Bookmarks could not all be deleted: {error}", type="error", duration=None)
+            finally:
+                catalogue_version.set(catalogue_version() + 1)
+                ui.modal_remove()
 
         def validate(configuration):
             if configuration_validator is not None:
