@@ -40,6 +40,7 @@ from module import Module
 from shiny import module, reactive, render, ui
 from shiny.types import SilentException
 
+
 class Card(Module):
     
     def __init__(

@@ -22,3 +22,4 @@ site
 /old_data
 /markdown/old
 /bookmarks/
+/.make/nightly-tests/

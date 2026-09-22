@@ -555,7 +555,7 @@ class TestWebKit:
         name = controller.InputText(page, namespaced_id(page, "NewName"))
         name.set("outcome")
         expect(by_id(page, "Commit")).to_be_enabled()
-        grid.expect_cell("outcome", row=0, col=1)
+        expect(grid.cell_locator(0, 1)).to_have_text("outcome")
 
     @pytest.mark.ui
     def test_reset_restores_pending_rename(self, page: Page, app: ShinyAppProc):
@@ -564,8 +564,12 @@ class TestWebKit:
         grid.expect_selected_rows([0])
         controller.InputText(page, namespaced_id(page, "NewName")).set("outcome")
         expect(by_id(page, "Commit")).to_be_enabled()
+        # Confirm the edit reached the grid before testing its reversal. Use a
+        # retrying locator assertion: expect_cell's preliminary scroll can retain
+        # an element handle while Shiny replaces the table during a render.
+        expect(grid.cell_locator(0, 1)).to_have_text("outcome")
         by_id(page, "Reset").click()
-        grid.expect_cell("y32", row=0, col=1)
+        expect(grid.cell_locator(0, 1)).to_have_text("y32")
 
     @pytest.mark.ui
     def test_commit_and_diff_report_rename(self, page: Page, app: ShinyAppProc):
@@ -606,8 +610,8 @@ class TestWebKit:
         page.goto(restore_app.url)
         grid = controller.OutputDataFrame(page, namespaced_id(page, "Table"))
         grid.expect_nrow(2)
-        grid.expect_cell("decimal", row=0, col=3)
-        grid.expect_cell("cohort", row=1, col=1)
+        expect(grid.cell_locator(0, 3)).to_have_text("decimal")
+        expect(grid.cell_locator(1, 1)).to_have_text("cohort")
         grid.expect_selected_rows([1])
         expect(by_id(page, "NewName")).to_have_value("cohort")
         expect(by_id(page, "NewDataType")).to_have_value("nominal")

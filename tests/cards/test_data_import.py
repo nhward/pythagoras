@@ -13,6 +13,7 @@ if str(path) not in sys.path:
 import geopandas as gpd
 import pandas as pd
 import pytest
+from module import Module
 from playwright.sync_api import Page, expect
 from proxy_data import proxy_data
 from shapely.geometry import Point
@@ -30,7 +31,6 @@ restore_app = create_app_fixture(
     scope="function",
 )
 openml_restore_app = create_app_fixture(app="../scenarios/data_import_openml_restore.py", scope="function")
-_HELPER_CARDS = {}
 
 
 @pytest.fixture(scope="session")
@@ -59,8 +59,19 @@ def deterministic_dataset_catalogues():
 
 
 @pytest.fixture
-def card_module(deterministic_dataset_catalogues):
-    return importlib.import_module("cards.data_import")
+def card_module(deterministic_dataset_catalogues, monkeypatch):
+    # Unit tests have no browser removal event/session teardown. Keep their cards
+    # separate from other tests and release every instance, including direct
+    # instance() calls and helpers whose methods are replaced with test stubs.
+    monkeypatch.setattr(Module, "Instances", {})
+    try:
+        yield importlib.import_module("cards.data_import")
+    finally:
+        for card in list(Module.Instances.values()):
+            if card is not None:
+                card._reuse_cards = True
+                card.reset()
+        assert not Module.Instances
 
 
 @pytest.fixture
@@ -125,10 +136,7 @@ def recorded_helpers(
     local_file_path="",
 ):
     """Expose the server's pure helpers through inert reactive decorators."""
-    card = _HELPER_CARDS.get(card_module)
-    if card is None:
-        card = card_module.instance()
-        _HELPER_CARDS[card_module] = card
+    card = card_module.instance()
     functions = {}
 
     def record(function):
@@ -719,7 +727,7 @@ class TestOpenML:
 
     @pytest.mark.unit
     def test_openml_bookmark_ui(self, card_module):
-        card = _HELPER_CARDS.get(card_module) or card_module.instance()
+        card = card_module.instance()
         card.restore_configuration_state({"inputs": {"Navset": "OpenML", "OpenMLDataset": "61", "OName": "flowers", "OpenMLPage": 2}, "last_committed_tab": "OpenML"})
         assert card._restored_configuration_state["last_committed_tab"] == "OpenML"
         html = str(card.front.tagify())
