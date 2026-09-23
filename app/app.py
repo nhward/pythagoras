@@ -1442,24 +1442,11 @@ def application():
         
 
         @reactive.effect
-        @reactive.event(input.FullScreen)
-        async def FullScreen():
-            """
-            This makes the browser go full screen.
-            Because full-screen is browser specific this may be unreliable.
-            The implememtation is in pythagoras.js
-            """
-            log.info("🙏 Full-screen app requested")
-            await session.send_custom_message("fullscreen_app", None)
-        
-
-        @reactive.effect
         @reactive.event(input.Quit)
         async def Quit():
             """
-            This shuts the browser session down - just like a conventional application.
-            Because closing tabs is browser specific this may be unreliable.
-            The implememtation is in pythagoras.js
+            Close the Shiny session even when the browser refuses to close its tab.
+            The client attempts tab closure and explains the manual-close fallback.
             """
             log.info("🙏 Quit app requested")
             await session.send_custom_message("quit_app", None)

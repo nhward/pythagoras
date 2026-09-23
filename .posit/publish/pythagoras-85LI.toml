@@ -1,0 +1,7 @@
+"$schema" = "https://cdn.posit.co/publisher/schemas/posit-publishing-schema-v3.json"
+type = "html"
+entrypoint = "/site/index.html"
+title = "Pythagoras"
+files = ["/site/**",]
+validate = true
+product_type = "connect_cloud"

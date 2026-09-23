@@ -40,7 +40,7 @@ def bookmark_directory() -> Path:
         if test_directory:
             return Path(test_directory).expanduser().resolve()
         return Path(tempfile.gettempdir()) / f"pythagoras-bookmarks-{os.getpid()}"
-    return Path.home() / "Documents" / "Pythagoras" / "Bookmarks"
+    return Path.home() / "Documents" / "Pythagoras" / "bookmarks"
 
 
 @recordable

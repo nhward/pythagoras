@@ -1,20 +1,23 @@
 """Cluster membership calculations, learned exports, and real-browser workflows."""
 from __future__ import annotations
+
 import os
 import sys
 from pathlib import Path
+
 APP_ROOT = Path(__file__).resolve().parents[2] / "app"
 os.chdir(APP_ROOT)
 sys.path.insert(0, str(APP_ROOT))
+
 import numpy as np
 import pandas as pd
 import pytest
+from cards import obs_clusters as m
 from pandas.testing import assert_frame_equal
 from playwright.sync_api import expect
-from shiny.pytest import create_app_fixture
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from cards import obs_clusters as m
+from shiny.pytest import create_app_fixture
 from threadpoolctl import threadpool_limits
 
 app = create_app_fixture(app="../scenarios/obs_clusters.py", scope="function")
@@ -43,7 +46,7 @@ def source(weighted=False):
     return proxy_data(_df=frame, _roles=roles, _cluster_count=2)
 
 def analyze(data=None, **kwargs):
-    options = dict(projection='pca', neighbours=3, min_points=3)
+    options = {"projection": 'pca', "neighbours": 3, "min_points": 3}
     options.update(kwargs)
     return m._analyze(source() if data is None else data, **options)
 
@@ -166,6 +169,7 @@ def test_tabs_table_export_and_reset(page, app):
     expect(by_id(page, 'TableTitle')).to_contain_text('Divisive membership')
     expect(by_id(page, 'Membership')).to_contain_text('Membership')
     by_id(page, 'FlipButton').click(force=True)
+    by_id(page, 'IncludeMembership').evaluate('(el) => window.originalMembershipControl = el')
     toggle(page, 'Partition').check()
     toggle(page, 'Mixture').check()
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition,cluster_mixture; methods=Partition,Mixture; nominal=True; stratifiers=True')
@@ -173,6 +177,9 @@ def test_tabs_table_export_and_reset(page, app):
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_mixture; methods=Mixture')
     toggle(page, 'Mixture').uncheck()
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')
+    expect(toggle(page, 'Partition')).not_to_be_checked()
+    expect(toggle(page, 'Mixture')).not_to_be_checked()
+    assert by_id(page, 'IncludeMembership').evaluate('(el) => el === window.originalMembershipControl')
     expect(by_id(page, 'ExportStatus')).to_have_count(0)
 
 @pytest.mark.ui
@@ -243,7 +250,6 @@ def test_density_membership_can_be_added_and_removed(page, app):
 
 @pytest.mark.unit
 def test_density_border_rule_and_training_pipeline():
-    from sklearn.base import clone
     r = analyze(source(True), min_points=3)
     model = r.transformers['Density']
     # A synthetic fixed training reference isolates the border prediction rule.

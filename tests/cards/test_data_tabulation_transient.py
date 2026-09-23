@@ -1,6 +1,7 @@
 import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
+
 app=create_app_fixture(app='../scenarios/data_tabulation_transient.py',scope='function')
 pytestmark=pytest.mark.ui
 @pytest.fixture(scope='session')

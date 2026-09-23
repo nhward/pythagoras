@@ -774,7 +774,7 @@ def instance():
                     sep=sep or ("\t" if ext == ".tsv" else ","),
                     **kwargs
                 )
-                object_cols = df.select_dtypes(include="object").columns
+                object_cols = df.select_dtypes(include=["object", "string"]).columns
                 df[object_cols] = df[object_cols].astype("string")
                 if "geometry" in df.columns:
                     try:
@@ -932,7 +932,7 @@ def instance():
                 )
                 # Category summary
                 # cat_cols=df.select_dtypes(include=['object', 'str', 'category'])  Shinylive does not like this line 
-                cat_cols=df.select_dtypes(include=['object', 'category'])
+                cat_cols=df.select_dtypes(include=['object', 'string', 'category'])
                 if cat_cols.empty:
                     cat_html=""
                 else:

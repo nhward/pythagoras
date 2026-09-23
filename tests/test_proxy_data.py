@@ -298,9 +298,9 @@ def test_select_dtypes_include_only_float():
 
 
 @pytest.mark.unit
-def test_select_dtypes_include_int_and_object():
+def test_select_dtypes_include_int_object_and_strings():
     p = make_sample_proxy()
-    p_sel = p.select_dtypes(include=["int", "object"])
+    p_sel = p.select_dtypes(include=["int", "object", "string"])
     cols = list(p_sel._df.columns)
     # ints: y, id; object: txt
     assert cols == ["y", "id", "txt"]
@@ -309,7 +309,7 @@ def test_select_dtypes_include_int_and_object():
 @pytest.mark.unit
 def test_select_dtypes_exclude_object():
     p = make_sample_proxy()
-    p_sel = p.select_dtypes(exclude=["object"])
+    p_sel = p.select_dtypes(exclude=["object", "string"])
     cols = list(p_sel._df.columns)
     # txt should be dropped
     assert "txt" not in cols

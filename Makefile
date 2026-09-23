@@ -76,6 +76,13 @@ shinylive-force:
 	$(SHINYLIVE) export app site
 	touch $(SHINYLIVE_STAMP)
 
+# Requires rsconnect-python in .venv and configured Connect Cloud authentication.
+.PHONY: publish
+# Content fingerprints include recursive app/assets, tests, build scripts, and
+# installed package versions. Changed inputs must pass the full suite first.
+publish:
+	$(PYTHON) scripts/publish.py
+
 clean:
 	rm -f app/www/markdown/*.html
 	rm -f app/www/README.html

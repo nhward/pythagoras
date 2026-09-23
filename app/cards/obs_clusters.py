@@ -456,7 +456,10 @@ def instance():
         @render.ui
         @this.record_context
         def MembershipControl():
-            saved = committed.get()
+            # Saving a choice must not replace the input with a stale selection
+            # while another browser change is already on its way to the server.
+            with reactive.isolate():
+                saved = committed.get()
             disabled = (incomingproxy_data().cluster_count or 1) == 1
             control = ui.input_checkbox_group("IncludeMembership", label=None,
                 choices={"Partition": "Add Partition members", "Mixture": "Add Mixture members", "Density": "Add DBSCAN members"},
@@ -490,7 +493,9 @@ def instance():
                         ui.update_checkbox_group("IncludeMembership", selected=[])
                 reset_pending = False
                 return
-            saved = committed.get()
+            # committed is the result of this effect, not a trigger for it.
+            with reactive.isolate():
+                saved = committed.get()
             plans = {} if saved is None else dict(saved[1])
             if not requested:
                 reset_pending = False

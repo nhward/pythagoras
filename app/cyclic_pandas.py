@@ -196,14 +196,17 @@ class CyclicArray(ExtensionArray):
             raise TypeError("constructing a CyclicArray requires a CyclicDtype")
 
         if dtype.is_categorical:
-            categorical = pd.Categorical(scalars, categories=dtype.categories)
-            codes = categorical.codes.astype(np.int64, copy=copy)
-            # pd.Categorical silently turns unknown labels into missing values.
-            supplied_missing = pd.isna(np.asarray(scalars, dtype=object))
+            values = np.asarray(scalars, dtype=object)
+            supplied_missing = pd.isna(values)
+            # Validate before constructing a Categorical: future pandas rejects
+            # unknown non-null labels instead of quietly assigning missing codes.
+            codes = pd.Index(dtype.categories).get_indexer(values)
             unknown = (codes == -1) & ~supplied_missing
             if unknown.any():
-                bad = np.asarray(scalars, dtype=object)[unknown][0]
+                bad = values[unknown][0]
                 raise ValueError(f"{bad!r} is not in the cyclic categories")
+            codes[supplied_missing] = -1
+            codes = codes.astype(np.int64, copy=copy)
             return cls(codes, dtype, copy=False)
 
         numeric = pd.to_numeric(np.asarray(scalars), errors="raise").astype(float)

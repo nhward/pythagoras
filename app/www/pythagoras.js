@@ -568,22 +568,60 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    window.fullscreen_app = function(msg) {
-        var element = document.documentElement,
-        enterFS = element.requestFullscreen || element.msRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen,
-        exitFS = document.exitFullscreen || document.msExitFullscreen || document.mozCancelFullScreen || document.webkitExitFullscreen;
-        if (!document.fullscreenElement && !document.msFullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement) {
-            enterFS.call(element);
-        } else {
-            exitFS.call(document);
+    // Application window controls: fullscreen must run in the click's activation.
+    function windowControlNotice(message) {
+        let notice = document.getElementById("window-control-notice");
+        if (!notice) {
+            notice = document.createElement("div");
+            notice.id = "window-control-notice";
+            notice.setAttribute("role", "status");
+            notice.style.cssText = "position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:2147483647;background:white;color:#222;padding:1rem;border:1px solid #777;max-width:90vw;box-shadow:0 2px 12px #777";
+            document.body.appendChild(notice);
+        }
+        notice.replaceChildren(document.createTextNode(message + " "));
+        const dismiss = document.createElement("button");
+        dismiss.textContent = "Dismiss";
+        dismiss.addEventListener("click", () => notice.remove());
+        notice.appendChild(dismiss);
+    }
+
+    window.fullscreen_app = async function() {
+        const element = document.documentElement;
+        const current = document.fullscreenElement || document.webkitFullscreenElement;
+        const action = current
+            ? document.exitFullscreen || document.webkitExitFullscreen
+            : element.requestFullscreen || element.webkitRequestFullscreen;
+        try {
+            if (!action) throw new Error("Fullscreen API unavailable");
+            await action.call(current ? document : element);
+        } catch (error) {
+            console.warn("Fullscreen request failed", error);
+            windowControlNotice("Full screen is unavailable here. Use your browser's full-screen command, or open the app directly outside its embedded frame.");
         }
     };
-    Shiny?.addCustomMessageHandler?.("fullscreen_app", window.fullscreen_app);
+    document.addEventListener("click", (event) => {
+        if (event.target.closest?.("#FullScreen")) {
+            event.preventDefault();
+            window.fullscreen_app();
+        }
+        if (event.target.closest?.("#Quit")) {
+            // Leave Shiny's click handling intact so Python closes the session.
+            window.quit_app();
+        }
+    }, true);
 
-    window.quit_app = function(msg) {
-        window.close();
+    window.quit_app = function(_message) {
+        try {
+            window.close();
+        } catch (error) {
+            console.warn("Automatic tab closing was blocked", error);
+        }
+        // window.close() can silently do nothing, particularly inside Shinylive's
+        // iframe. A permitted close removes this notice along with the document.
+        windowControlNotice("Quit requested. If this page remains open, close the browser tab to finish exiting Pythagoras.");
     };
     Shiny?.addCustomMessageHandler?.("quit_app", window.quit_app);
+    // End application window controls.
 
     document.querySelectorAll(".bslib-sidebar-layout.sidebar-collapsed.sidebar-right>.collapse-toggle").forEach((btn) => btn.classList.add("hover-btn"));
 

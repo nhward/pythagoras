@@ -200,12 +200,16 @@ def instance():
             if is_geo:
                 geom_cols = [c for c in df.columns if getattr(df[c].dtype, "name", None) == "geometry"]
                 active_name = df.geometry.name if getattr(df, "geometry", None) is not None else (geom_cols[0] if geom_cols else None)
+                geometry_source = df
+                # Display strings belong in a plain DataFrame, not an active
+                # GeoDataFrame geometry column. Retain CRS metadata separately.
+                df = pd.DataFrame(df.copy())
                 for c in geom_cols:
-                    s = df[c]
+                    s = geometry_source[c]
                     if getattr(s, "crs", None) is not None:
                         crs_map[c] = s.crs.to_string()
-                    elif getattr(df, "crs", None) is not None:
-                        crs_map[c] = df.crs.to_string()
+                    elif getattr(geometry_source, "crs", None) is not None:
+                        crs_map[c] = geometry_source.crs.to_string()
                     else:
                         crs_map[c] = ""
                     # stringify for grid

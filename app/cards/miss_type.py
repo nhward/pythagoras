@@ -263,7 +263,7 @@ def _fit_design_matrix(
             values = series.cyclic.codes().astype("Float64").astype(float).fillna(fill)
             kind = "cyclic"
         elif pd.api.types.is_datetime64_any_dtype(series.dtype):
-            values = series.astype("int64", copy=False).astype("float64")
+            values = series.astype("int64").astype("float64")
             values[series.isna()] = np.nan
             kind = "datetime"
         elif pd.api.types.is_numeric_dtype(series.dtype) and not pd.api.types.is_bool_dtype(series.dtype):
@@ -350,7 +350,7 @@ def _transform_design_matrix(
         if kind == "cyclic":
             values = series.cyclic.codes().astype("Float64").astype(float)
         elif kind == "datetime":
-            values = series.astype("int64", copy=False).astype("float64")
+            values = series.astype("int64").astype("float64")
             values[series.isna()] = np.nan
         elif kind == "ordered":
             values = pd.Series(

@@ -96,7 +96,7 @@ def _feature_frame(
             continue
         name = str(column)
         if pd.api.types.is_datetime64_any_dtype(series.dtype):
-            values = series.astype("int64", copy=False).astype(float)
+            values = series.astype("int64").astype(float)
             values[series.isna()] = np.nan
             converted[name] = values
             numeric.append(name)
