@@ -1,4 +1,5 @@
 """The Code modal exposes executed calculations across card families."""
+import re
 import time
 from pathlib import Path
 
@@ -65,17 +66,24 @@ def test_executed_code_modal(page, request, tmp_path, scenario, expected):
         card.locator('[id$="-Transform"] input[value="Scale"]').check(force=True)
     button = card.locator('[id$="-CodeButton"]')
     deadline = time.monotonic() + 60
+
+    def remaining_ms():
+        return max(1, int((deadline - time.monotonic()) * 1000))
+
+    # A visible card can precede Shiny input binding during startup. A forced
+    # click at that point is lost rather than queued for the server.
+    expect(button).to_have_class(re.compile(r"\bshiny-bound-input\b"), timeout=remaining_ms())
     while True:
-        card.hover()
-        button.click(force=True)
+        card.hover(timeout=remaining_ms())
+        button.click(timeout=remaining_ms())
         dialog = page.get_by_role("dialog")
-        expect(dialog).to_be_visible()
+        expect(dialog).to_be_visible(timeout=remaining_ms())
         headings = dialog.locator("h3").all_text_contents()
         if "# " + expected in headings or time.monotonic() >= deadline:
             break
         # The listing is a snapshot. Reopen it while background work completes.
-        dialog.get_by_role("button", name="Dismiss", exact=True).click()
-        expect(dialog).to_have_count(0)
+        dialog.get_by_role("button", name="Dismiss", exact=True).click(timeout=remaining_ms())
+        expect(dialog).to_have_count(0, timeout=remaining_ms())
         page.wait_for_timeout(350)
     expect(dialog.locator("h3", has_text="# " + expected)).to_be_visible()
     listing = dialog.locator("pre").all_text_contents()
