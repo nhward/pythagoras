@@ -26,6 +26,7 @@ dependencies = [
   "scipy>=1.10",
   "mlxtend>=0.23",
   "scikit-learn>=1.4",
+  "imbalanced-learn>=0.14,<0.15",
   "shinylive==0.8.12",
   "seaborn==0.13.2",
   "statsmodels==0.15.0",
@@ -40,6 +41,8 @@ dependencies = [
   "anyio==4.14.2",
   "typing-extensions==4.16.0",
   "openml==0.15.1",
+  "coverage==7.16.1",
+  "pytest-cov==7.1.0",
 ]
 
 # card, module, cards and roles are local source modules, not PyPI dependencies.

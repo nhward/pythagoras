@@ -213,6 +213,10 @@ Drag-and-drop ordering is handled via:
 * [Date-time encoding](app/www/markdown/var_time_encode.html) What numbers can we extract from dates and times?
 * [Variable encoding](app/www/markdown/var_encode.html) What numbers can we extract from Code, Nominal, Ordered, Cyclic and Logical variables.
 
+### ⚖️ Target preparation
+
+* [Target balance](app/www/markdown/targ_balance.html) Should nominal target classes be reweighted or resampled for training?
+
 ### 💐 Clusters
 
 * [Number of clusters](app/www/markdown/obs_k_clusters.html) How many cluster does the data naturally create?

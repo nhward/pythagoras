@@ -259,6 +259,39 @@ class proxy_data:
         added_roles: RoleMap | None = None,
         removed_columns: _Iterable[str] = (),
     ) -> proxy_data:
+        """Append an unfitted row-preserving transformer and its fitted preview.
+
+        Declare added/removed columns explicitly. Preserve index and column
+        order; retain clean_frame as the source for subsequent training fits.
+        Existing training-only samplers remain in an imblearn Pipeline.
+        """
+        return self._with_learned_step(
+            transformer, name=name, operation=operation, preview_frame=preview_frame,
+            added_roles=added_roles, removed_columns=removed_columns,
+        )
+
+    def with_sampling_step(
+        self, sampler: BaseEstimator, *, name: str,
+        preview_frame: pd.DataFrame, operation: str | None = None,
+        added_roles: RoleMap | None = None,
+    ) -> proxy_data:
+        """Append an unfitted training-only sampler, allowing changed row counts.
+
+        The preview remains separate from clean_frame. Subsequent learned
+        transforms retain the imblearn Pipeline so samplers run only at fit.
+        Samplers receive the role-bearing DataFrame and an aligned target y.
+        """
+        if not callable(getattr(sampler, "fit_resample", None)):
+            raise TypeError("sampler must implement fit_resample")
+        return self._with_learned_step(
+            sampler, name=name, operation=operation, preview_frame=preview_frame,
+            added_roles=added_roles, resampling=True,
+        )
+
+    def _with_learned_step(
+        self, transformer, *, name, operation, preview_frame,
+        added_roles=None, removed_columns=(), resampling=False,
+    ):
         """Return a successor with an unfitted learned transformer appended.
 
         ``preview_frame`` is the card's full-data, fitted result for interactive
@@ -266,7 +299,8 @@ class proxy_data:
         that preview cannot leak into later train/test or cross-validation fits.
         Appended columns must be declared in ``added_roles``. Removals must be
         explicit in ``removed_columns``; remaining column order and row indices
-        stay intact. clean_frame remains the original pipeline input.
+        stay intact except for explicitly registered samplers, which may change
+        rows. clean_frame remains the original pipeline input.
         """
         if not isinstance(transformer, BaseEstimator):
             raise TypeError("transformer must be a scikit-learn estimator")
@@ -291,7 +325,7 @@ class proxy_data:
             if not assigned:
                 raise ValueError("Added pipeline columns require a role")
             roles.set_roles(column, assigned)
-        if not preview_frame.index.equals(self.frame.index):
+        if not resampling and not preview_frame.index.equals(self.frame.index):
             raise ValueError("pipeline steps must preserve the DataFrame index")
 
         base_name = str(name).strip().replace(" ", "_")
@@ -332,13 +366,17 @@ class proxy_data:
             method=type(transformer).__name__,
             variables=tuple(map(str, variables or ())),
         )
+        pipeline_type = Pipeline
+        if resampling or any(callable(getattr(step, "fit_resample", None)) for _, step in steps):
+            from imblearn.pipeline import Pipeline as SamplingPipeline
+            pipeline_type = SamplingPipeline
         return proxy_data(
             _df=preview_frame.copy(),
             _roles=roles,
             _name=self.name,
             _cluster_count=self.cluster_count,
             _cleaning_records=self.cleaning_records,
-            _pipeline=Pipeline(steps),
+            _pipeline=pipeline_type(steps),
             _clean_df=self.clean_frame.copy(),
             _processing_records=(*self.processing_records, processing),
         )

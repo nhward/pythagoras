@@ -1,0 +1,65 @@
+### Objective
+This card's goal is to make the target levels have equal-enough weighted-frequency when run in a (future) "pipeline". Equal-enough is relative to a **multinomial equal-frequency diagnostic**. If the levels are equal-enough, urge that the "None" balancing option is selected.
+Balancing (equal weighted frequency) is done in the expectation that a balanced training set will ultimately produce a better model. This latter assumption can only be tested by allowing this cards main choices to be tunable. Tune-ability is for a later stage of development.
+
+### Eligibility
+
+A targ_balance card only applies to when there is a target (i.e. variable with the Target role) that is Nominal (by semantic data type). If the target is non-nominal or no target is defined, a message on the front should explain that this card is not needed. The buttons should be disabled. The card effectively becomes immutable. 
+
+Missing data should be removed from the data-copy just before the balancing but only if the balancing method demands this. Some methods might tolerate missing values.
+
+For ordinal, cyclic, text, and basket predictors there is no "distance" support in the balancing methods. They will be ignored if the method cannot cope with these types. Warn and advise that this card should come after encoding of these semantic types. Geometry variables currently have no encoding.
+
+
+## Styles
+There are two paths to arriving at a training set that is Balanced:
+
+1. Using additional weights that achieve the balancing directly. For $K$ observed training classes specify: $weighting_k=\frac{ \sum_i a_i}{K \sum_{i:y_i=c}a_i}$ This gives each class equal total weight and gives the training observations mean weight one. It matches sklearn’s balanced-weight convention. [sklearn documentation](https://sklearn.org/stable/modules/generated/sklearn.utils.class_weight.compute_sample_weight.html). A setting controls how the test evaluation employs the learned weights. If the weights role is already is use (as importance weights), the new weights are point-multiplied together to produce aggregate weights. We can overwrite the original weights or create the Weights variable for the first time. 
+
+
+2. Using up-sampling of rare levels and down-sampling of abundant levels can be employed. This should only happen for the training data. There are multiple methods that can do this. Some involve up-sampling observations with added random noise (just to numeric predictors, other roles incl. Identifier must not be altered.) Others involve down-sampling observations such a way as to maintain the diversity of those observations that remain. The test evaluation should always be unaffected by resampling. This method applies whether there are existing weights or not.
+
+3. When the **multinomial equal-frequency diagnostic** allows it, do nothing. If there is is imbalance,later use a modeling method that is least distracted by Target imbalance. Hopefully, the downstream model-picking card can detect the lack of target weighted -balance and hence the need for imbalance-tolerant methods.
+
+## Front screen
+
+Show a grouped-bar chart of the weighted target imbalance (before and after) as a preview of the balancing applied to the entire dataset. The bars could show an **equal-frequency reference band** based upon a **multinomial equal-frequency diagnostic**. Label it advisory.
+Maybe three side-by-side charts in fullscreen:  pie(before), grouped-bar(before/after), pie (after). Be careful to preserve colors and nominal ordering across all sub-plots.
+
+## Flip-side
+
+A compact table on the flip-side would be useful: class, original count, resulting count, class multiplier, and resulting total weight. Show the approximate confidence interval or the **multinomial equal-frequency diagnostic**.
+
+## Settings
+ 
+ - Which UP resampling method(s) to employ: RandomOverSampler, SMOTENC being careful that only predictors are given noise. Mixed data should be assumed - even the data turns out not be mixed.
+ - Which DOWN resampling method(s) to employ: k-medoids, ClusterCentroids, NearMiss, Cluster-stratified, RandomUnderSampler. Mixed data should be assumed - even the data turns out not be mixed.
+ - Numeric distance metric to use: Euclidean, Manhattan; default = Euclidean
+ - Normalization for distance measurement (default = True)
+ - For mixed resampling what count of observation to achieve for each level. Between min level-freq and max level-freq.
+ - For evaluation of test data, whether to use: a) No weights at all, b) Incoming weights only, c) weights multiplied by learned balancing factors. Default is "a".
+ - whether `ClusterCentroids` uses synthetic centroids or original observations via hard voting.
+ - Parameters to support the medoids method
+
+## Footer
+
+ * A re-weight button - to create a new weighting variable & assign it to the Weighting role.
+ * A re-sample button - to up and down sample the training data
+ * No rebalance button - Let the data pass-through unchanged. These are stylized radio buttons (not check boxes); radio group: **None / Reweight / Resample**, defaulting to None. 
+ 
+ No "commit" is required, the buttons alone are sufficient. Returning to None should remove this card’s contribution completely.
+
+The card's behavior should participate in the imblearn.pipeline. An imbalanced-learn pipeline supports training-time samplers through `fit_resample`. It is a solution for re-sampling, but needs integration with Pythagoras’s pipeline contract. [Pipeline documentation](https://imbalanced-learn.org/dev/references/generated/imblearn.pipeline.Pipeline.html)
+
+To generate the card's preview the pipeline can operate on the entire dataset. Only later, when the test/train resampling is defined, can the pipeline properly perform the balancing operation.  
+
+## Partition
+
+The use of the Partition role, and the various forms of randomized resampling, MAY be resolved upstream of this card. In which case the card can do a more realistic job of showing and explaining the rebalancing. This is a future enhancement - after the obs_resample card has been created. Even so, this suits being an all-data preview.
+
+## Summary
+
+Name: targ_balance
+Mutable: Yes for eligible Target - but output data is merely a preview.
+Sklearn: Compatible through imblearn package
+Deferred: a) Tuning, b) use of an agreed test/train split.

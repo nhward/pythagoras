@@ -1,0 +1,177 @@
+### Objective
+
+This card's goal is to define a suitable resampling strategy that is intended to avoid data-leakage and over-fitting. The exact strategy depends on the nature of the data. Non-independent observations are a problem that demands special resampling.
+
+The various resampling (arrays of row numbers) are supplied to the pipeline - which is stored in the proxy_data object.
+
+### Eligibility
+
+A obj_resample card needs to react to the "Partition" role as a pre-ordained resampling. Additionally the "Identifier"/"Sequence" and "Stratifier" roles govern dependence of observations.
+
+
+## Styles
+
+#### Preordained
+If the Partition role is assigned, then this defines a single test-train split. It can be safely assumes the majority level is Train and the minority is test. Partition data is not common. It might arise from Kaggle contests where the resampling is fixed.
+
+#### Time series
+The most recent data becomes the test data. A window of earlier observations becomes the training data. The training window can be a fixed size or growing. The presence of a Sequence variable (and no Identifier or a unique identifier) triggers this time series style. 
+
+#### Longitudinal 
+If there are non-unique Identifiers and a Sequence then the data is longitudinal and requires a set of identifier keys to be the test data. See leave-group-out.
+
+#### Leave group out
+When a Stratifier is defined and it is conjectured that members of the same Strata are more similar to each other than between strata, then leave-strata-out out strategy is appropriate.
+
+#### Cross-validation
+K-fold cross validation suits a lot of tabular data.
+
+#### Leave-region-out
+When the Geometry role is assigned and records geographic points, it may be possible to use existing or artificial polygons to carve up the domain of the data. A leave-region-out deals to the fact the geographically nearby locations are more similar than distant ones.
+
+Are there more styles to document?
+
+## Front screen
+A heat-map chart of the dataset. X-axis: observations(oldest...recent), Y-axis: sample (e.g. CV1, CV2, ...)
+The cells of the heat-map are color-coded to distinguish test and train.
+ 
+## Flip-side
+A tabulation of the row numbers of the resamples (e.g. columns CV1-test, CV1-train, CV2-test, ...)
+
+## Settings
+
+ - Number of CV folds
+ - Proportion of rows (in recent-to-oldest order) to preserve for test (p)
+ - Size of train window or number (s) or Count of resamples s=(1-p)N/c
+ - Whether train window allowed to grow
+ - Count of strata/regions/identifier-groups resamples 
+
+
+## Footer
+Choice of checkboxgroup buttons giving the plausible resampling styles. Inappropriate styles are not available.
+
+## Summary
+
+Name: obs_resample
+Mutable: yes 
+Sklearn: Adds the resamples to the pipeline
+Deferred: Allowing multiple partition variables to construct more realistic resampling strategies
+
+
+## Review
+
+The core idea is useful: **make the evaluation split explicit, inspectable, and reusable across models**. The specification needs a clearer distinction between describing the data and deciding what future predictions the evaluation should represent.
+
+I read [obs_resample.qmd](/Users/nickward/Documents/pythagoras/specs/obs_resample.qmd). No files were changed.
+
+1. **Splits belong alongside the pipeline, rather than inside it.**
+
+   In sklearn, a cross-validation splitter—or an iterable of `(train_indices, test_indices)`—is supplied to the evaluation or tuning operation. That operation fits a fresh pipeline on each training subset. The splitter is not an ordinary pipeline transformation. [sklearn interface](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_validate.html)
+
+   Suggested wording:
+
+   > The card stores an evaluation-split specification in `proxy_data`. Downstream evaluation uses it to fit and evaluate independent clones of the learning pipeline.
+
+   “Mutable: yes” can mean modifying this metadata while leaving observations unchanged. Also distinguish this card’s *evaluation resampling* from `targ_balance`’s *training-set resampling*.
+
+2. **The majority Partition level cannot safely be assumed to mean training.**
+
+   That is a plausible default suggestion, not a reliable interpretation. A predefined training set can be smaller than its test set, and equal-sized partitions are possible.
+
+   Require an explicit **Training level** selection. Recognizable labels such as “train” and “test” could provide defaults. State whether the remaining partition is a final holdout or a validation set used during tuning.
+
+   For Kaggle-style data, the held-out observations may have no target labels: they are a prediction set, not a locally scoreable test set.
+
+3. **Longitudinal data do not imply one particular splitting strategy.**
+
+   Repeated identifiers plus sequence indicate structure, but the appropriate split depends on the prediction objective:
+
+   | Intended prediction | Suitable constraint |
+   |---|---|
+   | New subjects/entities | Hold out entire identifiers |
+   | Future observations for known entities | Train on earlier observations; validate on later ones |
+   | Future observations for new entities | Enforce both entity separation and a temporal cutoff |
+
+   Likewise, repeated identifiers **without** a Sequence variable can still require group-aware splitting.
+
+   Roles should suggest valid strategies, but should not automatically decide the intended generalization task.
+
+4. **Separate grouping from stratification.**
+
+   A Stratifier role does not necessarily imply dependent observations. It may simply represent categories whose proportions should be maintained.
+
+   These operations are different:
+
+   - **Stratification:** distribute categories across folds.
+   - **Group separation:** keep every observation from a group in the same fold.
+
+   Include an explicit **Grouping variable** choice. Using the same variable both to keep groups intact and distribute every level across folds is generally incompatible.
+
+5. **Clarify whether users select one strategy or several.**
+
+   The checkbox group implies multiple simultaneous strategies. What does selecting K-fold plus time-series mean?
+
+   Possible interpretations—alternative evaluation plans, nested evaluation, or combined constraints—produce very different results.
+
+   For the first version, I recommend **one active strategy**, selected with radio buttons. Combined constraints can be explicit strategies later; they should not be produced by simply intersecting independently generated splits.
+
+6. **The temporal settings need a precise construction rule.**
+
+   The expression `s=(1-p)N/c` contains an undefined `c`, and “train window size or count of resamples” mixes distinct parameters.
+
+   Specify separately:
+
+   - Initial training-window size.
+   - Validation-window size or forecast horizon.
+   - Step between successive splits.
+   - Fixed versus expanding training window.
+   - Gap between training and validation.
+   - Number of splits, if it is not derived from the above.
+
+   Also define whether sizes mean **rows, unique time points, or elapsed time**. Equal timestamps should normally remain together. Sorting must use Sequence explicitly; original row order should not be presumed chronological.
+
+   sklearn’s `TimeSeriesSplit` provides some of these controls, but irregular time spacing and grouped longitudinal observations may require additional logic. [Cross-validation guide](https://scikit-learn.org/dev/modules/cross_validation.html)
+
+7. **Distinguish CV validation from a final test set.**
+
+   Repeatedly using a test set to select models turns it into validation data. A useful design is:
+
+   > Optionally reserve a final holdout; generate cross-validation splits only within the remaining development data.
+
+   The specification should also state that preprocessing and target balancing are fitted only within each training fold. Good splitting alone cannot prevent leakage from preprocessing fitted on the complete dataset. [sklearn leakage guidance](https://scikit-learn.org/1.8/common_pitfalls.html)
+
+   I would describe the objective as **reducing leakage and obtaining credible performance estimates**, rather than avoiding overfitting outright.
+
+8. **Spatial splitting needs more than polygon assignment.**
+
+   Adjacent points on opposite sides of a polygon boundary can remain strongly related. Clarify:
+
+   - Existing regions versus generated blocks.
+   - How block size is chosen.
+   - Whether a buffer excludes training points near held-out regions.
+   - Coordinate reference system and distance units.
+   - Missing geometries and regions with too few observations.
+
+   Leaving a region out evaluates transfer to withheld regions; it does not automatically eliminate spatial dependence. This is substantial enough to consider deferring beyond an initial release.
+
+9. **Define stable row identity and invalidation.**
+
+   “Arrays of row numbers” should mean zero-based positions in a specified source frame, not pandas index labels, which may be duplicated.
+
+   Record which dataset/order the positions refer to. Filtering, reordering, or resampling upstream must regenerate or invalidate them. Downstream training-set balancing should happen **after splitting**, so duplicated or synthetic rows never become independent validation observations.
+
+   For large datasets, storing the reproducible split recipe may be preferable to storing every index array in bookmarks.
+
+10. **Improve the visualization and validation rules.**
+
+   The heat map is a good choice, but needs at least **Train / Validation / Unused**, since temporal windows and gaps leave observations outside both sets. A final holdout may need another state.
+
+   “Oldest…recent” applies only to temporal strategies. Other styles should use source order or an explicitly labelled grouping order.
+
+   On the flip-side, prefer a fold summary—counts, class distributions, group overlap, time ranges and exclusions—with downloadable membership data. Separate `CV1-test`, `CV1-train`, etc. columns will have unequal lengths and become unwieldy.
+
+   Require checks for empty folds, train/validation overlap, insufficient groups, missing split-role values, temporal ordering, and absent training classes. Fix a reproducible seed, and do not silently fall back to ordinary K-fold when a constrained strategy fails.
+
+For additional styles, **stratified K-fold, grouped K-fold, stratified grouped K-fold, and repeated random holdout** are the most useful additions. sklearn supplies these building blocks. [Splitter overview](https://scikit-learn.org/dev/modules/cross_validation.html)
+
+My suggested initial scope is **explicit predefined holdout, ordinary/stratified K-fold, grouped K-fold, and forward temporal splitting**. The key decision to settle first is whether this card defines **one validation plan**, **a final holdout plus a validation plan**, or **several competing evaluation plans**.

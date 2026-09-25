@@ -1,0 +1,88 @@
+---
+title: Target balance
+---
+
+#### 🧭 Purpose
+
+*Compare nominal target classes and preview balancing their contributions to training. Place this card after role assignment and any necessary encoding or imputation. It can add observation weights or resample observations; neither operation establishes that a predictive model will improve.*
+
+#### 🎯 Goals
+
+1. Show class counts and weighted totals before and after balancing.
+1. Offer reproducible random, synthetic, and diversity-oriented sampling choices.
+1. Save an unfitted training-only recipe separately from the all-data preview.
+
+#### 🧠 How it works
+
+Exactly one **Target** with nominal semantics and at least two observed classes is required. Unused categorical levels are omitted; observed levels retain their categorical order. No suitable target makes the card pass through unchanged and disables its action buttons.
+
+**Reweight** multiplies each incoming observation weight by its class factor:
+
+$$f_c=\frac{\sum_{i:y_i\text{ observed}}a_i}{K\sum_{i:y_i=c}a_i}.$$
+
+Here $a_i$ is the incoming weight, or one when no **Weighting** variable exists, and $K$ is the number of observed classes. Each class then has equal total weight. The formula preserves the incoming total weight; mean weight is one only when the incoming weights already average one. An existing weighting variable is overwritten in the preview. Otherwise a **Weights** variable is appended with the Weighting role; a suffix avoids name collisions. Missing-target rows retain their incoming weight and are excluded from diagnostics. Invalid weights or a class with zero weight prevent balancing.
+
+**Resample** chooses an integer class count between the smallest and largest observed counts. The percentage setting defaults to 50%, halfway between them. It is recomputed after required-value removal for each training fit, so a preview count is not imposed on smaller validation folds. Existing weights travel with retained or duplicated rows; equal counts can still have unequal weight totals.
+
+| Method | Behavior |
+|:--|:--|
+| RandomOverSampler / RandomUnderSampler | Duplicate or select whole rows reproducibly. Missing predictors are allowed. |
+| SMOTENC | Generate numeric and nominal predictor values. Automatically use SMOTE for numeric-only data or SMOTEN for categorical-only data. Singleton classes cannot be synthesized. |
+| K-medoids | Select distinct original representatives using farthest-first initialization and alternating within-cluster medoid updates. This is not exhaustive PAM optimization. |
+| ClusterCentroids | Cluster each class and use synthetic centers or their nearest original observations. Euclidean uses means; Manhattan uses coordinate medians. Nominal values use the modal one-hot component. |
+| NearMiss | Version 1: retain majority observations close to the smallest class. This emphasizes class boundaries rather than overall diversity. |
+| Cluster-stratified | Form up to square-root-of-class-size clusters, retain at least one row per populated cluster, then allocate the remaining sample proportionally without replacement. |
+
+Only exclusively **Predictor**-role numeric, nominal, and logical variables enter distances. Unsupported predictors are ignored and reported; encode ordinal, cyclic, text, and basket types upstream. Geometry currently has no encoder. Missing targets are omitted for resampling. Distance methods also omit rows with missing or nonfinite values in predictors they require. Losing a whole class is an error, not a silent change of target.
+
+Synthetic rows change only supported predictors. Other columns, including identifiers, treatment, incoming weights, and unsupported predictors, are copied from the nearest original same-class donor. Identifiers may therefore repeat; retained values do not make a synthetic row a real observation. Hard centroids can also repeat donors when centers coincide. Source indices are preserved or duplicated, never treated as unique row keys.
+
+#### 🏞️ Front
+
+Grouped bars show original and resulting total weights. Color identifies class, with pale bars for the original values. Full screen adds before/after pies using the same colors and order. Hover reports raw totals.
+
+The gray band is an advisory 95% simultaneous equal-frequency reference interval, with a Bonferroni adjustment across classes. It uses the **original** total weight, so it should not be interpreted as an after-resampling confidence interval when total weight changes.
+
+#### 🔄 Flip side
+
+The table reports class, original/resulting counts, original/resulting total weight, and the applied class multiplier. Multipliers are one for resampling because it does not change individual weights. Floating-point values display four significant figures.
+
+The diagnostic tests an equal-probability multinomial reference at 5%. Exactly equal totals receive p=1. Otherwise it uses a chi-square approximation when expected effective counts are at least five and 9,999 seeded multinomial simulations otherwise. With unequal weights, Kish effective sample size replaces observation count; this is an approximation, not a survey-design or dependence-adjusted test. After-resampling diagnostics are descriptive: duplicated and synthetic rows are not independent new evidence. A non-significant result is compatibility with this reference, not proof of balance or a recommendation about predictive accuracy.
+
+#### 🛠️ Controls and actions
+
+Choose **None**, **Reweight**, or **Resample**. There is no Commit button. Settings settle briefly before recomputation. **None** restores the incoming data and removes this card's pipeline contribution. An active invalid configuration blocks downstream output and explains the problem; it does not silently skip the requested operation. If the original diagnostic is compatible with equality, the card advises preferring None unless validation supports a change.
+
+#### ⚙️ Settings
+
+The card's Tour Guide describes each setting. Defaults are random up/down sampling, halfway class counts, Euclidean standardized distances, hard centroids, five neighbors, 30 optimization iterations, and no evaluation weights. Calculations use seed 2025.
+
+#### 🔎 Interpretation and next steps
+
+Compare both counts and weight totals. Investigate omissions and the suitability of mixed-type distances before accepting synthetic or representative samples. Balancing is optional: a later model may handle imbalance directly. Judge its benefit using untouched validation data and a metric suited to the prediction problem.
+
+#### ⛔️ Limitations
+
+* The preview uses all incoming data. Partition roles, tuning, and an agreed train/test split are deferred.
+* Resampling is capped at 100,000 input/output rows, distance work at 10,000 complete rows, encoded distance data at four million cells, and clustering at four million row-center pairs. Medoids default to 2,000 rows per class, configurable up to 5,000. Oversized requests fail explicitly, without hidden subsampling.
+* Importance weights do not affect distance fitting or row selection probabilities. They are retained for downstream training. The diagnostic does not handle clustered or repeated-observation dependence.
+* A final model adapter must select Predictor columns and explicitly pass the Weighting column as `sample_weight`. Merely appending a plain sklearn classifier does not consume the weight column automatically.
+* Numeric distance choices apply to numeric nearest-neighbor geometry. SMOTENC uses its own categorical encoding/scaling, and categorical-only SMOTEN uses value-difference distances.
+
+#### 📌 Suggested workflow
+
+1. Assign the nominal Target, predictors, identifiers, and optional importance weights.
+1. Encode unsupported predictors and handle missingness deliberately.
+1. Inspect the original imbalance and start with **None**.
+1. Compare **Reweight** or **Resample**, checking the table and omission messages.
+1. Fit the saved recipe within training folds; evaluate on unchanged holdout rows.
+
+#### 🔗 Data flow
+
+* **Input:** Current preview, role map, original clean frame, and any existing learned pipeline.
+* **Output:** With an active mode, a changed preview plus a cloned, unfitted `TargetBalanceSampler` in an `imblearn.pipeline.Pipeline`. The original clean frame is preserved. Downstream learned transformations retain that pipeline type.
+* **Training:** `pipeline_for_training()` returns a fresh recipe. Supply the full role-bearing DataFrame and a positionally aligned target `y`. Samplers run through `fit_resample` during fitting and are skipped at prediction. Append a model/role adapter after preprocessing for a complete predictive pipeline. Pipeline `fit_transform` may resample training rows; it is not interchangeable with separate `fit` and `transform` calls.
+* **Evaluation:** A fitted sampler's `evaluation_weights(holdout)` implements the saved None / Incoming / Incoming × learned factors policy. It does not resample holdout data or automatically change model scoring. Balanced evaluation requires known, non-missing classes; the evaluator must supply untouched incoming weights, not already-balanced preview weights.
+* **Data journey:** Active balancing records its parameters and preview shapes as a Learning step. None and ineligible input add no balancing contribution.
+
+Implementation references: [imbalanced-learn Pipeline](https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html), [SMOTENC](https://imbalanced-learn.org/stable/references/generated/imblearn.over_sampling.SMOTENC.html), and [ClusterCentroids](https://imbalanced-learn.org/stable/references/generated/imblearn.under_sampling.ClusterCentroids.html). Centroid selection here adapts that approach to mixed data, Manhattan distances, and role-preserving donors.
