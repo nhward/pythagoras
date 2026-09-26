@@ -6,7 +6,7 @@
             "type": "process",
             "command": "/usr/bin/caffeinate",
             "args": [
-                "-i",
+                "-disu",
                 "${workspaceFolder}/.venv/bin/python",
                 "${workspaceFolder}/scripts/nightly_tests.py"
             ],

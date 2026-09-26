@@ -1,12 +1,12 @@
 """Run the full suite and email failures through the Mac's Apple Mail account."""
 import argparse
-from datetime import datetime
 import fcntl
 import os
-from pathlib import Path
 import signal
 import subprocess
 import sys
+from datetime import datetime
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS = ROOT / '.make' / 'nightly-tests'

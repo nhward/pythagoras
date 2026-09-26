@@ -3,7 +3,7 @@
 The **Pythagoras: nightly test suite** task runs all tests (including browser tests)
 at 02:00 in the Mac's local timezone. Cron Tasks must be enabled, this workspace
 must be open in Positron, and the Mac must be awake at that time. The extension
-cannot wake the Mac or run while Positron is closed. `caffeinate -i` prevents idle
+cannot wake the Mac or run while Positron is closed. `caffeinate -disu` prevents idle
 sleep during a run; it does not wake the computer beforehand.
 
 - View/run manually: Command Palette → **Tasks: Run Task** → **Pythagoras: nightly test suite**.

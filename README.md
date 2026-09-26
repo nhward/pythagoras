@@ -206,6 +206,7 @@ Drag-and-drop ordering is handled via:
 * [Variable correlation](app/www/markdown/var_correlation.html) How similar are variables to each other?
 * [Observation outliers](app/www/markdown/obs_outliers.html) Which observations stand out? 
 * [Observation dependence](app/www/markdown/obs_dependence.html) Are observations not independent of each other?
+* [Target balancing](app/www/markdown/targ_balance.html) How imbalanced are the outcome classes?
 
 ### 🆘 Encoding
 
