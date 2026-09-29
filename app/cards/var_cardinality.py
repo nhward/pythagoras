@@ -675,109 +675,97 @@ def instance():
     this.long_name = "Variable cardinality"
     this.description = "This card profiles distinct values and highlights data-type and cardinality combinations to review."
 
-    def front():
-        return ui.TagList(
-            ui.span(
-                "Variable cardinality chart",
-                class_="text-primary text-center d-block",
-            ),
-            shinywidgets.output_widget(
-                id="Chart",
-                fill=True,
-                guide=this,
-                title="Variable cardinality chart",
-                text="""
-                Each horizontal bar shows the distinct observed values found for a variable. Colors identify type/cardinality combinations 
-                that deserve review. Hover for the current role, data type, missingness, uniqueness, analysis basis, and explanation.
-                """,
-                position="left",
-            ),
-        )
+    this.front = lambda: ui.TagList(
+        ui.span(
+            "Variable cardinality chart",
+            class_="text-primary text-center d-block",
+        ),
+        shinywidgets.output_widget(
+            id="Chart",
+            fill=True,
+            guide=this,
+            title="Variable cardinality chart",
+            text="""
+            Each horizontal bar shows the distinct observed values found for a variable. Colors identify type/cardinality combinations 
+            that deserve review. Hover for the current role, data type, missingness, uniqueness, analysis basis, and explanation.
+            """,
+            position="left",
+        ),
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.span(
+            "Cardinality interpretation table",
+            class_="text-primary text-center d-block",
+        ),
+        ui.output_ui(
+            id="Profile",
+            guide=this, title="Cardinality interpretation table", position="left",
+            text="""
+            The table combines the current role, cardinality, missingness, concentration, data type, and suggested considerations for 
+            the subsequent Role Assignment card. Row colors match the chart findings. It reports roles but does not assign or validate them.
+            """,
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span(
-                "Cardinality interpretation table",
-                class_="text-primary text-center d-block",
-            ),
-            ui.output_ui(
-                id="Profile",
-                guide=this, title="Cardinality interpretation table", position="left",
-                text="""
-                The table combines the current role, cardinality, missingness, concentration, data type, and suggested considerations for 
-                the subsequent Role Assignment card. Row colors match the chart findings. It reports roles but does not assign or validate them.
-                """,
-            ),
-        )
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Busy"),
+        ui.output_ui(
+            id="Check",
+            guide=this, title="Cardinality summary", position="top",
+            text="Summarizes the variables needing review and states whether the analysis used all observations or a deterministic sample.",
+        ),
+        class_="text-center",
+    )
 
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"),
-            ui.output_ui(
-                id="Check",
-                guide=this, title="Cardinality summary", position="top",
-                text="Summarizes the variables needing review and states whether the analysis used all observations or a deterministic sample.",
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox(
+            id="ShowThresholds", label="Show cardinality thresholds", value=True,
+            guide=this, position="left",
+            text=(
+                "Draws the low- and high-cardinality reference lines. These "
+                "are screening guides rather than universal statistical limits."
             ),
-            class_="text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox(
-                id="ShowThresholds", label="Show cardinality thresholds", value=True,
-                guide=this, position="left",
-                text=(
-                    "Draws the low- and high-cardinality reference lines. These "
-                    "are screening guides rather than universal statistical limits."
-                ),
+        ),
+        ui.input_checkbox(
+            id="Logarithmic", label="Logarithmic cardinality axis", value=True,
+            guide=this, position="left",
+            text=(
+                "Uses a logarithmic horizontal axis so variables with a few "
+                "levels remain visible beside variables with thousands of values."
             ),
-            ui.input_checkbox(
-                id="Logarithmic", label="Logarithmic cardinality axis", value=True,
-                guide=this, position="left",
-                text=(
-                    "Uses a logarithmic horizontal axis so variables with a few "
-                    "levels remain visible beside variables with thousands of values."
-                ),
+        ),
+        ui.input_slider(
+            id="Thresholds", label="Cardinality thresholds", min=2, max=100,
+            value=(DEFAULT_LOW_CARDINALITY, DEFAULT_HIGH_CARDINALITY), step=1,
+            guide=this, position="left",
+            text=(
+                "The lower value matches Role Assignment's default maximum "
+                "cardinality for low-cardinality specialized roles. The upper "
+                "value identifies nominal variables whose number of levels may "
+                "require an identifier, text, or feature-engineering decision."
             ),
-            ui.input_slider(
-                id="Thresholds", label="Cardinality thresholds", min=2, max=100,
-                value=(DEFAULT_LOW_CARDINALITY, DEFAULT_HIGH_CARDINALITY), step=1,
-                guide=this, position="left",
-                text=(
-                    "The lower value matches Role Assignment's default maximum "
-                    "cardinality for low-cardinality specialized roles. The upper "
-                    "value identifies nominal variables whose number of levels may "
-                    "require an identifier, text, or feature-engineering decision."
-                ),
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=5, ticks=True, pre="10^",
+            guide=this, position="left",
+            text=(
+                "Above 10^n rows the chart uses a deterministic random sample. "
+                "Low-cardinality conclusions use bounded full-data checks, and "
+                "complete-data uniqueness is verified before a variable is called unique."
             ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=5, ticks=True, pre="10^",
-                guide=this, position="left",
-                text=(
-                    "Above 10^n rows the chart uses a deterministic random sample. "
-                    "Low-cardinality conclusions use bounded full-data checks, and "
-                    "complete-data uniqueness is verified before a variable is called unique."
-                ),
-            ),
-            ui.input_select(
-                id="Ordering", label="Variable ordering", selected="cardinality",
-                choices={
-                    "cardinality": "Cardinality",
-                    "finding": "Finding",
-                    "original": "Original column order",
-                },
-                guide=this, position="left",
-                text="Orders bars by distinct values, by review priority, or by the incoming data's column order. This changes presentation only."
-            ),
-        )
-
-    this.settings = settings
+        ),
+        ui.input_select(
+            id="Ordering", label="Variable ordering", selected="cardinality",
+            choices={
+                "cardinality": "Cardinality",
+                "finding": "Finding",
+                "original": "Original column order",
+            },
+            guide=this, position="left",
+            text="Orders bars by distinct values, by review priority, or by the incoming data's column order. This changes presentation only."
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()

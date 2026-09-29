@@ -1152,138 +1152,126 @@ def instance():
     this.long_name = "Missingness Type"
     this.description = "This card uses decision trees to assess whether each variable's missingness is random or not."
 
-    def front():
-        return ui.navset_bar(
-            ui.nav_panel(
-                "Obs-count",
-                ui.span("Predicting missing-value counts in observations ", class_="text-info text-center d-block"),
-                shinywidgets.output_widget(
-                    id="Tree",
-                    fill=True,
-                    guide=this,
-                    title="Decision tree",
-                    text="A decision tree predicting the selected variable's missingness, or the number of missing values in each observation.",
-                    position="left",
-                )
-            ),
-            title = None,
-            id = "Target", 
-            padding = 0, 
-            fillable = True
-        )
-
-    this.front = front
-
-    def back():
-        return ui.TagList(
-            ui.span("Missingness type table", class_="text-primary text-center d-block"),
-            ui.output_ui(id="Busy"),
-            ui.output_ui(
-                id="Table",
+    this.front = lambda: ui.navset_bar(
+        ui.nav_panel(
+            "Obs-count",
+            ui.span("Predicting missing-value counts in observations ", class_="text-info text-center d-block"),
+            shinywidgets.output_widget(
+                id="Tree",
+                fill=True,
                 guide=this,
-                title="Missingness type table",
-                text="Each incomplete variable is classified by whether its decision tree substantially outperforms the null model.",
+                title="Decision tree",
+                text="A decision tree predicting the selected variable's missingness, or the number of missing values in each observation.",
                 position="left",
             )
+        ),
+        title = None,
+        id = "Target", 
+        padding = 0, 
+        fillable = True
+    )
+
+    this.back = lambda: ui.TagList(
+        ui.span("Missingness type table", class_="text-primary text-center d-block"),
+        ui.output_ui(id="Busy"),
+        ui.output_ui(
+            id="Table",
+            guide=this,
+            title="Missingness type table",
+            text="Each incomplete variable is classified by whether its decision tree substantially outperforms the null model.",
+            position="left",
         )
+    )
 
-    this.back = back
+    this.footer = lambda: ui.TagList(
+        ui.output_ui(id="Summary"),
+    )
 
-    def footer():
-        return ui.TagList(
-            ui.output_ui(id="Summary"),
-       )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox(
-                id="AddSeq", label="Add a row-number predictor", value=True,
-                guide=this, position="left", text="""
-                    "Allows detection of missingness associated with row order or time order (if sequential).
-                    <br>This extra predictor allows the models to drift. 
-                    It may be that early data had more missing values that more recent data given data 
-                    collection has improved over time (assuming the data is in collection order)""",
-                
-            ),
-            ui.input_slider(
-                id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
-                guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
-            ),
-            ui.input_checkbox(
-                id="UseWeights",
-                label="Use observation weights",
-                value=True,
-                guide=this,
-                text="Use any variable assigned with the weighting role as tree observations weights.",
-                position="left",
-            ),
-            ui.input_slider(
-                id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
-                guide=this, text="Number of stratified held-out folds. This is reduced automatically when the minority class is small.", position="left",
-            ),
-            ui.input_select(
-                id="Permutations", label="Permutation repetitions", selected="99", choices={"99": "100", "199": "200", "499": "500", "999": "1000"},  # because the logic requires reps+1
-                guide=this, text="Sets the number of shuffled-label evaluations used for the empirical p-value. More repetitions improve p-value resolution and stability but increase model-fitting time.", position="left",
-            ),
-            ui.input_slider(
-                id="Alpha", label="Maximum p-value", min=0.01, max=0.10, value=0.05, step=0.01,
-                guide=this, position="left", text="""
-                    Maximum raw (or adjusted) permutation p-value for a patterned interpretation. Individual-variable classification p-values may be adjusted; the single aggregate regression p-value is unadjusted.
-                    <br>Why use several conditions?<br>
-                    <ul><li>The permutation p-value controls evidence against predictor–missingness independence.</li>
-                    <li>Improvement prevents tiny but statistically significant effects being called meaningful.</li>
-                    <li>Absolute balanced accuracy or R-squared prevents good-looking improvements over an unusually poor null score.</li>
-                    <li>Fold consistency guards against a result driven by one split.</li>
-                    <li>Minimum class counts prevent unstable classification conclusions about very rare missingness.</li></ul>
-                    """,
-            ),
-            ui.input_checkbox(
-                id="AdjustFDR", label="Adjust p-values for multiple variables", value=True, 
-                guide=this, position="left", text="""
-                    Apply Benjamini-Hochberg false-discovery-rate adjustment across the missingness models.<br>
-                    Because the hypothesis is testing multiple variables, raw permutation p-values should be adjusted for multiple testing. 
-                    The <a href='https://en.wikipedia.org/wiki/False_discovery_rate'>Benjamini–Hochberg false-discovery-rate correction</a> 
-                    is appropriate because this is a screening exercise rather than a single confirmatory hypothesis test."
-                    """,
-            ),
-            ui.input_slider(
-                id="MinImprovement", label="Minimum score improvement", min=0, max=0.25, value=0.15, step=0.05,
-                guide=this, text="Minimum practical improvement in balanced accuracy or R-squared over the matched null model.", position="left",
-            ),
-            ui.input_slider(
-                id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
-                guide=this, text="Requires at least this held-out balanced accuracy before a variable can be classified as Patterned. This prevents improvement over a weak null model from being treated as useful prediction.", position="left",
-            ),
-            ui.input_slider(
-                id="MinRSquared", label="Minimum R-squared", min=0, max=0.50, value=0.10, step=0.01,
-                guide=this, text="Requires at least this held-out R-squared before the aggregate missing-count result can be Patterned. Negative or small values indicate poor prediction beyond the mean count.", position="left",
-            ),
-            ui.input_slider(
-                id="MinFoldFraction", label="Minimum fold consistency", min=0.50, max=1, value=0.80, step=0.05,
-                guide=this, text="Requires the tree to outperform its matched null model in at least this fraction of held-out folds. Higher values demand more consistent evidence across splits.", position="left",
-            ),
-            ui.input_numeric(
-                id="MinClassCount", label="Minimum missing and observed cases", value=20, min=2, step=1,
-                guide=this, text="Both classes must contain at least this many cases before a reliable interpretation is made.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxTreeDepth", label="Maximum Tree depth parameter", min=1, max=5, value=3, step=1,
-                guide=this, text="Caps tree depth to control complexity and runtime. Deeper trees can represent more interactions but are harder to interpret and more prone to overfitting.", position="left",
-            ),
-            ui.input_slider(
-                id="MinLeafSamples", label="Minimum leaf samples (as a proportion)", min=0.001, max=0.05, value=0.02, step=0.001,
-                guide=this, text="Sets the minimum proportion of training observations allowed in a terminal leaf. Larger values create simpler, more stable trees but can miss small subgroups.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, position="left", 
-                text="Reproducible stratified sampling above this cap which is used for cross-validation and permutations. Raising it improves coverage but can substantially increase fitting time."
-            ),
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox(
+            id="AddSeq", label="Add a row-number predictor", value=True,
+            guide=this, position="left", text="""
+                "Allows detection of missingness associated with row order or time order (if sequential).
+                <br>This extra predictor allows the models to drift. 
+                It may be that early data had more missing values that more recent data given data 
+                collection has improved over time (assuming the data is in collection order)""",
+            
+        ),
+        ui.input_slider(
+            id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
+            guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
+        ),
+        ui.input_checkbox(
+            id="UseWeights",
+            label="Use observation weights",
+            value=True,
+            guide=this,
+            text="Use any variable assigned with the weighting role as tree observations weights.",
+            position="left",
+        ),
+        ui.input_slider(
+            id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
+            guide=this, text="Number of stratified held-out folds. This is reduced automatically when the minority class is small.", position="left",
+        ),
+        ui.input_select(
+            id="Permutations", label="Permutation repetitions", selected="99", choices={"99": "100", "199": "200", "499": "500", "999": "1000"},  # because the logic requires reps+1
+            guide=this, text="Sets the number of shuffled-label evaluations used for the empirical p-value. More repetitions improve p-value resolution and stability but increase model-fitting time.", position="left",
+        ),
+        ui.input_slider(
+            id="Alpha", label="Maximum p-value", min=0.01, max=0.10, value=0.05, step=0.01,
+            guide=this, position="left", text="""
+                Maximum raw (or adjusted) permutation p-value for a patterned interpretation. Individual-variable classification p-values may be adjusted; the single aggregate regression p-value is unadjusted.
+                <br>Why use several conditions?<br>
+                <ul><li>The permutation p-value controls evidence against predictor–missingness independence.</li>
+                <li>Improvement prevents tiny but statistically significant effects being called meaningful.</li>
+                <li>Absolute balanced accuracy or R-squared prevents good-looking improvements over an unusually poor null score.</li>
+                <li>Fold consistency guards against a result driven by one split.</li>
+                <li>Minimum class counts prevent unstable classification conclusions about very rare missingness.</li></ul>
+                """,
+        ),
+        ui.input_checkbox(
+            id="AdjustFDR", label="Adjust p-values for multiple variables", value=True, 
+            guide=this, position="left", text="""
+                Apply Benjamini-Hochberg false-discovery-rate adjustment across the missingness models.<br>
+                Because the hypothesis is testing multiple variables, raw permutation p-values should be adjusted for multiple testing. 
+                The <a href='https://en.wikipedia.org/wiki/False_discovery_rate'>Benjamini–Hochberg false-discovery-rate correction</a> 
+                is appropriate because this is a screening exercise rather than a single confirmatory hypothesis test."
+                """,
+        ),
+        ui.input_slider(
+            id="MinImprovement", label="Minimum score improvement", min=0, max=0.25, value=0.15, step=0.05,
+            guide=this, text="Minimum practical improvement in balanced accuracy or R-squared over the matched null model.", position="left",
+        ),
+        ui.input_slider(
+            id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
+            guide=this, text="Requires at least this held-out balanced accuracy before a variable can be classified as Patterned. This prevents improvement over a weak null model from being treated as useful prediction.", position="left",
+        ),
+        ui.input_slider(
+            id="MinRSquared", label="Minimum R-squared", min=0, max=0.50, value=0.10, step=0.01,
+            guide=this, text="Requires at least this held-out R-squared before the aggregate missing-count result can be Patterned. Negative or small values indicate poor prediction beyond the mean count.", position="left",
+        ),
+        ui.input_slider(
+            id="MinFoldFraction", label="Minimum fold consistency", min=0.50, max=1, value=0.80, step=0.05,
+            guide=this, text="Requires the tree to outperform its matched null model in at least this fraction of held-out folds. Higher values demand more consistent evidence across splits.", position="left",
+        ),
+        ui.input_numeric(
+            id="MinClassCount", label="Minimum missing and observed cases", value=20, min=2, step=1,
+            guide=this, text="Both classes must contain at least this many cases before a reliable interpretation is made.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxTreeDepth", label="Maximum Tree depth parameter", min=1, max=5, value=3, step=1,
+            guide=this, text="Caps tree depth to control complexity and runtime. Deeper trees can represent more interactions but are harder to interpret and more prone to overfitting.", position="left",
+        ),
+        ui.input_slider(
+            id="MinLeafSamples", label="Minimum leaf samples (as a proportion)", min=0.001, max=0.05, value=0.02, step=0.001,
+            guide=this, text="Sets the minimum proportion of training observations allowed in a terminal leaf. Larger values create simpler, more stable trees but can miss small subgroups.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+            guide=this, position="left", 
+            text="Reproducible stratified sampling above this cap which is used for cross-validation and permutations. Raising it improves coverage but can substantially increase fitting time."
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -1669,6 +1657,7 @@ def instance():
         @render.ui
         @this.record_context
         def Table():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="Table2")
 
         @output

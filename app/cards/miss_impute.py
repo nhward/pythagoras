@@ -585,64 +585,57 @@ def instance():
     this.long_name = "Learned Imputation"
     this.description = "This card imputes eligible predictor values with scikit-learn and evaluates the selected imputation method using repeated artificial masking."
 
-    def front():
-        return ui.TagList(
-            ui.span("Missing values before and after imputation", class_="text-primary text-center d-block"),
-            shinywidgets.output_widget(id="MissingChart", fill=True, guide=this, title="Imputation result", text="Compares missing counts before and after applying the selected method. Excluded predictors retain their missing values.", position="left"),
-        )
-    this.front = front
+    this.front = lambda: ui.TagList(
+        ui.span("Missing values before and after imputation", class_="text-primary text-center d-block"),
+        shinywidgets.output_widget(id="MissingChart", fill=True, guide=this, title="Imputation result", text="Compares missing counts before and after applying the selected method. Excluded predictors retain their missing values.", position="left"),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span("Cross-validated imputation performance", class_="text-primary text-center d-block"),
-            ui.output_ui(id="Performance", guide=this, title="Imputation performance", text="Observed values are repeatedly hidden, imputed without seeing their true values, and compared with random draws from that predictor's remaining observed values.", position="left"),
-        )
-    this.back = back
+    this.back = lambda: ui.TagList(
+        ui.span("Cross-validated imputation performance", class_="text-primary text-center d-block"),
+        ui.output_ui(id="Performance", guide=this, title="Imputation performance", text="Observed values are repeatedly hidden, imputed without seeing their true values, and compared with random draws from that predictor's remaining observed values.", position="left"),
+    )
 
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"), ui.output_ui(id="Check"),
-            ui.input_checkbox_group(
-                id="Apply", label="Imputation", choices=["Apply"],
-                inline=True, guide=this, title="Apply imputation", position="top",
-                text="Applies the selected method to eligible predictor missingness, publishes the fitted preview downstream, and records an unfitted learning step. Clearing it restores the incoming data.",
-            ),
-            class_="vertically-scrollable-footer",
-        )
-    this.footer = footer
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Busy"), 
+        ui.input_checkbox_group(
+            id="Apply", label="Imputation", choices=["Apply"], inline=True, 
+            guide=this, title="Apply imputation", position="top",
+            text="Applies the selected method to eligible predictor missingness, publishes the fitted preview downstream, and records an unfitted learning step. Clearing it restores the incoming data.",
+        ),
+        ui.output_ui(id="Check"),
+        class_="vertically-scrollable-footer",
+    )
 
-    def settings():
-        return ui.TagList(
-            ui.input_radio_buttons(
-                id="Method", label="Imputation method", choices=METHOD_LABELS, selected="simple",
-                guide=this, text="Choose how missing values are estimated. Median or mode uses each predictor by itself; the other methods use relationships between continuous predictors. Categorical predictors are always filled with their most common value.", position="left"
-            ),
-            ui.input_slider(
-                id="Neighbours", label="KNN neighbors", min=2, max=10, value=5, step=1,
-                guide=this, text="The number of nearest neighbors to use with KNN imputation. A smaller number makes a more complex model.", position="left"
-            ),
-            ui.input_slider(
-                id="Iterations", label="Iterative-Imputer maximum iterations", min=2, max=30, value=10, step=1,
-                guide=this, text="Caps the repeated prediction cycles used by iterative imputation. More iterations may improve convergence but increase fitting time; this has no effect for other methods.", position="left"
-            ),
-            ui.input_slider(
-                id="Repeats", label="Validation repeats", min=1, max=10, value=3, step=1,
-                guide=this, text="Repeats artificial masking and held-out evaluation this many times. More repeats stabilize the estimate but increase calculation time.", position="left"
-            ),
-            ui.input_slider(
-                id="Holdout", label="Observed values hidden per repeat (%)", min=5, max=30, value=15, step=5,
-                guide=this, text="The number of values whose imputation is to be assessed against their known value (per repeat).", position="left"
-            ),
-            ui.input_slider(
-                id="MinImprovement", label="Minimum improvement over random baseline", min=0, max=1, value=0.25, step=0.05,
-                guide=this, text="An assessed imputer must exceed this proportional improvement to be classified Strong; otherwise it is Weak.", position="left"
-            ),
-            ui.input_slider(
-                id="Jobs", label="Parallel evaluation workers", min=1, max=max(1, min(4, os.cpu_count() or 1)), value=max(1, min(2, os.cpu_count() or 1)), step=1,
-                guide=this, text="Sets the number of CPU worker processes used for independent validation tasks. More workers can reduce elapsed time but use additional memory and processor capacity.", position="left"
-            ),
-        )
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_radio_buttons(
+            id="Method", label="Imputation method", choices=METHOD_LABELS, selected="simple",
+            guide=this, text="Choose how missing values are estimated. Median or mode uses each predictor by itself; the other methods use relationships between continuous predictors. Categorical predictors are always filled with their most common value.", position="left"
+        ),
+        ui.input_slider(
+            id="Neighbours", label="KNN neighbors", min=2, max=10, value=5, step=1,
+            guide=this, text="The number of nearest neighbors to use with KNN imputation. A smaller number makes a more complex model.", position="left"
+        ),
+        ui.input_slider(
+            id="Iterations", label="Iterative-Imputer maximum iterations", min=2, max=30, value=10, step=1,
+            guide=this, text="Caps the repeated prediction cycles used by iterative imputation. More iterations may improve convergence but increase fitting time; this has no effect for other methods.", position="left"
+        ),
+        ui.input_slider(
+            id="Repeats", label="Validation repeats", min=1, max=10, value=3, step=1,
+            guide=this, text="Repeats artificial masking and held-out evaluation this many times. More repeats stabilize the estimate but increase calculation time.", position="left"
+        ),
+        ui.input_slider(
+            id="Holdout", label="Observed values hidden per repeat (%)", min=5, max=30, value=15, step=5,
+            guide=this, text="The number of values whose imputation is to be assessed against their known value (per repeat).", position="left"
+        ),
+        ui.input_slider(
+            id="MinImprovement", label="Minimum improvement over random baseline", min=0, max=1, value=0.25, step=0.05,
+            guide=this, text="An assessed imputer must exceed this proportional improvement to be classified Strong; otherwise it is Weak.", position="left"
+        ),
+        ui.input_slider(
+            id="Jobs", label="Parallel evaluation workers", min=1, max=max(1, min(4, os.cpu_count() or 1)), value=max(1, min(2, os.cpu_count() or 1)), step=1,
+            guide=this, text="Sets the number of CPU worker processes used for independent validation tasks. More workers can reduce elapsed time but use additional memory and processor capacity.", position="left"
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -735,6 +728,7 @@ def instance():
         @render.ui
         @this.record_context
         def Performance():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="PerformanceTable")
 
         @output

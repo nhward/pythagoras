@@ -36,63 +36,49 @@ def instance():
     this.long_name = "Data tabulation"
     this.description = "This card enables the data to be listed and searched."
     
-    def front():
-        return ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
-            id = "DataTable",
-            title = "A data listing", 
-            guide = this,
-            text = 'A top and bottom sample of the data when not in full-screen; all the rows when the card is in full-screen.',
-            position = "left"
-        ) 
+    this.front = lambda: ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
+        id = "DataTable",
+        title = "A data listing", 
+        guide = this,
+        text = 'A top and bottom sample of the data when not in full-screen; all the rows when the card is in full-screen.',
+        position = "left"
+    ) 
     
-    this.front = front
-
-    def back():
-        return ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
-            id = "StructTable",
-            title = "The meta-data", 
-            guide = this,
-            text = 'The structure of the dataset.',
-            position = "left"
-        ) 
+    this.back = lambda: ui.output_ui(
+        id = "StructTable",
+        title = "The meta-data", 
+        guide = this,
+        text = 'The structure of the dataset.',
+        position = "left"
+    ) 
     
-    this.back = back
-
-
-    def footer():
-        return ui.download_button(
-                id = "Export", 
-                label = 'Export', 
-                icon = icon("file-arrow-down", title = "Export the data", a11y = "sem"),
-                width = "250px", 
-                class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
-                style = "border: 0px; box-shadow: none;",
-                guide = this, 
-                title = "Export button",
-                text = "Downloads the complete incoming data as CSV. Display filters and rounding are not applied, but CSV cannot preserve roles, pipeline metadata, geometry metadata, or every pandas extension type.",
-                position = "top"
-            )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_slider(
-                id = "Decimals", label = "Number of decimal places to show", min = -2, max = 10, value = 2, 
-                guide = this, text = "Rounds numeric values in the browser table to this many decimal places. Negative values round to tens or hundreds. Stored and exported values retain their original precision.", position = "left"
-            ),
-            ui.input_checkbox(
-                    id = "Bounded", label = "Summarize each geometry variable as a bounding box", value = True,
-                    guide = this, text = "Shows each geometry as its minimum bounding rectangle instead of Well-Known Text. This changes only the browser table and never alters the spatial data passed downstream.", position = "left"
-            ),
-            ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to list", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, text = "Sets a logarithmic cap of 10^n observations in the full-screen browser listing. It limits display size only; exported and downstream data remain complete.", position = "left"
-            )
+    this.footer = lambda: ui.download_button(
+            id = "Export", 
+            label = 'Export', 
+            icon = icon("file-arrow-down", title = "Export the data", a11y = "sem"),
+            width = "250px", 
+            class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
+            style = "border: 0px; box-shadow: none;",
+            guide = this, 
+            title = "Export button",
+            text = "Downloads the complete incoming data as CSV. Display filters and rounding are not applied, but CSV cannot preserve roles, pipeline metadata, geometry metadata, or every pandas extension type.",
+            position = "top"
         )
 
-    this.settings = settings
-
+    this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id = "Decimals", label = "Number of decimal places to show", min = -2, max = 10, value = 2, 
+            guide = this, text = "Rounds numeric values in the browser table to this many decimal places. Negative values round to tens or hundreds. Stored and exported values retain their original precision.", position = "left"
+        ),
+        ui.input_checkbox(
+                id = "Bounded", label = "Summarize each geometry variable as a bounding box", value = True,
+                guide = this, text = "Shows each geometry as its minimum bounding rectangle instead of Well-Known Text. This changes only the browser table and never alters the spatial data passed downstream.", position = "left"
+        ),
+        ui.input_slider(
+            id = "MaxObs", label = "Maximum observations to list", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+            guide = this, text = "Sets a logarithmic cap of 10^n observations in the full-screen browser listing. It limits display size only; exported and downstream data remain complete.", position = "left"
+        )
+    )
 
     def server(input, output, session):
 
@@ -357,22 +343,22 @@ def instance():
         @render.ui
         @this.record_context
         def DataTable():
-            # Bind the grid once. Upstream invalidation belongs to its renderer,
-            # not this container (which would unbind/rebind an in-flight output).
+            req(incomingproxy_data() is not None)
+            # Recreate on source changes: moving a card reconnects Shiny's
+            # custom element, which can append a second internal grid.
             return ui.output_data_frame(id = "DataTable2")
 
         @output
         @render.data_frame
         @this.record_context
         def DataTable2():
-            req(PreparedData() is not None)
             full = this.isFullScreen()
             return render.DataTable(CleanDf(), summary=full, filters=full, width="100%", height="98%")
 
         @output
         @render.download_button(filename=f"{this.namespace}_data.csv", media_type="text/csv")
         def Export():
-            req(incomingproxy_data())
+            req(incomingproxy_data() is not None)
             frame = incomingproxy_data()
             yield frame.to_csv(index=False, header=True)
 
@@ -380,7 +366,8 @@ def instance():
         @render.ui
         @this.record_context
         def StructTable():
-            # Keep the metadata grid mounted through temporary upstream gaps.
+            req(incomingproxy_data() is not None)
+            # As above, rebuilding discards duplicate roots after DOM moves.
             return ui.output_data_frame(id = "Structure")
 
         @output

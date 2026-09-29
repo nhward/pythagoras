@@ -296,6 +296,12 @@ shiny-data-frame .shiny-data-grid > table
 background-color: var(--bs-body-bg, #fff) !important;
 }
 
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {
 background-color: rgba(233, 36, 66, 0.22) !important;
@@ -1044,6 +1050,7 @@ fill: var(--bs-primary) !important;
 <li><a href="markdown/var_correlation.html">Variable correlation</a> How similar are variables to each other?</li>
 <li><a href="markdown/obs_outliers.html">Observation outliers</a> Which observations stand out?</li>
 <li><a href="markdown/obs_dependence.html">Observation dependence</a> Are observations not independent of each other?</li>
+<li><a href="markdown/targ_balance.html">Target balancing</a> How imbalanced are the outcome classes?</li>
 </ul>
 <h3 id="encoding">🆘 Encoding</h3>
 <ul>

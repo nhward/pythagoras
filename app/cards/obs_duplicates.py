@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gettext
 import math
 import os
 import sys
@@ -490,8 +491,7 @@ def instance():
             if BUTTON_VALUE in (input.RemoveExact() or []) and removed:
                 noun = "row" if removed == 1 else "rows"
                 return ui.span(
-                    f"Removed {removed} redundant exact-duplicate {noun}; "
-                    f"{observations} observations remain.",
+                    f"Removed {removed} redundant exact-duplicate {noun}; {observations} observations remain.",
                     class_="text-warning",
                 )
             exact = int(results.loc[
@@ -502,11 +502,9 @@ def instance():
                     f"There are no exact duplicate rows among {observations} observations.",
                     class_="text-success",
                 )
-            noun = "row" if exact == 1 else "rows"
             return ui.span(
-                f"There are {exact} redundant exact-duplicate {noun} among "
-                f"{observations} observations.",
-                class_="text-warning",
+                f'{gettext.ngettext("There is %d redundant exact-duplicate row", "There are %d redundant exact-duplicate rows", exact) % exact} among {observations} observations.',
+                class_="text-warning"
             )
 
         session.on_ended(CalculateDuplicates.cancel)

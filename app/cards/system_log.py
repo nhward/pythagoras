@@ -76,62 +76,52 @@ def instance():
     this.long_name = "System log"
     this.description = "This card lists recent application and card log records, with filtering and text search."
 
-    def front():
-        return ui.output_data_frame(
-            id="LogTable",
+    this.front = lambda: ui.output_data_frame(
+        id="LogTable",
+        guide=this,
+        title="Application log",
+        text=(
+            "Recent application records, newest first. Use the column "
+            "filters for additional filtering."
+        ),
+        position="left",
+    )
+
+    this.footer = lambda: ui.div(
+        ui.input_action_button(
+            id="Refresh",
+            label="Refresh",
+            icon=icon("arrows-rotate", title="Refresh the log", a11y="sem"),
+            width="250px",
+            class_="btn rounded-pill btn-sm d-block mx-auto btn-primary",
+            style="border: 0px; box-shadow: none;",
             guide=this,
-            title="Application log",
-            text=(
-                "Recent application records, newest first. Use the column "
-                "filters for additional filtering."
-            ),
-            position="left",
-        )
+            title="Refresh button",
+            text="Takes a fresh snapshot of retained application records. It updates the listing but does not clear the log or change application data.",
+            position="top",
+        ),
+        ui.output_ui("Status"),
+        class_="text-center",
+    )
 
-    this.front = front
-   
-    def footer():
-        return ui.div(
-            ui.output_text("Status"),
-            ui.input_action_button(
-                id="Refresh",
-                label="Refresh",
-                icon=icon("arrows-rotate", title="Refresh the log", a11y="sem"),
-                width="250px",
-                class_="btn rounded-pill btn-sm d-block mx-auto btn-primary",
-                style="border: 0px; box-shadow: none;",
-                guide=this,
-                title="Refresh button",
-                text="Takes a fresh snapshot of retained application records. It updates the listing but does not clear the log or change application data.",
-                position="top",
-            ),
-            class_="text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox_group(
-                id="Levels", label="Log levels", choices=LOG_LEVELS, selected=LOG_LEVELS, inline=True,
-                guide=this, text="Includes only records at the selected DEBUG, INFO, WARNING, ERROR, or CRITICAL levels. Begin with severe levels and add lower levels when more context is needed.", position="left",
-            ),
-            ui.input_text(
-                id="Search", label="Search", placeholder="Logger, message, source, or thread", 
-                guide=this, title="Search log records", text="Applies a case-insensitive plain-text search across logger, message, source, and thread fields in the current snapshot.", position="left",
-            ),
-            ui.input_numeric(
-                id="Maximum", label="Maximum records", value=1_000, min=1, max=5_000, step=100,
-                guide=this, text="Caps matching records after filters and search are applied, keeping the newest first. Raising it provides more history but increases browser-table size.", position="left",
-            ),
-            ui.input_checkbox(
-                id="AutoRefresh", label="Refresh automatically", value=False, 
-                guide=this, text="Requests a fresh in-memory log snapshot every five seconds while enabled. Use it when reproducing a live problem; disable it when a stable table is easier to inspect.", position="left",
-            ),
-        )
-
-    this.settings = settings
-
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox_group(
+            id="Levels", label="Log levels", choices=LOG_LEVELS, selected=LOG_LEVELS, inline=True,
+            guide=this, text="Includes only records at the selected DEBUG, INFO, WARNING, ERROR, or CRITICAL levels. Begin with severe levels and add lower levels when more context is needed.", position="left",
+        ),
+        ui.input_text(
+            id="Search", label="Search", placeholder="Logger, message, source, or thread", 
+            guide=this, title="Search log records", text="Applies a case-insensitive plain-text search across logger, message, source, and thread fields in the current snapshot.", position="left",
+        ),
+        ui.input_numeric(
+            id="Maximum", label="Maximum records", value=1_000, min=1, max=5_000, step=100,
+            guide=this, text="Caps matching records after filters and search are applied, keeping the newest first. Raising it provides more history but increases browser-table size.", position="left",
+        ),
+        ui.input_checkbox(
+            id="AutoRefresh", label="Refresh automatically", value=False, 
+            guide=this, text="Requests a fresh in-memory log snapshot every five seconds while enabled. Use it when reproducing a live problem; disable it when a stable table is easier to inspect.", position="left",
+        ),
+    )
 
     def server(input, output, session):
         @this.reactable(calc=True)
@@ -160,12 +150,11 @@ def instance():
             )
 
         @output
-        @render.text
-        @this.record_context
+        @render.ui
         def Status():
             count = len(LogFrame())
             noun = "record" if count == 1 else "records"
-            return f"Showing {count:,} {noun}"
+            return ui.span(f"Showing {count:,} {noun}", class_ = "text-primary")
 
     this.server = server
     return this

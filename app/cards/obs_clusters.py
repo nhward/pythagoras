@@ -335,46 +335,46 @@ def instance():
     this.long_name = "Cluster membership"
     this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers."
 
-    def front():
-        return ui.navset_bar(*(ui.nav_panel(method, shinywidgets.output_widget(f"Chart_{method}", fill=True, guide=this, title=f"{method} membership", position="left",
+    this.front = lambda: ui.navset_bar(
+        *(ui.nav_panel(
+            method, 
+            shinywidgets.output_widget(f"Chart_{method}", fill=True, guide=this, title=f"{method} membership", position="left",
             text="Clusters are fitted in numeric predictor space and colored on the same 2D coordinates in every tab. Colors identify labels within each method, not equivalent groups across methods. Hover shows Identifier-role values when available, otherwise the original row position. Projection separation does not establish cluster validity."),
-            value=method) for method in METHODS), id="ClusterType", selected="Partition", title=None, padding=0, fillable=True)
-    this.front = front
+            value=method
+        ) for method in METHODS), id="ClusterType", selected="Partition", title=None, padding=0, fillable=True
+    )
     
-    def back():
-        return ui.div(
-            ui.output_text("TableTitle"), 
-            ui.output_data_frame("Membership"), 
-            class_="card-scroll-content"
-        )
+    this.back = lambda: ui.div(
+        ui.output_text("TableTitle"), 
+        ui.output_data_frame("Membership"), 
+        class_="card-scroll-content"
+    )
 
-    this.back = back
+    this.footer = lambda: ui.TagList(
+        ui.output_ui("Busy"), 
+        ui.output_ui("MembershipControl"),
+        ui.output_text("Status"),
+    )
 
-    def footer():
-        return ui.TagList(ui.output_ui("Busy"), ui.output_text("Status"),
-            ui.output_ui("MembershipControl"))
-    this.footer = footer
-
-    def settings():
-        def select(id, label, choices, text):
-            return ui.input_select(id, label=label, choices=choices, guide=this, position="left", text=text)
-        def check(id, label, text):
-            return ui.input_checkbox(id, label=label, value=True, guide=this, position="left", text=text)
-        def slider(id, label, low, high, value, text):
-            return ui.input_slider(id, label=label, min=low, max=high, value=value, guide=this, position="left", text=text)
-        return ui.TagList(
-            select("Projection", "2D projection", {"tsne":"t-SNE", "pca":"PCA"}, "One shared embedding for all methods. t-SNE emphasizes local neighborhoods and ignores weights in the embedding; PCA is faster and uses importance-weighted axes when enabled. Clustering is always fitted before projection, in predictor space."),
-            slider("Perplexity", "t-SNE perplexity", 2, 50, 30, "Neighborhood scale of the t-SNE display. Capped at (analyzed rows minus one) / 3. Changes the visualization, not the clustering inputs."),
-            check("Standardize", "Standardize numeric predictors", "Center and scale predictors to unit spread, using observation importance when enabled. Analysis only; outgoing predictor values are unchanged."),
-            check("UseWeights", "Use assigned observation weighting", "Use finite nonnegative numeric importance weights, normalized to mean one; omit zero-weight rows. Unequal weights are supported by Partition and Density. Other tabs explain why they are unavailable. Disable for equal importance; the weight column never becomes a predictor."),
-            select("Metric", "Distance metric", ["euclidean", "manhattan"], "Used by hierarchies except Ward, PAM, Density, Spectral and t-SNE. K-means, Gaussian mixtures, Ward and PCA use Euclidean geometry."),
-            select("Centre", "Partition method", {"centroids":"K-means", "medoids":"PAM (medoids)"}, "K-means uses fitted centers; PAM selects actual observations as medoids and can be slower. Both use incoming K and support importance weights."),
-            select("Linkage", "Agglomerative linkage", ["average", "single", "complete", "ward"], "Merge clusters using average, nearest or farthest pair distances, or Ward's increase in squared dispersion. Ward always uses Euclidean distances."),
-            slider("MinPoints", "DBSCAN minimum points (including self)", 2, 100, 5, "Minimum neighborhood size for a core point, including self. With weighting, this is mean-one importance mass. A bounded radius search favors counts closest to incoming K, then less noise. Exact K may be unattainable."),
-            check("Border", "Assign DBSCAN border points", "Include non-core points reachable from a core point. Disable to require minimum training-neighborhood importance mass as well. Unassigned rows are labeled unallocated; this level is not counted as a cluster. New rows are matched to fixed training core points within the learned radius."),
-            slider("Neighbours", "Spectral nearest neighbors", 1, 50, 10, "Binary undirected union of nearest-neighbor connections, excluding self. Increase if the graph has more components than K. Capped at analyzed rows minus one."),
-            slider("Limit", "Maximum observations to analyze", 50, 2000, 1000, "Reproducible uniform sampling without replacement above this limit. Distances use quadratic memory; PAM and t-SNE can be expensive. Partition, Mixture and DBSCAN assign all rows with complete fitted predictors on export, including unsampled rows. Incomplete rows retain missing labels. No outgoing rows are removed."))
-    this.settings = settings
+    def select(id, label, choices, text):
+        return ui.input_select(id, label=label, choices=choices, guide=this, position="left", text=text)
+    def check(id, label, text):
+        return ui.input_checkbox(id, label=label, value=True, guide=this, position="left", text=text)
+    def slider(id, label, low, high, value, text):
+        return ui.input_slider(id, label=label, min=low, max=high, value=value, guide=this, position="left", text=text)
+    this.settings = lambda: ui.TagList(
+        select("Projection", "2D projection", {"tsne":"t-SNE", "pca":"PCA"}, "One shared embedding for all methods. t-SNE emphasizes local neighborhoods and ignores weights in the embedding; PCA is faster and uses importance-weighted axes when enabled. Clustering is always fitted before projection, in predictor space."),
+        slider("Perplexity", "t-SNE perplexity", 2, 50, 30, "Neighborhood scale of the t-SNE display. Capped at (analyzed rows minus one) / 3. Changes the visualization, not the clustering inputs."),
+        check("Standardize", "Standardize numeric predictors", "Center and scale predictors to unit spread, using observation importance when enabled. Analysis only; outgoing predictor values are unchanged."),
+        check("UseWeights", "Use assigned observation weighting", "Use numeric importance weights and omit zero-weight rows. Weights are supported by Partition and Density methods."),
+        select("Metric", "Distance metric", ["euclidean", "manhattan"], "Used by hierarchies except Ward, PAM, Density, Spectral and t-SNE. K-means, Gaussian mixtures, Ward and PCA use Euclidean geometry."),
+        select("Centre", "Partition method", {"centroids":"K-means", "medoids":"PAM (medoids)"}, "K-means uses fitted centers; PAM selects actual observations as medoids and can be slower. Both use incoming K and support importance weights."),
+        select("Linkage", "Agglomerative linkage", ["average", "single", "complete", "ward"], "Merge clusters using average, nearest or farthest pair distances, or Ward's increase in squared dispersion. Ward always uses Euclidean distances."),
+        slider("MinPoints", "DBSCAN minimum points (including self)", 2, 100, 5, "Minimum neighborhood size for a core point, including self. With weighting, this is mean-one importance mass. A bounded radius search favors counts closest to incoming K, then less noise. Exact K may be unattainable."),
+        check("Border", "Assign DBSCAN border points", "Include non-core points reachable from a core point. Disable to require minimum training-neighborhood importance mass as well. Unassigned rows are labeled unallocated; this level is not counted as a cluster. New rows are matched to fixed training core points within the learned radius."),
+        slider("Neighbours", "Spectral nearest neighbors", 1, 50, 10, "Binary undirected union of nearest-neighbor connections, excluding self. Increase if the graph has more components than K. Capped at analyzed rows minus one."),
+        slider("Limit", "Maximum observations to analyze", 50, 2000, 1000, "Reproducible uniform sampling without replacement above this limit. Distances use quadratic memory; PAM and t-SNE can be expensive. Partition, Mixture and DBSCAN assign all rows with complete fitted predictors on export, including unsampled rows. Incomplete rows retain missing labels. No outgoing rows are removed.")
+    )
 
     def server(input, output, session):
         busy = this.busy()

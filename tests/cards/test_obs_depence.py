@@ -138,6 +138,13 @@ def test_card(page, app):
     page.set_viewport_size({"width": 1800, "height": 1100})
     page.goto(app.url)
     by_id = lambda name: page.locator(f'[id$="-{name}"]')
+    card = page.locator(".card").first
+    # init_card attaches the click handlers and hides the contract wrapper.
+    # The buttons exist before that message arrives from the server.
+    expect(card.locator(".hidden > .contract-btn")).to_have_count(1)
+    card.hover()
+    by_id("ExpandButton").click()
+    expect(card).to_have_attribute("aria-expanded", "true")
     expect(by_id("Status")).to_contain_text("Longitudinal structure confirmed", timeout=60000)
     expect(by_id("PassThrough")).to_have_text("unchanged=True")
     expect(by_id("Chart").locator(".js-plotly-plot")).to_be_visible()

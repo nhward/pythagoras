@@ -273,6 +273,7 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = 'Variable encoding'
     this.description = 'Encode nominal, Code, Ordered, Cyclic, Logical and Basket predictors through sklearn pipeline steps.'
+
     this.front = lambda: ui.navset_bar(
         ui.nav_panel(
             'Nominal',
@@ -433,7 +434,6 @@ def instance():
         busy = this.busy()
 
         @this.reactable(calc=True)
-        @this.record_context
         def IncomingData():
             try:
                 source = this.input_data()
@@ -446,13 +446,11 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(2)
-        @this.record_context
         def Encode():
             return tuple(input.Encode() or [])
 
         @this.reactable(calc=True)
         @this.settle(2)
-        @this.record_context
         def Settings():
             return {
                 'nominal': {
@@ -483,7 +481,6 @@ def instance():
             }
 
         @this.reactable(calc=True)
-        @this.record_context
         def Options():
             return {**Settings(), 'selected':Encode()}
 
@@ -496,7 +493,6 @@ def instance():
 
 
         @this.reactable()
-        @this.record_context
         def Start():
             Calculate.cancel()
             Calculate.invoke(IncomingData().clone(), Options())

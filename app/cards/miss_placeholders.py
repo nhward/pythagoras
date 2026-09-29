@@ -223,161 +223,133 @@ def instance():
     # Define the user-interface #
     #############################
 
-    def front() -> ui.TagList:
-        """
-        These ui elements appear in the front of the card. 
-        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
-        """
-        return ui.navset_bar(
-            ui.nav_panel(
-                "All variables",
-                shinywidgets.output_widget(  ## needed as plotly workaround
-                    id = "AllChart",
-                    title = "All variables' placeholders chart",
-                    guide = this,
-                    text = 'A chart of the occurence of placeholders throughout the data. This shows all variable types (excluding any geometries).',
-                    position = "left"
-                    )
-            ),
-            ui.nav_panel(
-                "Integer",
-                shinywidgets.output_widget(
-                    id = "IntegerChart",
-                    title = "Integer variables' placeholders chart",
-                    guide = this,
-                    text = 'A chart of the occurence of placeholders throughout the data. This shows all integer types.',
-                    position = "left"
+    this.front = lambda: ui.navset_bar(
+        ui.nav_panel(
+            "All variables",
+            shinywidgets.output_widget(  ## needed as plotly workaround
+                id = "AllChart",
+                title = "All variables' placeholders chart",
+                guide = this,
+                text = 'A chart of the occurence of placeholders throughout the data. This shows all variable types (excluding any geometries).',
+                position = "left"
                 )
-            ),
-            ui.nav_panel(
-                "Decimal",
-                shinywidgets.output_widget(
-                    id = "FloatChart",
-                    title = "Decimal variables' placeholders chart",
-                    guide = this,
-                    text = 'A chart of the occurence of placeholders throughout the data. This shows all decimal (floating point) types.',
-                    position = "left"
-                )
-            ),
-            ui.nav_panel(
-                "Character",
-                shinywidgets.output_widget(
-                    id = "CharacterChart",
-                    title = "Character variables' placeholders chart",
-                    guide = this,
-                    text = 'A chart of the occurence of placeholders throughout the data. This shows all character types.',
-                    position = "left"
-                )
-            ),
-            ui.nav_panel(
-                "Dates & Times",
-                shinywidgets.output_widget(
-                    id = "DateChart",
-                    title = "Date/time variables' placeholders chart",
-                    guide = this,
-                    text = 'A chart of the occurence of placeholders throughout the data. This shows all datetime types.',
-                    position = "left"
-                )
-            ),
-            title = None,
-            id = "Navset", 
-            padding = 0, 
-            fillable = True
-        )
-    
-    this.front = front   ## The above "front" function must be assigned to the instance
-
-    def back() -> ui.TagList:
-        """
-        These ui elements appear in the back of the card. 
-        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
-        """
-        return ui.TagList(
-            ui.card_header("Placeholder Summary", class_ = "text-primary text-center"),
-            ui.output_ui(
-                id = "Summary", 
-                guide = this, title = "Placeholder Summary", position = "top",
-                text = "This summary shows the number of placeholders after any acknowledgements.",
-                style = "font-size: 0.85rem; line-height: 1.1;"
+        ),
+        ui.nav_panel(
+            "Integer",
+            shinywidgets.output_widget(
+                id = "IntegerChart",
+                title = "Integer variables' placeholders chart",
+                guide = this,
+                text = 'A chart of the occurence of placeholders throughout the data. This shows all integer types.',
+                position = "left"
             )
+        ),
+        ui.nav_panel(
+            "Decimal",
+            shinywidgets.output_widget(
+                id = "FloatChart",
+                title = "Decimal variables' placeholders chart",
+                guide = this,
+                text = 'A chart of the occurence of placeholders throughout the data. This shows all decimal (floating point) types.',
+                position = "left"
+            )
+        ),
+        ui.nav_panel(
+            "Character",
+            shinywidgets.output_widget(
+                id = "CharacterChart",
+                title = "Character variables' placeholders chart",
+                guide = this,
+                text = 'A chart of the occurence of placeholders throughout the data. This shows all character types.',
+                position = "left"
+            )
+        ),
+        ui.nav_panel(
+            "Dates & Times",
+            shinywidgets.output_widget(
+                id = "DateChart",
+                title = "Date/time variables' placeholders chart",
+                guide = this,
+                text = 'A chart of the occurence of placeholders throughout the data. This shows all datetime types.',
+                position = "left"
+            )
+        ),
+        title = None,
+        id = "Navset", 
+        padding = 0, 
+        fillable = True
+    )
+
+    this.back = lambda: ui.TagList(
+        ui.card_header("Placeholder Summary", class_ = "text-primary text-center"),
+        ui.output_ui(
+            id = "Summary", 
+            guide = this, title = "Placeholder Summary", position = "top",
+            text = "This summary shows the number of placeholders after any acknowledgements.",
+            style = "font-size: 0.85rem; line-height: 1.1;"
         )
-    
-    this.back = back  ## The above "back" function must be assigned to the instance
+    )
 
-    def footer():
-        """
-        These ui elements appear in the footer of the card (but only on the front). 
-        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
-        """
-        return ui.div(
-            ui.output_ui(id="Message"),
-            ui.input_checkbox_group(
-                id = "Replace",
-                label = None,
-                choices=[],
-                inline=True,
-                guide = this, title = "Replace buttons", position = "top",
-                text = "Buttons for replacing placeholders by converting them to missing values. There is a button for each type of placeholder found. The changes can be reversed."
-            ),
-            class_ = "vertically-scrollable-footer")
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Message"),
+        ui.input_checkbox_group(
+            id = "Replace",
+            label = None,
+            choices=[],
+            inline=True,
+            guide = this, title = "Replace buttons", position = "top",
+            text = "Buttons for replacing placeholders by converting them to missing values. There is a button for each type of placeholder found. The changes can be reversed."
+        ),
+        class_ = "vertically-scrollable-footer")
 
-    this.footer = footer  ## The above "footer" function must be assigned to the instance
-
-    def settings() -> ui.TagList:
-        """
-        These settings related ui elements appear in the sidebar of the card. 
-        The optional 'guide', 'text', 'position' and 'priority' parameters of the ui elements allows for the Guide.
-        """
-        return ui.TagList(
-            ui.input_selectize(
-                id="NA_Strings", label = "Missing string-value placeholders", 
-                choices=["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
-                selected=["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
-                multiple=True, options=({"placeholder": "Enter string values", "create": True}),
-                guide=this, position="left",
-                text = 'This comma-delimited list supplies placeholders for missing string-values. Entire string-values that match any of these will be replaced with NA. The search is case insensitive.',
-            ),
-            ui.input_checkbox(
-                id = "NA_CaseSensitive", label = "Use a case-sensitive search", value = False,
-                guide = this, text = 'Treats capitalization variants such as "N/A" and "n/a" as different candidate string values. Leave this off when source capitalization is inconsistent.', position = "left"
-            ),
-            ui.input_selectize(
-                id = "NA_Integers", label = "Missing integer-value placeholders", choices =  [-9999,-999,-99, -1], selected = [-9999,-999,-99, -1],
-                multiple = True, options=({"placeholder": "Enter integer values", "create": True}),
-                guide = this, position = "left",
-                text = 'This comma-delimited list supplies placeholders for missing numeric-values. Entire values that match any of these will be replaced with NA <em>provided</em> they correspond with the lowest recorded values.',
-            ),
-            ui.input_selectize(
-                id = "NA_Floats", label = "Missing decimal-value placeholders",  choices =  [-9999.99,-999.99,-99.99, -99.00, -1.00],
-                selected = [-9999.99,-999.99,-99.99, -99.00, -1.00], multiple = True, options=({"placeholder": "Enter decimal values", "create": True}),
-                guide = this, position = "left",
-                text = 'This comma-delimited list supplies placeholders for missing decimal-values. Entire values that match any of these will be replaced with NaN <em>provided</em> they correspond with the lowest recorded values.',
-            ),
-            ui.input_checkbox(
-                id = "NA_Extrema", label = "Only replace extreme numeric values (at minimum or maximum)",  value = True,
-                guide = this, position = "left", text = """
-                Only replace numbers <em>provided</em> they correspond with the lowest or highest recorded values. When set ON, a numeric placeholder (e.g. -99) 
-                is only flagged if it sits at the edge of the observed distribution for that variable (i.e., equals the current minimum or maximum).
-                When OFF, any occurrence of the placeholder is matched regardless of position.
-                <br>Example: If a column’s observed range is −1000 … 1200<br>
-                -99 is inside the range → not flagged when `Replace extrema only` is ON.
-                <br>Example: If the range is −99 … 1200:<br>
-                -99 equals the minimum → is flagged when `Replace extrema only` is ON.  
-                """,
-            ),
-            ui.input_selectize(
-                id = "NA_DateTime", label = "Missing date/time-value placeholders", choices = ["0000-00-00", "0001-01-01", "1900-01-01", "0"],
-                selected = ["0000-00-00", "0001-01-01", "1900-01-01", "0"], multiple = True, options=({"placeholder": "Enter date-literal values", "create": True}),
-                guide = this, position = "left",
-                text = 'This comma-delimited list supplies placeholders for missing date/time-values. Date values that match any of these will be replaced with NaT.',
-            ),
-            ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 3, ticks = True, pre = "10^",
-                guide = this, text = "Sets a logarithmic cap of 10^n observations used to detect candidate placeholders. Raising it improves the chance of finding rare candidates but increases calculation and chart size.", position = "left"
-            ),
-        )
-
-    this.settings = settings ## The above "setting" function must be assigned to the instance 
+    this.settings = lambda: ui.TagList(
+        ui.input_selectize(
+            id="NA_Strings", label = "Missing string-value placeholders", 
+            choices=["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
+            selected=["NA","-","--", "N/A", "Missing", "Not Applicable", "Not Available"],
+            multiple=True, options=({"placeholder": "Enter string values", "create": True}),
+            guide=this, position="left",
+            text = 'This comma-delimited list supplies placeholders for missing string-values. Entire string-values that match any of these will be replaced with NA. The search is case insensitive.',
+        ),
+        ui.input_checkbox(
+            id = "NA_CaseSensitive", label = "Use a case-sensitive search", value = False,
+            guide = this, text = 'Treats capitalization variants such as "N/A" and "n/a" as different candidate string values. Leave this off when source capitalization is inconsistent.', position = "left"
+        ),
+        ui.input_selectize(
+            id = "NA_Integers", label = "Missing integer-value placeholders", choices =  [-9999,-999,-99, -1], selected = [-9999,-999,-99, -1],
+            multiple = True, options=({"placeholder": "Enter integer values", "create": True}),
+            guide = this, position = "left",
+            text = 'This comma-delimited list supplies placeholders for missing numeric-values. Entire values that match any of these will be replaced with NA <em>provided</em> they correspond with the lowest recorded values.',
+        ),
+        ui.input_selectize(
+            id = "NA_Floats", label = "Missing decimal-value placeholders",  choices =  [-9999.99,-999.99,-99.99, -99.00, -1.00],
+            selected = [-9999.99,-999.99,-99.99, -99.00, -1.00], multiple = True, options=({"placeholder": "Enter decimal values", "create": True}),
+            guide = this, position = "left",
+            text = 'This comma-delimited list supplies placeholders for missing decimal-values. Entire values that match any of these will be replaced with NaN <em>provided</em> they correspond with the lowest recorded values.',
+        ),
+        ui.input_checkbox(
+            id = "NA_Extrema", label = "Only replace extreme numeric values (at minimum or maximum)",  value = True,
+            guide = this, position = "left", text = """
+            Only replace numbers <em>provided</em> they correspond with the lowest or highest recorded values. When set ON, a numeric placeholder (e.g. -99) 
+            is only flagged if it sits at the edge of the observed distribution for that variable (i.e., equals the current minimum or maximum).
+            When OFF, any occurrence of the placeholder is matched regardless of position.
+            <br>Example: If a column’s observed range is −1000 … 1200<br>
+            -99 is inside the range → not flagged when `Replace extrema only` is ON.
+            <br>Example: If the range is −99 … 1200:<br>
+            -99 equals the minimum → is flagged when `Replace extrema only` is ON.  
+            """,
+        ),
+        ui.input_selectize(
+            id = "NA_DateTime", label = "Missing date/time-value placeholders", choices = ["0000-00-00", "0001-01-01", "1900-01-01", "0"],
+            selected = ["0000-00-00", "0001-01-01", "1900-01-01", "0"], multiple = True, options=({"placeholder": "Enter date-literal values", "create": True}),
+            guide = this, position = "left",
+            text = 'This comma-delimited list supplies placeholders for missing date/time-values. Date values that match any of these will be replaced with NaT.',
+        ),
+        ui.input_slider(
+            id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 3, ticks = True, pre = "10^",
+            guide = this, text = "Sets a logarithmic cap of 10^n observations used to detect candidate placeholders. Raising it improves the chance of finding rare candidates but increases calculation and chart size.", position = "left"
+        ),
+    )
 
     ########################
     # Define the behaviour #

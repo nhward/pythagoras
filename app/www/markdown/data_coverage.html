@@ -318,22 +318,22 @@ background-color: #e2e3e5 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
 background-color: #d95f02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
 background-color: #e6ab02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
 background-color: #3978a8 !important;
 color: #fff !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
 background-color: #9aa7b2 !important;
 color: #000 !important;
 }
@@ -351,7 +351,11 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
 .var-cardinality-strong-review-row,
 .var-cardinality-review-row,
 .var-cardinality-expected-row,
-.var-cardinality-not-assessed-row
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
 ) {
 color: var(--bs-body-color, #212529) !important;
 }
@@ -868,9 +872,9 @@ fill: var(--bs-primary) !important;
 r = \frac{\text{observed} - \text{expected}}{\sqrt{\text{expected}}}.
 </annotation></semantics></math></p>
 <p>Negative residuals indicate deficits; positive residuals indicate excesses. Colors use descriptive thresholds at −4, −2, 2, and 4. They are not adjusted significance tests.</p>
-<p>By default, rows missing any selected variable are omitted. <strong>Include missing values as a level</strong> retains them as explicit groups. Counts and expected proportions always use the same rows. Missing values in unrelated columns do not exclude observations. There is no sampling, and assigned importance weights are not applied.</p>
+<p>By default, rows missing any selected variable are omitted. <strong>Include missing values as a level</strong> retains them as explicit groups. Counts and expected proportions always use the same rows. Missing values in unrelated columns do not exclude observations. There is no sampling. With <strong>Use assigned observation weighting</strong> checked and a Weighting variable assigned, every observed count becomes a sum of weights. Margins, independence expectations, percentages, shortfalls, residuals, and tile areas all use those same weight sums and their total. Without a Weighting role, or with the setting unchecked, the card uses ordinary counts. Weights must be numeric, finite and nonnegative; zero-weight rows are omitted, and the remaining rows must have positive total weight. Weight sums are not normalized: multiplying weights changes Pearson residual magnitudes and the expected-value-below-five flags, so interpret these descriptively.</p>
 <h4 id="front">🏞️ Front</h4>
-<p>The mosaic divides a rectangle into intersection tiles, alternating horizontal and vertical splits in selection order. Positions describe groups rather than continuous measurement axes. Larger tiles receive level labels and an observed count; hover identifies intersections and reports counts, their ratio, and the residual.</p>
+<p>The mosaic divides a rectangle into intersection tiles, alternating horizontal and vertical splits in selection order. Positions describe groups rather than continuous measurement axes. Larger tiles receive level labels and an observed count (n) or weight sum (Σw); hover identifies intersections and reports counts, their ratio, and the residual.</p>
 <table class="caption-top">
 <caption>Table 1 - Coverage colors</caption>
 <thead>
@@ -931,11 +935,11 @@ r = \frac{\text{observed} - \text{expected}}{\sqrt{\text{expected}}}.
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Observed</strong>, <strong>Expected</strong></td>
-<td style="text-align: left;">Actual count and independence-reference count.</td>
+<td style="text-align: left;">Actual count and independence-reference count, or their weight sums when enabled.</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Observed %</strong>, <strong>Expected %</strong></td>
-<td style="text-align: left;">Corresponding percentages of analyzed rows.</td>
+<td style="text-align: left;">Corresponding percentages of analyzed rows, or total analyzed weight when enabled.</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Observed/expected</strong></td>

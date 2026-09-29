@@ -165,10 +165,10 @@ def test_ass2_age25_random_order_noise_is_calibrated_away(card_module):
 @pytest.mark.unit
 def test_reference_modes_change_the_question(card_module):
     data, _ = drift_data()
-    arguments = dict(
-        data=data, sequence="when", variables=["numeric"], group_count=6,
-        threshold=0.25, permutations=40,
-    )
+    arguments = {
+        "data": data, "sequence": "when", "variables": ["numeric"], "group_count": 6,
+        "threshold": 0.25, "permutations": 40,
+    }
 
     first = card_module._analyse_homogeneity(reference="first", **arguments)
     previous = card_module._analyse_homogeneity(reference="previous", **arguments)
@@ -245,7 +245,7 @@ class TestWebKitUI:
 
         expect(by_id(page, "DriftChart").locator(".plotly")).to_be_attached(timeout=20_000)
         expect(by_id(page, "Check")).to_contain_text("Compared 3 variables", timeout=20_000)
-        expect(by_id(page, "Check")).to_contain_text("12 groups", timeout=20_000)
+        expect(by_id(page, "Check")).to_contain_text("12 sequential groups", timeout=20_000)
         expect(by_id(page, "Sequence")).to_be_attached()
         expect(by_id(page, "Variables")).to_be_attached()
 

@@ -240,106 +240,94 @@ def instance():
     ]
 
 
-    def front():
-        return ui.div(
-            ui.output_data_frame(
-                id="Table",
-                title="Table of variables",
-                text="Choose a variable from this table and alter the name, data type, or cyclic order.",
-                guide=this,
-                position="bottom",
+    this.front = lambda: ui.div(
+        ui.output_data_frame(
+            id="Table",
+            title="Table of variables",
+            text="Choose a variable from this table and alter the name, data type, or cyclic order.",
+            guide=this,
+            position="bottom",
+        ),
+        id = "TableDiv"
+    )
+
+    this.back = lambda: ui.TagList(
+        ui.card_header("Committed Differences", class_="text-primary text-center"),
+        this.guidedDiv(
+            ui.output_ui(id="DFDiff"),
+            id="X-DFDiff",
+            guide=this,
+            title="Change report",
+            text="This report lists structural changes to the dataset by this card.",
+            position="top",
+        ),
+    )
+
+    this.footer = lambda: ui.TagList(
+        this.guidedDiv(
+            ui.input_text(id="NewName", label="New Name", value=None, 
+            guide = this, title = "Proposed variable name", text="Changes the proposed name for the selected row. Names must remain unique; the role map is updated when a valid rename is committed.", position="top"),
+            ui.input_selectize(id="NewDataType", label="New Data Type", choices=list(set(TYPES.values())), selected=False, options={"dropdownParent": "body"}, 
+            guide = this, title = "Proposed variable data type", text="Changes the proposed type for the selected variable. Available choices depend on Alternative types; conversion affects downstream data only after commitment.", position="top"
             ),
-            id = "TableDiv"
-        )
-
-    this.front = front
-
-    def back() -> ui.TagList:
-        return ui.TagList(
-            ui.card_header("Committed Differences", class_="text-primary text-center"),
-            this.guidedDiv(
-                ui.output_ui(id="DFDiff"),
-                id="X-DFDiff",
+            ui.input_selectize(id="NewOrder", label="New order", choices=[], selected=None, multiple=True, remove_button=False, width = "100%",
+            options={
+                "dropdownParent": "body",
+                "plugins": ["drag_drop"],
+                "onDelete": ui.js_eval("function(values) { return false; }"),
+            },
+            guide = this, title = "Proposed category or cycle order", text="Drag values into their intended order for an ordered-category or cyclic variable. The order is ignored for other types and applied only on commitment.", position="top"),
+            id="Row",
+            title="New attributes for the choosen variable.",
+            text="The fields shown here can be modified. The available choices are controlled by the 'Alternatives' settings.",
+            guide=this,
+            position="top",
+            class_="across-row",
+        ),
+        ui.div(
+            ui.input_action_button(
+                id="Commit",
+                label="Commit modification",
+                icon=icon("gavel", title="Commit modification", a11y="sem"),
+                width="220px",
+                class_="btn rounded-pill btn-sm btn-primary",
+                style="border: 0px; box-shadow: none;",
                 guide=this,
-                title="Change report",
-                text="This report lists structural changes to the dataset by this card.",
+                title="Commit button",
+                text="Applies every valid proposed rename, type conversion, and order change in the table to the full incoming data and records one Cleaning operation.",
                 position="top",
             ),
-        )
-
-    this.back = back
-
-    def footer() -> ui.TagList:
-        return ui.TagList(
-            this.guidedDiv(
-                ui.input_text(id="NewName", label="New Name", value=None, 
-                guide = this, title = "Proposed variable name", text="Changes the proposed name for the selected row. Names must remain unique; the role map is updated when a valid rename is committed.", position="top"),
-                ui.input_selectize(id="NewDataType", label="New Data Type", choices=list(set(TYPES.values())), selected=False, options={"dropdownParent": "body"}, 
-                guide = this, title = "Proposed variable data type", text="Changes the proposed type for the selected variable. Available choices depend on Alternative types; conversion affects downstream data only after commitment.", position="top"
-                ),
-                ui.input_selectize(id="NewOrder", label="New order", choices=[], selected=None, multiple=True, remove_button=False, width = "100%",
-                options={
-                    "dropdownParent": "body",
-                    "plugins": ["drag_drop"],
-                    "onDelete": ui.js_eval("function(values) { return false; }"),
-                },
-                guide = this, title = "Proposed category or cycle order", text="Drag values into their intended order for an ordered-category or cyclic variable. The order is ignored for other types and applied only on commitment.", position="top"),
-                id="Row",
-                title="New attributes for the choosen variable.",
-                text="The fields shown here can be modified. The available choices are controlled by the 'Alternatives' settings.",
+            ui.input_action_button(
+                id="Reset",
+                label=None,
+                icon=icon("arrow-rotate-left", title="Reset modifications", a11y="sem"),
+                class_="btn rounded-pill btn-sm btn-primary",
+                style="border: 0px; box-shadow: none;",
                 guide=this,
+                title="Reset button",
+                text="Discards every proposal and committed modification made by this card, restores the incoming data, and resets the table to its original definitions.",
                 position="top",
-                class_="across-row",
             ),
-            ui.div(
-                ui.input_action_button(
-                    id="Commit",
-                    label="Commit modification",
-                    icon=icon("gavel", title="Commit modification", a11y="sem"),
-                    width="220px",
-                    class_="btn rounded-pill btn-sm btn-primary",
-                    style="border: 0px; box-shadow: none;",
-                    guide=this,
-                    title="Commit button",
-                    text="Applies every valid proposed rename, type conversion, and order change in the table to the full incoming data and records one Cleaning operation.",
-                    position="top",
-                ),
-                ui.input_action_button(
-                    id="Reset",
-                    label=None,
-                    icon=icon("arrow-rotate-left", title="Reset modifications", a11y="sem"),
-                    class_="btn rounded-pill btn-sm btn-primary",
-                    style="border: 0px; box-shadow: none;",
-                    guide=this,
-                    title="Reset button",
-                    text="Discards every proposal and committed modification made by this card, restores the incoming data, and resets the table to its original definitions.",
-                    position="top",
-                ),
-                id="Reset-Commit",
-                class_="btn-group mx-auto text-center gap-2",
-            ),
-        )
+            id="Reset-Commit",
+            class_="btn-group mx-auto text-center gap-2",
+        ),
+    )
 
-    this.footer = footer
-
-    def settings() -> ui.TagList:
-        return ui.TagList(
-            ui.input_text(
-                id="Formats", label="Possible date formats", width="100%", value=", ".join(map(str, DATE_FORMATS)),
-                guide=this, text="Comma-delimited date formats to try - in this order. %Y means year; %m means month; %d means day.", position="left",
-            ),
-            ui.input_radio_buttons(
-                id="Alternatives", label="Alternative types", choices=["Sensible", "Related", "All"], selected="Sensible",
-                guide=this, position="left", text="""How the data-type choices are offered based on the nature of the variable; <br>
-                <b>All:</b> all possible choices are offered, <br><b>Related:</b> the data-type related choices are offered, <br>
-                <b>Sensible:</b> the choices based on data-type, values and cardinality""",
-            ),
-            ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, text = "Sets a logarithmic cap of 10^n observations used to assess cardinality and suggest feasible conversions. Commitment still transforms the complete incoming column.", position = "left")
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_text(
+            id="Formats", label="Possible date formats", width="100%", value=", ".join(map(str, DATE_FORMATS)),
+            guide=this, text="Comma-delimited date formats to try - in this order. %Y means year; %m means month; %d means day.", position="left",
+        ),
+        ui.input_radio_buttons(
+            id="Alternatives", label="Alternative types", choices=["Sensible", "Related", "All"], selected="Sensible",
+            guide=this, position="left", text="""How the data-type choices are offered based on the nature of the variable; <br>
+            <b>All:</b> all possible choices are offered, <br><b>Related:</b> the data-type related choices are offered, <br>
+            <b>Sensible:</b> the choices based on data-type, values and cardinality""",
+        ),
+        ui.input_slider(
+            id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+            guide = this, text = "Sets a logarithmic cap of 10^n observations used to assess cardinality and suggest feasible conversions. Commitment still transforms the complete incoming column.", position = "left")
+    )
 
     def server(input, output, session):
 

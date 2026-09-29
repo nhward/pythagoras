@@ -454,76 +454,66 @@ def instance():
     this.long_name = "Informative Missingness"
     this.description = "This card uses a Random Forest model to assess the informative missingness of each predictor's missing values."
 
-    def front():
-        return ui.TagList(
-            ui.span("Cross-validated variable importance", class_="text-primary text-center d-block"),
-            shinywidgets.output_widget(
-                id="Importance", fill=True, guide=this, position="left",
-                title="Variable importance chart", text="Variable importance of variables of a Random Forest model predicting the target."
-            )
+    this.front = lambda: ui.TagList(
+        ui.span("Cross-validated variable importance", class_="text-primary text-center d-block"),
+        shinywidgets.output_widget(
+            id="Importance", fill=True, guide=this, position="left",
+            title="Variable importance chart", text="Variable importance of variables of a Random Forest model predicting the target."
         )
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.span("Cross-validated shadow-variable importance", class_="text-primary text-center d-block"),
+        ui.output_ui(
+            id="Table", guide=this, title="Variable importance table", position="left",
+            text="""
+                Shadow rows describe whether each predictor's missingness 
+                helps predict the target. The 'Interpretation' column is the conclusion.
+                The columns are
+                <ul>
+                <li>Variable: The variable name</li>
+                <li>Variable type: Standard predictor or Shadow predictor</li>
+                <li>Source Variable: The underlying variable name</li>
+                <li>Missing proportion: Fraction missing values</li>
+                <li>Importance: Mean held-out permutation importance across cross-validation 
+                folds</li>
+                <li>Importance standard deviation: Spread based on permuations</li>
+                <li>Positive Fraction: The proportion of permutations where the importance is greater than zero</li>
+                <li>Interpretation: Informative or not</li>
+                </ul>
+                """
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span("Cross-validated shadow-variable importance", class_="text-primary text-center d-block"),
-            ui.output_ui(
-                id="Table", guide=this, title="Variable importance table", position="left",
-                text="""
-                    Shadow rows describe whether each predictor's missingness 
-                    helps predict the target. The 'Interpretation' column is the conclusion.
-                    The columns are
-                    <ul>
-                    <li>Variable: The variable name</li>
-                    <li>Variable type: Standard predictor or Shadow predictor</li>
-                    <li>Source Variable: The underlying variable name</li>
-                    <li>Missing proportion: Fraction missing values</li>
-                    <li>Importance: Mean held-out permutation importance across cross-validation 
-                    folds</li>
-                    <li>Importance standard deviation: Spread based on permuations</li>
-                    <li>Positive Fraction: The proportion of permutations where the importance is greater than zero</li>
-                    <li>Interpretation: Informative or not</li>
-                    </ul>
-                    """
-            ),
-        )
-
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"),
-            ui.output_ui(id="Significance"),
-            ui.input_checkbox_group(id="Shadow", label="Permanently add shadow variables", inline=True, choices = [],
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Busy"),
+        ui.input_checkbox_group(
+            id="Shadow", label="Permanently add shadow variables", inline=True, choices = [],
             guide=this, position="top",
-            text="Permanently add a boolean shadow variable for any named predictors. These should have the interpretation \"Informative\"."),
-            class_ = "vertically-scrollable-footer"
-       )
+            text="Permanently add a boolean shadow variable for any named predictors. These should have the interpretation \"Informative\"."
+        ),
+        ui.output_ui(id="Significance"),
+        class_ = "vertically-scrollable-footer"
+    )
 
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_slider(
-                id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
-                guide=this, text="Number of held-out folds. For classification this is reduced automatically when the minority class is small.", position="left",
-            ),
-            ui.input_slider(
-                id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
-                guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
-            ),
-            ui.input_slider(
-                id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
-                guide=this, text="Requires the target model to reach at least this held-out balanced accuracy before shadow importance is interpreted as informative. Raising it demands stronger overall predictive performance.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, step = 1, ticks=True, pre="10^",
-                guide=this, position="left", text="Sets a cap of observations used for cross-validated importance. Raising it improves coverage but increases random-forest fitting and permutation time."
-            )
+    this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
+            guide=this, text="Number of held-out folds. For classification this is reduced automatically when the minority class is small.", position="left",
+        ),
+        ui.input_slider(
+            id="MinMissProp", label="Minimum missing proportion", min=0, max=0.5, value=0.05, step=0.01,
+            guide=this, text="For a predictor to be considered to have missing values, its missing proportion must exceed this value.", position="left",
+        ),
+        ui.input_slider(
+            id="MinBalancedAccuracy", label="Minimum balanced accuracy", min=0.50, max=0.90, value=0.55, step=0.01,
+            guide=this, text="Requires the target model to reach at least this held-out balanced accuracy before shadow importance is interpreted as informative. Raising it demands stronger overall predictive performance.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, step = 1, ticks=True, pre="10^",
+            guide=this, position="left", text="Sets a cap of observations used for cross-validated importance. Raising it improves coverage but increases random-forest fitting and permutation time."
         )
-
-    this.settings = settings
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -729,6 +719,7 @@ def instance():
         @render.ui
         @this.record_context
         def Table():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="Table2")
 
         @output
@@ -784,7 +775,7 @@ def instance():
                 variables = ", ".join(map(str, informative))
                 return ui.span(
                     f"Potentially informative missingness: {variables}.",
-                    class_="text-warning-emphasis",
+                    class_="text-warning",
                 )
             return ui.span(
                 "No missingness indicator has stable positive importance.",

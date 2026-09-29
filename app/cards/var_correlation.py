@@ -814,93 +814,81 @@ def instance():
             value=method.key,
         )
 
-    def front():
-        return ui.navset_bar(
-            *(_panel(method) for method in METHODS.values()),
-            title=None,
-            id="CorrType",
-            selected="pearson",
-            padding=0,
-            fillable=True,
-        )
+    this.front = lambda: ui.navset_bar(
+        *(_panel(method) for method in METHODS.values()),
+        title=None,
+        id="CorrType",
+        selected="pearson",
+        padding=0,
+        fillable=True,
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.output_ui(id="TableTitle"),
+        ui.output_ui(
+            id="Table",
+            guide=this,
+            title="Association values",
+            text=(
+                "Lists values at or above the selected magnitude threshold. "
+                "Directional methods retain both source-to-destination directions."
+            ),
+            position="left",
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.output_ui(id="TableTitle"),
-            ui.output_ui(
-                id="Table",
-                guide=this,
-                title="Association values",
-                text=(
-                    "Lists values at or above the selected magnitude threshold. "
-                    "Directional methods retain both source-to-destination directions."
-                ),
-                position="left",
-            ),
-        )
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Busy"),
+        ui.output_ui(
+            id="Check",
+            guide=this,
+            title="Correlation analysis summary",
+            text="Reports the variables, observations, weighting, and directionality used by the selected method.",
+            position="top",
+        ),
+        class_="text-center",
+    )
 
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"),
-            ui.output_ui(
-                id="Check",
-                guide=this,
-                title="Correlation analysis summary",
-                text="Reports the variables, observations, weighting, and directionality used by the selected method.",
-                position="top",
-            ),
-            class_="text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_radio_buttons(
-                id="Style", label="Chart style", choices={"heatmap": "Heat map", "chord": "Chord"}, selected="chord",
-                guide=this, position="left", text="Switches between a heatmap chart and a chord chart.",
-            ),
-            ui.input_slider(
-                id="Threshold", label="Association threshold", min=0, max=1, value=0.25, step=0.01,
-                guide=this, position="left",
-                text="""
-                Values below this threshold (by absolute magnitude) are hidden from the charts and tables.
-                This entirely subjective and is intended to hide associations that are indistinguishable from zero.
-                This may also be a mechanism to expose the large associations.
-                """
-            ),
-            ui.input_checkbox(
-                id="IncludeTarget", label="Include target variables", value=False,
-                guide=this, position="left", text="Adds numeric, nonconstant target variables to predictors and treatment variables.",
-            ),
-            ui.input_checkbox(
-                id="Absolute", label="Show absolute values", value=False,
-                guide=this, position="left",
-                text="Removes the sign from signed measures in both chart styles. Chord widths always use magnitude; without absolute values, ribbon colours distinguish positive and negative associations.",
-            ),
-            ui.input_select(
-                id="Ordering", label="Variable ordering", selected="optimal",
-                choices={
-                    "optimal": "Optimal leaf ordering",
-                    "clustered": "Hierarchical clustering",
-                    "mean": "Mean association",
-                    "original": "Original column order",
-                },
-                guide=this, position="left",
-                text="Changes presentation only. Assymmetric matrices are combined with their transpose solely to calculate a common row and column order."
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=2, max=5, value=3, ticks=True, pre="10^",
-                guide=this, position="left",
-                text="Above 10^n rows the chart uses a deterministic random sample. Distance correlation is capped at 2,000 and PPS at 10,000 observations for computational safety."
-            ),
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_radio_buttons(
+            id="Style", label="Chart style", choices={"heatmap": "Heat map", "chord": "Chord"}, selected="chord",
+            guide=this, position="left", text="Switches between a heatmap chart and a chord chart.",
+        ),
+        ui.input_slider(
+            id="Threshold", label="Association threshold", min=0, max=1, value=0.25, step=0.01,
+            guide=this, position="left",
+            text="""
+            Values below this threshold (by absolute magnitude) are hidden from the charts and tables.
+            This entirely subjective and is intended to hide associations that are indistinguishable from zero.
+            This may also be a mechanism to expose the large associations.
+            """
+        ),
+        ui.input_checkbox(
+            id="IncludeTarget", label="Include target variables", value=False,
+            guide=this, position="left", text="Adds numeric, nonconstant target variables to predictors and treatment variables.",
+        ),
+        ui.input_checkbox(
+            id="Absolute", label="Show absolute values", value=False,
+            guide=this, position="left",
+            text="Removes the sign from signed measures in both chart styles. Chord widths always use magnitude; without absolute values, ribbon colours distinguish positive and negative associations.",
+        ),
+        ui.input_select(
+            id="Ordering", label="Variable ordering", selected="optimal",
+            choices={
+                "optimal": "Optimal leaf ordering",
+                "clustered": "Hierarchical clustering",
+                "mean": "Mean association",
+                "original": "Original column order",
+            },
+            guide=this, position="left",
+            text="Changes presentation only. Assymmetric matrices are combined with their transpose solely to calculate a common row and column order."
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=2, max=5, value=3, ticks=True, pre="10^",
+            guide=this, position="left",
+            text="Above 10^n rows the chart uses a deterministic random sample. Distance correlation is capped at 2,000 and PPS at 10,000 observations for computational safety."
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -1099,7 +1087,7 @@ def instance():
             ]
             if analysis.weighted:
                 details.append("observation weights applied")
-            return ui.span("; ".join(details) + ".", class_="text-info")
+            return ui.span("; ".join(details) + ".", class_="text-primary")
 
         session.on_ended(Calculate.cancel)
         

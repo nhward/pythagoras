@@ -224,16 +224,6 @@ def _analyze(source, lags=10, row_order=False, use_entities=True, use_target=Tru
 
 
 @recordable
-def _summary(result, alpha):
-    valid = result.table["Adjusted p"].notna()
-    count = int((result.table["Adjusted p"] < alpha).sum())
-    conclusion = (f"Dependence diagnostics flagged {count} of {int(valid.sum())} tested entity-variable series."
-                  if count else "No serial dependence detected in tested series; this does not establish independence."
-                  if valid.any() else "No series could be tested.")
-    return " ".join([conclusion, *result.notes])
-
-
-@recordable
 def _figure(result, *, alpha=.05, full_screen=False):
     table = _display_table(result.table, alpha).dropna(subset=["Adjusted p"]).sort_values("Adjusted p").head(30)
     if table.empty:
@@ -248,17 +238,36 @@ def _figure(result, *, alpha=.05, full_screen=False):
             if table["Finding"].eq(finding).any():
                 figure.add_trace(go.Bar(x=[None], y=[None], name=finding,
                                        marker_color=colour, hoverinfo="skip"))
-        figure.update_layout(showlegend=full_screen, legend={"orientation": "h", "y": -0.22})
+        figure.update_layout(
+            showlegend=full_screen, 
+            legend={
+                "orientation": "h", 
+                "y": -0.05, 
+                "x": 0.5, 
+                "xanchor": "center",
+                "yanchor": "top",
+                "itemclick": False,
+                'itemdoubleclick': False,
+            }
+        )
         figure.add_vline(x=-np.log10(alpha), line_dash="dash")
         figure.update_layout(
             template="plotly_white",
             xaxis_title="−log₁₀ adjusted p (larger = stronger evidence)",
             yaxis={"autorange": "reversed", "type": "category"},
-            # title="Up to 30 strongest entity-variable results",
+            title= {
+                'text': 'Dependency bar chart',
+                'font': {'size':17},
+                'x': 0.5, 
+                'xanchor': "center",
+                'y': 1, 
+                'yanchor': "top",
+            },
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor='#bbd6f8',
-            margin={"l": 15, "r": 15, "t": 35, "b": 35},
-            # font={"size": 13 if full_screen else 10},
+            margin={"l": 15, "r": 35, "t": 20, "b": 5},
+            modebar = {"orientation": "v"},
+            font={"size": 13 if full_screen else 10},
         )
     return figure
 
@@ -286,7 +295,7 @@ def instance():
 
     this.footer = lambda: ui.TagList(
         ui.output_ui(id="Busy"), 
-        ui.output_text(id="Status")
+        ui.output_ui(id="Status")
     )
 
     this.settings = lambda: ui.TagList(
@@ -341,7 +350,7 @@ def instance():
             return source
 
         @this.reactable(calc=True)
-        @this.settle(seconds=1)
+        @this.settle(seconds=2)
         @this.record_context
         def Options():
             return (int(input.Lags()), input.Order() == "row", bool(input.Entities()), bool(input.Target()), input.Imputation(), int(input.Window()))
@@ -376,16 +385,32 @@ def instance():
             return busy.ui()
 
         @output
-        @render.text
+        @render.ui
         @this.record_context
         def Status():
-            return _summary(Results(), float(input.Alpha()))
+            result = Results()
+            alpha = float(input.Alpha())
+            valid = result.table["Adjusted p"].notna()
+            count = int((result.table["Adjusted p"] < alpha).sum())
+            if count:
+                conclusion = f"Dependence diagnostics flagged {count} of {int(valid.sum())} tested entity-variable series."
+                class_ = "text-warning"
+            elif valid.any():
+                conclusion = "No serial dependence detected in tested series; this does not establish independence."
+                class_ = "text-success"
+            else:
+                conclusion = "Dependency could not be tested."
+                class_ = "text-danger"
+
+            if this.isFullScreen():
+                return ui.span(" ".join([conclusion, *result.notes]), class_ = class_)
+            return ui.span(conclusion, class_ = class_)
 
         @output
         @render.data_frame
         @this.record_context
         def Table():
-            table = _display_table(Results().table, float(input.Alpha()))
+            table = _display_table(Results().table.round(3), float(input.Alpha()))
             return render.DataTable(table, width="100%", height=None, styles=_row_styles(table))
 
         @output

@@ -246,12 +246,12 @@ def _figure(result):
     )
     return fig
 
-
 def instance():
     this = Card(file=__file__)
     this.defer_configuration_input('Membership')
     this.long_name = 'Cluster profiling'
     this.description = 'Explain cluster memberships using an interpretable tree and held-out fidelity scores.'
+
     this.front = lambda: ui.navset_bar(
         ui.nav_panel('No memberships', shinywidgets.output_widget('EmptyTree', fill=True), value='__empty__'),
         id='Membership', title=None, padding=0, fillable=True)
@@ -261,20 +261,23 @@ def instance():
         ui.nav_panel('Rules', ui.output_text('RulesTarget'), ui.output_data_frame('Rules')),
         ui.nav_panel('Cluster accuracy', ui.output_text('RecallTarget'), ui.output_data_frame('Recall')),
         ui.nav_panel('Confusion', ui.output_text('ConfusionTarget'), ui.output_data_frame('Confusion')), id='Details')
-    this.footer = lambda: ui.TagList(ui.output_ui('Busy'), ui.output_text('Accuracy'))
-    def settings():
-        def slider(id, label, low, high, value, step, text, ticks=True, pre=None):
-            return ui.input_slider(id, label=label, min=low, max=high, value=value, step=step, guide=this, position='left', text=text, ticks=ticks, pre=pre)
-        return ui.TagList(
-            slider('Depth', 'Maximum tree depth', 1, 6, 3, 1, 'Limits explanation complexity. Deeper trees may reproduce labels more closely but are harder to read and can overfit.'),
-            slider('Leaf', 'Minimum leaf fraction', .01, .25, .02, .01, 'Minimum fraction of training rows in each leaf. This uses row counts, not importance mass.'),
-            slider('Folds', 'Cross-validation folds', 2, 10, 5, 1, 'Stratified folds, capped by the smallest cluster count. Accuracy uses out-of-fold predictions; balanced accuracy averages recall across clusters. Fold SD describes variability, not a confidence interval. Existing cluster labels are fixed, so this does not validate the upstream clustering pipeline.'),
-            ui.input_checkbox('UseWeights', label='Use assigned observation weighting', value=True, guide=this, position='left', text='Use finite nonnegative importance weights for tree fitting and held-out metrics. Zero-weight rows are excluded; positive weights are normalized to mean one. Imputation and sampling use row counts. Disable to give all rows equal importance.'),
-            ui.input_checkbox('Unallocated', label='Include unallocated', value=True, guide=this, position='left', text='Treat DBSCAN unallocated as a class to explain. Disable to profile allocated clusters only. Missing labels are always omitted. At least two observed classes are needed.'),
-            slider('Limit', 'Maximum observations to analyze', 2, 7, 4, 1, 'Reproducible stratified sampling above this cap. Rare clusters need at least two sampled rows. Raising it improves coverage but can substantially increase fitting time.', True, "10^")
-        )
 
-    this.settings = settings
+    this.footer = lambda: ui.TagList(
+        ui.output_ui('Busy'), 
+        ui.output_text('Accuracy')
+    )
+    
+    def slider(id, label, low, high, value, step, text, ticks=True, pre=None):
+        return ui.input_slider(id, label=label, min=low, max=high, value=value, step=step, guide=this, position='left', text=text, ticks=ticks, pre=pre)
+    this.settings = lambda: ui.TagList(
+        slider('Depth', 'Maximum tree depth', 1, 6, 3, 1, 'Limits explanation complexity. Deeper trees may reproduce labels more closely but are harder to read and can overfit.'),
+        slider('Leaf', 'Minimum leaf fraction', .01, .25, .02, .01, 'Minimum fraction of training rows in each leaf. This uses row counts, not importance mass.'),
+        slider('Folds', 'Cross-validation folds', 2, 10, 5, 1, 'Stratified folds, capped by the smallest cluster count. Accuracy uses out-of-fold predictions; balanced accuracy averages recall across clusters. Fold SD describes variability, not a confidence interval. Existing cluster labels are fixed, so this does not validate the upstream clustering pipeline.'),
+        ui.input_checkbox('UseWeights', label='Use assigned observation weighting', value=True, guide=this, position='left', text='Use finite nonnegative importance weights for tree fitting and held-out metrics. Zero-weight rows are excluded; positive weights are normalized to mean one. Imputation and sampling use row counts. Disable to give all rows equal importance.'),
+        ui.input_checkbox('Unallocated', label='Include unallocated', value=True, guide=this, position='left', text='Treat DBSCAN unallocated as a class to explain. Disable to profile allocated clusters only. Missing labels are always omitted. At least two observed classes are needed.'),
+        slider('Limit', 'Maximum observations to analyze', 2, 7, 4, 1, 'Reproducible stratified sampling above this cap. Rare clusters need at least two sampled rows. Raising it improves coverage but can substantially increase fitting time.', True, "10^")
+    )
+
     def server(input, output, session):
         busy = this.busy()
         restored = this.restored_configuration_input('Membership', None)

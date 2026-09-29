@@ -2,18 +2,20 @@
 import os
 import sys
 from pathlib import Path
+
 ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(ROOT)
 sys.path.insert(0,str(ROOT))
+
 import numpy as np
 import pandas as pd
 import pytest
 from cards import data_coverage as m
+from playwright.sync_api import expect
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from playwright.sync_api import expect
-from shiny.pytest import create_app_fixture
 from shiny.playwright import controller
+from shiny.pytest import create_app_fixture
 
 app = create_app_fixture(app='../scenarios/data_coverage.py', scope='function')
 @pytest.fixture(scope='session')
@@ -63,9 +65,54 @@ class TestCoverage:
         r=m._analyze(d,['stratum','treatment','sensitive'])
         assert r.expected.shape==(2,2,2) and np.all(r.expected==7.5)
         assert r.table.Empty.sum()==6 and r.expected.sum()==r.observed.sum()==60
-        assert d.equals(before) and 'importance column is not applied' in r.note
+        assert d.equals(before) and 'weighting column was not applied' in r.note
         d.frame['weight']*=100
         pd.testing.assert_frame_equal(r.table,m._analyze(d,r.variables).table)
+
+    def test_weighted_totals_margins_percentages_and_geometry(self):
+        d = source()
+        d.frame['weight'] = np.r_[np.full(30, .25), np.full(30, 1.5)]
+        before = d.clone()
+        r = m._analyze(d, ['stratum', 'treatment'], use_weights=True)
+        assert not r.error and r.weighted and r.total == 52.5
+        np.testing.assert_allclose(r.observed, [[7.5, 0], [0, 45]])
+        expected = np.outer([7.5, 45], [7.5, 45]) / 52.5
+        np.testing.assert_allclose(r.expected, expected)
+        assert r.table['Observed %'].sum() == pytest.approx(100)
+        assert r.table['Expected %'].sum() == pytest.approx(100)
+        assert 7.5 in r.table.Observed.values
+        for area in ('observed', 'expected'):
+            masses = getattr(r, area)
+            for index, (x0, y0, x1, y1) in m._rectangles(masses).items():
+                assert (x1-x0)*(y1-y0) == pytest.approx(masses[index] / 52.5)
+            fig = m._figure(r, area=area)
+            assert 'weighted counts' in fig.layout.title.text
+            assert 'Observed: 7.5' in fig.data[0].hovertemplate
+            assert any('Σw=7.5' in annotation.text for annotation in fig.layout.annotations)
+        assert d.equals(before)
+
+    def test_weight_fallback_and_positional_missing_filter(self):
+        d = source()
+        d.frame.index = [0] * 60
+        d.frame.iloc[0, 0] = None
+        d.frame['weight'] = np.r_[100., 0., np.ones(58)]
+        r = m._analyze(d, ['stratum', 'treatment'], use_weights=True)
+        assert not r.error and r.omitted == 1 and r.zero_weight_rows == 1
+        assert r.rows == 58 and r.total == 58
+        included = m._analyze(d, ['stratum', 'treatment'], use_weights=True, missing=True)
+        assert not included.error and included.total == 158
+        d.role_map.clear_roles('weight')
+        fallback = m._analyze(d, ['stratum', 'treatment'], use_weights=True)
+        unweighted = m._analyze(d, ['stratum', 'treatment'])
+        pd.testing.assert_frame_equal(fallback.table, unweighted.table)
+        assert not fallback.weighted and 'using counts' in fallback.note
+
+    @pytest.mark.parametrize('weight', [-1., np.nan, np.inf, 0.])
+    def test_invalid_or_zero_weights(self, weight):
+        d = source()
+        d.frame['weight'] = weight
+        assert m._analyze(d, ['stratum', 'treatment'], use_weights=True).error
+        assert not m._analyze(d, ['stratum', 'treatment']).error
 
     def test_missing_and_unused_categories(self):
         d=source();d.frame.loc[0,'stratum']=None
@@ -117,7 +164,7 @@ def test_restored_mosaic_table_and_full_screen_legend(page,app):
     chart=by_id(page,'Mosaic').locator('.js-plotly-plot')
     expect(chart).to_be_visible()
     assert chart.evaluate('el=>el.layout.showlegend') is False
-    assert 'expected-counts' in chart.evaluate('el=>el.layout.title.text')
+    assert 'expected counts' in chart.evaluate('el=>el.layout.title.text')
     assert chart.evaluate('el=>el.layout.modebar.orientation')=='v'
     tile=chart.locator('.scatterlayer .trace').first.locator('.js-fill')
     bounds=tile.bounding_box()
@@ -140,10 +187,29 @@ def test_selection_clear_and_area_switch(page,app):
     page.locator('.card').first.hover()
     page.locator('.card').first.locator('button.collapse-toggle').click()
     by_id(page,'Area').locator('input[value="observed"]').check()
-    page.wait_for_function("() => document.querySelector('.js-plotly-plot')?.layout?.title?.text?.includes('observed-counts')")
+    page.wait_for_function("() => document.querySelector('.js-plotly-plot')?.layout?.title?.text?.includes('observed counts')")
     selector=controller.InputSelectize(page,by_id(page,'Variables').get_attribute('id'))
     selector.set(['Region','Treatment'])
     expect(by_id(page,'Status')).to_contain_text('4 intersections',timeout=30000)
     selector.set([])
     expect(by_id(page,'Status')).to_contain_text('Select between two and five',timeout=30000)
     expect(by_id(page,'PassThrough')).to_contain_text('unchanged=True')
+
+
+@pytest.mark.ui
+def test_use_weights_updates_mosaic_and_table(page, app):
+    page.goto(app.url)
+    expect(by_id(page, 'Status')).to_contain_text('8 intersections', timeout=60000)
+    page.locator('.card').first.hover()
+    page.locator('.card').first.locator('button.collapse-toggle').click()
+    by_id(page, 'UseWeights').check()
+    expect(by_id(page, 'Status')).to_contain_text('Total weight: 5,050', timeout=30000)
+    chart = by_id(page, 'Mosaic').locator('.js-plotly-plot')
+    page.wait_for_function("() => document.querySelector('.js-plotly-plot')?.layout?.title?.text?.includes('weighted counts')")
+    assert any('Observed: 820' in (t.get('hovertemplate') or '') for t in chart.evaluate('el=>el.data'))
+    by_id(page, 'FlipButton').click(force=True)
+    expect(by_id(page, 'Table')).to_contain_text('820', timeout=15000)
+    by_id(page, 'UseWeights').uncheck()
+    expect(by_id(page, 'Status')).not_to_contain_text('Total weight:', timeout=30000)
+    expect(by_id(page, 'Table')).not_to_contain_text('820', timeout=15000)
+    expect(by_id(page, 'PassThrough')).to_contain_text('unchanged=True')

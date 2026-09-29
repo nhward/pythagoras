@@ -45,6 +45,7 @@ dependencies = [
   "pytest-cov==7.1.0",
   "setuptools==84.0.0",
   "rich==15.0.0",
+  "inflect==7.5.0",
 ]
 
 # card, module, cards and roles are local source modules, not PyPI dependencies.

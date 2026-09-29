@@ -33,6 +33,8 @@ from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PowerTransformer, StandardScaler
 
+#TODO: Add other styles of centring and scaling that sklearn supports (ideally robust ones)
+
 TRANSFORM_LABELS = {
     "Center": "Mean center",
     "Scale": "Common spread",
@@ -603,72 +605,64 @@ def instance():
     this.long_name = "Variable Transform"
     this.description = "This card explores and applies transformations to the location, spread, and shape of continuous numeric predictors and, when explicitly enabled, one continuous target."
 
-    def front():
-        return ui.TagList(
-            ui.span(
-                "Variables in location–spread and distribution-shape space",
-                class_="text-primary text-center d-block",
-            ),
-            shinywidgets.output_widget(
-                id="DistributionChart", fill=True, guide=this,
-                title="Distribution transformation map",
-                text="The card maps mean against standard deviation. Full-screen mode adds skew against standard deviation and kurtosis against skew. When transformations are selected, lines connect each original point to its transformed position without changing the original axis scales.",
-                position="left",
-            ),
-        )
-    this.front = front
+    this.front = lambda: ui.TagList(
+        ui.span(
+            "Variables in location–spread and distribution-shape space",
+            class_="text-primary text-center d-block",
+        ),
+        shinywidgets.output_widget(
+            id="DistributionChart", fill=True, guide=this,
+            title="Distribution transformation map",
+            text="The card maps mean against standard deviation. Full-screen mode adds skew against standard deviation and kurtosis against skew. When transformations are selected, lines connect each original point to its transformed position without changing the original axis scales.",
+            position="left",
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span(
-                "Distribution statistics before and after transformation",
-                class_="text-primary text-center d-block",
-            ),
-            ui.output_ui(
-                id="Statistics", guide=this, title="Distribution statistics",
-                text="The table reports the moments before and after transformation, the fitted Yeo–Johnson lambda, and explicit reasons for excluded variables.",
-                position="left",
-            ),
-        )
-    this.back = back
+    this.back = lambda: ui.TagList(
+        ui.span(
+            "Distribution statistics before and after transformation",
+            class_="text-primary text-center d-block",
+        ),
+        ui.output_ui(
+            id="Statistics", guide=this, title="Distribution statistics",
+            text="The table reports the moments before and after transformation, the fitted Yeo–Johnson lambda, and explicit reasons for excluded variables.",
+            position="left",
+        ),
+    )
 
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"),
-            ui.output_ui(id="Check"),
-            ui.input_checkbox_group(
-                id="Transform", label="Transform variables",
-                choices=TRANSFORM_LABELS, selected=[], inline=True,
-                guide=this, title="Apply transformations", position="top",
-                text="Reduce skew with a fitted Yeo–Johnson power transform, give predictors a common standard deviation, or mean-center them. Selected operations are always applied in that order, and clearing the choices restores the incoming data.",
-            ),
-            class_="vertically-scrollable-footer",
-        )
-    this.footer = footer
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Busy"),
+        ui.input_checkbox_group(
+            id="Transform", label="Transform variables",
+            choices=TRANSFORM_LABELS, selected=[], inline=True,
+            guide=this, title="Apply transformations", position="top",
+            text="Reduce skew with a fitted Yeo–Johnson power transform, give predictors a common standard deviation, or mean-center them. Selected operations are always applied in that order, and clearing the choices restores the incoming data.",
+        ),
+        ui.output_ui(id="Check"),
+        class_="vertically-scrollable-footer",
+    )
 
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox(
-                id="IncludeTarget",
-                label="Include a continuous numeric target",
-                value=False,
-                guide=this,
-                title="Transform the continuous target",
-                position="left",
-                text="When exactly one continuous numeric target is assigned, include it in the selected transformations. Otherwise this setting has no effect. Target transformations will eventually become part of the persisted proxy workflow; until then, interpret transformed target values with care.",
-            ),
-            ui.input_checkbox(
-                id="Labels", label="Label chart points", value=False,
-                guide=this, title="Point labels", position="left",
-                text="Show variable names beside chart points. Hover information remains available when labels are hidden.",
-            ),
-            ui.input_slider(
-                id="Digits", label="Table decimal places", min=1, max=8,
-                value=3, step=1, guide=this, title="Decimal places",
-                position="left", text="Rounds numeric values in the flip-side statistics table to this many decimal places. It changes presentation only and does not alter fitted transformations or exported values.",
-            ),
-        )
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox(
+            id="IncludeTarget",
+            label="Include a continuous numeric target",
+            value=False,
+            guide=this,
+            title="Transform the continuous target",
+            position="left",
+            text="When exactly one continuous numeric target is assigned, include it in the selected transformations. Otherwise this setting has no effect. Target transformations will eventually become part of the persisted proxy workflow; until then, interpret transformed target values with care.",
+        ),
+        ui.input_checkbox(
+            id="Labels", label="Label chart points", value=False,
+            guide=this, title="Point labels", position="left",
+            text="Show variable names beside chart points. Hover information remains available when labels are hidden.",
+        ),
+        ui.input_slider( #TODO: make this fixed as it is elsewhere
+            id="Digits", label="Table decimal places", min=1, max=8,
+            value=3, step=1, guide=this, title="Decimal places",
+            position="left", text="Rounds numeric values in the flip-side statistics table to this many decimal places. It changes presentation only and does not alter fitted transformations or exported values.",
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()

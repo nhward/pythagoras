@@ -166,7 +166,8 @@ def _figure(result, full_screen=False):
         showlegend=full_screen,
         legend={"orientation": "h", "y": 1.02, "x": .5, "xanchor": "center", "yanchor": "bottom"},
         margin={"l": 55, "r": 15, "t": 10, "b": 45},
-        modebar={"orientation": "v"}, font={"size": 13 if full_screen else 10},
+        modebar={"orientation": "v"}, 
+        font={"size": 13 if full_screen else 10},
         uirevision="continuous-values",
     )
     return figure
@@ -186,12 +187,12 @@ def instance():
     )
     this.back = lambda: ui.TagList(
         ui.p("Largest observed gaps, not significance tests. Gap summaries are withheld below 90% distinct values. Counts and percentages describe the assessed sample."),
-        ui.output_data_frame(
+        ui.output_ui(
             id="Summary", guide=this, title="Gap summary", position="left",
             text="One row per selected variable. Omitted counts missing or infinite values in the sampled rows. Gap from/to bound the largest adjacent gap, and Gap / range expresses its size relative to that variable's observed range. Equal largest gaps report the first. Sampling can exaggerate gaps.",
         ),
     )
-    this.footer = lambda: ui.TagList(ui.output_ui("Busy"), ui.output_text("Status"))
+    this.footer = lambda: ui.TagList(ui.output_ui("Busy"), ui.output_ui("Status"))
     this.settings = lambda: ui.TagList(
         ui.input_checkbox(
             id="UseTarget", label="Include any target", value=False,
@@ -286,12 +287,18 @@ def instance():
             return widget
 
         @output
-        @render.data_frame
+        @render.ui
         def Summary():
+            return ui.output_data_frame(id="SummaryTable")
+
+        @output
+        @render.data_frame
+        @this.record_context
+        def SummaryTable():
             table = Results().table.copy()
             for column in table.select_dtypes(include="floating"):
                 table[column] = table[column].map(lambda value: f"{value:.4g}" if pd.notna(value) else "")
-            return render.DataTable(table, width="100%", height=None, filters=False)
+            return render.DataTable(table, width="100%", filters=False)
 
         @output
         @render.ui
@@ -299,7 +306,7 @@ def instance():
             return busy.ui()
 
         @output
-        @render.text
+        @render.ui
         def Status():
             result = Results()
             if result.message:
@@ -307,11 +314,13 @@ def instance():
             count = sum(bool(len(values)) for values in result.curves.values())
             noun = "variable" if count == 1 else "variables"
             text = f"{count} {noun} plotted; {result.sampled:,} of {result.total:,} rows assessed."
+            if not this.isFullScreen():
+                return ui.span(text, class_ = "text-success")
             if result.sampled < result.total:
                 text += " Reproducible sample: apparent gaps may be enlarged."
             if result.table["Omitted"].sum():
                 text += " Missing/nonfinite values omitted separately per variable."
-            return text
+            return ui.span(text, class_ = "text-success")
 
         def stop():
             cancellation.set()

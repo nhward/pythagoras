@@ -367,81 +367,72 @@ def instance():
         "parallel-coordinates chart. Each line represents one complete observation."
     )
 
-    def front():
-        return ui.TagList(
-            ui.span(
-                "Parallel coordinates",
-                class_="text-primary text-center d-block",
+    this.front = lambda: ui.TagList(
+        ui.span(
+            "Parallel coordinates",
+            class_="text-primary text-center d-block",
+        ),
+        ui.div(
+            ui.div(
+                ui.tags.button(
+                    "Clear comparison",
+                    type="button",
+                    class_="btn btn-sm btn-outline-secondary parallel-clear-comparison",
+                    hidden=True,
+                ),
+                class_="parallel-chart-controls",
+            ),
+            shinywidgets.output_widget(
+                id="Chart",
+                fill=True,
+                guide=this,
+                title="Parallel-coordinates chart",
+                text=(
+                    "Each line is an observation spanning the selected variable "
+                    "axes. Hover near a line to identify it and click to pin it for "
+                    "comparison. Drag vertically on an axis to filter lines, "
+                    "double-click to clear a filter, and drag an axis horizontally "
+                    "to reorder it. Only observations complete across the displayed "
+                    "and color variables are included."
+                ),
+                position="left",
             ),
             ui.div(
-                ui.div(
-                    ui.tags.button(
-                        "Clear comparison",
-                        type="button",
-                        class_="btn btn-sm btn-outline-secondary parallel-clear-comparison",
-                        hidden=True,
-                    ),
-                    class_="parallel-chart-controls",
-                ),
-                shinywidgets.output_widget(
-                    id="Chart",
-                    fill=True,
-                    guide=this,
-                    title="Parallel-coordinates chart",
-                    text=(
-                        "Each line is an observation spanning the selected variable "
-                        "axes. Hover near a line to identify it and click to pin it for "
-                        "comparison. Drag vertically on an axis to filter lines, "
-                        "double-click to clear a filter, and drag an axis horizontally "
-                        "to reorder it. Only observations complete across the displayed "
-                        "and color variables are included."
-                    ),
-                    position="left",
-                ),
-                ui.div(
-                    hidden=True,
-                    class_="parallel-hover-tooltip",
-                    role="status",
-                ),
-                ui.div(
-                    hidden=True,
-                    class_="parallel-comparison-label",
-                    role="status",
-                ),
-                class_="parallel-hover-host html-fill-container html-fill-item",
-                data_parallel_hover="true",
+                hidden=True,
+                class_="parallel-hover-tooltip",
+                role="status",
             ),
-        )
-
-    this.front = front
-
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Check"),
-            class_="text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_selectize(
-                id="Variables", label="Variables to display", choices=[], selected=[], multiple=True, options={"plugins": ["remove_button"]},
-                guide=this, title="Variables", position="left",
-                text= f"Select the vertical axes. Numeric, Boolean, date/time, and categorical variables with no more than {MAX_CATEGORICAL_LEVELS} observed levels can be displayed."
+            ui.div(
+                hidden=True,
+                class_="parallel-comparison-label",
+                role="status",
             ),
-            ui.input_select(
-                id="Colour", label="Color lines by", choices={NO_COLOUR: "No color variable"}, selected=NO_COLOUR,
-                guide=this, title="Color variable", position="left",
-                text="Optionally colors every observation line by another compatible variable. The scale is shown in full-screen mode; this changes only the chart, not the exported data."
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to chart", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Sets a logarithmic cap of 10^n complete observations drawn by deterministic random sampling. Raising it improves coverage but increases chart density and browser cost; no rows are removed downstream.", position="left",
-            ),
-        )
+            class_="parallel-hover-host html-fill-container html-fill-item",
+            data_parallel_hover="true",
+        ),
+    )
 
-    this.settings = settings
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Check"),
+        class_="text-center",
+    )
+
+    this.settings = lambda: ui.TagList(
+        ui.input_selectize(
+            id="Variables", label="Variables to display", choices=[], selected=[], multiple=True, options={"plugins": ["remove_button"]},
+            guide=this, title="Variables", position="left",
+            text= f"Select the vertical axes. Numeric, Boolean, date/time, and categorical variables with no more than {MAX_CATEGORICAL_LEVELS} observed levels can be displayed."
+        ),
+        ui.input_select(
+            id="Colour", label="Color lines by", choices={NO_COLOUR: "No color variable"}, selected=NO_COLOUR,
+            guide=this, title="Color variable", position="left",
+            text="Optionally colors every observation line by another compatible variable. The scale is shown in full-screen mode; this changes only the chart, not the exported data."
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to chart", min=3, max=7, value=4, ticks=True, pre="10^",
+            guide=this, text="Sets a logarithmic cap of 10^n complete observations drawn by deterministic random sampling. Raising it improves coverage but increases chart density and browser cost; no rows are removed downstream.", position="left",
+        ),
+    )
 
     def server(input, output, session):
         variable_selection = SelectionRestore(this.restored_configuration_input("Variables"))

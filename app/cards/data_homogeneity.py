@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gettext
 import os
 import sys
 from dataclasses import dataclass
@@ -12,7 +13,6 @@ if __name__ == "__main__":
     root_string = str(ROOT)
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
-
 
 import numpy as np
 import pandas as pd
@@ -46,7 +46,6 @@ SUMMARY_ROW_CLASSES = {
     "Stable": "data-homogeneous-stable-row",
     "Excluded": "data-homogeneous-excluded-row",
 }
-
 
 @recordable
 @dataclass
@@ -601,71 +600,64 @@ def instance():
     this.long_name = "Data homogeneity"
     this.description = "This card examines whether variable distributions remain homogeneous through a meaningful observation sequence; a time sequence makes this a data-drift analysis."
 
-    def front():
-        return ui.TagList(
-            ui.span("Distribution drift through the observation sequence", class_="text-primary text-center d-block"),
-            shinywidgets.output_widget(
-                id="DriftChart", fill=True, guide=this,
-                title="Data homogeneity heatmap",
-                text="Each cell measures drift beyond the variable's 95% random-order boundary. Hover details retain the raw distribution and missingness discrepancies.",
-                position="left",
-            ),
-        )
-    this.front = front
+    this.front = lambda: ui.TagList(
+        ui.span("Distribution drift through the observation sequence", class_="text-primary text-center d-block"),
+        shinywidgets.output_widget(
+            id="DriftChart", fill=True, guide=this,
+            title="Data homogeneity heatmap",
+            text="Each cell measures drift beyond the variable's 95% random-order boundary. Hover details retain the raw distribution and missingness discrepancies.",
+            position="left",
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span("Variables ranked by evidence of drift", class_="text-primary text-center d-block"),
-            ui.output_ui(
-                id="Summary", guide=this, title="Homogeneity summary",
-                text="The table ranks variables by maximum drift and identifies where the strongest change occurs.", position="left",
-            ),
+    this.back = lambda: ui.TagList(
+        ui.span("Variables ranked by evidence of drift", class_="text-primary text-center d-block"),
+        ui.output_ui(
+            id="Summary", 
+            guide=this, title="Homogeneity summary", position="left",
+            text="The table ranks variables by maximum drift and identifies where the strongest change occurs."
         )
-    this.back = back
+    )
 
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Busy"),
-            ui.output_ui(id="Check"),
-            class_="vertically-scrollable-footer text-center",
-        )
-    this.footer = footer
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Busy"),
+        ui.output_ui(id="Check"),
+        class_="vertically-scrollable-footer text-center",
+    )
 
-    def settings():
-        return ui.TagList(
-            ui.input_select(
-                id="Sequence", label="Observation sequence",
-                choices={ROW_ORDER: "Current row order"}, selected=ROW_ORDER,
-                guide=this, title="Observation sequence", position="left", text="""
-                Determines how rows are sorted before grouping. Try more than one plausible sequence where appropriate. Lexicographically sorted string identifiers are meaningful only if their text order represents the intended order—for example, `A1, A10, A2` is not numeric order.
-                Sequence-role variables are preferred, followed by identifiers and scalar variables whose observed values are 100% unique. Complete unique variables precede those containing missing values. <em>Current row order</em> is always available."
-                """),
-            ui.input_selectize(
-                id="Variables", label="Variables to examine", choices=[],
-                selected=[], multiple=True, options={"plugins": ["remove_button"]},
-                guide=this, title="Variables to examine", position="left", text="""
-                Controls the heat-map rows. Reducing the selection can make patterns easier to see. Sequence, identifier, geometry, shadow, list, cyclic, unsupported, nearly empty, and high-cardinality categorical variables can be omitted from the analysis. Exclusion reasons appear on the flip-side.
-                Structured and high-cardinality variables that cannot be compared defensibly are excluded.
-                """,
-            ),
-            ui.input_slider(
-                id="Groups", label="Maximum consecutive groups", min=2, max=50, value=20, step=1,
-                guide=this, position="left", text="""
-                The largest number of consecutive groups controls resolution. More groups provide greater localization but fewer observations per comparison and therefore more variability. Fewer groups produce more stable distribution estimates but can conceal short-lived changes. The card enforces a minimum of five observations per group, although larger groups are preferable for reliable distribution comparisons.
-                The number of groups reduced automatically so every group has at least five observations.
-                Changing the number of groups automatically recalibrates every variable. A raw score from one group setting should not be compared directly with a raw score from another; compare their excess-drift results instead."""
-            ),
-            ui.input_radio_buttons(
-                id="Reference", label="Reference distribution", choices=REFERENCE_LABELS, selected="overall",
-                guide=this, position="left", text="""Compare each group with all observations (the whole dataset), the first group (the beginning), or the immediately preceding group (a running analysis)."""
-            ),
-            ui.input_slider(
-                id="Threshold", label="Strong drift threshold", min=0.05, max=0.75, value=0.25, step=0.05,
-                guide=this, position="left", text="""A variable whose maximum chance-corrected drift reaches this threshold is classified as Strong.
-                This acts as a practical classification of variables. It should reflect how much change matters in the dataset rather than being treated as a universal statistical cutoff."""
-            ),
-        )
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_select(
+            id="Sequence", label="Observation sequence",
+            choices={ROW_ORDER: "Current row order"}, selected=ROW_ORDER,
+            guide=this, title="Observation sequence", position="left", text="""
+            Determines how rows are sorted before grouping. Try more than one plausible sequence where appropriate. Lexicographically sorted string identifiers are meaningful only if their text order represents the intended order—for example, `A1, A10, A2` is not numeric order.
+            Sequence-role variables are preferred, followed by identifiers and scalar variables whose observed values are 100% unique. Complete unique variables precede those containing missing values. <em>Current row order</em> is always available."
+            """),
+        ui.input_selectize(
+            id="Variables", label="Variables to examine", choices=[],
+            selected=[], multiple=True, options={"plugins": ["remove_button"]},
+            guide=this, title="Variables to examine", position="left", text="""
+            Controls the heat-map rows. Reducing the selection can make patterns easier to see. Sequence, identifier, geometry, shadow, list, cyclic, unsupported, nearly empty, and high-cardinality categorical variables can be omitted from the analysis. Exclusion reasons appear on the flip-side.
+            Structured and high-cardinality variables that cannot be compared defensibly are excluded.
+            """,
+        ),
+        ui.input_slider(
+            id="Groups", label="Maximum consecutive groups", min=2, max=50, value=20, step=1,
+            guide=this, position="left", text="""
+            The largest number of consecutive groups controls resolution. More groups provide greater localization but fewer observations per comparison and therefore more variability. Fewer groups produce more stable distribution estimates but can conceal short-lived changes. The card enforces a minimum of five observations per group, although larger groups are preferable for reliable distribution comparisons.
+            The number of groups reduced automatically so every group has at least five observations.
+            Changing the number of groups automatically recalibrates every variable. A raw score from one group setting should not be compared directly with a raw score from another; compare their excess-drift results instead."""
+        ),
+        ui.input_radio_buttons(
+            id="Reference", label="Reference distribution", choices=REFERENCE_LABELS, selected="overall",
+            guide=this, position="left", text="""Compare each group with all observations (the whole dataset), the first group (the beginning), or the immediately preceding group (a running analysis)."""
+        ),
+        ui.input_slider(
+            id="Threshold", label="Strong drift threshold", min=0.05, max=0.75, value=0.25, step=0.05,
+            guide=this, position="left", text="""A variable whose maximum chance-corrected drift reaches this threshold is classified as Strong.
+            This acts as a practical classification of variables. It should reflect how much change matters in the dataset rather than being treated as a universal statistical cutoff."""
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -762,6 +754,7 @@ def instance():
         @render.ui
         @this.record_context
         def Summary():
+            req(incomingproxy_data() is not None)
             return ui.output_data_frame(id="SummaryTable")
 
         @output
@@ -769,9 +762,7 @@ def instance():
         @this.record_context
         def SummaryTable():
             table = Analysis().summary
-            return render.DataTable(
-                table, width="100%", height="98%", styles=_summary_row_styles(table),
-            )
+            return render.DataTable(table, width="100%", styles=_summary_row_styles(table))
 
         @output
         @render.ui
@@ -781,11 +772,11 @@ def instance():
             strong = int(analysis.summary["Status"].eq("Strong").sum()) if not analysis.summary.empty else 0
             analysed = int(analysis.summary["Status"].ne("Excluded").sum()) if not analysis.summary.empty else 0
             excluded = int(analysis.summary["Status"].eq("Excluded").sum()) if not analysis.summary.empty else 0
-            excluded_text = f"; {excluded} unsupported variables are listed on the flip-side" if excluded else ""
-            return ui.span(
-                f"Compared {analysed} variables across {analysis.groups} groups ordered by {analysis.sequence_label}; {strong} show strong excess drift{excluded_text}.",
-                class_="text-warning" if strong else "text-success",
-            )
+            excluded_text = f' {gettext.ngettext("%d unsupported variable", "%d unsupported variables", excluded) % excluded}.' if excluded else ""
+            text = f'Compared {gettext.ngettext("%d variable", "%d variables", analysed) % analysed} across {gettext.ngettext("%d sequential group", "%d sequential groups", analysis.groups) % analysis.groups} ordered by {analysis.sequence_label}.'
+            if this.isFullScreen():
+                text = text + "".join(f' {gettext.ngettext("%d shows", "%d show", strong) % strong} strong excess drift. {excluded_text}')
+            return ui.span(text, class_="text-warning" if strong else "text-success")
 
         session.on_ended(Calculate.cancel)
 

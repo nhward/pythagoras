@@ -435,59 +435,47 @@ def instance():
     this.long_name = "Data journey"
     this.description = "This card shows the order of cleaning operations, learned transformations and learned models."
 
-    def front():
-        return ui.TagList(
-            ui.span(
-                "Data cleaning and learning journey",
-                class_="text-primary text-center d-block",
+    this.front = lambda: ui.TagList(
+        ui.span(
+            "Data cleaning and learning journey",
+            class_="text-primary text-center d-block",
+        ),
+        ui.div(
+            shinywidgets.output_widget(
+                id="JourneyChart", width="100%", height="auto", fill=False,
+                guide=this, title="Data journey", position="left",
+                text="Follow step numbers across rows in alternating directions. Green boxes are materialized cleaning operations; orange boxes are unfitted scikit-learn steps; gray and blue boxes are the source and current preview. The chart scrolls vertically as it grows."
             ),
-            ui.div(
-                shinywidgets.output_widget(
-                    id="JourneyChart", width="100%", height="auto", fill=False,
-                    guide=this, title="Data journey", position="left",
-                    text="Follow step numbers across rows in alternating directions. Green boxes are materialized cleaning operations; orange boxes are unfitted scikit-learn steps; gray and blue boxes are the source and current preview. The chart scrolls vertically as it grows."
-                ),
-                class_="journey-chart-scroll html-fill-item",
-            ),
-        )
+            class_="journey-chart-scroll html-fill-item",
+        ),
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.span(
+            "Data journey details",
+            class_="text-primary text-center d-block",
+        ),
+        ui.output_data_frame(
+            id="JourneyTable",
+            guide=this, title="Data journey table", position="left",
+            text="Each row corresponds to a chart box and reports its card, method, affected variables, parameters, and shape change."
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span(
-                "Data journey details",
-                class_="text-primary text-center d-block",
-            ),
-            ui.output_data_frame(
-                id="JourneyTable",
-                guide=this, title="Data journey table", position="left",
-                text="Each row corresponds to a chart box and reports its card, method, affected variables, parameters, and shape change."
-            ),
-        )
+    this.footer = lambda: ui.div(
+        ui.output_ui(
+            id="Status",
+            guide=this, title="Summary", position="left",
+            text="Reports the number of visible materialized cleaning steps and trainable learning steps. Source and preview bookends are not included in these counts."
+        ),
+        class_="html-fill-container html-fill-item text-center",
+    )
 
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.output_ui(
-                id="Status",
-                guide=this, title="Summary", position="left",
-                text="Reports the number of visible materialized cleaning steps and trainable learning steps. Source and preview bookends are not included in these counts."
-            ),
-            class_="html-fill-container html-fill-item text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.input_checkbox(
-            id="HideInactive", label="Hide steps that were not enabled", value=True,
-            guide=this, title="Hide inactive steps", position="left",
-            text="Hide operations whose data-changing control was not enabled. An enabled operation remains visible even when the data did not require any change."
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.input_checkbox(
+        id="HideInactive", label="Hide steps that were not enabled", value=True,
+        guide=this, title="Hide inactive steps", position="left",
+        text="Hide operations whose data-changing control was not enabled. An enabled operation remains visible even when the data did not require any change."
+    )
 
     def server(input, output, session):
 

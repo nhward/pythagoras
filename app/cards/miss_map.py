@@ -319,71 +319,57 @@ def instance():
     this.long_name = "Excessive missingness"
     this.description = "This card maps missing values across variables and observations and can remove excessive missingness from the dataset."
 
-    def front():
-        return ui.TagList(
-            ui.span("Missingness map", class_="text-primary text-center d-block"),
-            shinywidgets.output_widget(
-                id="Map", fill=True, guide=this, title="Missingness map",
-                text="Brown cells are missing values; pale cells are present values. Full screen also shows variable and observation missingness summaries.",
-                position="left",
-            ),
-        )
+    this.front = lambda: ui.TagList(
+        ui.span("Missingness map", class_="text-primary text-center d-block"),
+        shinywidgets.output_widget(
+            id="Map", fill=True, guide=this, title="Missingness map",
+            text="Brown cells are missing values; pale cells are present values. Full screen also shows variable and observation missingness summaries.",
+            position="left",
+        ),
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.span("Missingness issues", class_="text-primary text-center d-block"),
+        ui.output_ui(id="Table", guide=this, title="Missingness issues", text="Lists special-role variables with missing values and variables or observations above their thresholds.", position="left"),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span("Missingness issues", class_="text-primary text-center d-block"),
-            ui.output_ui(id="Table", guide=this, title="Missingness issues", text="Lists special-role variables with missing values and variables or observations above their thresholds.", position="left"),
-        )
+    this.footer = lambda: ui.div(
+        ui.input_checkbox_group(
+            id="Remove", label="Remove excessive missingness in", choices=["Variables", "Observations"], inline=True, 
+            guide=this, title="Remove excessive missingness", position="top",
+            text="Removes variables or observations above their respective thresholds. When both are selected, variables are removed first.",
+        ),
+        ui.output_ui(id="Check"),
+        class_="vertically-scrollable-footer",
+    )
 
-    this.back = back
+    this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id="VariableThreshold", label="Excessive variable missingness (%)", min=0, max=100, value=50, step=1,
+            guide = this, text = "Flags a variable when its missing-value percentage exceeds this threshold. If variable removal is enabled, those columns are removed before observation missingness is evaluated.", position="left"
+        ),
+        ui.input_slider(
+            id="ObservationThreshold", label="Excessive observation missingness (%)", min=0, max=100, value=50, step=1,
+            guide = this, text = "Flags an observation when its percentage of missing values exceeds this threshold. If observation removal is enabled, the calculation uses the columns remaining after any variable removal.", position="left"
 
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Check"),
-            ui.input_checkbox_group(
-                id="Remove", label="Remove  excessive missingness in",
-                choices=["Variables", "Observations"],
-                inline=True, width="500px", guide=this,
-                title="Remove excessive missingness", position="top",
-                text="Removes variables or observations above their respective thresholds from this card's exported data. When both are selected, variables are removed first.",
-            ),
-            class_="vertically-scrollable-footer",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_slider(
-                id="VariableThreshold", label="Excessive variable missingness (%)", min=0, max=100, value=50, step=1,
-                guide = this, text = "Flags a variable when its missing-value percentage exceeds this threshold. If variable removal is enabled, those columns are removed before observation missingness is evaluated.", position="left"
-            ),
-            ui.input_slider(
-                id="ObservationThreshold", label="Excessive observation missingness (%)", min=0, max=100, value=50, step=1,
-                guide = this, text = "Flags an observation when its percentage of missing values exceeds this threshold. If observation removal is enabled, the calculation uses the columns remaining after any variable removal.", position="left"
-
-            ),
-            ui.input_checkbox(
-                id="HideComplete", label="Hide variables without missing values", value=True,
-                guide = this, text = "Hides complete variables from the heat map to focus attention on missingness. This changes only the display; complete variables remain in the exported data.", position="left"
-            ),
-            ui.input_checkbox(
-                id="SortVariables", label="Sort variables by missingness", value=True,
-                guide = this, text = "Orders heat-map columns from highest to lowest missing proportion. Turn this off when the original variable order carries useful structural meaning.", position="left"
-            ),
-            ui.input_checkbox(
-                id="ShowThresholds", label="Show thresholds in full screen", value=True,
-                guide = this, text = "Displays the variable and observation thresholds as reference lines in full-screen mode. It does not change classification or removal.", position="left"
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text = "Sets a logarithmic cap of 10^n observations for the diagnostic map. Larger values improve coverage but increase browser and calculation cost; this sampling limit does not itself remove rows downstream.", position="left",
-            ),        
-        )
-
-    this.settings = settings
+        ),
+        ui.input_checkbox(
+            id="HideComplete", label="Hide variables without missing values", value=True,
+            guide = this, text = "Hides complete variables from the heat map to focus attention on missingness. This changes only the display; complete variables remain in the exported data.", position="left"
+        ),
+        ui.input_checkbox(
+            id="SortVariables", label="Sort variables by missingness", value=True,
+            guide = this, text = "Orders heat-map columns from highest to lowest missing proportion. Turn this off when the original variable order carries useful structural meaning.", position="left"
+        ),
+        ui.input_checkbox(
+            id="ShowThresholds", label="Show thresholds in full screen", value=True,
+            guide = this, text = "Displays the variable and observation thresholds as reference lines in full-screen mode. It does not change classification or removal.", position="left"
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+            guide=this, text = "Sets a logarithmic cap of 10^n observations for the diagnostic map. Larger values improve coverage but increase browser and calculation cost; this sampling limit does not itself remove rows downstream.", position="left",
+        ),        
+    )
 
     def server(input, output, session):
         @this.reactable(calc=True)
@@ -462,6 +448,7 @@ def instance():
         @render.ui
         @this.record_context
         def Table():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="Table2")
 
         @output

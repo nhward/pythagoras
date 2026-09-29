@@ -222,39 +222,6 @@ def instance():
     this.long_name = "Role Assignment"
     this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data."
 
-    def settings():
-        return ui.TagList(
-            ui.input_text(
-                id = "Separator", 
-                label = "Between-identifier-variable separator", 
-                value = "|",
-                guide = this,
-                text = 'Since tab, semi-colon and comma characters are common in identifiers, this string specifies the type of separation to employ.',
-                position = "left"),
-            ui.input_slider(
-                id = "CardinalityThreshold", 
-                label = "Maximum cardinality of low-cardinality roles",
-                min = 3,
-                max = 50,
-                value = 4,
-                ticks = True,
-                guide = this,
-                text = "Sets the maximum number of distinct observed values permitted when validating Sensitive, Stratifier, and Treatment roles. Raise it only when a larger grouping remains analytically meaningful.",
-                position = "left"),
-            ui.input_slider(
-                id = "MaxObs", 
-                label = "Maximum observations to analyze",
-                min = 3,
-                max = 7,
-                value = 4,
-                ticks = True,
-                pre = "10^",
-                guide = this,
-                text = "Sets a logarithmic cap of 10^n observations used to assess cardinality and missingness during validation. It does not remove observations from committed data.",
-                position = "left")
-        )
-
-    this.settings = settings
 
     def front():
         grid = ui.div(class_ = "roles-grid")
@@ -279,39 +246,62 @@ def instance():
             position = "top",
             priority = 0
         )
-
     this.front = front
     
-    def back():
-        return ui.output_table(id = "Assignments")
+    this.back = lambda: ui.output_table(id = "Assignments")
 
-    this.back = back
+    this.footer = lambda: ui.TagList(
+        ui.input_action_button(
+            id = "Commit", 
+            label = 'Commit Assignments', 
+            icon = icon("gavel", title = "Commit the role assignments", a11y = "sem"),
+            disabled = True, 
+            width = "250px", 
+            class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
+            style = "border: 0px; box-shadow: none;",
+            guide = this, 
+            title = "Commit button",
+            text = "This button commits the role assignments. Variables assigned to None are removed from the data passed downstream, but remain available here for later reassignment. Restored or previously committed assignments are reapplied automatically when incoming data changes and they remain valid. Manual edits still require this button. The button bounces momentarily when it is ready to be clicked.",
+            position = "top"
+        ),
+        ui.output_ui(
+            id = "Check",
+            guide = this, 
+            title = "Card status",
+            text = "Reports the most immediate role-validation problem, or confirms whether valid assignments are ready to commit or already applied.",
+            position = "top")
+    )
 
-    def footer():
-        return ui.TagList(
-            ui.input_action_button(
-                id = "Commit", 
-                label = 'Commit Assignments', 
-                icon = icon("gavel", title = "Commit the role assignments", a11y = "sem"),
-                disabled = True, 
-                width = "250px", 
-                class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
-                style = "border: 0px; box-shadow: none;",
-                guide = this, 
-                title = "Commit button",
-                text = "This button commits the role assignments. Variables assigned to None are removed from the data passed downstream, but remain available here for later reassignment. Restored or previously committed assignments are reapplied automatically when incoming data changes and they remain valid. Manual edits still require this button. The button bounces momentarily when it is ready to be clicked.",
-                position = "top"
-            ),
-            ui.output_ui(
-                id = "Check",
-                guide = this, 
-                title = "Card status",
-                text = "Reports the most immediate role-validation problem, or confirms whether valid assignments are ready to commit or already applied.",
-                position = "top")
-        )
-
-    this.footer = footer
-
+    this.settings = lambda: ui.TagList(
+        ui.input_text(
+            id = "Separator", 
+            label = "Between-identifier-variable separator", 
+            value = "|",
+            guide = this,
+            text = 'Since tab, semi-colon and comma characters are common in identifiers, this string specifies the type of separation to employ.',
+            position = "left"),
+        ui.input_slider(
+            id = "CardinalityThreshold", 
+            label = "Maximum cardinality of low-cardinality roles",
+            min = 3,
+            max = 50,
+            value = 4,
+            ticks = True,
+            guide = this,
+            text = "Sets the maximum number of distinct observed values permitted when validating Sensitive, Stratifier, and Treatment roles. Raise it only when a larger grouping remains analytically meaningful.",
+            position = "left"),
+        ui.input_slider(
+            id = "MaxObs", 
+            label = "Maximum observations to analyze",
+            min = 3,
+            max = 7,
+            value = 4,
+            ticks = True,
+            pre = "10^",
+            guide = this,
+            text = "Sets a logarithmic cap of 10^n observations used to assess cardinality and missingness during validation. It does not remove observations from committed data.",
+            position = "left")
+    )
     
     def server(input, output, session):
 

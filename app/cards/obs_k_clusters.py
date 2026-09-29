@@ -596,147 +596,139 @@ def instance():
     this.long_name = "Number of clusters"
     this.description = "Assess cluster counts using seven clustering families and two resampling evaluations and record a number-of-clusters decision for downstream cluster analysis."
 
-    def front():
-        return ui.TagList(
-            # ui.input_select("Family", label="Evidence", choices=["Aggregate", *FAMILIES], selected="Aggregate"),
-            ui.span("K-th Support barchart", class_="text-primary text-center d-block"),
-            shinywidgets.output_widget("Chart", fill=True),
-        )
-    this.front = front
+    this.front = lambda: ui.TagList(
+        # ui.input_select("Family", label="Evidence", choices=["Aggregate", *FAMILIES], selected="Aggregate"),
+        ui.span("K-th Support barchart", class_="text-primary text-center d-block"),
+        shinywidgets.output_widget("Chart", fill=True),
+    )
 
-    def back():
-        return ui.div(
-            ui.span("Support evidence table", class_="text-primary text-center d-block"),
-            ui.output_ui("Table"),
-            ui.output_ui("Notes"),
-            class_="card-scroll-content",
-        )
-    this.back = back
+    this.back = lambda: ui.div(
+        ui.span("Support evidence table", class_="text-primary text-center d-block"),
+        ui.output_ui("Table"),
+        ui.output_ui("Notes"),
+        class_="card-scroll-content",
+    )
 
-    def footer():
-        return ui.TagList(
-            ui.output_ui("Busy"),
-            ui.output_ui("KControl"),
-            ui.output_text("Summary"),
-        )
-    this.footer = footer
+    this.footer = lambda: ui.TagList(
+        ui.output_ui("Busy"),
+        ui.output_ui("KControl"),
+        ui.output_text("Summary"),
+    )
 
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox("UseWeights", label="Use assigned observation weighting", value=True,
-                guide=this, position="left",
-                text="Use one numeric Weighting-role column as relative observation importance. Values must be "
-                     "finite and nonnegative, with at least one positive value; zero-weight rows are excluded. "
-                     "Weights are normalized to mean one. Unequal weights affect Partition, Density, Stability "
-                     "and Gap; the other families are unavailable. Equal weights, or no assigned column, retain "
-                     "all families. Disable for equal importance; only predictors still enter clustering."),
-            ui.input_slider(
-                id="Maximum", label="Largest K to assess", min=2, max=25, value=10,
-                guide=this, position="left",
-                text="Assess and offer decisions from K=1 through this maximum. Data size and distinct rows may "
-                     "reduce the counts that can be evaluated; stability is also capped at a quarter of its "
-                     "sample size. Gap may fit K+1 internally to check the boundary. Lowering this maximum "
-                     "also caps the recorded decision. More K values increase calculation time."
-            ),
-            ui.input_checkbox(
-                id="Standardize", label="Standardize numeric predictors", value=True,
-                guide=this, position="left",
-                text="Center each numeric predictor and scale it to unit standard deviation on the analysis "
-                     "sample, using importance-weighted means and spreads when enabled. This prevents large "
-                     "measurement scales dominating distances. Applies only to this assessment; incoming "
-                     "and outgoing values are unchanged. Disable when original relative scales are meaningful."
-            ),
-            ui.input_select(
-                id="Metric", label="Distance metric", choices=["euclidean", "manhattan"],
-                guide=this, position="left",
-                text="Euclidean is straight-line distance; Manhattan sums absolute coordinate differences. "
-                     "Used by silhouette, DIANA, PAM, topology, DBSCAN and the spectral graph, and by "
-                     "non-Ward agglomerative linkage. Ward, K-means, centroid-based scores and both "
-                     "resampling evaluations retain Euclidean geometry; mixture BIC is unaffected."
-            ),
-            ui.input_select(
-                id="Method", label="Agglomerative linkage", choices=["average", "single", "complete", "ward"],
-                guide=this, position="left",
-                text="Choose how Agglomerative merges clusters: average uses mean pair distances, single the "
-                     "nearest pair, complete the farthest pair, and Ward the increase in within-cluster "
-                     "squared dispersion. Single can form chains; complete favors compact groups. Ward "
-                     "always uses Euclidean distances. This family is unavailable with unequal importance weights."
-            ),
-            ui.input_select(
-                id="Centre", label="Partition method", choices={"centroids": "K-means", "medoids": "PAM (medoids)"},
-                guide=this, position="left",
-                text="Choose the Partition family's model. K-means fits Euclidean centers that need not be "
-                     "observed rows. PAM chooses actual observations as medoids using the selected distance "
-                     "metric and can be slower. Both support observation importance. Stability and Gap "
-                     "always evaluate K-means, even when PAM is selected here."
-            ),
-            ui.input_slider(
-                id="GraphNeighbours", label="Spectral graph nearest neighbours", min=1, max=50, value=10, step=1, 
-                guide=this, title="Spectral graph connectivity", position="left",
-                text="Connect each observation to this many nearest neighbours, excluding itself, "
-                     "and make connections undirected. Larger values connect more of the graph "
-                     "and may merge local clusters. Capped at the number of sampled rows minus one. "
-                     "The Spectral family is unavailable with unequal importance weights.",
-            ),
-            ui.input_slider(
-                id="MinPoints", label="DBSCAN minimum points (including self)", min=2, max=100, value=10,
-                guide=this, position="left",
-                text="Minimum neighborhood size for a DBSCAN core observation, including itself. With unequal "
-                     "importance weights this is neighborhood mass after mean-one normalization. Larger "
-                     "values require denser regions and may increase noise. The card sweeps an adaptive "
-                     "range of radii; this setting also helps determine that range. It does not fix K."
-            ),
-            ui.input_checkbox("Stability", label="Evaluate resampling stability (K-means)", value=True,
-                guide=this, position="left",
-                text="Repeatedly fit K-means on two halves of the evaluation sample and measure pair "
-                     "agreement under the other half's model. Uses the weakest cluster in each direction "
-                     "and averages across directions and splits. This evaluates K-means only; disable to "
-                     "avoid these extra fits. Sampling and standardization are shared across repeats."),
-            ui.input_checkbox("Gap", label="Evaluate gap statistic (K-means)", value=True,
-                guide=this, position="left",
-                text="Compare K-means dispersion with uniform reference samples in a principal-component-"
-                     "aligned bounding box. Favor the smallest K satisfying the one-standard-error rule; "
-                     "K=1 is eligible. No qualifying K means no vote. Uses K-means only, with importance "
-                     "weights retained in reference fits when enabled. Disable to avoid reference fits."),
-            ui.input_slider("EvaluationLimit", label="Maximum rows for resampling evaluations",
-                            min=50, max=1000, value=300, step=50,
-                guide=this, position="left",
-                text="Cap the prepared-data sample used by Stability and Gap, independently of the main "
-                     "analysis limit. Subsampling is reproducible and uniform without replacement; importance "
-                     "is applied in fitting and scoring. Larger samples cost more but may reveal small groups. "
-                     "This cap does not limit the other families' work."),
-            ui.input_slider("StabilityRepeats", label="Stability split repeats",
-                            min=2, max=50, value=10, step=1,
-                guide=this, position="left",
-                text="Number of reproducible random half splits. Each split fits both halves for every "
-                     "eligible K, with five K-means starts per fit. More repeats reduce split-to-split "
-                     "uncertainty at approximately proportional cost. The table reports mean prediction "
-                     "strength and between-split standard deviation. Used only when Stability is enabled."),
-            ui.input_slider("StabilityThreshold", label="Minimum prediction strength",
-                            min=0.5, max=0.95, value=0.8, step=0.05,
-                guide=this, position="left",
-                text="Recommend the largest K whose mean prediction strength meets this threshold. Higher "
-                     "values demand stronger agreement. Singleton test clusters score zero; K=1 is trivially "
-                     "stable and is a fallback, not proof of one natural group. Changing only this threshold "
-                     "reuses cached split scores when available. Used only when Stability is enabled."),
-            ui.input_slider("GapReferences", label="Gap reference samples",
-                            min=2, max=50, value=20, step=1,
-                guide=this, position="left",
-                text="Number of simulated null-reference datasets. Each requires K-means fits across K, "
-                     "with five starts per fit. More references improve Monte Carlo precision at approximately "
-                     "proportional cost; a small count is exploratory. Reference uncertainty feeds the "
-                     "one-standard-error rule and is not a p-value. Used only when Gap is enabled."),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, position="left",
-                text="Analyze at most 10 raised to this value rows (4 means 10,000), using reproducible uniform "
-                     "sampling without replacement above the limit. A larger sample may retain small groups "
-                     "but increases time and memory sharply: pairwise distance storage grows with the square "
-                     "of row count. Resampling evaluations have a separate, lower row cap. Sampling does not "
-                     "change outgoing data."
-            ),
-        )
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox("UseWeights", label="Use assigned observation weighting", value=True,
+            guide=this, position="left",
+            text="Use one numeric Weighting-role column as relative observation importance. Values must be "
+                    "finite and nonnegative, with at least one positive value; zero-weight rows are excluded. "
+                    "Weights are normalized to mean one. Unequal weights affect Partition, Density, Stability "
+                    "and Gap; the other families are unavailable. Equal weights, or no assigned column, retain "
+                    "all families. Disable for equal importance; only predictors still enter clustering."),
+        ui.input_slider(
+            id="Maximum", label="Largest K to assess", min=2, max=25, value=10,
+            guide=this, position="left",
+            text="Assess and offer decisions from K=1 through this maximum. Data size and distinct rows may "
+                    "reduce the counts that can be evaluated; stability is also capped at a quarter of its "
+                    "sample size. Gap may fit K+1 internally to check the boundary. Lowering this maximum "
+                    "also caps the recorded decision. More K values increase calculation time."
+        ),
+        ui.input_checkbox(
+            id="Standardize", label="Standardize numeric predictors", value=True,
+            guide=this, position="left",
+            text="Center each numeric predictor and scale it to unit standard deviation on the analysis "
+                    "sample, using importance-weighted means and spreads when enabled. This prevents large "
+                    "measurement scales dominating distances. Applies only to this assessment; incoming "
+                    "and outgoing values are unchanged. Disable when original relative scales are meaningful."
+        ),
+        ui.input_select(
+            id="Metric", label="Distance metric", choices=["euclidean", "manhattan"],
+            guide=this, position="left",
+            text="Euclidean is straight-line distance; Manhattan sums absolute coordinate differences. "
+                    "Used by silhouette, DIANA, PAM, topology, DBSCAN and the spectral graph, and by "
+                    "non-Ward agglomerative linkage. Ward, K-means, centroid-based scores and both "
+                    "resampling evaluations retain Euclidean geometry; mixture BIC is unaffected."
+        ),
+        ui.input_select(
+            id="Method", label="Agglomerative linkage", choices=["average", "single", "complete", "ward"],
+            guide=this, position="left",
+            text="Choose how Agglomerative merges clusters: average uses mean pair distances, single the "
+                    "nearest pair, complete the farthest pair, and Ward the increase in within-cluster "
+                    "squared dispersion. Single can form chains; complete favors compact groups. Ward "
+                    "always uses Euclidean distances. This family is unavailable with unequal importance weights."
+        ),
+        ui.input_select(
+            id="Centre", label="Partition method", choices={"centroids": "K-means", "medoids": "PAM (medoids)"},
+            guide=this, position="left",
+            text="Choose the Partition family's model. K-means fits Euclidean centers that need not be "
+                    "observed rows. PAM chooses actual observations as medoids using the selected distance "
+                    "metric and can be slower. Both support observation importance. Stability and Gap "
+                    "always evaluate K-means, even when PAM is selected here."
+        ),
+        ui.input_slider(
+            id="GraphNeighbours", label="Spectral graph nearest neighbours", min=1, max=50, value=10, step=1, 
+            guide=this, title="Spectral graph connectivity", position="left",
+            text="Connect each observation to this many nearest neighbours, excluding itself, "
+                    "and make connections undirected. Larger values connect more of the graph "
+                    "and may merge local clusters. Capped at the number of sampled rows minus one. "
+                    "The Spectral family is unavailable with unequal importance weights.",
+        ),
+        ui.input_slider(
+            id="MinPoints", label="DBSCAN minimum points (including self)", min=2, max=100, value=10,
+            guide=this, position="left",
+            text="Minimum neighborhood size for a DBSCAN core observation, including itself. With unequal "
+                    "importance weights this is neighborhood mass after mean-one normalization. Larger "
+                    "values require denser regions and may increase noise. The card sweeps an adaptive "
+                    "range of radii; this setting also helps determine that range. It does not fix K."
+        ),
+        ui.input_checkbox("Stability", label="Evaluate resampling stability (K-means)", value=True,
+            guide=this, position="left",
+            text="Repeatedly fit K-means on two halves of the evaluation sample and measure pair "
+                    "agreement under the other half's model. Uses the weakest cluster in each direction "
+                    "and averages across directions and splits. This evaluates K-means only; disable to "
+                    "avoid these extra fits. Sampling and standardization are shared across repeats."),
+        ui.input_checkbox("Gap", label="Evaluate gap statistic (K-means)", value=True,
+            guide=this, position="left",
+            text="Compare K-means dispersion with uniform reference samples in a principal-component-"
+                    "aligned bounding box. Favor the smallest K satisfying the one-standard-error rule; "
+                    "K=1 is eligible. No qualifying K means no vote. Uses K-means only, with importance "
+                    "weights retained in reference fits when enabled. Disable to avoid reference fits."),
+        ui.input_slider("EvaluationLimit", label="Maximum rows for resampling evaluations",
+                        min=50, max=1000, value=300, step=50,
+            guide=this, position="left",
+            text="Cap the prepared-data sample used by Stability and Gap, independently of the main "
+                    "analysis limit. Subsampling is reproducible and uniform without replacement; importance "
+                    "is applied in fitting and scoring. Larger samples cost more but may reveal small groups. "
+                    "This cap does not limit the other families' work."),
+        ui.input_slider("StabilityRepeats", label="Stability split repeats",
+                        min=2, max=50, value=10, step=1,
+            guide=this, position="left",
+            text="Number of reproducible random half splits. Each split fits both halves for every "
+                    "eligible K, with five K-means starts per fit. More repeats reduce split-to-split "
+                    "uncertainty at approximately proportional cost. The table reports mean prediction "
+                    "strength and between-split standard deviation. Used only when Stability is enabled."),
+        ui.input_slider("StabilityThreshold", label="Minimum prediction strength",
+                        min=0.5, max=0.95, value=0.8, step=0.05,
+            guide=this, position="left",
+            text="Recommend the largest K whose mean prediction strength meets this threshold. Higher "
+                    "values demand stronger agreement. Singleton test clusters score zero; K=1 is trivially "
+                    "stable and is a fallback, not proof of one natural group. Changing only this threshold "
+                    "reuses cached split scores when available. Used only when Stability is enabled."),
+        ui.input_slider("GapReferences", label="Gap reference samples",
+                        min=2, max=50, value=20, step=1,
+            guide=this, position="left",
+            text="Number of simulated null-reference datasets. Each requires K-means fits across K, "
+                    "with five starts per fit. More references improve Monte Carlo precision at approximately "
+                    "proportional cost; a small count is exploratory. Reference uncertainty feeds the "
+                    "one-standard-error rule and is not a p-value. Used only when Gap is enabled."),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+            guide=this, position="left",
+            text="Analyze at most 10 raised to this value rows (4 means 10,000), using reproducible uniform "
+                    "sampling without replacement above the limit. A larger sample may retain small groups "
+                    "but increases time and memory sharply: pairwise distance storage grows with the square "
+                    "of row count. Resampling evaluations have a separate, lower row cap. Sampling does not "
+                    "change outgoing data."
+        ),
+    )
 
     def server(input, output, session):
         busy = this.busy()

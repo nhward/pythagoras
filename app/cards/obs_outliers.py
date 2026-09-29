@@ -127,7 +127,7 @@ def _code_functions(record_code=lambda function: function):
         identifiers = [c for c in data.columns if Role.IDENTIFIER in data.role_map.roles_for(c)]
         if identifiers:
             result.observations["Identifier"] = data.frame[identifiers[0]].iloc[positions].astype("string").fillna("(missing)").to_numpy()
-            result.notes.append(f"Identifier: {identifiers[0]} (row numbers distinguish repeated identifiers).")
+            result.notes.append(f"Identifier: {identifiers[0]}.")
         if result.total != result.eligible:
             result.notes.append(f"{result.total - result.eligible} rows with missing/nonfinite predictors excluded from analysis only.")
         if data.role_map.columns_with_role(Role.WEIGHTING):
@@ -248,28 +248,26 @@ def instance():
             id="Scores",
             guide=this, title="Investigation table", position = "left",
             text="All analyzed observations, sorted by the active chart's score in descending order (Aggregate when that method is unavailable). Row is the one-based position in the incoming data; Identifier is shown when assigned. No rows are removed."))
+
     this.footer = lambda: ui.TagList(
         ui.output_ui("Busy"),
         ui.output_text("Status")
     )
 
-    def settings():
-        def slider(id, label, low, high, value, step, text, ticks=True, pre=None):
-            return ui.input_slider(id, label=label, min=low, max=high, value=value, step=step, guide=this, text=text, position="left", ticks=ticks, pre=pre)
-
-        return ui.TagList(
-            ui.input_checkbox_group(
-                id="Methods", label="Evaluation methods", choices=list(METHODS), selected=list(METHODS),
-                guide=this, position = "left",
-                text="Enabled, usable methods contribute equally after percentile ranking. Mahalanobis uses shrinkage covariance. Cook's distance requires a complete numeric Target and a full-rank linear regression. Weights are not used. Select several methods to compare disagreement."
-            ),
-            slider("Top", "Observations displayed", 5, 100, 30, 1, "Show the highest-scoring observations for each panel, in descending order. This changes only the plot, not fitting or the full table."),
-            slider("Neighbors", "LOF nearest neighbors", 2, 100, 20, 1, "Neighborhood size, capped below the analyzed row count. Small neighborhoods emphasize local anomalies; large ones compare a wider context."),
-            slider("Nu", "One-class SVM nu", .02, .5, .1, 0.02, "Controls the SVM boundary: an upper bound on training errors and lower bound on support vectors, not an estimated probability of bad data."),
-            slider("Trees", "Isolation Forest trees", 25, 300, 100, 1, "More trees stabilize rankings but take longer. Each tree uses up to 256 sampled rows with a fixed random seed."),
-            slider("Limit", "Maximum observations to assess", 2, 7, 3, 1, "Complete rows above this cap are sampled reproducibly. Unselected rows are not assessed and rare outliers may be missed. Raising the cap can substantially increase SVM and neighborhood computation time.", True, "10^"),
-        )
-    this.settings = settings
+    def slider(id, label, low, high, value, step, text, ticks=True, pre=None):
+        return ui.input_slider(id, label=label, min=low, max=high, value=value, step=step, guide=this, text=text, position="left", ticks=ticks, pre=pre)
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox_group(
+            id="Methods", label="Evaluation methods", choices=list(METHODS), selected=list(METHODS),
+            guide=this, position = "left",
+            text="Enabled, usable methods contribute equally after percentile ranking. Mahalanobis uses shrinkage covariance. Cook's distance requires a complete numeric Target and a full-rank linear regression. Weights are not used. Select several methods to compare disagreement."
+        ),
+        slider("Top", "Observations displayed", 5, 100, 30, 1, "Show the highest-scoring observations for each panel, in descending order. This changes only the plot, not fitting or the full table."),
+        slider("Neighbors", "LOF nearest neighbors", 2, 100, 20, 1, "Neighborhood size, capped below the analyzed row count. Small neighborhoods emphasize local anomalies; large ones compare a wider context."),
+        slider("Nu", "One-class SVM nu", .02, .5, .1, 0.02, "Controls the SVM boundary: an upper bound on training errors and lower bound on support vectors, not an estimated probability of bad data."),
+        slider("Trees", "Isolation Forest trees", 25, 300, 100, 1, "More trees stabilize rankings but take longer. Each tree uses up to 256 sampled rows with a fixed random seed."),
+        slider("Limit", "Maximum observations to assess", 2, 7, 3, 1, "Complete rows above this cap are sampled reproducibly. Unselected rows are not assessed and rare outliers may be missed. Raising the cap can substantially increase SVM and neighborhood computation time.", True, "10^"),
+    )
 
     def server(input, output, session):
         busy = this.busy()

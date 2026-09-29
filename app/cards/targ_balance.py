@@ -217,48 +217,60 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = "Target balance"
     this.description = "Assess the target's imbalance and adjust it through reweignting or resampling."
-    this.front = lambda: ui.TagList(
-        shinywidgets.output_widget(id="Chart", fill=True, guide=this, title="Target balance", position="left",
-            text="Weighted totals before and after. Color identifies the class; pale bars are before. Gray is an advisory simultaneous 95% equal-frequency band using the original total weight. Full screen adds pies."),
-    )
-    this.back = lambda: ui.TagList(ui.output_text("Diagnostic"), ui.output_data_frame(
-        id="Summary", guide=this, title="Class accounting", position="left",
-        text="Counts, original/resulting weight totals, and applied multipliers. Only Reweight changes weights. Diagnostics are advisory and do not show whether a model will improve."))
-    this.footer = lambda: ui.TagList(ui.output_ui("Busy"), ui.output_text("Status"), ui.output_ui("Modes"))
 
-    def settings():
-        def select(id, label, choices, selected, text):
-            return ui.input_select(id=id, label=label, choices=choices, selected=selected,
-                                   guide=this, text=text, position="left")
-        def numeric(id, label, value, min, max, text):
-            return ui.input_numeric(id=id, label=label, value=value, min=min, max=max, step=1,
-                                    guide=this, text=text, position="left")
-        return ui.TagList(
-            select("Up", "Upsampling", {"random": "RandomOverSampler", "smote": "SMOTENC (automatic type adaptation)"}, "random",
-                   "Random duplicates complete rows and accepts missing predictors. SMOTENC uses nominal and numeric predictors; all-numeric uses SMOTE and all-categorical uses SMOTEN. Other roles come from same-class donors."),
-            select("Down", "Downsampling", {"random": "RandomUnderSampler", "medoids": "K-medoids", "centroids": "ClusterCentroids", "nearmiss": "NearMiss", "stratified": "Cluster-stratified"}, "random",
-                   "Medoids retain class representatives; centroids use cluster centers or nearest rows. NearMiss-1 favors points close to the smallest class. Cluster-stratified samples within roughly sqrt(n) clusters, retaining each populated cluster."),
-            ui.input_slider(id="CountFraction", label="Desired count: min → max (%)", min=0, max=100, value=50, step=1,
-                            guide=this, position="left", text="0 downsamples to the smallest class; 100 upsamples to the largest. Intermediate values combine both. Counts are recomputed after required-value removal in each training fold, rounded to the nearest integer."),
-            select("Metric", "Numeric distance", {"euclidean": "Euclidean", "manhattan": "Manhattan"}, "euclidean",
-                   "Numeric distances after optional standardization. Nominal mismatches contribute unit distance. Centroid methods use means for Euclidean and medians for Manhattan. Pure categorical SMOTEN uses its own value-difference metric."),
-            ui.input_checkbox(
-                id="Normalize", label="Normalize numeric distances", value=True, 
-                guide=this, position="left",
-                text="Learn each numeric predictor's mean and standard deviation on training rows only. Resampled values retain original units."
-            ),
-            select("Voting", "Centroid voting", {"hard": "Hard: original observations", "soft": "Soft: synthetic centers"}, "hard",
-                   "Hard chooses the nearest row per center (donors may repeat). Soft uses numeric centers and modal nominal values; all other columns come from the nearest same-class donor."),
-            numeric("Neighbors", "SMOTE / NearMiss neighbors", 5, 1, 50,
-                    "Reduced automatically for small classes. SMOTE requires at least two complete rows per upsampled class."),
-            numeric("MedoidLimit", "Medoid rows per class (maximum)", 2000, 10, 5000,
-                    "K-medoids uses quadratic memory. Larger classes are rejected; no hidden subsampling is performed."),
-            numeric("Iterations", "Medoid / centroid iterations", 30, 1, 100,
-                    "Maximum alternating optimization iterations. K-medoids uses farthest-first initialization and within-cluster medoid updates, not exhaustive PAM swaps."),
-            select("Evaluation", "Evaluation weights", {"none": "None", "incoming": "Incoming weights", "balanced": "Incoming × learned factors"}, "none",
-                   "Saved policy for a future model evaluator: evaluation_weights(X) returns weights without resampling. No weights by default. Balanced evaluation rejects unseen or missing target classes."),
+    this.front = lambda: ui.TagList(
+        shinywidgets.output_widget(
+            id="Chart", fill=True, 
+            guide=this, title="Target balance", position="left",
+            text="Weighted totals before and after. Color identifies the class; pale bars are before. Gray is an advisory simultaneous 95% equal-frequency band using the original total weight. Full screen adds pies."
+        ),
+    )
+
+    this.back = lambda: ui.TagList(
+        ui.output_text("Diagnostic"), 
+        ui.output_data_frame(
+            id="Summary", guide=this, title="Class accounting", position="left",
+            text="Counts, original/resulting weight totals, and applied multipliers. Only Reweight changes weights. Diagnostics are advisory and do not show whether a model will improve."
         )
-    this.settings = settings
+    )
+    
+    this.footer = lambda: ui.TagList(
+        ui.output_ui("Busy"), 
+        ui.output_ui("Modes"),
+        ui.output_ui("Status"), 
+    )
+
+    def select(id, label, choices, selected, text):
+        return ui.input_select(id=id, label=label, choices=choices, selected=selected,
+                                guide=this, text=text, position="left")
+    def numeric(id, label, value, min, max, text):
+        return ui.input_numeric(id=id, label=label, value=value, min=min, max=max, step=1,
+                                guide=this, text=text, position="left")
+    this.settings = lambda: ui.TagList(
+        select("Up", "Upsampling", {"random": "RandomOverSampler", "smote": "SMOTENC (automatic type adaptation)"}, "random",
+                "Random duplicates complete rows and accepts missing predictors. SMOTENC uses nominal and numeric predictors; all-numeric uses SMOTE and all-categorical uses SMOTEN. Other roles come from same-class donors."),
+        select("Down", "Downsampling", {"random": "RandomUnderSampler", "medoids": "K-medoids", "centroids": "ClusterCentroids", "nearmiss": "NearMiss", "stratified": "Cluster-stratified"}, "random",
+                "Medoids retain class representatives; centroids use cluster centers or nearest rows. NearMiss-1 favors points close to the smallest class. Cluster-stratified samples within roughly sqrt(n) clusters, retaining each populated cluster."),
+        ui.input_slider(id="CountFraction", label="Desired count: min → max (%)", min=0, max=100, value=50, step=1,
+                        guide=this, position="left", text="0 downsamples to the smallest class; 100 upsamples to the largest. Intermediate values combine both. Counts are recomputed after required-value removal in each training fold, rounded to the nearest integer."),
+        select("Metric", "Numeric distance", {"euclidean": "Euclidean", "manhattan": "Manhattan"}, "euclidean",
+                "Numeric distances after optional standardization. Nominal mismatches contribute unit distance. Centroid methods use means for Euclidean and medians for Manhattan. Pure categorical SMOTEN uses its own value-difference metric."),
+        ui.input_checkbox(
+            id="Normalize", label="Normalize numeric distances", value=True, 
+            guide=this, position="left",
+            text="Learn each numeric predictor's mean and standard deviation on training rows only. Resampled values retain original units."
+        ),
+        select("Voting", "Centroid voting", {"hard": "Hard: original observations", "soft": "Soft: synthetic centers"}, "hard",
+                "Hard chooses the nearest row per center (donors may repeat). Soft uses numeric centers and modal nominal values; all other columns come from the nearest same-class donor."),
+        numeric("Neighbors", "SMOTE / NearMiss neighbors", 5, 1, 50,
+                "Reduced automatically for small classes. SMOTE requires at least two complete rows per upsampled class."),
+        numeric("MedoidLimit", "Medoid rows per class (maximum)", 2000, 10, 5000,
+                "K-medoids uses quadratic memory. Larger classes are rejected; no hidden subsampling is performed."),
+        numeric("Iterations", "Medoid / centroid iterations", 30, 1, 100,
+                "Maximum alternating optimization iterations. K-medoids uses farthest-first initialization and within-cluster medoid updates, not exhaustive PAM swaps."),
+        select("Evaluation", "Evaluation weights", {"none": "None", "incoming": "Incoming weights", "balanced": "Incoming × learned factors"}, "none",
+                "Saved policy for a future model evaluator: evaluation_weights(X) returns weights without resampling. No weights by default. Balanced evaluation rejects unseen or missing target classes."),
+    )
 
     def server(input, output, session):
         busy = this.busy()
@@ -285,10 +297,14 @@ def instance():
                     selected = input.Mode() or "none"
                 except SilentException:
                     selected = "none"
-            return ui.tags.fieldset(ui.input_radio_buttons(
-                id="Mode", label=None, choices={"none": "None", "reweight": "Reweight", "resample": "Resample"},
-                selected=selected, inline=True, guide=this, position="top",
-                text="Applies immediately; no commit needed. None restores the incoming data and removes this card's pipeline contribution. Results are full-data previews; saved samplers run only during model training."), disabled=bool(reason))
+            return ui.tags.fieldset(
+                ui.input_radio_buttons(
+                    id="Mode", label=None, choices={"none": "None", "reweight": "Reweight", "resample": "Resample"},
+                    selected=selected, inline=True, guide=this, position="top",
+                    text="Applies immediately; no commit needed. None restores the incoming data and removes this card's pipeline contribution. Results are full-data previews; saved samplers run only during model training."
+                ), 
+                disabled=bool(reason)
+            )
 
         @this.reactable(calc=True)
         def RawOptions():
@@ -371,9 +387,9 @@ def instance():
             return " ".join(pieces) + " Advisory 5% test; weighted results use a Kish effective-size approximation. Resampled rows are not independent new evidence."
 
         @output
-        @render.text
+        @render.ui
         def Status():
-            return Results().message
+            return ui.span(Results().message, class_ = "text-danger")
 
         @output
         @render.ui

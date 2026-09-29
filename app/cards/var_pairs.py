@@ -34,7 +34,7 @@ MAX_FACETS = 8
 MAX_ROWS = 10_000
 BINS = 12
 NONE = "__no_facet__"
-PALETTE = ["#3978a8", "#e6ab02", "#d95f02", "#1b9e77", "#7570b3", "#e7298a", "#66a61e", "#666666", "#a6761d"]
+PALETTE = ["#5555f2", "#e6ab02", "#eb6c0c", "#29d9a4", "#b479ec", "#ef1d2f", "#8ce922", "#f1adad", "#836020"]
 PAIR_COLUMNS = ["X", "Y", "Chart", "Sampled rows", "Plotted rows", "Omitted rows", "Note"]
 
 
@@ -264,7 +264,7 @@ def _build(source, variables, facet=NONE, limit=1000, target=True, layout="lower
         note = ""
         if chart == "Scatter":
             if x.kind == y.kind == "cyclic":
-                note = "Both cycles shown as Cartesian phases; wrap boundaries are equivalent."
+                note = "Both cycles shown as Cartesian phases."
             for group in np.unique(groups):
                 mask = groups == group
                 add(go.Scattergl(x=xv[mask], y=yv[mask], mode="markers",
@@ -358,14 +358,37 @@ def _build(source, variables, facet=NONE, limit=1000, target=True, layout="lower
     spacing = .025
     size = (1 - spacing * (n - 1)) / n
     for i, name in enumerate(names):
-        fig.add_annotation(x=i*(size+spacing)+size/2, y=1-i*(size+spacing)-size/2,
-                           xref="paper", yref="paper", text=str(name), showarrow=False, font={"size": 10})
-    fig.update_layout(template="plotly_white", barmode="overlay", bargap=0,
-                      meta={"pairs_layout": layout, "axis_titles": axis_titles},
-                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#bbd6f8",
-                      margin={"l": 70, "r": 15, "t": 15, "b": 65},
-                      legend={"title": {"text": str(facet) if facet != NONE else ""},
-                              "orientation": "h", "y": -.12}, modebar={"orientation": "v"})
+        fig.add_annotation(
+            x=i*(size+spacing)+size/2, 
+            y=1-i*(size+spacing)-size/2,
+            xanchor= "center",
+            xref="paper", 
+            yref="paper", 
+            text=str(name), 
+            showarrow=False
+        )
+    fig.update_layout(
+        title = {
+            'text': 'Pairs chart',
+            'font': {'size':17},
+            'x': 0.5, 
+            'xanchor': "center",
+            'y': 1, 
+            'yanchor': "top",
+        },
+        template="plotly_white", 
+        barmode="overlay", 
+        bargap=0,
+        meta={"pairs_layout": layout, "axis_titles": axis_titles},
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="#bbd6f8",
+        margin={"l": 70, "r": 15, "t": 15, "b": 65},
+        legend={
+            "title": {"text": str(facet) if facet != NONE else ""}, 
+            "orientation": "h", 
+            "y": -.12
+        }, 
+        modebar={"orientation": "v"})
     # Hide inner polar axis decorations as well as labels.
     for name in fig.layout:
         if name.startswith("polar"):
@@ -398,7 +421,7 @@ def _display(result, full):
 def instance():
     this = Card(file=__file__, mutable=False)
     this.long_name = "Variable pairs"
-    this.description = "Explore pairs of original variables using charts suited to their semantic types."
+    this.description = "Explore pairs of variables using charts suited to their semantic types."
     
     this.front = lambda: ui.TagList(
         shinywidgets.output_widget(
@@ -410,14 +433,14 @@ def instance():
     
     this.footer = lambda: ui.TagList(
         ui.output_ui(id="Busy"), 
-        ui.output_text(id="Status")
+        ui.output_ui(id="Status")
     )
     
     this.settings = lambda: ui.TagList(
         ui.input_checkbox(
             id="Target", label="Include targets", value=True, 
             guide=this, position="left", 
-            text="Only Predictor, Treatment and optionally Target roles are eligible. Code, geometry, shadow and unsupported structured types are excluded. Use before encoding."
+            text="Only Predictor, Treatment and optionally Target roles are eligible. Code, geometry, shadow and unsupported structured types are excluded."
         ),
         ui.input_selectize(
             id="Variables", label="Variables (maximum 12)", choices=[], multiple=True, options={"maxItems": MAX_VARIABLES}, 
@@ -433,7 +456,7 @@ def instance():
         ),
         ui.input_slider(
             id="Limit", label="Maximum observations", min=2, max=4, value=3, step=1, ticks=True, pre="10^", 
-            guide=this, position="left", text="A fixed-seed random sample of up to 10^n rows is shared by all panels. Pairwise missing/nonfinite values are then omitted."
+            guide=this, position="left", text="A repeatable random sample of up to 10^n rows is shared by all panels. Pairwise missing/nonfinite values are then omitted."
         )
     )
 
@@ -524,11 +547,15 @@ def instance():
             return busy.ui()
 
         @output
-        @render.text
+        @render.ui
         @this.record_context
         def Status():
             r = Results()
-            return f"{r.sampled:,} of {r.total:,} rows sampled; {len(r.table)} pairs. Pairwise missing values omitted. " + " ".join(r.notes)
+            if this.isFullScreen():
+                text = f"{r.sampled:,} of {r.total:,} rows sampled; {len(r.table)} pairs. Pairwise missing values omitted. " + " ".join(r.notes)
+            else:
+                text =  f"{r.sampled:,} of {r.total:,} rows sampled; {len(r.table)} pairs."
+            return ui.span(text, class_ = "text-success")
 
         session.on_ended(Calculate.cancel)
         return Incoming

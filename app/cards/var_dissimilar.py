@@ -43,78 +43,67 @@ def instance():
         "a dissimilarity matrix visualized as a hierarchy chart."
     )
 
-    def front():
-        return ui.TagList(
-            ui.div(
-                ui.span(
-                    "Variable Dissimilarity chart",
-                    class_="text-primary text-center d-block",
-                ),
-                shinywidgets.output_widget(
-                    id="Chart",
-                    fill=True,
-                    guide=this,
-                    title="Chart of variable dissimilarity",
-                    text=(
-                        "A hierarchy derived from the variable dissimilarity "
-                        "matrix. Nearby leaves describe variables with similar "
-                        "names, summaries, missingness, or values."
-                    ),
-                    position="left",
-                ),
-                id="X-Chart",
-                class_="html-fill-container html-fill-item",
-                style="width:100%; height:100%;",
-            )
-        )
-
-    this.front = front
-
-    def back():
-        return ui.TagList(
+    this.front = lambda: ui.TagList(
+        ui.div(
             ui.span(
-                "Variable Dissimilarity table",
+                "Variable Dissimilarity chart",
                 class_="text-primary text-center d-block",
             ),
-            ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
-                id = "Table",
+            shinywidgets.output_widget(
+                id="Chart",
+                fill=True,
                 guide=this,
-                title="Table of variable dissimilarity",
+                title="Chart of variable dissimilarity",
                 text=(
-                    "A symmetric matrix in which zero means identical and "
-                    "larger values mean more dissimilar variables."
+                    "A hierarchy derived from the variable dissimilarity "
+                    "matrix. Nearby leaves describe variables with similar "
+                    "names, summaries, missingness, or values."
                 ),
-                position="left"
+                position="left",
             ),
+            id="X-Chart",
+            class_="html-fill-container html-fill-item",
+            style="width:100%; height:100%;",
         )
+    )
 
-    this.back = back
+    this.back = lambda: ui.TagList(
+        ui.span(
+            "Variable Dissimilarity table",
+            class_="text-primary text-center d-block",
+        ),
+        ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
+            id = "Table",
+            class_="block-table",
+            guide=this,
+            title="Table of variable dissimilarity",
+            text="A symmetric matrix in which zero means identical variables and larger values mean inceasingly more dissimilar variables.",
+            position="left"
+        ),
+    )
 
-    def settings():
-        return ui.TagList(
-            ui.input_checkbox(
-                id="Robust", label="Employ robust statistics for central tendency and spread", value=True, 
-                guide=this,  text="Uses median and median absolute deviation instead of mean and standard deviation for numeric summaries. Enable it when outliers should have less influence on variable dissimilarity.", position="left",
-            ),
-            ui.input_slider(
-                id="Qgram", label="The size of q-grams", min=1, max=5, value=2,
-                guide=this, text="Q-grams compare variable names and dtype names. Values of one or two are usually appropriate.", position="left",
-            ),
-            ui.input_radio_buttons(
-                id="Which", label="Hierarchical clustering technique", choices=["Agglomerative", "Divisive"], selected="Agglomerative",
-                guide=this, text="Chooses bottom-up agglomerative or top-down divisive construction. Both use the same dissimilarity matrix but can organize ambiguous groups differently.", position="left",
-            ),
-            ui.input_radio_buttons(
-                id="Style", label="Hierarchy chart layout", choices={"rectangular": "Rectangular", "radial": "Radial"}, selected="radial",
-                guide=this, text="Changes only presentation. Rectangular layout makes merge height easier to compare; radial layout can fit more variable labels in limited space.", position="left",
-            ),
-            ui.input_slider(
-                id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
-                guide = this, text = "Sets a logarithmic cap of 10^n randomly sampled observations used in value and missingness comparisons. Raising it improves coverage but increases calculation time.", position = "left"
-            ),
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox(
+            id="Robust", label="Employ robust statistics for central tendency and spread", value=True, 
+            guide=this,  text="Uses median and median absolute deviation instead of mean and standard deviation for numeric summaries. Enable it when outliers should have less influence on variable dissimilarity.", position="left",
+        ),
+        ui.input_slider(
+            id="Qgram", label="The size of q-grams", min=1, max=5, value=2,
+            guide=this, text="Q-grams compare variable names and dtype names. Values of one or two are usually appropriate.", position="left",
+        ),
+        ui.input_radio_buttons(
+            id="Which", label="Hierarchical clustering technique", choices=["Agglomerative", "Divisive"], selected="Agglomerative",
+            guide=this, text="Chooses bottom-up agglomerative or top-down divisive construction. Both use the same dissimilarity matrix but can organize ambiguous groups differently.", position="left",
+        ),
+        ui.input_radio_buttons(
+            id="Style", label="Hierarchy chart layout", choices={"rectangular": "Rectangular", "radial": "Radial"}, selected="radial",
+            guide=this, text="Changes only presentation. Rectangular layout makes merge height easier to compare; radial layout can fit more variable labels in limited space.", position="left",
+        ),
+        ui.input_slider(
+            id = "MaxObs", label = "Maximum observations to analyze", min = 3, max = 7, value = 4, ticks = True, pre = "10^",
+            guide = this, text = "Sets a logarithmic cap of 10^n randomly sampled observations used in value and missingness comparisons. Raising it improves coverage but increases calculation time.", position = "left"
+        ),
+    )
 
     def server(input, output, session):
 
@@ -599,7 +588,6 @@ def instance():
         @render.ui
         @this.record_context
         def Table():
-            req(PreparedData() is not None)
             return ui.output_data_frame(id = "Table2")
 
         @output
@@ -608,7 +596,7 @@ def instance():
         def Table2():
             req(DissimilarityMatrix() is not None)
             matrix = DissimilarityMatrix().round(3)
-            table = matrix.copy()
+            table = pd.DataFrame(data = matrix.copy())
             table.insert(0, "Variable", table.index)
             table.reset_index(drop=True)
             return render.DataTable(table, width="100%")

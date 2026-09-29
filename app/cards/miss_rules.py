@@ -33,72 +33,60 @@ def instance():
     this.long_name = "Missingness rules"
     this.description = "This card visualises Association Rules that describe patterns of missingness."
 
-    def front():
-        return ui.TagList(
-            ui.span(
-                "Missingness association network",
-                class_="text-primary text-center d-block",
-            ),
-            shinywidgets.output_widget(
-                id="Network", fill=True, 
-                guide=this, title="Missingness association network", position="left",
-                text="""
-                    Variables are square nodes and association rules are circular nodes. A path from variables through a rule to 
-                    other variables reads: if the former are missing, the latter are also likely to be missing.
-                """
-            )
+    this.front = lambda: ui.TagList(
+        ui.span(
+            "Missingness association network",
+            class_="text-primary text-center d-block",
+        ),
+        shinywidgets.output_widget(
+            id="Network", fill=True, 
+            guide=this, title="Missingness association network", position="left",
+            text="""
+                Variables are square nodes and association rules are circular nodes. A path from variables through a rule to 
+                other variables reads: if the former are missing, the latter are also likely to be missing.
+            """
         )
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.span(
+            "Missingness association rules",
+            class_="text-primary text-center d-block",
+        ),
+        ui.output_ui(
+            id="Table",
+            guide=this, title="Missingness association rules", position="left",
+            text="Each row reads: if the LHS variables are missing, the RHS variables are missing with the reported confidence."
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span(
-                "Missingness association rules",
-                class_="text-primary text-center d-block",
-            ),
-            ui.output_ui(
-                id="Table",
-                guide=this, title="Missingness association rules", position="left",
-                text="Each row reads: if the LHS variables are missing, the RHS variables are missing with the reported confidence."
-            ),
-        )
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Check"),
+        class_="html-fill-container html-fill-item text-center",
+    )
 
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Check"),
-            class_="html-fill-container html-fill-item text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_slider(
-                id="MinSupport", label="Minimum permitted rule support", min=0.1, max=0.95, value=0.1, step=0.01,
-                guide=this, text="Keeps only rules whose complete LHS-and-RHS combination occurs in at least this proportion of analyzed observations. Lower values reveal rarer patterns but can produce many unstable rules.", position="left",
-            ),
-            ui.input_slider(
-                id="MinLift", label="Minimum permitted rule lift", min=0.1, max=5, value=2, step=0.1,
-                guide=this, text="Keeps only rules meeting this lift. Lift is confidence divided by the RHS base frequency: 1 indicates independence and values above 1 indicate positive association.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxLength", label="Maximum variables per rule", min=2, max=15, value=10, step=1,
-                guide=this, text="Caps the combined number of LHS and RHS variables in a rule. Larger rules can represent complex patterns but greatly increase search cost and are harder to interpret.", position="left",
-            ),
-            ui.input_checkbox(
-                id="RemoveRedundant", label="Prune redundant rules", value=False,
-                guide=this, text="Hide specialised rules when a simpler rule with the same conclusion has at least as much confidence.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text = "Sets a logarithmic cap of 10^n observations used for rule mining. Raising it improves coverage of uncommon combinations but can substantially increase runtime and rule count.", position="left",
-            ),
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id="MinSupport", label="Minimum permitted rule support", min=0.1, max=0.95, value=0.1, step=0.01,
+            guide=this, text="Keeps only rules whose complete LHS-and-RHS combination occurs in at least this proportion of analyzed observations. Lower values reveal rarer patterns but can produce many unstable rules.", position="left",
+        ),
+        ui.input_slider(
+            id="MinLift", label="Minimum permitted rule lift", min=0.1, max=5, value=2, step=0.1,
+            guide=this, text="Keeps only rules meeting this lift. Lift is confidence divided by the RHS base frequency: 1 indicates independence and values above 1 indicate positive association.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxLength", label="Maximum variables per rule", min=2, max=15, value=10, step=1,
+            guide=this, text="Caps the combined number of LHS and RHS variables in a rule. Larger rules can represent complex patterns but greatly increase search cost and are harder to interpret.", position="left",
+        ),
+        ui.input_checkbox(
+            id="RemoveRedundant", label="Prune redundant rules", value=False,
+            guide=this, text="Hide specialised rules when a simpler rule with the same conclusion has at least as much confidence.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+            guide=this, text = "Sets a logarithmic cap of 10^n observations used for rule mining. Raising it improves coverage of uncommon combinations but can substantially increase runtime and rule count.", position="left",
+        ),
+    )
 
     def server(input, output, session):
         @this.reactable(calc=True)
@@ -402,6 +390,7 @@ def instance():
         @render.ui
         @this.record_context
         def Table():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="Table2")
 
         @output

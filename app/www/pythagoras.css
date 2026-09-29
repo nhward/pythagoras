@@ -279,6 +279,14 @@ body.bslib-gap-spacing {
     background-color: var(--bs-body-bg, #fff) !important;
 }
 
+/* Blaock tables: colour the table and its opaque header/body cells.
+   Leave hovered rows to the shared row/cell highlighting rules below. */
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+    background-color: #bbd6f8 !important;
+}
+
 /* Semantic highlighting in the Informative Missingness card overrides striping. */
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {

@@ -249,72 +249,60 @@ def instance():
     this.long_name = "Missingness sets"
     this.description = "This card visualises which variables are missing together, both as individual sets and as exact intersections."
 
-    def front():
-        return ui.TagList(
-            ui.span("Missingness sets", class_="text-primary text-center d-block"),
-            shinywidgets.output_widget(
-                id="Upset",
-                fill=True,
-                guide=this,
-                title="Missingness UpSet chart",
-                text=(
-                    "The left bars count missing values in each variable. The top "
-                    "bars count exact combinations, identified by the connected "
-                    "dots beneath them."
-                ),
-                position="left",
+    this.front = lambda: ui.TagList(
+        ui.span("Missingness sets", class_="text-primary text-center d-block"),
+        shinywidgets.output_widget(
+            id="Upset",
+            fill=True,
+            guide=this,
+            title="Missingness UpSet chart",
+            text=(
+                "The left bars count missing values in each variable. The top "
+                "bars count exact combinations, identified by the connected "
+                "dots beneath them."
             ),
-        )
+            position="left",
+        ),
+    )
 
-    this.front = front
+    this.back = lambda: ui.TagList(
+        ui.span(
+            "Missingness intersections",
+            class_="text-primary text-center d-block",
+        ),
+        ui.output_ui(
+            id="Table",
+            guide=this,
+            title="Missingness intersection table",
+            text="Each row is one exact combination of variables missing in the same observations.",
+            position="left",
+        ),
+    )
 
-    def back():
-        return ui.TagList(
-            ui.span(
-                "Missingness intersections",
-                class_="text-primary text-center d-block",
-            ),
-            ui.output_ui(
-                id="Table",
-                guide=this,
-                title="Missingness intersection table",
-                text="Each row is one exact combination of variables missing in the same observations.",
-                position="left",
-            ),
-        )
+    this.footer = lambda: ui.div(
+        ui.output_ui(id="Check"),
+        id="X-Check",
+        class_="html-fill-container html-fill-item text-center",
+    )
 
-    this.back = back
-
-    def footer():
-        return ui.div(
-            ui.output_ui(id="Check"),
-            id="X-Check",
-            class_="html-fill-container html-fill-item text-center",
-        )
-
-    this.footer = footer
-
-    def settings():
-        return ui.TagList(
-            ui.input_slider(
-                id="MaxIntersections", label="Maximum intersections to chart", min=5, max=100, value=40, step=1,
-                guide=this, text="Caps the most frequent exact missingness combinations shown in both views. Raising it reveals more rare patterns but increases chart density.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxVariables", label="Maximum variables to chart", min=2, max=30, value=15, step=1,
-                guide=this, text="Keeps this many variables with the largest missing counts when more columns are incomplete. Raising it broadens coverage but makes the dot matrix denser and can multiply intersections.", position="left",
-            ),
-            ui.input_numeric(
-                id="MinCount", label="Minimum observations per intersection", value=1, min=1, step=1,
-                guide=this, text="Hides exact missingness combinations with fewer observations than this count. The filter changes only the diagnostic result, not the upstream data.", position="left",
-            ),
-            ui.input_slider(
-                id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
-                guide=this, text="Sets a logarithmic cap of 10^n observations and uses random sampling above it. Raising the limit improves coverage of rare intersections but increases calculation time.", position="left",
-            ),
-        )
-
-    this.settings = settings
+    this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id="MaxIntersections", label="Maximum intersections to chart", min=5, max=100, value=40, step=1,
+            guide=this, text="Caps the most frequent exact missingness combinations shown in both views. Raising it reveals more rare patterns but increases chart density.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxVariables", label="Maximum variables to chart", min=2, max=30, value=15, step=1,
+            guide=this, text="Keeps this many variables with the largest missing counts when more columns are incomplete. Raising it broadens coverage but makes the dot matrix denser and can multiply intersections.", position="left",
+        ),
+        ui.input_numeric(
+            id="MinCount", label="Minimum observations per intersection", value=1, min=1, step=1,
+            guide=this, text="Hides exact missingness combinations with fewer observations than this count. The filter changes only the diagnostic result, not the upstream data.", position="left",
+        ),
+        ui.input_slider(
+            id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",
+            guide=this, text="Sets a logarithmic cap of 10^n observations and uses random sampling above it. Raising the limit improves coverage of rare intersections but increases calculation time.", position="left",
+        ),
+    )
 
     def server(input, output, session):
         
@@ -423,6 +411,7 @@ def instance():
         @render.ui
         @this.record_context
         def Table():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="Table2")
 
         @output
