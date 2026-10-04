@@ -31,9 +31,7 @@ from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PowerTransformer, StandardScaler
-
-#TODO: Add other styles of centring and scaling that sklearn supports (ideally robust ones)
+from sklearn.preprocessing import PowerTransformer, RobustScaler, StandardScaler
 
 TRANSFORM_LABELS = {
     "Center": "Mean center",
@@ -46,23 +44,32 @@ FULL_SCREEN_VERTICAL_SPACING = 0.06
 
 @recordable
 class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    """Give each feature unit spread without changing its fitted mean."""
+    """Give unit spread while preserving the fitted mean (or robust median)."""
 
-    def fit(self, X, y=None):
-        self.scaler_ = StandardScaler(with_mean=True, with_std=True).fit(X)
+    def __init__(self, robust=False):
+        self.robust = robust
+
+    def fit(self, X, y=None, sample_weight=None):
+        if self.robust:
+            self.scaler_ = RobustScaler().fit(X)
+            self.location_ = self.scaler_.center_
+        else:
+            self.scaler_ = StandardScaler(with_mean=True, with_std=True).fit(
+                X, sample_weight=sample_weight,
+            )
+            self.location_ = self.scaler_.mean_
         self.n_features_in_ = self.scaler_.n_features_in_
         if hasattr(self.scaler_, "feature_names_in_"):
             self.feature_names_in_ = self.scaler_.feature_names_in_
         return self
 
     def transform(self, X):
-        # StandardScaler first produces zero mean and unit spread.  Restoring
-        # the fitted mean changes location back without changing that spread.
-        return self.scaler_.transform(X) + self.scaler_.mean_
+        # Restore the fitted location so scaling does not also centre.
+        return self.scaler_.transform(X) + self.location_
 
     def inverse_transform(self, X):
         values = np.asarray(X, dtype=float)
-        standard = values - self.scaler_.mean_
+        standard = values - self.location_
         return self.scaler_.inverse_transform(standard)
 
 
@@ -70,24 +77,37 @@ class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 class VariableTransformStep(TransformerMixin, BaseEstimator):
     """DataFrame-preserving learned transformations for selected variables."""
 
-    def __init__(self, columns: tuple[str, ...], transforms: tuple[str, ...]):
+    def __init__(self, columns: tuple[str, ...], transforms: tuple[str, ...],
+                 weight_column: str | None = None, robust: bool = False):
         self.columns = columns
         self.transforms = transforms
+        self.weight_column = weight_column
+        self.robust = robust
 
     def fit(self, X: pd.DataFrame, y=None):
         if not isinstance(X, pd.DataFrame):
             raise TypeError("VariableTransformStep requires a pandas DataFrame")
+        weights = None if self.robust else _observation_weights(X, self.weight_column)
         self.pipelines_ = {}
         self.failures_ = {}
         for column in self.columns:
             if column not in X.columns:
                 self.failures_[column] = "Variable is absent"
                 continue
-            pipeline = _build_pipeline(self.transforms)
+            pipeline = _build_pipeline(self.transforms, robust=self.robust)
             if pipeline is None:
                 continue
             try:
-                self.pipelines_[column] = pipeline.fit(X[[column]])
+                if weights is not None and not np.any(
+                    (weights > 0) & X[column].notna().to_numpy()
+                ):
+                    raise ValueError("No positive weight among observed values")
+                fit_params = {
+                    f"{name}__sample_weight": weights
+                    for name in ("common_spread", "centre")
+                    if weights is not None and name in pipeline.named_steps
+                }
+                self.pipelines_[column] = pipeline.fit(X[[column]], **fit_params)
             except (ValueError, TypeError, FloatingPointError) as error:
                 self.failures_[column] = str(error)
         self.feature_names_in_ = np.asarray(X.columns, dtype=object)
@@ -232,7 +252,7 @@ def _eligible_columns(
 
 
 @recordable
-def _build_pipeline(transforms: list[str] | tuple[str, ...]) -> Pipeline | None:
+def _build_pipeline(transforms: list[str] | tuple[str, ...], *, robust=False) -> Pipeline | None:
     """Build the selected scikit-learn workflow in its required order."""
     selected = set(transforms)
     steps: list[tuple[str, object]] = []
@@ -246,12 +266,12 @@ def _build_pipeline(transforms: list[str] | tuple[str, ...]) -> Pipeline | None:
     if "Scale" in selected:
         steps.append((
             "common_spread",
-            CommonSpreadScaler(),
+            CommonSpreadScaler(robust=robust),
         ))
     if "Center" in selected:
         steps.append((
             "centre",
-            StandardScaler(
+            RobustScaler(with_scaling=False) if robust else StandardScaler(
                 with_mean=True,
                 with_std=False,
             ),
@@ -262,11 +282,34 @@ def _build_pipeline(transforms: list[str] | tuple[str, ...]) -> Pipeline | None:
 
 
 @recordable
-def _describe(values: pd.Series) -> dict[str, float]:
+def _observation_weights(frame: pd.DataFrame, column: str | None):
+    if column is None:
+        return None
+    if column not in frame:
+        raise ValueError(f"Weighting variable {column!r} is absent")
+    if not pd.api.types.is_numeric_dtype(frame[column].dtype):
+        raise ValueError("Observation weights must be numeric")
+    weights = frame[column].to_numpy(dtype=float, na_value=np.nan)
+    if not np.isfinite(weights).all() or (weights < 0).any() or not (weights > 0).any():
+        raise ValueError("Observation weights must be finite, nonnegative and have a positive total")
+    return weights
+
+
+@recordable
+def _describe(values: pd.Series, weights=None) -> dict[str, float]:
     numeric = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    mean, sd = float(numeric.mean()), float(numeric.std(ddof=0))
+    if weights is not None:
+        observed = numeric.notna().to_numpy() & (weights > 0)
+        if observed.any():
+            x, w = numeric.to_numpy(dtype=float)[observed], weights[observed]
+            mean = float(np.average(x, weights=w))
+            sd = float(np.sqrt(np.average((x - mean) ** 2, weights=w)))
+        else:
+            mean = sd = np.nan
     return {
-        "Mean": float(numeric.mean()),
-        "Standard deviation": float(numeric.std(ddof=0)),
+        "Mean": mean,
+        "Standard deviation": sd,
         "Skew": float(numeric.skew()),
         # pandas reports Fisher (excess) kurtosis.  Adding three gives the
         # ordinary Pearson definition, for which a normal distribution is 3.
@@ -275,10 +318,11 @@ def _describe(values: pd.Series) -> dict[str, float]:
 
 
 @recordable
-def _transform_name(transforms: list[str] | tuple[str, ...]) -> str:
+def _transform_name(transforms: list[str] | tuple[str, ...], *, robust=False) -> str:
     selected = set(transforms)
+    labels = TRANSFORM_LABELS | ({"Center": "Median center", "Scale": "Unit IQR"} if robust else {})
     return " → ".join(
-        TRANSFORM_LABELS[value]
+        labels[value]
         for value in ("Deskew", "Scale", "Center")
         if value in selected
     ) or "None"
@@ -289,14 +333,21 @@ def _analyse_distribution(
     data: proxy_data,
     transforms: list[str] | tuple[str, ...],
     include_target: bool = False,
+    use_weights: bool = False,
+    robust: bool = False,
 ) -> DistributionAnalysis:
     """Transform eligible columns from a fresh source frame and summarise them."""
     source = data.frame
     eligible, excluded = _eligible_columns(data, include_target=include_target)
     target = _continuous_target(data) if include_target else None
     selected = list(transforms)
+    weight_columns = list(data.role_map.columns_with_role(Role.WEIGHTING)) if use_weights and not robust else []
+    if len(weight_columns) > 1:
+        raise ValueError("Assign a single Weighting variable")
+    weight_column = weight_columns[0] if weight_columns else None
+    weights = _observation_weights(source, weight_column)
     transformer = (
-        VariableTransformStep(tuple(eligible), tuple(selected)).fit(source)
+        VariableTransformStep(tuple(eligible), tuple(selected), weight_column, robust=robust).fit(source)
         if selected else None
     )
     frame = transformer.transform(source) if transformer is not None else source.copy()
@@ -308,7 +359,7 @@ def _analyse_distribution(
         before = source[column]
         after = frame[column]
         fitted_lambda = np.nan
-        status = _transform_name(selected)
+        status = _transform_name(selected, robust=robust)
         pipeline = pipelines.get(column)
         if column in failures:
             status = f"Not transformed: {failures[column]}"
@@ -316,8 +367,8 @@ def _analyse_distribution(
         elif pipeline is not None and "deskew" in pipeline.named_steps:
             fitted_lambda = float(pipeline.named_steps["deskew"].lambdas_[0])
 
-        before_stats = _describe(before)
-        after_stats = _describe(after)
+        before_stats = _describe(before, weights)
+        after_stats = _describe(after, weights)
         rows.append({
             "Variable": str(column),
             "Role": _role_label(data, column),
@@ -644,6 +695,16 @@ def instance():
 
     this.settings = lambda: ui.TagList(
         ui.input_checkbox(
+            id="Robust", label="Use robust centring and scaling", value=False,
+            guide=this, title="Robust statistics", position="left",
+            text="Center on the median and scale by the interquartile range (25th–75th percentiles). Scaling alone preserves the median. Observation weights are ignored in this mode. Skew reduction is unchanged; chart and table moments remain ordinary unweighted statistics.",
+        ),
+        ui.input_checkbox(
+            id="UseWeights", label="Use observation weights", value=False,
+            guide=this, title="Weighted centring and scaling", position="left",
+            text="Use the assigned Weighting variable for centring, scaling, and displayed means and standard deviations. Without a Weighting role, use ordinary statistics. Ignored when robust mode is enabled. Weights must be finite, nonnegative and have a positive total. Skew reduction, skew and kurtosis remain unweighted.",
+        ),
+        ui.input_checkbox(
             id="IncludeTarget",
             label="Include a continuous numeric target",
             value=False,
@@ -693,6 +754,8 @@ def instance():
                     if name in selected
                 ],
                 "include_target": target is not None and bool(input.IncludeTarget()),
+                "use_weights": bool(input.UseWeights()),
+                "robust": bool(input.Robust()),
             }
 
         @busy.track("Transforming continuous numeric predictors…")
@@ -754,6 +817,7 @@ def instance():
         @render.ui
         @this.record_context
         def Statistics():
+            req(incomingproxy_data())
             return ui.output_data_frame(id="StatisticsTable")
 
         @output
@@ -771,22 +835,31 @@ def instance():
         @this.record_context
         def Check():
             analysis = Analysis()
-            target_count = int(analysis.target is not None)
-            predictor_count = len(analysis.eligible) - target_count
-            subject = f"{predictor_count} predictors"
-            if target_count:
-                subject += " and 1 target"
-            # excluded = len(analysis.excluded)
-            # suffix = f"; {excluded} excluded variables are explained on the flip-side" if excluded else ""
-            if analysis.transforms:
+            count = len(analysis.eligible)
+            if this.isFullScreen():
+                targ = ", including the target" if analysis.target is not None else ""
+                excluded = len(analysis.excluded)
+                if analysis.transforms:
+                    return ui.span(
+                        f"Transformed {count} variables{targ}, using {_transform_name(analysis.transforms, robust=analysis.transformer.robust)}."
+                        + (" Robust mode; weights ignored." if analysis.transformer.robust else "")
+                        + (f"{excluded} excluded variables." if excluded > 0 else ""),
+                        class_="text-primary",
+                    )
                 return ui.span(
-                    f"Transformed {subject} using {_transform_name(analysis.transforms)}.",
-                    class_="text-success",
+                    f"There are {count} available continuous numeric variables{targ}.",
+                    class_="text-info",
                 )
-            return ui.span(
-                f"{subject} are continuous numeric variables.",
-                class_="text-primary",
-            )
+            else:    
+                if analysis.transforms:
+                    return ui.span(
+                        f"Transformed {count} variables using {_transform_name(analysis.transforms, robust=analysis.transformer.robust)}.",
+                        class_="text-primary",
+                    )
+                return ui.span(
+                    f"There are {count} available continuous numeric variables.",
+                    class_="text-info",
+                )
 
         session.on_ended(Calculate.cancel)
 

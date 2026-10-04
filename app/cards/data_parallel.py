@@ -531,11 +531,16 @@ def instance():
             if len(variables) < 2:
                 return ui.span(
                     "Select at least two compatible variables.",
-                    class_="text-info",
+                    class_="text-warning",
                 )
             omitted = prepared.source_observations - prepared.complete_observations
             sampled = prepared.complete_observations - len(prepared.frame)
             messages = [f"Showing {len(prepared.frame):,} observations"]
+            if not this.isFullScreen():
+                return ui.span(
+                    "; ".join(messages) + ".",
+                    class_="text-warning" if omitted or sampled else "text-primary",
+                )
             if omitted:
                 noun = "observation" if omitted == 1 else "observations"
                 messages.append(f"{omitted:,} incomplete {noun} omitted")
@@ -544,7 +549,7 @@ def instance():
                 messages.append(f"{sampled:,} complete {noun} sampled out")
             return ui.span(
                 "; ".join(messages) + ".",
-                class_="text-warning" if omitted or sampled else "text-success",
+                class_="text-warning" if omitted or sampled else "text-primary",
             )
 
     this.server = server

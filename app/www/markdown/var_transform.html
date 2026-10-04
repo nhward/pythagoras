@@ -261,6 +261,12 @@ shiny-data-frame .shiny-data-grid > table
 background-color: var(--bs-body-bg, #fff) !important;
 }
 
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {
 background-color: rgba(233, 36, 66, 0.22) !important;
@@ -318,22 +324,22 @@ background-color: #e2e3e5 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
 background-color: #d95f02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
 background-color: #e6ab02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
 background-color: #3978a8 !important;
 color: #fff !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
 background-color: #9aa7b2 !important;
 color: #000 !important;
 }
@@ -351,7 +357,11 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
 .var-cardinality-strong-review-row,
 .var-cardinality-review-row,
 .var-cardinality-expected-row,
-.var-cardinality-not-assessed-row
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
 ) {
 color: var(--bs-body-color, #212529) !important;
 }
@@ -869,6 +879,8 @@ fill: var(--bs-primary) !important;
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
 <p>The footer checkboxes apply <strong>De-skew</strong>, <strong>Scale</strong>, and <strong>Center</strong>. Selecting any operation propagates the fitted preview and adds the corresponding learned sequence to the pipeline. Clearing all selections restores the upstream preview and records the operation as inactive.</p>
 <h4 id="settings">⚙️ Settings</h4>
+<p>Enable <strong>Use observation weights</strong> to use the assigned Weighting variable for centering and scaling, and for chart/table means and standard deviations. Without a Weighting role, ordinary statistics are used. Weights must be numeric, finite, nonnegative and have a positive total; zero weights do not contribute to fitted means or variances. The saved learning step reads weights from each training partition when refitted.</p>
+<p><strong>Use robust centering and scaling</strong> replaces mean centering with median centering and standard-deviation scaling with interquartile-range scaling (25th–75th percentiles). Scaling alone preserves the median; selecting both gives median zero and unit IQR for non-degenerate distributions. Robust mode ignores observation weights, even when Use observation weights is checked. Yeo–Johnson is unchanged. Chart/table means, standard deviations, skew and kurtosis remain ordinary unweighted moments, not medians or IQRs.</p>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
 <p>De-skewing can make symmetric-distance and linear-model assumptions more plausible, but normality is not a universal requirement. Scaling is important for distance-based and penalized methods but usually unnecessary for tree models. Centering changes origin, not shape or spread.</p>
@@ -879,7 +891,7 @@ fill: var(--bs-primary) !important;
 <li>Yeo–Johnson is the only power family currently fitted; Box–Cox is not offered.</li>
 <li>Strong outliers can dominate moments and chart ranges.</li>
 <li>Transforming a target changes interpretation and requires care when converting predictions back to original units.</li>
-<li>Observation weights are not used in fitted transformations.</li>
+<li>Yeo–Johnson skew reduction and displayed skew/kurtosis remain unweighted, even when weighted centering and scaling are enabled.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
 <ol type="1">

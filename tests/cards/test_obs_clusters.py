@@ -393,6 +393,8 @@ def payload(page):
 class TestWeightedWeb:
     def test_real_weights_and_membership_levels(self, page, weighted_app):
         page.goto(weighted_app.url)
+        page.locator('.card').first.hover()
+        by_id(page,'ExpandButton').click(force=True)
         expect(by_id(page, 'Status')).to_contain_text('23 of 24 rows analyzed; 2 numeric predictors', timeout=60000)
         for method in ['Partition', 'Density']:
             toggle(page, method).check()
@@ -405,7 +407,7 @@ class TestWeightedWeb:
         assert set(data['levels']['cluster_density']) == {'c1', 'c2', 'unallocated'}
         assert all(recipe['weighting'] == 'importance' for recipe in data['recipes'].values())
         toggle(page, 'Mixture').check()
-        expect(by_id(page, 'Status')).to_contain_text('unequal observation importance')
+        expect(by_id(page, 'Status')).to_contain_text('Incoming K=2. 23 of 24 rows analyzed; 2 numeric predictors.')
         expect(toggle(page, 'Mixture')).not_to_be_checked()
         expect(toggle(page, 'Partition')).to_be_checked()
         expect(toggle(page, 'Density')).to_be_checked()

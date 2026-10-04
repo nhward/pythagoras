@@ -555,7 +555,7 @@ def instance():
                 text = f"{r.sampled:,} of {r.total:,} rows sampled; {len(r.table)} pairs. Pairwise missing values omitted. " + " ".join(r.notes)
             else:
                 text =  f"{r.sampled:,} of {r.total:,} rows sampled; {len(r.table)} pairs."
-            return ui.span(text, class_ = "text-success")
+            return ui.span(text, class_ = "text-primary")
 
         session.on_ended(Calculate.cancel)
         return Incoming

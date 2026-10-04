@@ -20,7 +20,11 @@ from roles import Role, RoleMap
 from scipy.spatial.distance import pdist, squareform
 from shiny.playwright import controller
 from shiny.pytest import create_app_fixture
-from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
 from threadpoolctl import threadpool_limits
 
 app = create_app_fixture(app="../scenarios/obs_k_clusters.py", scope="function")
@@ -56,8 +60,8 @@ def data(weights=True):
 
 
 def analyze(module, source=None, **kwargs):
-    options = dict(maximum=3, min_points=3, graph_neighbours=3,
-                   stability_repeats=2, gap_references=2)
+    options = {"maximum": 3, "min_points": 3, "graph_neighbours": 3,
+                   "stability_repeats": 2, "gap_references": 2}
     options.update(kwargs)
     return module._analyse(data() if source is None else source, **options)
 
@@ -247,19 +251,21 @@ class TestWeb:
 
     def test_weighting_toggle_recalculates_evidence(self, page: Page, app):
         page.goto(app.url)
-        expect(by_id(page, "Summary")).to_contain_text("Importance column: importance", timeout=60000)
-        expect(by_id(page, "Summary")).to_contain_text("Analysis uses 31 rows")
+        page.locator('.card').first.hover()
+        expect(by_id(page, "Summary")).to_contain_text("Weighted outlier analysis", timeout=60000)
+        expect(by_id(page, "Summary")).to_contain_text("includes 31 observations")
         open_settings(page)
+        by_id(page,'ExpandButton').click(force=True)
         by_id(page, "UseWeights").uncheck()
-        expect(by_id(page, "Summary")).to_contain_text("Observation weighting is disabled", timeout=60000)
-        expect(by_id(page, "Summary")).to_contain_text("Analysis uses 32 rows")
+        expect(by_id(page, "Summary")).to_contain_text("Outlier analysis", timeout=60000)
+        expect(by_id(page, "Summary")).to_contain_text("includes 32 observations.")
         by_id(page, "UseWeights").check()
-        expect(by_id(page, "Summary")).to_contain_text("Importance column: importance", timeout=60000)
+        expect(by_id(page, "Summary")).to_contain_text("Weighted outlier analysis includes 31 observations", timeout=60000)
         expect(by_id(page, "ExportProbe")).to_contain_text("unchanged=True")
 
     def test_chart_discrete_shared_range_and_evidence_table(self, page: Page, app):
         page.goto(app.url)
-        expect(by_id(page, "Summary")).to_contain_text("Importance column", timeout=60000)
+        expect(by_id(page, "Summary")).to_contain_text("Weighted outlier analysis", timeout=60000)
         page.wait_for_function("() => document.querySelector('.js-plotly-plot')?.data?.length > 0")
         chart = page.locator('.js-plotly-plot').first.evaluate("el => ({axis:el.layout.xaxis, traces:el.data.map(t=>({x:t.x,width:t.width,name:t.name}))})")
         assert chart['axis']['type'] == 'category'

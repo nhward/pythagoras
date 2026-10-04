@@ -294,7 +294,7 @@ def instance():
         ui.output_ui(id="Message"),
         ui.input_checkbox_group(
             id = "Replace",
-            label = None,
+            label = "Replace",
             choices=[],
             inline=True,
             guide = this, title = "Replace buttons", position = "top",
@@ -412,7 +412,7 @@ def instance():
             used_codes = pd.to_numeric(flat, errors="coerce").dropna().astype(int).unique().tolist()
             used_codes = sorted(k for k in used_codes if k not in (0, 1))
             reduced_labels = [str(rawstate["legend"].get(k, f"Code {k}")) for k in used_codes]
-            return [f"Replace {lab}" for lab in reduced_labels]
+            return reduced_labels
 
         @output
         @render.ui
@@ -426,9 +426,11 @@ def instance():
         def UpdateButtons():
             choices = Choices()
             with reactive.isolate():
-                previous = Replace()
+                # The settled value may not exist yet; reading it in isolation
+                # would stop this update without retrying when it is published.
+                previous = input.Replace() or []
             selected = [c for c in previous if c in choices]
-            ui.update_checkbox_group(id="Replace", choices=choices, selected=selected, )
+            ui.update_checkbox_group(id="Replace", choices=choices, selected=selected)
 
 
         @this.record_code
@@ -624,7 +626,7 @@ def instance():
         @this.record_code
         def _transform_data(source, replacements, extrema, case_sensitive):
             full  = source
-            sentinels = [s.removeprefix("Replace ") for s in replacements]
+            sentinels = replacements
             if not sentinels:
                 return full.with_inactive_step(
                     stage="Cleaning",
@@ -843,10 +845,9 @@ def instance():
         @this.record_context
         def CorrectedState():
             sample = PreparedData()
-            sentinels = [s.removeprefix("Replace ") for s in Replace()]
             fixed = ResolvePlaceholders(
                 data=sample,
-                sentinels=sentinels,
+                sentinels=Replace(),
                 extrema=input.NA_Extrema(),
                 case_sensitive=input.NA_CaseSensitive(),
             )

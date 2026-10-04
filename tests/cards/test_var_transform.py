@@ -67,6 +67,7 @@ def test_card_is_mutable_with_transform_controls_and_statistics(card_module):
     assert "Mean center" in footer
     assert "Common spread" in footer
     assert "Reduce skew" in footer
+    assert 'id="UseWeights"' in str(card.settings)
     assert 'id="IncludeTarget"' in str(card.settings)
     assert 'id="Labels"' in str(card.settings)
 
@@ -365,7 +366,7 @@ class TestWebKitUI:
             timeout=20_000,
         )
         expect(by_id(page, "Check")).to_contain_text(
-            "3 predictors are continuous numeric variables", timeout=20_000,
+            "3 available continuous numeric variables", timeout=20_000,
         )
         expect(by_id(page, "Transform")).to_be_attached()
         expect(by_id(page, "IncludeTarget")).to_be_attached()
@@ -376,13 +377,13 @@ class TestWebKitUI:
     ):
         page.goto(app.url)
         expect(by_id(page, "Check")).to_contain_text(
-            "3 predictors are continuous numeric variables", timeout=20_000,
+            "3 available continuous numeric variables", timeout=20_000,
         )
 
         by_id(page, "Transform").locator('input[value="Deskew"]').check(force=True)
         by_id(page, "Transform").locator('input[value="Center"]').check(force=True)
         expect(by_id(page, "Check")).to_contain_text(
-            "Transformed 3 predictors using Reduce skew → Mean center",
+            "Transformed 3 variables using Reduce skew → Mean center",
             timeout=20_000,
         )
 
@@ -406,12 +407,12 @@ class TestWebKitUI:
         expect(by_id(page, "IncludeTarget")).to_be_visible()
         by_id(page, "IncludeTarget").check()
         expect(by_id(page, "Check")).to_contain_text(
-            "3 predictors and 1 target are continuous numeric variables",
+            "3 available continuous numeric variables",
             timeout=20_000,
         )
         by_id(page, "Transform").locator('input[value="Scale"]').check(force=True)
         expect(by_id(page, "Check")).to_contain_text(
-            "Transformed 3 predictors and 1 target using Common spread",
+            "Transformed 4 variables using Common spread",
             timeout=20_000,
         )
 
@@ -419,3 +420,123 @@ class TestWebKitUI:
         table = by_id(page, "StatisticsTable")
         expect(table).to_contain_text("outcome", timeout=10_000)
         expect(table).to_contain_text("Target")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('transforms', [['Center'], ['Scale'], ['Deskew', 'Scale', 'Center']])
+def test_weighted_scaling_and_training_refit(card_module, transforms):
+    from roles import Role
+    from sklearn.base import clone
+
+    data, frame = distribution_data()
+    data.frame['weight'] = np.arange(1, len(frame) + 1, dtype=float)
+    data.role_map.set_roles('weight', [Role.WEIGHTING])
+    result = card_module._analyse_distribution(data, transforms, use_weights=True)
+    weights = data.frame['weight'].to_numpy()
+    expected = frame[['large']]
+    if 'Deskew' in transforms:
+        expected = PowerTransformer(standardize=False).fit_transform(expected)
+    mean = np.average(np.asarray(expected).ravel(), weights=weights)
+    scaler = StandardScaler(with_std='Scale' in transforms).fit(expected, sample_weight=weights)
+    expected = scaler.transform(expected).ravel()
+    if 'Center' not in transforms:
+        expected += mean
+    np.testing.assert_allclose(result.frame['large'], expected, atol=1e-12)
+    row = result.statistics.set_index('Variable').loc['large']
+    assert row['Mean after'] == pytest.approx(np.average(expected, weights=weights), abs=1e-12)
+    pd.testing.assert_series_equal(result.frame['weight'], data.frame['weight'])
+    training = data.frame.iloc[:25]
+    refitted = clone(result.transformer).fit(training)
+    train_values = training[['large']]
+    if 'Deskew' in transforms:
+        train_values = PowerTransformer(standardize=False).fit_transform(train_values)
+    train_weights = training['weight'].to_numpy()
+    train_scaler = StandardScaler(with_std='Scale' in transforms).fit(
+        train_values, sample_weight=train_weights,
+    )
+    train_expected = train_scaler.transform(train_values).ravel()
+    if 'Center' not in transforms:
+        train_expected += np.average(np.asarray(train_values).ravel(), weights=train_weights)
+    np.testing.assert_allclose(refitted.transform(training)['large'], train_expected, atol=1e-12)
+    assert refitted.weight_column == 'weight'
+
+
+@pytest.mark.unit
+def test_weight_setting_fallback_and_invalid_weights(card_module):
+    from roles import Role
+
+    data, _ = distribution_data()
+    ordinary = card_module._analyse_distribution(data, ['Center'])
+    fallback = card_module._analyse_distribution(data, ['Center'], use_weights=True)
+    pd.testing.assert_frame_equal(ordinary.frame, fallback.frame)
+    data.frame['weight'] = -1.
+    data.role_map.set_roles('weight', [Role.WEIGHTING])
+    unchecked = card_module._analyse_distribution(data, ['Center'])
+    np.testing.assert_allclose(unchecked.frame['large'], ordinary.frame['large'])
+    for invalid in [-1., np.nan, np.inf, 0.]:
+        data.frame['weight'] = invalid
+        with pytest.raises(ValueError, match='Observation weights'):
+            card_module._analyse_distribution(data, ['Center'], use_weights=True)
+
+
+@pytest.mark.unit
+def test_weighted_target_missing_values_and_zero_weights(card_module):
+    from roles import Role
+
+    data, _ = distribution_data()
+    data.frame['weight'] = 1.
+    data.frame.loc[0, 'weight'] = 0.
+    data.role_map.set_roles('weight', [Role.WEIGHTING])
+    result = card_module._analyse_distribution(
+        data, ['Scale', 'Center'], include_target=True, use_weights=True,
+    )
+    for column in ['skewed', 'outcome']:
+        reference = StandardScaler().fit(
+            data.frame[[column]], sample_weight=data.frame['weight'],
+        )
+        np.testing.assert_allclose(
+            result.frame[column], reference.transform(data.frame[[column]]).ravel(),
+            atol=1e-12, equal_nan=True,
+        )
+    np.testing.assert_allclose(
+        result.inverse_target(result.frame['outcome']), data.frame['outcome'],
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('transforms', [['Center'], ['Scale'], ['Scale', 'Center'], ['Deskew', 'Scale', 'Center']])
+def test_robust_transforms_ignore_weights_and_refit(card_module, transforms):
+    from roles import Role
+    from sklearn.base import clone
+    from sklearn.preprocessing import RobustScaler
+
+    data, _ = distribution_data()
+    # Invalid weights must not even be validated in robust mode.
+    data.frame['weight'] = np.nan
+    data.role_map.set_roles('weight', [Role.WEIGHTING])
+    result = card_module._analyse_distribution(
+        data, transforms, include_target=True, use_weights=True, robust=True,
+    )
+    for column in ['large', 'skewed', 'outcome']:
+        values = data.frame[[column]]
+        if 'Deskew' in transforms:
+            values = PowerTransformer(standardize=False).fit_transform(values)
+        reference = RobustScaler(with_scaling='Scale' in transforms).fit(values)
+        expected = reference.transform(values).ravel()
+        if 'Center' not in transforms:
+            expected += reference.center_
+        np.testing.assert_allclose(result.frame[column], expected, atol=1e-12, equal_nan=True)
+    np.testing.assert_allclose(result.inverse_target(result.frame['outcome']), data.frame['outcome'])
+    training = data.frame.iloc[:30]
+    step = clone(result.transformer).fit(training)
+    assert step.robust
+    values = training[['large']]
+    if 'Deskew' in transforms:
+        values = PowerTransformer(standardize=False).fit_transform(values)
+    reference = RobustScaler(with_scaling='Scale' in transforms).fit(values)
+    expected = reference.transform(values).ravel()
+    if 'Center' not in transforms:
+        expected += reference.center_
+    np.testing.assert_allclose(step.transform(training)['large'], expected, atol=1e-12)
+    # Transforming future data never requires its weights.
+    step.transform(training.drop(columns='weight'))

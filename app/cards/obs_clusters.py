@@ -353,15 +353,15 @@ def instance():
     this.footer = lambda: ui.TagList(
         ui.output_ui("Busy"), 
         ui.output_ui("MembershipControl"),
-        ui.output_text("Status"),
+        ui.output_ui("Status"),
     )
 
     def select(id, label, choices, text):
         return ui.input_select(id, label=label, choices=choices, guide=this, position="left", text=text)
     def check(id, label, text):
         return ui.input_checkbox(id, label=label, value=True, guide=this, position="left", text=text)
-    def slider(id, label, low, high, value, text):
-        return ui.input_slider(id, label=label, min=low, max=high, value=value, guide=this, position="left", text=text)
+    def slider(id, label, low, high, value, text, ticks = True, pre = None):
+        return ui.input_slider(id, label=label, min=low, max=high, value=value, ticks = ticks, pre = pre, guide=this, position="left", text=text)
     this.settings = lambda: ui.TagList(
         select("Projection", "2D projection", {"tsne":"t-SNE", "pca":"PCA"}, "One shared embedding for all methods. t-SNE emphasizes local neighborhoods and ignores weights in the embedding; PCA is faster and uses importance-weighted axes when enabled. Clustering is always fitted before projection, in predictor space."),
         slider("Perplexity", "t-SNE perplexity", 2, 50, 30, "Neighborhood scale of the t-SNE display. Capped at (analyzed rows minus one) / 3. Changes the visualization, not the clustering inputs."),
@@ -373,7 +373,7 @@ def instance():
         slider("MinPoints", "DBSCAN minimum points (including self)", 2, 100, 5, "Minimum neighborhood size for a core point, including self. With weighting, this is mean-one importance mass. A bounded radius search favors counts closest to incoming K, then less noise. Exact K may be unattainable."),
         check("Border", "Assign DBSCAN border points", "Include non-core points reachable from a core point. Disable to require minimum training-neighborhood importance mass as well. Unassigned rows are labeled unallocated; this level is not counted as a cluster. New rows are matched to fixed training core points within the learned radius."),
         slider("Neighbours", "Spectral nearest neighbors", 1, 50, 10, "Binary undirected union of nearest-neighbor connections, excluding self. Increase if the graph has more components than K. Capped at analyzed rows minus one."),
-        slider("Limit", "Maximum observations to analyze", 50, 2000, 1000, "Reproducible uniform sampling without replacement above this limit. Distances use quadratic memory; PAM and t-SNE can be expensive. Partition, Mixture and DBSCAN assign all rows with complete fitted predictors on export, including unsampled rows. Incomplete rows retain missing labels. No outgoing rows are removed.")
+        slider("Limit", "Maximum observations to analyze", 3, 7, 4, "Analyze at most 10 raised to this value rows (4 means 10,000), using reproducible uniform sampling without replacement above the limit. Partition, Mixture and DBSCAN assign all rows with complete fitted predictors on export, including unsampled rows. No outgoing rows are removed.", ticks=True, pre="10^"),
     )
 
     def server(input, output, session):
@@ -400,10 +400,19 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def Options():
-            return {"limit": int(input.Limit()), "standardize": bool(input.Standardize()), "use_weights": bool(input.UseWeights()),
-                        "metric": input.Metric(), "centre": input.Centre(), "linkage": input.Linkage(), "min_points": int(input.MinPoints()),
-                        "border": bool(input.Border()), "neighbours": int(input.Neighbours()), "projection": input.Projection(),
-                        "perplexity": int(input.Perplexity())}
+            return {
+                "limit": 10**int(input.Limit()), 
+                "standardize": bool(input.Standardize()), 
+                "use_weights": bool(input.UseWeights()),
+                "metric": input.Metric(), 
+                "centre": input.Centre(), 
+                "linkage": input.Linkage(), 
+                "min_points": int(input.MinPoints()),
+                "border": bool(input.Border()), 
+                "neighbours": int(input.Neighbours()), 
+                "projection": input.Projection(),
+                "perplexity": int(input.Perplexity())
+            }
 
         @busy.track("Calculating cluster memberships…")
         @this.extended_task
@@ -552,13 +561,15 @@ def instance():
             return busy.ui()
 
         @output
-        @render.text
+        @render.ui
         @this.record_context
         def Status():
             result = Analysis()
             method = input.ClusterType()
             prefix = f"Incoming K={result.source.cluster_count or 1}. {len(result.positions)} of {len(result.source)} rows analyzed; {len(result.predictors)} numeric predictors. "
-            return prefix + (result.error or result.notes.get(method, "")) + (" " + message.get() if message.get() else "")
+            if not this.isFullScreen():
+                return ui.span(prefix, class_ = "text-primary")
+            return ui.span(prefix + (result.error or result.notes.get(method, "")) + (" " + message.get() if message.get() else ""), class_ = "text-primary")
 
         def register_chart(method):
             @output(id=f"Chart_{method}")

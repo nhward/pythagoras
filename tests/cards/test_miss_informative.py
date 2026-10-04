@@ -147,6 +147,26 @@ def importance_table(miss_informative) -> pd.DataFrame:
     ], columns=miss_informative.IMPORTANCE_COLUMNS)
 
 
+@pytest.mark.unit
+def test_shadow_choices_filter_and_rank(miss_informative):
+    table = importance_table(miss_informative)
+    uninformative = table.iloc[1].copy()
+    uninformative["Variable"] = f"{Card.SHADOW_PREFIX}noise"
+    uninformative["Source Variable"] = "noise"
+    uninformative["Interpretation"] = "Uninformative"
+    uninformative["Importance"] = 0.01
+    table = pd.concat([table, uninformative.to_frame().T], ignore_index=True)
+    eligible = ["unestimated", "noise", "x"]
+    assert miss_informative._shadow_choices(eligible, table) == ["x"]
+    assert miss_informative._shadow_choices(eligible, table, False) == [
+        "x", "noise", "unestimated"
+    ]
+    assert miss_informative._shadow_choices(["noise"], table) == []
+    empty = miss_informative._empty_analysis(None, "No target").importance
+    assert miss_informative._shadow_choices(eligible, empty) == []
+    assert miss_informative._shadow_choices(eligible, empty, False) == eligible
+
+
 class TestCardDefinition:
     @pytest.mark.unit
     def test_metadata_and_regions(self, card):
@@ -168,7 +188,7 @@ class TestCardDefinition:
         assert 'id="Busy"' in footer
         assert 'id="Significance"' in footer
         assert 'id="Shadow"' in footer
-        for control in ("CVFolds", "MinMissProp", "MinBalancedAccuracy", "MaxObs"):
+        for control in ("InformativeOnly", "CVFolds", "MinMissProp", "MinBalancedAccuracy", "MaxObs"):
             assert f'id="{control}"' in settings
 
     @pytest.mark.unit

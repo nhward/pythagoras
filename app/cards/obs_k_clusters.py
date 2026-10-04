@@ -420,10 +420,12 @@ def _analyse(data: proxy_data, *, maximum=10, limit=500, metric="euclidean",
         x = x[:, keep]
         if standardize:
             x = (safe[:, keep] - centre_values[keep]) / spread[keep]
-    if raw_weights is not None:
-        notes.append(f"Analysis uses {len(x)} rows. Importance column: {weight_column}; zero-weight rows excluded. Weights are normalized to mean one.")
+    if weights is not None:
+        summary = f"Weighted outlier analysis includes {len(x)} observations."
+        notes.append(summary)
     else:
-        notes.append(f"Analysis uses {len(x)} rows. Observation weighting is {'disabled' if not use_weights else 'not assigned'}.")
+        summary = f"Outlier analysis includes {len(x)} observations."
+        notes.append(f'Outlier analysis includes {len(x)} observations. {" Observation weighting is not assigned." if use_weights is None else ""}')
     notes.append("Only numeric Predictor-role columns enter clustering; weighting and shadow columns are excluded.")
     if weights is not None:
         notes.append("Unequal importance weights: Agglomerative, Divisive, Mixture, Topology and Spectral "
@@ -437,7 +439,7 @@ def _analyse(data: proxy_data, *, maximum=10, limit=500, metric="euclidean",
     votes = []
     def result():
         return {"scores": pd.DataFrame(scores, columns=["Family", "Criterion", "K", "Score", "Direction"]),
-                    "votes": pd.DataFrame(votes, columns=["Family", "Criterion", "K"]), "notes": notes}
+                    "votes": pd.DataFrame(votes, columns=["Family", "Criterion", "K"]), "notes": notes, "summary": summary}
     if len(x) < 3 or x.shape[1] == 0:
         notes.append("At least three complete rows and one varying numeric predictor are needed for recommendations.")
         return result()
@@ -585,8 +587,8 @@ def _figure(analysis, *, maximum, full_screen=False):
             "y": 1.0,
             "yanchor": "bottom",
         },
-        # font={"size": 13 if full_screen else 10},
-        # showlegend=full_screen,
+        font={"size": 13 if full_screen else 10},
+        showlegend=full_screen,
     )
     return figure
 
@@ -612,17 +614,15 @@ def instance():
     this.footer = lambda: ui.TagList(
         ui.output_ui("Busy"),
         ui.output_ui("KControl"),
-        ui.output_text("Summary"),
+        ui.output_ui("Summary"),
     )
 
     this.settings = lambda: ui.TagList(
         ui.input_checkbox("UseWeights", label="Use assigned observation weighting", value=True,
             guide=this, position="left",
-            text="Use one numeric Weighting-role column as relative observation importance. Values must be "
-                    "finite and nonnegative, with at least one positive value; zero-weight rows are excluded. "
-                    "Weights are normalized to mean one. Unequal weights affect Partition, Density, Stability "
+            text="Use one numeric Weighting-role column as relative observation importance. Unequal weights affect Partition, Density, Stability "
                     "and Gap; the other families are unavailable. Equal weights, or no assigned column, retain "
-                    "all families. Disable for equal importance; only predictors still enter clustering."),
+                    "all families. Disable for equal importance."),
         ui.input_slider(
             id="Maximum", label="Largest K to assess", min=2, max=25, value=10,
             guide=this, position="left",
@@ -833,10 +833,13 @@ def instance():
             return busy.ui()
 
         @output
-        @render.text
+        @render.ui
         @this.record_context
         def Summary():
-            return " ".join(Analysis()["notes"][:2])
+            if this.isFullScreen():
+                return ui.span(" ".join(Analysis()["notes"][:2]), class_ = "text-primary")
+            else:
+                return ui.span(Analysis()["summary"], class_ = "text-primary")
 
         @output
         @render.ui

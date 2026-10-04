@@ -233,6 +233,39 @@ class TestInstance:
 
 class TestServerInputs:
     @pytest.mark.unit
+    @pytest.mark.parametrize("selected", [[], ["str: NA"]])
+    def test_buttons_populate_before_replacement_selection_settles(
+        self, card_module, monkeypatch, selected
+    ):
+        card, _ = recorded_helpers(card_module)
+        pending = reactive.Value()
+
+        def settle(*args, **kwargs):
+            def decorate(function):
+                if function.__name__ != "Replace":
+                    return function
+
+                def Replace():
+                    return pending.get()
+
+                return Replace
+            return decorate
+
+        monkeypatch.setattr(card, "settle", settle)
+        updates = []
+        monkeypatch.setattr(
+            card_module.ui, "update_checkbox_group",
+            lambda **kwargs: updates.append(kwargs),
+        )
+        _, functions = recorded_helpers(
+            card_module, inputs=FakeInputs(replace=selected)
+        )
+        with reactive.isolate():
+            functions["UpdateButtons"]()
+        assert "str: NA" in updates[0]["choices"]
+        assert updates[0]["selected"] == selected
+
+    @pytest.mark.unit
     def test_max_observations_is_logarithmic(self, card_module):
         _, functions = recorded_helpers(card_module, inputs=FakeInputs(max_obs=5))
         assert functions["MaxObs"]() == 100_000
@@ -263,6 +296,20 @@ class TestServerInputs:
 
 
 class TestPlaceholderCodes:
+    @pytest.mark.unit
+    def test_short_labels_and_corrected_state_preserve_remaining_placeholders(self, card_module):
+        _, functions = recorded_helpers(
+            card_module, inputs=FakeInputs(replace=["str: NA"])
+        )
+        with reactive.isolate():
+            choices = functions["Choices"]()
+            state = functions["CorrectedState"]()
+        assert "str: NA" in choices
+        assert all(not label.startswith("Replace ") for label in choices)
+        assert state["codes"].loc[0, "character"] == 0
+        integer_code = state["codes"].loc[0, "integer"]
+        assert state["legend"][integer_code] == "int: -999"
+
     @pytest.fixture
     def helpers(self, card_module):
         return recorded_helpers(card_module)[1]
@@ -554,7 +601,7 @@ class TestWebKitUI:
     ):
         page.goto(app.url)
         set_shiny_input(page, "NA_Strings", ["NA", "A"])
-        expect(by_id(page, "Replace")).to_contain_text("Replace str: A", timeout=10_000)
+        expect(by_id(page, "Replace").get_by_label("str: A", exact=True)).to_be_attached(timeout=10_000)
 
     @pytest.mark.ui
     def test_flip_displays_placeholder_summary(self, page: Page, app: ShinyAppProc):

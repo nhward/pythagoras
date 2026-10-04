@@ -282,14 +282,10 @@ class TestWebKitUI:
     @pytest.mark.ui
     def test_chart_status_and_settings_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
-
-        expect(by_id(page, "Chart").locator(".plotly")).to_be_attached(
-            timeout=15_000,
-        )
-        expect(by_id(page, "Check")).to_contain_text(
-            "Showing 17 observations; 1 incomplete observation omitted.",
-            timeout=15_000,
-        )
+        expect(by_id(page, "Chart").locator(".plotly")).to_be_attached(timeout=15_000)
+        page.locator('.card').first.hover()
+        by_id(page,'ExpandButton').click(force=True)
+        expect(by_id(page, "Check")).to_contain_text("Showing 17 observations; 1 incomplete observation omitted.", timeout=15_000)
         for control in ("Variables", "Colour", "MaxObs"):
             expect(by_id(page, control)).to_be_attached()
         expect(get_card(page).locator(".parallel-axis-mode")).to_have_count(0)

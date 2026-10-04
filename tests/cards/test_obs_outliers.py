@@ -147,7 +147,6 @@ def test_chart_tables_controls_and_unchanged_output(page, app):
     by_id(page, "FlipButton").click(force=True)
     expect(by_id(page, "Scores")).to_contain_text("Disagreement")
     expect(by_id(page, "Scores")).to_contain_text("person-99")
-    by_id(page, "Raw").check()
     expect(by_id(page, "Scores")).to_contain_text("Mahalanobis")
     by_id(page, "EmptySource").click()
     expect(by_id(page, "Status")).to_contain_text("No varying numeric predictors", timeout=60000)

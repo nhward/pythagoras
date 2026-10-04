@@ -153,7 +153,7 @@ def _analyze(source, options, card_name="targ_balance"):
             message += " " + " ".join(sampler.warnings_)
         missing = int(source.frame[target].isna().sum())
         if missing:
-            message += f" {missing:,} missing targets excluded from diagnostics."
+            message += f" {missing} missing targets excluded from diagnostics."
         return BalanceResult(successor, pd.DataFrame(rows), before, after, message)
     except ValueError as exc:
         return BalanceResult(source, pd.DataFrame(), None, None, str(exc), True)
@@ -299,7 +299,7 @@ def instance():
                     selected = "none"
             return ui.tags.fieldset(
                 ui.input_radio_buttons(
-                    id="Mode", label=None, choices={"none": "None", "reweight": "Reweight", "resample": "Resample"},
+                    id="Mode", label="Rebalance", choices={"none": "None", "reweight": "Reweight", "resample": "Resample"},
                     selected=selected, inline=True, guide=this, position="top",
                     text="Applies immediately; no commit needed. None restores the incoming data and removes this card's pipeline contribution. Results are full-data previews; saved samplers run only during model training."
                 ), 
@@ -389,7 +389,8 @@ def instance():
         @output
         @render.ui
         def Status():
-            return ui.span(Results().message, class_ = "text-danger")
+            if not Results().table.empty:
+                return ui.span(Results().message, class_ = "text-danger")
 
         @output
         @render.ui

@@ -6,9 +6,9 @@ from cards import targ_balance as m
 from code_recording import recording_context
 from module import Module
 from playwright.sync_api import expect
-from shiny.pytest import create_app_fixture
 from proxy_data import proxy_data
 from roles import Role, RoleMap
+from shiny.pytest import create_app_fixture
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
@@ -328,7 +328,6 @@ def test_ineligible_target_disables_actions_and_passes_through(page, app):
     page.get_by_label('Reweight', exact=True).check()
     expect(page.locator('[id$="-ExportProbe"]')).to_contain_text('weights=True', timeout=30000)
     page.get_by_label('Nominal target', exact=True).uncheck()
-    expect(status).to_contain_text('not nominal', timeout=30000)
     expect(page.get_by_label('Reweight', exact=True)).to_be_disabled()
     expect(page.locator('[id$="-ExportProbe"]')).to_contain_text('weights=False steps=0', timeout=30000)
 

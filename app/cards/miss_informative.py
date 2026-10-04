@@ -341,7 +341,7 @@ def _fit_forest_importance(
 def _importance_figure(
     analysis: ForestAnalysis,
     *,
-    maximum_variables: int = 25,
+    maximum_variables: int = 12,
 ) -> go.Figure:
     if analysis.message:
         return Card.empty_figure(analysis.message)
@@ -350,7 +350,9 @@ def _importance_figure(
     table = table.loc[np.isfinite(table["Importance"])].copy()
     if table.empty:
         return Card.empty_figure("Variable importance could not be estimated")
-    table = table.head(maximum_variables).sort_values(
+    table = table.sort_values(
+        ["Importance", "Variable"], ascending=[False, True], kind="stable"
+    ).head(maximum_variables).sort_values(
         "Importance", ascending=True
     )
     importance_sd = pd.to_numeric(
@@ -448,6 +450,26 @@ def _add_shadow_variables(
         role_map=result.role_map,
     )
 
+@recordable
+def _shadow_choices(eligible, importance, informative_only=True):
+    """Rank eligible indicators, optionally restricting them to informative ones."""
+    shadow = importance.loc[
+        importance["Variable Type"].eq("Shadow")
+        & importance["Source Variable"].isin(eligible)
+    ]
+    if informative_only:
+        shadow = shadow.loc[shadow["Interpretation"].eq("Informative")]
+    ranked = shadow.sort_values(
+        ["Importance", "Variable"],
+        ascending=[False, True],
+        kind="stable",
+        na_position="last",
+    )["Source Variable"].tolist()
+    if informative_only:
+        return ranked
+    return ranked + [column for column in eligible if column not in ranked]
+
+
 def instance():
     """Create the mutable missingness-type card."""
     this = Card(file=__file__, mutable=True)
@@ -488,15 +510,25 @@ def instance():
     this.footer = lambda: ui.div(
         ui.output_ui(id="Busy"),
         ui.input_checkbox_group(
-            id="Shadow", label="Permanently add shadow variables", inline=True, choices = [],
+            id="Shadow", label="Add shadow variables", inline=True, choices = [],
             guide=this, position="top",
-            text="Permanently add a boolean shadow variable for any named predictors. These should have the interpretation \"Informative\"."
+            text='Permanently add a boolean shadow variable for any named predictors. These choices are affected by the "Only offer informative variables" setting.'
         ),
         ui.output_ui(id="Significance"),
         class_ = "vertically-scrollable-footer"
     )
 
     this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id="MaxVariables", label="Maximum variables to display", value=12, min=3, step=1, max=30,
+            guide=this, position="left",
+            text="Show the top variables by importance: up to this many predictors and shadows in the chart, and this many shadows in the table.",
+        ),
+        ui.input_checkbox(
+            id="InformativeOnly", label="Only offer informative variables", value=True,
+            guide=this, position="left",
+            text="Limit shadow-variable choices to predictors judged potentially informative by the analysis. Turn off to offer all predictors above the minimum missing proportion.",
+        ),
         ui.input_slider(
             id="CVFolds", label="Cross-validation folds", min=2, max=10, value=5, step=1,
             guide=this, text="Number of held-out folds. For classification this is reduced automatically when the minority class is small.", position="left",
@@ -546,21 +578,23 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
-        @this.record_context
         def CVFolds():
             return input.CVFolds()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
-        @this.record_context
         def MinMissProp():
             return input.MinMissProp()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
-        @this.record_context
         def MinBalancedAccuracy():
             return input.MinBalancedAccuracy()
+
+        @this.reactable(calc=True)
+        @this.settle(seconds=2)
+        def MaxVariables():
+            return input.MaxVariables()
 
         @this.record_code
         def _prepare_data(source, maximum):
@@ -613,22 +647,17 @@ def instance():
             columns = sorted(proxy.role_map.columns_with_role(Role.WEIGHTING))
             return columns[0] if columns else None
 
+        @this.reactable(calc=True)
+        @this.record_context
+        def ShadowChoices():
+            return _shadow_choices(
+                MissingVariables(), Analysis().importance, input.InformativeOnly()
+            )
+
         @reactive.effect
         @this.record_context
         def UpdateShadowChoices():
-            eligible = MissingVariables()
-            importance = Analysis().importance
-            ranked = importance.loc[
-                importance["Variable Type"].eq("Shadow")
-                & importance["Source Variable"].isin(eligible)
-            ].sort_values(
-                ["Importance", "Variable"],
-                ascending=[False, True],
-                kind="stable",
-                na_position="last",
-            )["Source Variable"].tolist()
-            # Keep eligible variables without an estimate available after ranked ones.
-            choices = ranked + [column for column in eligible if column not in ranked]
+            choices = ShadowChoices()
             with reactive.isolate():
                 selected = [
                     column for column in (input.Shadow() or [])
@@ -690,7 +719,8 @@ def instance():
         @this.reactable(calc=True)
         @this.record_context
         def TransformedData():
-            selected = Shadow() or []
+            choices = ShadowChoices()
+            selected = [column for column in (Shadow() or []) if column in choices]
             if selected:
                 this.log.info(f"Adding shadow to predictors: {selected}")
             return _add_shadow_variables(incomingproxy_data(), selected)
@@ -699,7 +729,9 @@ def instance():
         @render_widget
         @this.record_context
         def Importance():
-            figure = _importance_figure(Analysis())
+            figure = _importance_figure(
+                Analysis(), maximum_variables=MaxVariables()
+            )
             figure.update_layout(
                 modebar={"orientation": "v"},
                 modebar_remove=[
@@ -729,7 +761,9 @@ def instance():
             table = Analysis().importance.copy()
             table = table.loc[
                 table["Variable Type"].eq("Shadow")
-            ].reset_index(drop=True)
+            ].sort_values(
+                ["Importance", "Variable"], ascending=[False, True], kind="stable"
+            ).head(MaxVariables()).reset_index(drop=True)
             numeric = [
                 "Missing Proportion",
                 "Importance",

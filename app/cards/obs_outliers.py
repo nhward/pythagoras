@@ -22,8 +22,8 @@ from card import Card
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import render, ui
-from shiny.types import SilentException
+from shiny import render, req, ui
+from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.covariance import LedoitWolf
 from sklearn.ensemble import IsolationForest
@@ -239,19 +239,14 @@ def instance():
 
     this.back = lambda: ui.TagList(
         ui.span("Observation scores", class_="text-primary text-center d-block"),
-        ui.input_checkbox(
-            id="Raw", label="Show raw method scores", value=False,
-            guide=this, position = "left",
-            text="Switch between raw scores and percentiles. Aggregate is always the mean percentile; Disagreement is the largest minus smallest percentile. Neither is an outlier probability."
-        ),
-        ui.output_data_frame(
+        ui.output_ui(
             id="Scores",
             guide=this, title="Investigation table", position = "left",
             text="All analyzed observations, sorted by the active chart's score in descending order (Aggregate when that method is unavailable). Row is the one-based position in the incoming data; Identifier is shown when assigned. No rows are removed."))
 
     this.footer = lambda: ui.TagList(
         ui.output_ui("Busy"),
-        ui.output_text("Status")
+        ui.output_ui("Status")
     )
 
     def slider(id, label, low, high, value, step, text, ticks=True, pre=None):
@@ -261,6 +256,11 @@ def instance():
             id="Methods", label="Evaluation methods", choices=list(METHODS), selected=list(METHODS),
             guide=this, position = "left",
             text="Enabled, usable methods contribute equally after percentile ranking. Mahalanobis uses shrinkage covariance. Cook's distance requires a complete numeric Target and a full-rank linear regression. Weights are not used. Select several methods to compare disagreement."
+        ),
+        ui.input_checkbox(
+            id="Raw", label="Show raw method scores", value=False,
+            guide=this, position = "left",
+            text="Switch between raw scores and percentiles. Aggregate is always the mean percentile; Disagreement is the largest minus smallest percentile. Neither is an outlier probability."
         ),
         slider("Top", "Observations displayed", 5, 100, 30, 1, "Show the highest-scoring observations for each panel, in descending order. This changes only the plot, not fitting or the full table."),
         slider("Neighbors", "LOF nearest neighbors", 2, 100, 20, 1, "Neighborhood size, capped below the analyzed row count. Small neighborhoods emphasize local anomalies; large ones compare a wider context."),
@@ -285,6 +285,19 @@ def instance():
                 "methods": tuple(input.Methods() or ())
             }
 
+        @this.reactable(calc=True)
+        @this.record_context
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
         @busy.track("Comparing observation outlier scores…")
         @this.extended_task
         async def Calculate(data, options, cancelled):
@@ -299,7 +312,7 @@ def instance():
         def Start():
             nonlocal cancellation
             try:
-                data = this.input_data()
+                data = incomingproxy_data()
             except SilentException:
                 data = None
             options = Options()
@@ -311,7 +324,7 @@ def instance():
         @this.reactable(calc=True)
         def Results():
             try:
-                current = this.input_data()
+                current = incomingproxy_data()
             except SilentException:
                 current = None
             if current is None:
@@ -336,15 +349,23 @@ def instance():
             register(i, name)
 
         @output
-        @render.data_frame
+        @render.ui
         def Scores():
+            req(incomingproxy_data())
+            return ui.output_data_frame(id="Scores2")
+
+        @output
+        @render.data_frame
+        @this.record_context
+        def Scores2():
+            req(incomingproxy_data())
             result = Results()
             table = table_scores(result, raw=bool(input.Raw()))
             if not table.empty:
                 view = input.View()
                 scores = result.raw[view] if view in result.raw else table["Aggregate"]
                 table = table.loc[scores.sort_values(ascending=False, kind="stable").index]
-            return render.DataTable(table.round(4), width="100%", height=None, filters=True)
+            return render.DataTable(table.round(4), width="100%", height=None, filters=False)
 
         @output
         @render.ui
@@ -352,14 +373,16 @@ def instance():
             return busy.ui()
 
         @output
-        @render.text
+        @render.ui
         def Status():
             r = Results()
             if r.message:
-                return " ".join([r.message] + r.notes)
-            return (f"{len(r.raw):,} of {r.total:,} observations analyzed ({r.eligible:,} complete); "
-                    f"{len(r.predictors)} numeric predictors; {len(r.raw.columns)} methods. "
-                    "Investigate unusual values; no observations removed. " + " ".join(r.notes))
+                return ui.span(" ".join([r.message] + r.notes), class_ = "text-ewarning")
+            if this.isFullScreen():
+                return ui.span(f"{len(r.raw):,} of {r.total:,} observations analyzed ({r.eligible:,} complete); "
+                        f"{len(r.predictors)} numeric predictors; {len(r.raw.columns)} methods. "+ " ".join(r.notes), class_ = "text-primary")
+            return ui.span(f"{len(r.raw):,} of {r.total:,} observations analyzed ({r.eligible:,} complete); "
+                    f"{len(r.predictors)} numeric predictors; {len(r.raw.columns)} methods. ", class_ = "text-primary")
 
         def stop():
             cancellation.set()
