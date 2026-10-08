@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Data coverage</title>
+<title>Observation weighting</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -854,152 +854,75 @@ fill: var(--bs-primary) !important;
 
 
 <header id="title-block-header">
-<h1 class="title">Data coverage</h1>
+<h1 class="title">Observation weighting</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<h4 id="purpose">🧭 Purpose</h4>
-<p><em>Find combinations of strata, treatments, and sensitive groups that occur less or more often than expected. Use this diagnostic card after assigning variable roles to identify gaps that may limit comparisons or model assessment. Coverage is measured against an independence reference derived from the incoming data; the card leaves those data unchanged.</em></p>
-<h4 id="goals">🎯 Goals</h4>
-<ol type="1">
-<li><strong>Primary:</strong> Identify under-represented and empty intersections that deserve investigation.</li>
-<li><strong>Secondary:</strong> Distinguish relative deficits from small counts that reflect uncommon individual levels.</li>
-<li><strong>Tertiary:</strong> Inspect over-representation and the associations behind uneven coverage.</li>
-</ol>
-<h4 id="how-it-works">🧠 How it works</h4>
-<p>An intersection is a combination containing one level from each selected variable, such as region North, treatment Control, and group A. The card accepts two to five variables with Stratifier, Treatment, or Sensitive roles. Variables must have at least two observed non-missing levels and meet the cardinality limit. Numeric values are treated as discrete levels, without binning. Initially, the first two eligible variables are selected.</p>
-<p>The card counts every combination of levels present in the analyzed rows, including combinations with no observations. Expected counts use <strong>mutual independence</strong>: the reference assumes that knowing one selected variable’s level does not change another’s proportions.</p>
-<p>For an intersection, the expected count is the number of analyzed rows multiplied by each constituent level’s overall proportion. For example, among 200 rows, a region containing 40% of observations and a treatment containing 25% would have an expected intersection count of 20. This is a reference count, not a collection quota.</p>
-<p>The Pearson residual measures departure from that reference:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mfrac><mrow><mtext mathvariant="normal">observed</mtext><mo>−</mo><mtext mathvariant="normal">expected</mtext></mrow><msqrt><mtext mathvariant="normal">expected</mtext></msqrt></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
-r = \frac{\text{observed} - \text{expected}}{\sqrt{\text{expected}}}.
-</annotation></semantics></math></p>
-<p>Negative residuals indicate deficits; positive residuals indicate excesses. Colors use descriptive thresholds at −4, −2, 2, and 4. They are not adjusted significance tests.</p>
-<p>By default, rows missing any selected variable are omitted. <strong>Include missing values as a level</strong> retains them as explicit groups. Counts and expected proportions always use the same rows. Missing values in unrelated columns do not exclude observations. There is no sampling. With <strong>Use observation weightings</strong> checked and Weighting variables assigned, every observed count becomes a sum of weights. Margins, independence expectations, percentages, shortfalls, residuals, and tile areas all use those same weight sums and their total. Without a Weighting role, or with the setting unchecked, the card uses ordinary counts. Weights must be numeric, finite and nonnegative; zero-weight rows are omitted, and the remaining rows must have positive total weight. Weight sums are not normalized: multiplying weights changes Pearson residual magnitudes and the expected-value-below-five flags, so interpret these descriptively.</p>
-<h4 id="front">🏞️ Front</h4>
-<p>The mosaic divides a rectangle into intersection tiles, alternating horizontal and vertical splits in selection order. Positions describe groups rather than continuous measurement axes. Larger tiles receive level labels and an observed count (n) or weight sum (Σw); hover identifies intersections and reports counts, their ratio, and the residual.</p>
+<h4 id="purpose">Purpose</h4>
+<p>Inspect every variable assigned the <strong>Weighting</strong> role and the effective weight obtained by multiplying them. Optionally change the shape of a component or the effective distribution, and configure importance-only or uniform Test weighting. The card has no flip side.</p>
+<h4 id="reading-the-front">Reading the front</h4>
+<p>Normal view shows only effective-weight bars and a horizontal effective-distribution chart. Full screen adds a top row of equally sized component bar charts when there are two or more Weighting variables. All components share that top row. The effective bar chart and distribution remain together below, sharing a Y scale with a narrow gap and a 70:30 width split. With a single Weighting variable, both views show the same two charts. Scroll vertically in full screen when more panels are needed.</p>
+<p>Observation bars have <strong>Observations</strong> on the horizontal axis and <strong>Weights</strong> on the vertical axis. Observation numbers are one-based positions in the current input, not unique identifiers. The display limit thins bars at evenly spaced positions without changing the data. The distribution has <strong>Counts</strong> on the horizontal axis and <strong>Weights</strong> on the vertical axis; it counts every observation, including zero weights.</p>
+<p>The footer reports:</p>
+<ul>
+<li>The number and proportion of observations with zero effective weight.</li>
+<li>Effective sample size, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo>∑</mo><mi>w</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mi>/</mi><mo>∑</mo><msup><mi>w</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(\sum w)^2/\sum w^2</annotation></semantics></math>, as a concentration diagnostic rather than a claim about independent observations.</li>
+<li>The largest observation’s fraction of total weight.</li>
+</ul>
+<p>More than 10% zero effective weights is flagged. Such weights remain visible here for investigation, but downstream statistical cards fall back to unweighted calculations and explain this in Settings. Exactly 10% is allowed. An all-zero distribution has effective sample size zero. Missing, negative, nonnumeric or infinite components produce an explanation instead of a misleading plot.</p>
+<h4 id="shape-buttons-and-component-selection">Shape buttons and component selection</h4>
+<p>The footer buttons apply immediately to downstream data:</p>
 <table class="caption-top">
-<caption>Table 1 - Coverage colors</caption>
 <thead>
 <tr class="header">
-<th style="text-align: left;">Color</th>
-<th style="text-align: left;">Pearson residual</th>
-<th style="text-align: left;">Interpretation</th>
+<th>Button</th>
+<th style="text-align: right;">Power</th>
+<th>Effect</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">Dark red</td>
-<td style="text-align: left;">≤ −4</td>
-<td style="text-align: left;">Strongly under-represented.</td>
+<td>Square</td>
+<td style="text-align: right;">2</td>
+<td>Increase relative extremes.</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Light red</td>
-<td style="text-align: left;">&gt; −4 and ≤ −2</td>
-<td style="text-align: left;">Under-represented.</td>
+<td>Original</td>
+<td style="text-align: right;">1</td>
+<td>Restore this card’s incoming component values.</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Gray</td>
-<td style="text-align: left;">&gt; −2 and &lt; 2</td>
-<td style="text-align: left;">Near expectation by these thresholds.</td>
+<td>Square root</td>
+<td style="text-align: right;">0.5</td>
+<td>Reduce relative extremes.</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Light blue</td>
-<td style="text-align: left;">≥ 2 and &lt; 4</td>
-<td style="text-align: left;">Over-represented.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Dark blue</td>
-<td style="text-align: left;">≥ 4</td>
-<td style="text-align: left;">Strongly over-represented.</td>
+<td>Cube root</td>
+<td style="text-align: right;">1/3</td>
+<td>Reduce relative extremes more strongly.</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Observed counts</strong> gives the conventional mosaic: tile area is proportional to the observed count. Empty intersections have zero area and appear as boundary diamonds, which may overlap. <strong>Expected counts</strong> instead sizes tiles by their reference counts, exposing empty and severely under-represented combinations. Changing tile areas does not change colors or table results.</p>
-<p>The legend appears only in full-screen view, with coloring enabled. Full screen also enables the vertical Plotly mode-bar and axis titles. The horizontal title names the first, third, and fifth selected variables; the vertical title names the second and fourth, where present. Arrows indicate successive subdivisions. Category levels remain in tiles and hover because their boundaries can differ between branches. The footer summarizes empty intersections, residual-based deficits and excesses, sparse expected counts, and omitted rows. Invalid selections and excessive intersection counts produce an empty-plot explanation rather than silently dropping groups.</p>
-<h4 id="flip-side">🔄 Flip side</h4>
-<p>The filterable table includes every analyzed intersection, including empty ones. It initially sorts by Pearson residual from lowest to highest, putting the strongest standardized deficits first. Decimal values are rounded to four places.</p>
-<table class="caption-top">
-<caption>Table 2 - Coverage table</caption>
-<colgroup>
-<col style="width: 47%">
-<col style="width: 52%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Column</th>
-<th style="text-align: left;">Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;"><strong>… (level)</strong></td>
-<td style="text-align: left;">Each selected variable’s level in the intersection.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Observed</strong>, <strong>Expected</strong></td>
-<td style="text-align: left;">Actual count and independence-reference count, or their weight sums when enabled.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Observed %</strong>, <strong>Expected %</strong></td>
-<td style="text-align: left;">Corresponding percentages of analyzed rows, or total analyzed weight when enabled.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Observed/expected</strong></td>
-<td style="text-align: left;">Relative coverage; below one indicates a deficit.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Shortfall</strong></td>
-<td style="text-align: left;">Expected minus observed, bounded below by zero.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Pearson residual</strong>, <strong>Coverage</strong></td>
-<td style="text-align: left;">Standardized departure and its color category.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Empty</strong></td>
-<td style="text-align: left;">Whether the observed count is zero.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>Expected &lt; 5</strong></td>
-<td style="text-align: left;">A sparse reference count requiring cautious interpretation.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p>Flip the card to inspect precise counts, filter the table, or expand it for the legend and more plotting space. Changes to selections and display controls update the diagnostic output only. There is no Apply or Commit action.</p>
-<h4 id="settings">⚙️ Settings</h4>
-<p>The card’s Tour Guide gives a concise description of each setting.</p>
-<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
-<p>Prioritize empty and under-represented combinations that matter to the intended analysis. Compare residual, observed count, ratio, and shortfall: statistical departure and practical sample adequacy are different questions. A gray tile can still contain too few observations for reliable assessment.</p>
-<p>Check whether gaps reflect collection problems, missing labels, genuine associations, or impossible combinations. A treatment restricted to certain groups can create expected deficits under independence without indicating a data error. Additional collection is appropriate only where the combination is meaningful and relevant.</p>
-<h4 id="limitations">⛔️ Limitations</h4>
+<p>Choose <strong>Component to transform</strong> in settings. <strong>Effective (all components)</strong> applies the same power to each component, making the resulting product proportional to the original product raised to that power. Alternatively select one component to alter only that contribution. Component names and roles are preserved; <code>balance__</code> continues to identify balancing factors.</p>
+<p>For a selected component, the transformation is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>w</mi><mi>i</mi><mo>′</mo></msubsup><mo>=</mo><msubsup><mi>w</mi><mi>i</mi><mi>p</mi></msubsup><mfrac><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></munder><msub><mi>w</mi><mi>j</mi></msub></mrow><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></munder><msubsup><mi>w</mi><mi>j</mi><mi>p</mi></msubsup></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">w&#39;_i = w_i^p\frac{\sum_{j\in\mathrm{Train}}w_j}{\sum_{j\in\mathrm{Train}}w_j^p}.</annotation></semantics></math></p>
+<p>The implementation rescales the calculation for numerical stability. Each component retains its training mean; the <strong>total effective product need not be preserved</strong> when several components are changed. All-zero components remain zero. Positive powers preserve zeros: these buttons cannot repair a large zero-weight fraction.</p>
+<p>This is a nonnegative power transformation, not ordinary Box–Cox. <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.boxcox.html">The Box–Cox formula</a> subtracts one and divides by the power (or takes a logarithm), so it can produce negative weights and has restrictions at zero. Here powers are deliberately positive and the output stays nonnegative.</p>
+<h4 id="what-is-a-good-distribution">What is a good distribution?</h4>
+<p>There is no universally desirable shape and no requirement for normally distributed weights. Uniform weights maximize the concentration-based effective sample size for a fixed row count, but may discard intended importance or balancing information. A distribution dominated by a few observations, a small effective sample size, or many zeros warrants investigation; none alone establishes that the weighting is wrong.</p>
+<p>First check which component causes the concentration and why it exists. Transform a particular component when that contribution is the concern. Transform the effective distribution when the combined importance is intentionally being moderated. Changing balancing factors can undo equal class-weight totals; changing importance weights changes the learning and scoring objective. Compare downstream performance using the intended evaluation policy rather than choosing the smoothest-looking histogram.</p>
+<h4 id="training-test-and-persistence">Training, Test and persistence</h4>
+<p>The chart is an <strong>all-data Training preview</strong>. A saved, unfitted pipeline step learns each normalization constant afresh from its training fold. Future transformations reuse those constants and never normalize on Test data. Missing training-only <code>balance__</code> columns are skipped during inference; required selected importance columns must still exist.</p>
+<p><strong>Test weighting</strong> is saved in the pipeline:</p>
 <ul>
-<li>Independence is not an external population benchmark; the card cannot establish representative sampling or fairness.</li>
-<li>Sparse counts weaken residual-based interpretation. No p-values or multiple-comparison corrections are calculated.</li>
-<li>Levels absent from the analyzed rows, including unused declared categories, are not represented. The card cannot discover groups missing entirely from the data.</li>
-<li>Missing-value handling changes the analyzed population and reference proportions.</li>
-<li>Intersection counts grow rapidly with each added variable. Role, cardinality, and intersection limits constrain the display; nested values are unsupported.</li>
+<li><strong>Importance only</strong> multiplies Weighting components whose names do not start with <code>balance__</code>.</li>
+<li><strong>Uniform (no weights)</strong> ignores every component.</li>
 </ul>
-<h4 id="suggested-workflow">📌 Suggested workflow</h4>
-<ol type="1">
-<li>Confirm the relevant Stratifier, Treatment, and Sensitive roles.</li>
-<li>Begin with two variables and inspect the counts and omitted-row summary.</li>
-<li>Switch to <strong>Expected counts</strong> to expose empty combinations.</li>
-<li>Inspect deficits, shortfalls, and sparse expected counts on the flip side.</li>
-<li>Validate important gaps against domain constraints before extending the comparison or collecting more data.</li>
-</ol>
-<h4 id="data-flow">🔗 Data flow</h4>
-<ul>
-<li><strong>Input:</strong> Upstream observations and eligible Stratifier, Treatment, and Sensitive variables.</li>
-<li><strong>Output:</strong> Incoming values, roles, and pipeline pass through unchanged. Counts and mosaics remain diagnostic results.</li>
-<li><strong>Data journey:</strong> No transformation or learned pipeline step is added.</li>
-</ul>
-<p>Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named <code>balance__...</code> are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data’s training-weight product. Test-time importance-only weighting excludes balancing factors.</p>
-<p>With <strong>Use observation weightings</strong> unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.</p>
+<p>The latest observation-weighting step supplies the default policy when <code>Card.effective_weights(data, purpose=&quot;test&quot;)</code> is called on its downstream proxy data. An explicit <code>test_policy</code> argument overrides it. A fitted step also exposes <code>evaluation_weights(transformed_frame)</code> for already-transformed Test rows. The evaluator must request and pass these weights to its scoring method; storing a policy does not automatically route <code>sample_weight</code> into an arbitrary estimator.</p>
+<p><strong>Preview Test weighting</strong> illustrates the policy on the current observations. It does not create a holdout or refit on Test observations. Display limits, bins, and the Test-preview switch do not affect exported data. Power, component, and policy selections are bookmarkable. Original resets this card’s transformation while keeping its Test-policy setting.</p>
 
 
 

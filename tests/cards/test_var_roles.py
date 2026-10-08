@@ -606,6 +606,16 @@ class TestWebKitRoles:
         expect(by_id(page, "Check")).to_contain_text("Assignments are ready to commit")
 
     @pytest.mark.ui
+    def test_multiple_weighting_variables_can_be_committed(self, page: Page, app: ShinyAppProc):
+        page.goto(app.url)
+        populate_roles(page, {"predictor": ["x2"], "target": ["y"],
+                              "weighting": ["x1", "id"], "partition": ["part"]})
+        expect(role_bucket(page, "weighting").locator(".var-chip")).to_have_count(2)
+        expect(by_id(page, "Commit")).to_be_enabled()
+        by_id(page, "Commit").click()
+        expect(by_id(page, "Check")).to_contain_text("Assignments applied")
+
+    @pytest.mark.ui
     def test_invalid_role_map_disables_commit_and_shows_error(
         self, page: Page, app: ShinyAppProc
     ):

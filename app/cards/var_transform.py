@@ -78,7 +78,7 @@ class VariableTransformStep(TransformerMixin, BaseEstimator):
     """DataFrame-preserving learned transformations for selected variables."""
 
     def __init__(self, columns: tuple[str, ...], transforms: tuple[str, ...],
-                 weight_column: str | None = None, robust: bool = False):
+                 weight_column: str | tuple[str, ...] | None = None, robust: bool = False):
         self.columns = columns
         self.transforms = transforms
         self.weight_column = weight_column
@@ -283,16 +283,8 @@ def _build_pipeline(transforms: list[str] | tuple[str, ...], *, robust=False) ->
 
 @recordable
 def _observation_weights(frame: pd.DataFrame, column: str | None):
-    if column is None:
-        return None
-    if column not in frame:
-        raise ValueError(f"Weighting variable {column!r} is absent")
-    if not pd.api.types.is_numeric_dtype(frame[column].dtype):
-        raise ValueError("Observation weights must be numeric")
-    weights = frame[column].to_numpy(dtype=float, na_value=np.nan)
-    if not np.isfinite(weights).all() or (weights < 0).any() or not (weights > 0).any():
-        raise ValueError("Observation weights must be finite, nonnegative and have a positive total")
-    return weights
+    weights = Card.observation_weights(frame, columns=() if column is None else column)
+    return None if weights is None else weights.to_numpy()
 
 
 @recordable
@@ -342,9 +334,7 @@ def _analyse_distribution(
     target = _continuous_target(data) if include_target else None
     selected = list(transforms)
     weight_columns = list(data.role_map.columns_with_role(Role.WEIGHTING)) if use_weights and not robust else []
-    if len(weight_columns) > 1:
-        raise ValueError("Assign a single Weighting variable")
-    weight_column = weight_columns[0] if weight_columns else None
+    weight_column = tuple(sorted(weight_columns)) or None
     weights = _observation_weights(source, weight_column)
     transformer = (
         VariableTransformStep(tuple(eligible), tuple(selected), weight_column, robust=robust).fit(source)
@@ -694,15 +684,16 @@ def instance():
     )
 
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
         ui.input_checkbox(
             id="Robust", label="Use robust centring and scaling", value=False,
             guide=this, title="Robust statistics", position="left",
             text="Center on the median and scale by the interquartile range (25th–75th percentiles). Scaling alone preserves the median. Observation weights are ignored in this mode. Skew reduction is unchanged; chart and table moments remain ordinary unweighted statistics.",
         ),
         ui.input_checkbox(
-            id="UseWeights", label="Use observation weights", value=False,
+            id="UseWeights", label="Use observation weightings", value=False,
             guide=this, title="Weighted centring and scaling", position="left",
-            text="Use the assigned Weighting variable for centring, scaling, and displayed means and standard deviations. Without a Weighting role, use ordinary statistics. Ignored when robust mode is enabled. Weights must be finite, nonnegative and have a positive total. Skew reduction, skew and kurtosis remain unweighted.",
+            text="Multiply the assigned Weighting variables for centring, scaling, and displayed means and standard deviations. Without a Weighting role, use ordinary statistics. Ignored when robust mode is enabled. Weights must be finite, nonnegative and have a positive total. Skew reduction, skew and kurtosis remain unweighted.",
         ),
         ui.input_checkbox(
             id="IncludeTarget",
@@ -726,6 +717,7 @@ def instance():
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()) and not bool(input.Robust()))
         busy = this.busy()
 
         @this.reactable(calc=True)

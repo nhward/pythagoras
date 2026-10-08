@@ -23,7 +23,7 @@ Drag each variable into one role container. The supported roles are:
 | **Predictor** | Input available to a model or analysis. |
 | **Treatment** | Exposure whose possible causal effect is of interest. |
 | **Identifier** | One or more fields that identify an observation. |
-| **Weighting** | Nonnegative numeric case weight. |
+| **Weighting** | Finite, nonnegative numeric weight component; components are multiplied. |
 | **Partition** | Predefined training or test membership. |
 | **Stratifier** | Low-cardinality grouping used for comparison rather than prediction. |
 | **Sequence** | Meaningful observation order, commonly time. |
@@ -31,7 +31,7 @@ Drag each variable into one role container. The supported roles are:
 | **Geometry** | Spatial object used by geographic methods. |
 | **None** | Variable removed from the data passed to downstream cards. |
 
-Every variable has one role at most, and the **None** role makes exclusion explicit. **Predictor**, **Identifier**, and **None** accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.
+Every variable has one role at most, and the **None** role makes exclusion explicit. **Predictor**, **Identifier**, **Weighting**, and **None** accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.
 
 #### 🏞️ Front
 
@@ -78,3 +78,5 @@ If a variable genuinely needs two analytical uses, create a deliberate duplicate
 * **Input:** The upstream variables and current role map.
 * **Output:** Retained values with the committed role map; variables assigned **None** are omitted.
 * **Data journey:** A committed role change or **None** removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.
+
+Weighting variables named `balance__...` are balancing factors; all other Weighting variables are importance weights. Renaming across this prefix changes their purpose. Training uses their product. Test importance-only weighting excludes balancing factors; uniform Test weighting ignores all components. More than 10% zero effective weights raises an error.

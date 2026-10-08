@@ -275,11 +275,16 @@ class TestDesignMatrix:
 
 class TestTreePreparationAndFit:
     @pytest.mark.unit
-    def test_prepare_classification_data_cleans_weights_and_adds_sequence(
+    def test_prepare_classification_data_validates_weights_and_adds_sequence(
         self, miss_type
     ):
         frame = classification_frame(8)
         weights = pd.Series([1, np.nan, -2, np.inf, 2, 3, 4, 5])
+        with pytest.warns(UserWarning, match="Using unweighted"):
+            fallback = miss_type._prepare_tree_data(frame, target="target", add_sequence=True,
+                                         sample_weight=weights, excluded={"noise"})
+        assert fallback[3] is None
+        weights = pd.Series(np.arange(1., 9.))
         matrix, truth, task, cleaned, working, predictors = miss_type._prepare_tree_data(
             frame,
             target="target",

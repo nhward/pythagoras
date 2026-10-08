@@ -39,6 +39,8 @@ from faicons import icon_svg as icon
 from module import Module
 from shiny import module, reactive, render, ui
 from shiny.types import SilentException
+from roles import BALANCE_PREFIX
+from weighting import effective_weights, observation_weights, WeightingError
 
 
 class Card(Module):
@@ -74,6 +76,25 @@ class Card(Module):
 
     max_height = Module.config.get("settings", {}).get("max_card_height")
     SHADOW_PREFIX = "shadow__"
+    BALANCE_PREFIX = BALANCE_PREFIX
+    effective_weights = staticmethod(effective_weights)
+    observation_weights = staticmethod(observation_weights)
+
+    def bind_weighting_notice(self, output, data, enabled):
+        """Explain invalid-weight fallback beside the shared UseWeights setting."""
+        @output
+        @render.ui
+        def WeightingNotice():
+            if not enabled():
+                return None
+            source = data()
+            if source is None:
+                return None
+            try:
+                effective_weights(source)
+            except WeightingError as error:
+                return ui.span(f"Using unweighted calculations: {error}", class_="text-warning")
+            return None
 
     def empty_figure(
         message: str,

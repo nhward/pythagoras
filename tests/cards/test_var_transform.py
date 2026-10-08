@@ -458,7 +458,7 @@ def test_weighted_scaling_and_training_refit(card_module, transforms):
     if 'Center' not in transforms:
         train_expected += np.average(np.asarray(train_values).ravel(), weights=train_weights)
     np.testing.assert_allclose(refitted.transform(training)['large'], train_expected, atol=1e-12)
-    assert refitted.weight_column == 'weight'
+    assert refitted.weight_column == ('weight',)
 
 
 @pytest.mark.unit
@@ -475,8 +475,10 @@ def test_weight_setting_fallback_and_invalid_weights(card_module):
     np.testing.assert_allclose(unchecked.frame['large'], ordinary.frame['large'])
     for invalid in [-1., np.nan, np.inf, 0.]:
         data.frame['weight'] = invalid
-        with pytest.raises(ValueError, match='Observation weights'):
-            card_module._analyse_distribution(data, ['Center'], use_weights=True)
+        with pytest.warns(UserWarning, match='Using unweighted'):
+            result = card_module._analyse_distribution(data, ['Center'], use_weights=True)
+        expected = card_module._analyse_distribution(data, ['Center'], use_weights=False)
+        pd.testing.assert_frame_equal(result.frame, expected.frame)
 
 
 @pytest.mark.unit

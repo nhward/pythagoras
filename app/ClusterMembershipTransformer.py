@@ -62,20 +62,14 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
         missing = set(self.columns) - set(X.columns)
         if missing:
             raise ValueError(f"Missing predictor columns: {sorted(missing)}")
-        columns = [c for c in self.columns if c != self.weighting and not str(c).startswith("shadow__")
+        weighting = (self.weighting,) if isinstance(self.weighting, str) else (self.weighting or ())
+        columns = [c for c in self.columns if c not in weighting and not str(c).startswith("shadow__")
                    and pd.api.types.is_numeric_dtype(X[c].dtype)
                    and not pd.api.types.is_bool_dtype(X[c].dtype)
                    and not pd.api.types.is_complex_dtype(X[c].dtype)]
-        raw_weights = None
-        if self.weighting is not None:
-            if self.weighting not in X:
-                raise ValueError("The fitting data lacks the assigned weighting column")
-            w = X[self.weighting]
-            if (not pd.api.types.is_numeric_dtype(w.dtype) or pd.api.types.is_bool_dtype(w.dtype)
-                    or pd.api.types.is_complex_dtype(w.dtype)):
-                raise ValueError("Observation importance must be numeric")
-            raw_weights = w.to_numpy(dtype=float, na_value=np.nan)
-            _importance_weights(raw_weights)
+        from weighting import observation_weights
+        combined = observation_weights(X, columns=weighting)
+        raw_weights = None if combined is None else combined.to_numpy()
         positive = np.ones(len(X), dtype=bool) if raw_weights is None else raw_weights > 0
         frame = X[columns].astype(float).replace([np.inf, -np.inf], np.nan)
         frame = frame.loc[:, frame.iloc[np.flatnonzero(positive)].nunique() > 1]

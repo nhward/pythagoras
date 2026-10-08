@@ -16,16 +16,16 @@ from sklearn.metrics import pairwise_distances
 from sklearn.neighbors import NearestNeighbors
 from sklearn.utils.validation import check_is_fitted
 from var_types import var_kind
+from roles import BALANCE_PREFIX
+from weighting import effective_weights, observation_weights
 
 
 @recordable
 def balance_weights(frame, column=None):
     """Importance weights must be finite, nonnegative and have positive mass."""
-    values = (np.ones(len(frame)) if column is None else
-              pd.to_numeric(frame[column], errors="coerce").to_numpy(dtype=float, na_value=np.nan))
-    if not np.isfinite(values).all() or (values < 0).any() or not np.isfinite(values.sum()) or not values.sum() > 0:
-        raise ValueError("Weights must be finite, nonnegative, and have positive total weight.")
-    return values
+    combined = observation_weights(frame, columns=() if column is None else column)
+    return np.ones(len(frame)) if combined is None else combined.to_numpy()
+
 
 
 @recordable
@@ -106,15 +106,16 @@ class TargetBalanceSampler(BaseEstimator):
     imblearn skips this step at inference. evaluation_weights is an explicit,
     separately invoked policy; the sampler does not route model sample_weight.
     """
-    def __init__(self, target, predictors=(), weight=None, output_weight="Weights",
+    def __init__(self, target, predictors=(), weight=None, output_weight="balance__weights",
                  mode="reweight", up="random", down="random", count_fraction=.5,
-                 metric="euclidean", normalize=True, evaluation="none",
+                 metric="euclidean", normalize=True, evaluation="incoming",
                  voting="hard", neighbors=5, medoid_limit=2000,
                  iterations=30, random_state=2025, max_rows=100000,
-                 distance_limit=10000):
+                 distance_limit=10000, use_weights=True):
         self.target = target
         self.predictors = predictors
         self.weight = weight
+        self.use_weights = use_weights
         self.output_weight = output_weight
         self.mode = mode
         self.up = up
@@ -157,7 +158,7 @@ class TargetBalanceSampler(BaseEstimator):
                 pd.Series(y).astype(object).fillna("__missing_target__").to_numpy(),
                 X[self.target].astype(object).fillna("__missing_target__").to_numpy())):
             raise ValueError("y must match the Target column positionally.")
-        weights = balance_weights(X, self.weight)
+        weights = balance_weights(X, self.weight if self.use_weights else None)
         self.warnings_ = []
         self.dropped_ = 0
         self.synthetic_ = 0
@@ -176,11 +177,13 @@ class TargetBalanceSampler(BaseEstimator):
         self.classes_ = classes
         if self.mode == "reweight":
             result = X.copy()
-            if self.weight is None and self.output_weight in X:
+            if not self.output_weight.startswith(BALANCE_PREFIX):
+                raise ValueError("Balancing weight names must start with balance__")
+            if self.output_weight in X:
                 raise ValueError("The new weight column would overwrite an existing variable.")
             factors = np.ones(len(X))
             factors[valid] = (totals.sum() / (len(classes) * totals))[observed.cat.codes.to_numpy()[valid]]
-            result[self.weight or self.output_weight] = weights * factors
+            result[self.output_weight] = factors
             self.sample_indices_ = np.arange(len(X))
             if not valid.all():
                 self.warnings_.append("Missing targets retain their incoming weight; excluded from the diagnostic.")
@@ -194,7 +197,8 @@ class TargetBalanceSampler(BaseEstimator):
         distance = (need_up and self.up == "smote") or (need_down and self.down != "random")
         supported = []
         if distance:
-            supported = [c for c in self.predictors if c in X and c not in (self.target, self.weight) and var_kind(X[c]) in
+            weight_columns = (self.weight,) if isinstance(self.weight, str) else (self.weight or ())
+            supported = [c for c in self.predictors if c in X and c != self.target and c not in weight_columns and var_kind(X[c]) in
                          ("decimal", "integer", "nominal", "logical")]
             self.ignored_ = [c for c in self.predictors if c not in supported]
             if self.ignored_:
@@ -352,11 +356,20 @@ class TargetBalanceSampler(BaseEstimator):
     def evaluation_weights(self, X):
         """Explicit holdout policy; no rows are added, removed or synthesized."""
         check_is_fitted(self, "class_factors_")
-        if self.evaluation == "none":
+        if self.evaluation == "none" or not self.use_weights:
             return None
-        incoming = balance_weights(X, self.weight)
+        combined = observation_weights(
+            X, columns=() if self.weight is None else self.weight,
+            purpose="test", test_policy="importance",
+        )
+        incoming = np.ones(len(X)) if combined is None else combined.to_numpy()
         if self.evaluation == "incoming":
             return incoming
         if X[self.target].isna().any() or not X[self.target].isin(self.classes_).all():
             raise ValueError("Balanced evaluation requires known, nonmissing target classes.")
-        return incoming * np.array([self.class_factors_[c] for c in X[self.target]])
+        evaluation = pd.DataFrame({
+            "importance": incoming,
+            self.output_weight: [self.class_factors_[c] for c in X[self.target]],
+        }, index=X.index)
+        combined = observation_weights(evaluation, columns=("importance", self.output_weight))
+        return None if combined is None else combined.to_numpy()

@@ -439,7 +439,7 @@ class TestForestAnalysis:
         assert shadow["Interpretation"] == "Informative"
 
     @pytest.mark.unit
-    def test_invalid_weights_are_cleaned_without_failure(
+    def test_invalid_weights_fall_back(
         self, miss_informative, serial_permutation_importance
     ):
         frame = informative_classification_frame(40)
@@ -447,16 +447,22 @@ class TestForestAnalysis:
             [np.nan, np.inf, -1, 0, 1] * 8,
             index=frame.index,
         )
-        result = miss_informative._fit_forest_importance(
-            frame,
-            target="target",
-            predictors=["x"],
-            missing_variables=["x"],
-            sample_weight=weights,
-            cv_folds=2,
+        with pytest.warns(UserWarning, match="Using unweighted"):
+            result = miss_informative._fit_forest_importance(
+                frame,
+                target="target",
+                predictors=["x"],
+                missing_variables=["x"],
+                sample_weight=weights,
+                cv_folds=2,
+            )
+
+        ordinary = miss_informative._fit_forest_importance(
+            frame, target="target", predictors=["x"], missing_variables=["x"], cv_folds=2,
         )
-        assert result.message is None
-        assert np.isfinite(result.score)
+        assert result.score == pytest.approx(ordinary.score)
+        pd.testing.assert_frame_equal(result.importance, ordinary.importance)
+
 
 
 class TestImportanceFigure:
@@ -541,7 +547,7 @@ class TestWebKitUI:
             "Potentially informative missingness: x.", timeout=30_000
         )
         for control in (
-            "CVFolds", "MinMissProp", "MinBalancedAccuracy", "MaxObs", "Shadow"
+            "CVFolds", "MinMissProp", "MinBalancedAccuracy", "MaxObs", "Shadow", "UseWeights"
         ):
             expect(by_id(page, control)).to_be_attached()
 
@@ -582,3 +588,21 @@ class TestWebKitUI:
 
         set_shiny_input(page, "MinMissProp", 0.49)
         expect(by_id(page, "Significance")).to_contain_text("Potentially informative missingness: x.", timeout=30_000)
+
+
+invalid_weights_app = create_app_fixture(app='../scenarios/miss_informative_invalid_weights.py', scope='function')
+
+
+@pytest.mark.ui
+def test_invalid_weight_notice_and_setting_toggle(page, invalid_weights_app):
+    page.goto(invalid_weights_app.url)
+    expect(by_id(page, 'Significance')).to_contain_text('Potentially informative missingness: x.', timeout=30000)
+    get_card(page).hover()
+    get_card(page).locator('button.collapse-toggle').click()
+    expect(by_id(page, 'UseWeights')).to_be_checked()
+    expect(by_id(page, 'WeightingNotice')).to_contain_text('Using unweighted calculations', timeout=30000)
+    by_id(page, 'UseWeights').uncheck()
+    expect(by_id(page, 'WeightingNotice')).to_be_empty(timeout=30000)
+    expect(by_id(page, 'Significance')).to_contain_text('Potentially informative missingness: x.', timeout=30000)
+    by_id(page, 'UseWeights').check()
+    expect(by_id(page, 'WeightingNotice')).to_contain_text('Using unweighted calculations', timeout=30000)

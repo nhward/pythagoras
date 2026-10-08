@@ -103,14 +103,13 @@ def _analyze(source, options, card_name="targ_balance"):
     if reason:
         return BalanceResult(source, pd.DataFrame(), None, None, reason)
     weight_columns = [c for c in source.columns if Role.WEIGHTING in source.role_map.roles_for(c)]
-    if len(weight_columns) > 1:
-        return BalanceResult(source, pd.DataFrame(), None, None,
-                             "Choose at most one Weighting variable upstream.", True)
-    weight = weight_columns[0] if weight_columns else None
-    output_weight = "Weights"
+    assigned_weight = tuple(weight_columns) or None
+    combined = Card.observation_weights(source, enabled=options.get("use_weights", True))
+    weight = assigned_weight if combined is not None else None
+    output_weight = Card.BALANCE_PREFIX + "weights"
     suffix = 2
     while output_weight in source.columns:
-        output_weight = f"Weights_{suffix}"
+        output_weight = f"{Card.BALANCE_PREFIX}weights_{suffix}"
         suffix += 1
     predictors = tuple(c for c in source.columns if source.role_map.roles_for(c) == {Role.PREDICTOR}
                        and not str(c).startswith(Card.SHADOW_PREFIX))
@@ -123,11 +122,11 @@ def _analyze(source, options, card_name="targ_balance"):
             result = source.frame
             result_weight = weight
         else:
-            sampler = TargetBalanceSampler(target=target, predictors=predictors, weight=weight,
+            sampler = TargetBalanceSampler(target=target, predictors=predictors, weight=assigned_weight,
                                            output_weight=output_weight, **options)
             result, _ = sampler.fit_resample(source.frame)
-            result_weight = (weight or output_weight) if mode == "reweight" else weight
-            added = RoleMap.from_primitive({"weighting": [output_weight]}) if mode == "reweight" and weight is None else None
+            result_weight = tuple(weight or ()) + (output_weight,) if mode == "reweight" else weight
+            added = RoleMap.from_primitive({"weighting": [output_weight]}) if mode == "reweight" else None
             successor = source.with_sampling_step(
                 sampler, name=card_name, preview_frame=result, added_roles=added,
                 operation="Balance nominal target: " + mode,
@@ -247,6 +246,9 @@ def instance():
         return ui.input_numeric(id=id, label=label, value=value, min=min, max=max, step=1,
                                 guide=this, text=text, position="left")
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
+        ui.input_checkbox("UseWeights", label="Use observation weightings", value=True,
+            guide=this, position="left", text="Use the product of assigned Weighting variables. If effective weights are invalid, use unweighted calculations."),
         select("Up", "Upsampling", {"random": "RandomOverSampler", "smote": "SMOTENC (automatic type adaptation)"}, "random",
                 "Random duplicates complete rows and accepts missing predictors. SMOTENC uses nominal and numeric predictors; all-numeric uses SMOTE and all-categorical uses SMOTEN. Other roles come from same-class donors."),
         select("Down", "Downsampling", {"random": "RandomUnderSampler", "medoids": "K-medoids", "centroids": "ClusterCentroids", "nearmiss": "NearMiss", "stratified": "Cluster-stratified"}, "random",
@@ -268,11 +270,12 @@ def instance():
                 "K-medoids uses quadratic memory. Larger classes are rejected; no hidden subsampling is performed."),
         numeric("Iterations", "Medoid / centroid iterations", 30, 1, 100,
                 "Maximum alternating optimization iterations. K-medoids uses farthest-first initialization and within-cluster medoid updates, not exhaustive PAM swaps."),
-        select("Evaluation", "Evaluation weights", {"none": "None", "incoming": "Incoming weights", "balanced": "Incoming × learned factors"}, "none",
-                "Saved policy for a future model evaluator: evaluation_weights(X) returns weights without resampling. No weights by default. Balanced evaluation rejects unseen or missing target classes."),
+        select("Evaluation", "Evaluation weights", {"none": "None", "incoming": "Importance weights", "balanced": "Importance × learned factors"}, "incoming",
+                "Saved policy for a future model evaluator: evaluation_weights(X) returns weights without resampling. Importance weights are multiplied by default; balance__ components are excluded. None gives uniform weights. Balanced evaluation applies this step's training-fitted class factor and rejects unseen or missing target classes."),
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()))
         busy = this.busy()
 
         @this.reactable(calc=True)
@@ -309,7 +312,7 @@ def instance():
         @this.reactable(calc=True)
         def RawOptions():
             req(input.Neighbors() is not None, input.MedoidLimit() is not None, input.Iterations() is not None)
-            return {"mode": input.Mode() or "none", "up": input.Up(), "down": input.Down(),
+            return {"use_weights": bool(input.UseWeights()), "mode": input.Mode() or "none", "up": input.Up(), "down": input.Down(),
                         "count_fraction": float(input.CountFraction()) / 100, "metric": input.Metric(),
                         "normalize": bool(input.Normalize()), "evaluation": input.Evaluation(), "voting": input.Voting(),
                         "neighbors": int(input.Neighbors()), "medoid_limit": int(input.MedoidLimit()), "iterations": int(input.Iterations())}

@@ -99,15 +99,10 @@ def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
         weights = np.ones(len(frame))
         weighting = data.role_map.columns_with_role(Role.WEIGHTING)
         if use_weights and weighting:
-            if len(weighting) != 1:
-                raise ValueError('Assign exactly one observation weighting column.')
-            series = frame[next(iter(weighting))]
-            if not pd.api.types.is_numeric_dtype(series.dtype) or pd.api.types.is_bool_dtype(series.dtype) or pd.api.types.is_complex_dtype(series.dtype):
-                raise ValueError('Observation importance must be numeric.')
-            weights = series.to_numpy(dtype=float, na_value=np.nan)
-            if not np.isfinite(weights).all() or (weights < 0).any() or not (weights > 0).any():
-                raise ValueError('Observation importance must be finite, nonnegative, and include positive values.')
-            result.weighted = True
+            combined = Card.observation_weights(data)
+            if combined is not None:
+                weights = combined.to_numpy()
+                result.weighted = True
         observed = frame[target].notna().to_numpy() & (weights > 0)
         labels = frame[target].astype('string')
         if not include_unallocated:
@@ -270,15 +265,17 @@ def instance():
     def slider(id, label, low, high, value, step, text, ticks=True, pre=None):
         return ui.input_slider(id, label=label, min=low, max=high, value=value, step=step, guide=this, position='left', text=text, ticks=ticks, pre=pre)
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
         slider('Depth', 'Maximum tree depth', 1, 6, 3, 1, 'Limits explanation complexity. Deeper trees may reproduce labels more closely but are harder to read and can overfit.'),
         slider('Leaf', 'Minimum leaf fraction', .01, .25, .02, .01, 'Minimum fraction of training rows in each leaf. This uses row counts, not importance mass.'),
         slider('Folds', 'Cross-validation folds', 2, 10, 5, 1, 'Stratified folds, capped by the smallest cluster count. Accuracy uses out-of-fold predictions; balanced accuracy averages recall across clusters. Fold SD describes variability, not a confidence interval. Existing cluster labels are fixed, so this does not validate the upstream clustering pipeline.'),
-        ui.input_checkbox('UseWeights', label='Use assigned observation weighting', value=True, guide=this, position='left', text='Use finite nonnegative importance weights for tree fitting and held-out metrics. Zero-weight rows are excluded; positive weights are normalized to mean one. Imputation and sampling use row counts. Disable to give all rows equal importance.'),
+        ui.input_checkbox('UseWeights', label='Use observation weightings', value=True, guide=this, position='left', text='Use finite nonnegative importance weights for tree fitting and held-out metrics. Zero-weight rows are excluded; positive weights are normalized to mean one. Imputation and sampling use row counts. Disable to give all rows equal importance.'),
         ui.input_checkbox('Unallocated', label='Include unallocated', value=True, guide=this, position='left', text='Treat DBSCAN unallocated as a class to explain. Disable to profile allocated clusters only. Missing labels are always omitted. At least two observed classes are needed.'),
         slider('Limit', 'Maximum observations to analyze', 2, 7, 4, 1, 'Reproducible stratified sampling above this cap. Rare clusters need at least two sampled rows. Raising it improves coverage but can substantially increase fitting time.', True, "10^")
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()))
         busy = this.busy()
         restored = this.restored_configuration_input('Membership', None)
         restore_pending = True

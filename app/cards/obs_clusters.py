@@ -68,15 +68,8 @@ def _prepare(data, *, limit, standardize, use_weights):
                and not pd.api.types.is_complex_dtype(data.frame[c].dtype)]
     raw_weights = None
     if use_weights and weight_columns:
-        if len(weight_columns) != 1:
-            raise ValueError("Assign exactly one observation-importance column.")
-        series = data.frame[next(iter(weight_columns))]
-        if (not pd.api.types.is_numeric_dtype(series.dtype)
-                or pd.api.types.is_bool_dtype(series.dtype)
-                or pd.api.types.is_complex_dtype(series.dtype)):
-            raise ValueError("Observation importance must be numeric.")
-        raw_weights = series.to_numpy(dtype=float, na_value=np.nan)
-        _importance_weights(raw_weights)
+        combined = Card.observation_weights(data)
+        raw_weights = None if combined is None else combined.to_numpy()
     positive = np.ones(len(data), dtype=bool) if raw_weights is None else raw_weights > 0
     frame = data.frame[columns].astype(float).replace([np.inf, -np.inf], np.nan)
     frame = frame.loc[:, frame.iloc[np.flatnonzero(positive)].nunique() > 1]
@@ -217,7 +210,7 @@ def _analyze(data, *, limit=1000, standardize=True, use_weights=True, metric="eu
                     transformer = ClusterMembershipTransformer(
                         columns=tuple(c for c in data.columns if c in data.role_map.columns_with_role(Role.PREDICTOR)),
                         n_clusters=k, method=method, centre=centre, metric=metric, min_points=min_points, border=border,
-                        standardize=standardize, weighting=next(iter(weighting), None), limit=limit,
+                        standardize=standardize, weighting=tuple(sorted(weighting)) or None, limit=limit,
                         output_column=_membership_name(data.columns),
                     ).fit(data.frame)
                     preview = transformer.transform(data.frame)
@@ -363,10 +356,11 @@ def instance():
     def slider(id, label, low, high, value, text, ticks = True, pre = None):
         return ui.input_slider(id, label=label, min=low, max=high, value=value, ticks = ticks, pre = pre, guide=this, position="left", text=text)
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
         select("Projection", "2D projection", {"tsne":"t-SNE", "pca":"PCA"}, "One shared embedding for all methods. t-SNE emphasizes local neighborhoods and ignores weights in the embedding; PCA is faster and uses importance-weighted axes when enabled. Clustering is always fitted before projection, in predictor space."),
         slider("Perplexity", "t-SNE perplexity", 2, 50, 30, "Neighborhood scale of the t-SNE display. Capped at (analyzed rows minus one) / 3. Changes the visualization, not the clustering inputs."),
         check("Standardize", "Standardize numeric predictors", "Center and scale predictors to unit spread, using observation importance when enabled. Analysis only; outgoing predictor values are unchanged."),
-        check("UseWeights", "Use assigned observation weighting", "Use numeric importance weights and omit zero-weight rows. Weights are supported by Partition and Density methods."),
+        check("UseWeights", "Use observation weightings", "Use numeric importance weights and omit zero-weight rows. Weights are supported by Partition and Density methods."),
         select("Metric", "Distance metric", ["euclidean", "manhattan"], "Used by hierarchies except Ward, PAM, Density, Spectral and t-SNE. K-means, Gaussian mixtures, Ward and PCA use Euclidean geometry."),
         select("Centre", "Partition method", {"centroids":"K-means", "medoids":"PAM (medoids)"}, "K-means uses fitted centers; PAM selects actual observations as medoids and can be slower. Both use incoming K and support importance weights."),
         select("Linkage", "Agglomerative linkage", ["average", "single", "complete", "ward"], "Merge clusters using average, nearest or farthest pair distances, or Ward's increase in squared dispersion. Ward always uses Euclidean distances."),
@@ -377,6 +371,7 @@ def instance():
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()))
         busy = this.busy()
         committed = reactive.Value(None)
         OutputData = reactive.Value()

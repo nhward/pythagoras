@@ -2,12 +2,12 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import clone
-from sklearn.preprocessing import StandardScaler
-from threadpoolctl import threadpool_limits
 from ClusterMembershipTransformer import ClusterMembershipTransformer
 from proxy_data import proxy_data
 from roles import Role, RoleMap
+from sklearn.base import clone
+from sklearn.preprocessing import StandardScaler
+from threadpoolctl import threadpool_limits
 
 pytestmark = pytest.mark.unit
 
@@ -40,7 +40,8 @@ def test_fitted_assignment_is_batch_independent_and_nominal(method, centre):
 
 @pytest.mark.parametrize('centre', ['centroids','medoids'])
 def test_importance_fits_but_is_not_required_to_predict(centre):
-    X = frame()
+    # One zero among twelve rows stays below the effective-weight 10% limit.
+    X = pd.concat([frame(), frame()])
     X.iloc[0, X.columns.get_loc('weight')] = 0
     model = ClusterMembershipTransformer(('x','y','weight'), weighting='weight', centre=centre).fit(X)
     assert 'weight' not in model.predictors_
@@ -49,6 +50,17 @@ def test_importance_fits_but_is_not_required_to_predict(centre):
     scaled = X.copy(); scaled['weight'] *= 100
     other = clone(model).fit(scaled)
     pd.testing.assert_series_equal(model.transform(X).cluster, other.transform(X).cluster)
+
+
+@pytest.mark.parametrize('centre', ['centroids', 'medoids'])
+def test_excessive_zero_importance_falls_back(centre):
+    X = frame()
+    X.iloc[0, X.columns.get_loc('weight')] = 0
+    with pytest.warns(UserWarning, match='Using unweighted'):
+        fitted = ClusterMembershipTransformer(('x', 'y'), weighting='weight', centre=centre).fit(X)
+    ordinary = ClusterMembershipTransformer(('x', 'y'), centre=centre).fit(X)
+    pd.testing.assert_series_equal(fitted.transform(X).cluster, ordinary.transform(X).cluster)
+    assert len(fitted.fit_positions_) == len(X)
 
 
 def test_mixture_rejects_unequal_weights():

@@ -4,7 +4,7 @@ title: Target balance
 
 #### 🧭 Purpose
 
-*Compare nominal target classes and preview balancing their contributions to training. Place this card after role assignment and any necessary encoding or imputation. It can add observation weights or resample observations; neither operation establishes that a predictive model will improve.*
+*Compare nominal target classes and preview balancing their contributions to training. Place this card after role assignment. It can add additional observation weights or resample observations.*
 
 #### 🎯 Goals
 
@@ -20,7 +20,7 @@ Exactly one **Target** with nominal semantics and at least two observed classes 
 
 $$f_c=\frac{\sum_{i:y_i\text{ observed}}a_i}{K\sum_{i:y_i=c}a_i}.$$
 
-Here $a_i$ is the incoming weight, or one when no **Weighting** variable exists, and $K$ is the number of observed classes. Each class then has equal total weight. The formula preserves the incoming total weight; mean weight is one only when the incoming weights already average one. An existing weighting variable is overwritten in the preview. Otherwise a **Weights** variable is appended with the Weighting role; a suffix avoids name collisions. Missing-target rows retain their incoming weight and are excluded from diagnostics. Invalid weights or a class with zero weight prevent balancing.
+Here $a_i$ is the incoming effective weight, or one when weighting is disabled, unavailable or invalid, and $K$ is the number of observed classes. Each class then has equal total weight. The formula preserves the incoming total weight; mean weight is one only when the incoming weights already average one. Incoming Weighting variables are preserved. A **balance__weights** variable containing only the class multiplier is appended with the Weighting role; a suffix avoids name collisions. Effective training weights are the element-wise product of all Weighting variables. Missing-target rows retain their incoming weight and are excluded from diagnostics. Invalid effective weights cause unweighted balancing. Otherwise, a class with zero total weight prevents balancing.
 
 **Resample** chooses an integer class count between the smallest and largest observed counts. The percentage setting defaults to 50%, halfway between them. It is recomputed after required-value removal for each training fit, so a preview count is not imposed on smaller validation folds. Existing weights travel with retained or duplicated rows; equal counts can still have unequal weight totals.
 
@@ -55,7 +55,7 @@ Choose **None**, **Reweight**, or **Resample**. There is no Commit button. Setti
 
 #### ⚙️ Settings
 
-The card's Tour Guide describes each setting. Defaults are random up/down sampling, halfway class counts, Euclidean standardized distances, hard centroids, five neighbors, 30 optimization iterations, and no evaluation weights. Calculations use seed 2025.
+The card's Tour Guide describes each setting. Defaults are random up/down sampling, halfway class counts, Euclidean standardized distances, hard centroids, five neighbors, 30 optimization iterations, and importance-only evaluation weights. Calculations use seed 2025.
 
 #### 🔎 Interpretation and next steps
 
@@ -66,7 +66,7 @@ Compare both counts and weight totals. Investigate omissions and the suitability
 * The preview uses all incoming data. Partition roles, tuning, and an agreed train/test split are deferred.
 * Resampling is capped at 100,000 input/output rows, distance work at 10,000 complete rows, encoded distance data at four million cells, and clustering at four million row-center pairs. Medoids default to 2,000 rows per class, configurable up to 5,000. Oversized requests fail explicitly, without hidden subsampling.
 * Importance weights do not affect distance fitting or row selection probabilities. They are retained for downstream training. The diagnostic does not handle clustered or repeated-observation dependence.
-* A final model adapter must select Predictor columns and explicitly pass the Weighting column as `sample_weight`. Merely appending a plain sklearn classifier does not consume the weight column automatically.
+* A final model adapter must select Predictor columns and explicitly pass the product of applicable Weighting columns as `sample_weight`. Merely appending a plain sklearn classifier does not consume the weight column automatically.
 * Numeric distance choices apply to numeric nearest-neighbor geometry. SMOTENC uses its own categorical encoding/scaling, and categorical-only SMOTEN uses value-difference distances.
 
 #### 📌 Suggested workflow
@@ -82,7 +82,13 @@ Compare both counts and weight totals. Investigate omissions and the suitability
 * **Input:** Current preview, role map, original clean frame, and any existing learned pipeline.
 * **Output:** With an active mode, a changed preview plus a cloned, unfitted `TargetBalanceSampler` in an `imblearn.pipeline.Pipeline`. The original clean frame is preserved. Downstream learned transformations retain that pipeline type.
 * **Training:** `pipeline_for_training()` returns a fresh recipe. Supply the full role-bearing DataFrame and a positionally aligned target `y`. Samplers run through `fit_resample` during fitting and are skipped at prediction. Append a model/role adapter after preprocessing for a complete predictive pipeline. Pipeline `fit_transform` may resample training rows; it is not interchangeable with separate `fit` and `transform` calls.
-* **Evaluation:** A fitted sampler's `evaluation_weights(holdout)` implements the saved None / Incoming / Incoming × learned factors policy. It does not resample holdout data or automatically change model scoring. Balanced evaluation requires known, non-missing classes; the evaluator must supply untouched incoming weights, not already-balanced preview weights.
+* **Evaluation:** A fitted sampler's `evaluation_weights(holdout)` implements the saved None / Importance / Importance × learned factors policy. It does not resample holdout data or automatically change model scoring. Balanced evaluation requires known, non-missing classes; the evaluator supplies importance components; `balance__` input components are excluded. The balanced option adds this sampler's training-fitted factor.
 * **Data journey:** Active balancing records its parameters and preview shapes as a Learning step. None and ineligible input add no balancing contribution.
 
 Implementation references: [imbalanced-learn Pipeline](https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html), [SMOTENC](https://imbalanced-learn.org/stable/references/generated/imblearn.over_sampling.SMOTENC.html), and [ClusterCentroids](https://imbalanced-learn.org/stable/references/generated/imblearn.under_sampling.ClusterCentroids.html). Centroid selection here adapts that approach to mixed data, Manhattan distances, and role-preserving donors.
+
+Weight components must be finite, real numeric, nonnegative, and non-missing. Effective products with more than 10% zero observations are invalid (exactly 10% is allowed).
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.
+
+This setting controls incoming weights. Rebalancing by weighting still creates its new `balance__` factor using the selected weighted or unweighted class masses.

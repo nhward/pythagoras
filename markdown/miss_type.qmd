@@ -48,7 +48,7 @@ Use prominent tree splits as hypotheses. A split on row number can indicate drif
 * Multiple-testing adjustment reduces false discoveries but does not eliminate them.
 * Sampling, rare missingness, and small folds reduce stability.
 * The tree shown on the front is explanatory; cross-validated metrics support the interpretation.
-* Observation weights are not currently used.
+* When the "Use observation weightings" setting is enabled, assigned weighting variables are element-wise multiplied for tree fitting and diagnostic scores.
 
 #### 📌 Suggested workflow
 
@@ -68,3 +68,7 @@ Use prominent tree splits as hypotheses. A split on row number can indicate drif
   <summary>Click here for a fully expanded discussion of missing values.</summary>
   <iframe src="/markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
 </details>
+
+Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named `balance__...` are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data's training-weight product. Test-time importance-only weighting excludes balancing factors.
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.

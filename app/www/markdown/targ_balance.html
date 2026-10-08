@@ -261,6 +261,12 @@ shiny-data-frame .shiny-data-grid > table
 background-color: var(--bs-body-bg, #fff) !important;
 }
 
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {
 background-color: rgba(233, 36, 66, 0.22) !important;
@@ -856,7 +862,7 @@ fill: var(--bs-primary) !important;
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>Compare nominal target classes and preview balancing their contributions to training. Place this card after role assignment and any necessary encoding or imputation. It can add observation weights or resample observations; neither operation establishes that a predictive model will improve.</em></p>
+<p><em>Compare nominal target classes and preview balancing their contributions to training. Place this card after role assignment. It can add additional observation weights or resample observations.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
 <li>Show class counts and weighted totals before and after balancing.</li>
@@ -867,7 +873,7 @@ fill: var(--bs-primary) !important;
 <p>Exactly one <strong>Target</strong> with nominal semantics and at least two observed classes is required. Unused categorical levels are omitted; observed levels retain their categorical order. No suitable target makes the card pass through unchanged and disables its action buttons.</p>
 <p><strong>Reweight</strong> multiplies each incoming observation weight by its class factor:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>f</mi><mi>c</mi></msub><mo>=</mo><mfrac><mrow><munder><mo>∑</mo><mrow><mi>i</mi><mo>:</mo><msub><mi>y</mi><mi>i</mi></msub><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> observed</mtext></mrow></mrow></munder><msub><mi>a</mi><mi>i</mi></msub></mrow><mrow><mi>K</mi><munder><mo>∑</mo><mrow><mi>i</mi><mo>:</mo><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><mi>c</mi></mrow></munder><msub><mi>a</mi><mi>i</mi></msub></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">f_c=\frac{\sum_{i:y_i\text{ observed}}a_i}{K\sum_{i:y_i=c}a_i}.</annotation></semantics></math></p>
-<p>Here <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>a</mi><mi>i</mi></msub><annotation encoding="application/x-tex">a_i</annotation></semantics></math> is the incoming weight, or one when no <strong>Weighting</strong> variable exists, and <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math> is the number of observed classes. Each class then has equal total weight. The formula preserves the incoming total weight; mean weight is one only when the incoming weights already average one. An existing weighting variable is overwritten in the preview. Otherwise a <strong>Weights</strong> variable is appended with the Weighting role; a suffix avoids name collisions. Missing-target rows retain their incoming weight and are excluded from diagnostics. Invalid weights or a class with zero weight prevent balancing.</p>
+<p>Here <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>a</mi><mi>i</mi></msub><annotation encoding="application/x-tex">a_i</annotation></semantics></math> is the incoming effective weight, or one when weighting is disabled, unavailable or invalid, and <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math> is the number of observed classes. Each class then has equal total weight. The formula preserves the incoming total weight; mean weight is one only when the incoming weights already average one. Incoming Weighting variables are preserved. A **balance__weights** variable containing only the class multiplier is appended with the Weighting role; a suffix avoids name collisions. Effective training weights are the element-wise product of all Weighting variables. Missing-target rows retain their incoming weight and are excluded from diagnostics. Invalid effective weights cause unweighted balancing. Otherwise, a class with zero total weight prevents balancing.</p>
 <p><strong>Resample</strong> chooses an integer class count between the smallest and largest observed counts. The percentage setting defaults to 50%, halfway between them. It is recomputed after required-value removal for each training fit, so a preview count is not imposed on smaller validation folds. Existing weights travel with retained or duplicated rows; equal counts can still have unequal weight totals.</p>
 <table class="caption-top">
 <colgroup>
@@ -918,7 +924,7 @@ fill: var(--bs-primary) !important;
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
 <p>Choose <strong>None</strong>, <strong>Reweight</strong>, or <strong>Resample</strong>. There is no Commit button. Settings settle briefly before recomputation. <strong>None</strong> restores the incoming data and removes this card’s pipeline contribution. An active invalid configuration blocks downstream output and explains the problem; it does not silently skip the requested operation. If the original diagnostic is compatible with equality, the card advises preferring None unless validation supports a change.</p>
 <h4 id="settings">⚙️ Settings</h4>
-<p>The card’s Tour Guide describes each setting. Defaults are random up/down sampling, halfway class counts, Euclidean standardized distances, hard centroids, five neighbors, 30 optimization iterations, and no evaluation weights. Calculations use seed 2025.</p>
+<p>The card’s Tour Guide describes each setting. Defaults are random up/down sampling, halfway class counts, Euclidean standardized distances, hard centroids, five neighbors, 30 optimization iterations, and importance-only evaluation weights. Calculations use seed 2025.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
 <p>Compare both counts and weight totals. Investigate omissions and the suitability of mixed-type distances before accepting synthetic or representative samples. Balancing is optional: a later model may handle imbalance directly. Judge its benefit using untouched validation data and a metric suited to the prediction problem.</p>
 <h4 id="limitations">⛔️ Limitations</h4>
@@ -926,7 +932,7 @@ fill: var(--bs-primary) !important;
 <li>The preview uses all incoming data. Partition roles, tuning, and an agreed train/test split are deferred.</li>
 <li>Resampling is capped at 100,000 input/output rows, distance work at 10,000 complete rows, encoded distance data at four million cells, and clustering at four million row-center pairs. Medoids default to 2,000 rows per class, configurable up to 5,000. Oversized requests fail explicitly, without hidden subsampling.</li>
 <li>Importance weights do not affect distance fitting or row selection probabilities. They are retained for downstream training. The diagnostic does not handle clustered or repeated-observation dependence.</li>
-<li>A final model adapter must select Predictor columns and explicitly pass the Weighting column as <code>sample_weight</code>. Merely appending a plain sklearn classifier does not consume the weight column automatically.</li>
+<li>A final model adapter must select Predictor columns and explicitly pass the product of applicable Weighting columns as <code>sample_weight</code>. Merely appending a plain sklearn classifier does not consume the weight column automatically.</li>
 <li>Numeric distance choices apply to numeric nearest-neighbor geometry. SMOTENC uses its own categorical encoding/scaling, and categorical-only SMOTEN uses value-difference distances.</li>
 </ul>
 <h4 id="suggested-workflow">📌 Suggested workflow</h4>
@@ -942,10 +948,13 @@ fill: var(--bs-primary) !important;
 <li><strong>Input:</strong> Current preview, role map, original clean frame, and any existing learned pipeline.</li>
 <li><strong>Output:</strong> With an active mode, a changed preview plus a cloned, unfitted <code>TargetBalanceSampler</code> in an <code>imblearn.pipeline.Pipeline</code>. The original clean frame is preserved. Downstream learned transformations retain that pipeline type.</li>
 <li><strong>Training:</strong> <code>pipeline_for_training()</code> returns a fresh recipe. Supply the full role-bearing DataFrame and a positionally aligned target <code>y</code>. Samplers run through <code>fit_resample</code> during fitting and are skipped at prediction. Append a model/role adapter after preprocessing for a complete predictive pipeline. Pipeline <code>fit_transform</code> may resample training rows; it is not interchangeable with separate <code>fit</code> and <code>transform</code> calls.</li>
-<li><strong>Evaluation:</strong> A fitted sampler’s <code>evaluation_weights(holdout)</code> implements the saved None / Incoming / Incoming × learned factors policy. It does not resample holdout data or automatically change model scoring. Balanced evaluation requires known, non-missing classes; the evaluator must supply untouched incoming weights, not already-balanced preview weights.</li>
+<li><strong>Evaluation:</strong> A fitted sampler’s <code>evaluation_weights(holdout)</code> implements the saved None / Importance / Importance × learned factors policy. It does not resample holdout data or automatically change model scoring. Balanced evaluation requires known, non-missing classes; the evaluator supplies importance components; <code>balance__</code> input components are excluded. The balanced option adds this sampler’s training-fitted factor.</li>
 <li><strong>Data journey:</strong> Active balancing records its parameters and preview shapes as a Learning step. None and ineligible input add no balancing contribution.</li>
 </ul>
 <p>Implementation references: <a href="https://imbalanced-learn.org/stable/references/generated/imblearn.pipeline.Pipeline.html">imbalanced-learn Pipeline</a>, <a href="https://imbalanced-learn.org/stable/references/generated/imblearn.over_sampling.SMOTENC.html">SMOTENC</a>, and <a href="https://imbalanced-learn.org/stable/references/generated/imblearn.under_sampling.ClusterCentroids.html">ClusterCentroids</a>. Centroid selection here adapts that approach to mixed data, Manhattan distances, and role-preserving donors.</p>
+<p>Weight components must be finite, real numeric, nonnegative, and non-missing. Effective products with more than 10% zero observations are invalid (exactly 10% is allowed).</p>
+<p>With <strong>Use observation weightings</strong> unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.</p>
+<p>This setting controls incoming weights. Rebalancing by weighting still creates its new <code>balance__</code> factor using the selected weighted or unweighted class masses.</p>
 
 
 

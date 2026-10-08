@@ -389,14 +389,8 @@ def _analyse(data: proxy_data, *, maximum=10, limit=500, metric="euclidean",
                and not pd.api.types.is_complex_dtype(data.frame[c].dtype)]
     raw_weights = None
     if use_weights and weight_columns:
-        if len(weight_columns) != 1:
-            raise ValueError("Assign exactly one observation-importance column")
-        weight_column = next(iter(weight_columns))
-        series = data.frame[weight_column]
-        if not pd.api.types.is_numeric_dtype(series.dtype) or pd.api.types.is_bool_dtype(series.dtype) or pd.api.types.is_complex_dtype(series.dtype):
-            raise ValueError("Observation importance must be numeric")
-        raw_weights = series.to_numpy(dtype=float, na_value=np.nan)
-        _importance_weights(raw_weights)  # Validate before removing incomplete rows.
+        combined = Card.observation_weights(data)
+        raw_weights = None if combined is None else combined.to_numpy()
     frame = data.frame[columns].astype(float).replace([np.inf, -np.inf], np.nan)
     positive = np.ones(len(frame), dtype=bool) if raw_weights is None else raw_weights > 0
     frame = frame.loc[:, frame.iloc[np.flatnonzero(positive)].nunique(dropna=True) > 1]
@@ -618,9 +612,10 @@ def instance():
     )
 
     this.settings = lambda: ui.TagList(
-        ui.input_checkbox("UseWeights", label="Use assigned observation weighting", value=True,
+        ui.output_ui("WeightingNotice"),
+        ui.input_checkbox("UseWeights", label="Use observation weightings", value=True,
             guide=this, position="left",
-            text="Use one numeric Weighting-role column as relative observation importance. Unequal weights affect Partition, Density, Stability "
+            text="Multiply numeric Weighting-role columns for relative observation importance. Unequal weights affect Partition, Density, Stability "
                     "and Gap; the other families are unavailable. Equal weights, or no assigned column, retain "
                     "all families. Disable for equal importance."),
         ui.input_slider(
@@ -731,6 +726,7 @@ def instance():
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()))
         busy = this.busy()
         previous_incoming = None
 

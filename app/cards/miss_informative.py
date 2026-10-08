@@ -241,14 +241,10 @@ def _fit_forest_importance(
     y = y.loc[features.index]
     weights = None
     if sample_weight is not None:
-        weights = pd.to_numeric(
-            sample_weight.reindex(frame.index).loc[observed_target],
-            errors="coerce",
-        ).replace([np.inf, -np.inf], np.nan)
-        fill = float(weights.dropna().median()) if weights.notna().any() else 1.0
-        weights = weights.fillna(fill).clip(lower=0)
-        if not bool(weights.gt(0).any()):
-            weights = None
+        weights = Card.observation_weights(
+            pd.DataFrame({"observation_weight": sample_weight}, index=frame.index).loc[observed_target],
+            columns=("observation_weight",),
+        )
     fold_scores: list[float] = []
     fold_importances: list[np.ndarray] = []
     for fold, (train, test) in enumerate(splits):
@@ -519,6 +515,9 @@ def instance():
     )
 
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
+        ui.input_checkbox("UseWeights", label="Use observation weightings", value=True,
+            guide=this, position="left", text="Use the product of assigned Weighting variables. If effective weights are invalid, use unweighted calculations."),
         ui.input_slider(
             id="MaxVariables", label="Maximum variables to display", value=12, min=3, step=1, max=30,
             guide=this, position="left",
@@ -548,6 +547,7 @@ def instance():
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, lambda: PreparedData(), lambda: bool(input.UseWeights()))
         busy = this.busy()
 
         @this.reactable(calc=True)
@@ -643,10 +643,6 @@ def instance():
             predictors = proxy.role_map.columns_with_role(Role.PREDICTOR)
             return [column for column in frame.columns if column in predictors]
 
-        def _weighting_column(proxy: proxy_data) -> str | None:
-            columns = sorted(proxy.role_map.columns_with_role(Role.WEIGHTING))
-            return columns[0] if columns else None
-
         @this.reactable(calc=True)
         @this.record_context
         def ShadowChoices():
@@ -698,9 +694,8 @@ def instance():
         def StartAnalysis():
             proxy = PreparedData()
             frame = proxy.frame.copy()
-            weighting = _weighting_column(proxy)
-            sample_weight = frame[weighting].copy() if weighting else None
             CalculateAnalysis.cancel()
+            sample_weight = Card.observation_weights(proxy, enabled=bool(input.UseWeights()))
             CalculateAnalysis.invoke(
                 frame,
                 Target(),

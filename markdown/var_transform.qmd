@@ -32,9 +32,9 @@ The footer checkboxes apply **De-skew**, **Scale**, and **Center**. Selecting an
 
 #### ⚙️ Settings
 
-Enable **Use observation weights** to use the assigned Weighting variable for centering and scaling, and for chart/table means and standard deviations. Without a Weighting role, ordinary statistics are used. Weights must be numeric, finite, nonnegative and have a positive total; zero weights do not contribute to fitted means or variances. The saved learning step reads weights from each training partition when refitted.
+Enable **Use observation weightings** to use the product of assigned Weighting variables for centering and scaling, and for chart/table means and standard deviations. Without a Weighting role, ordinary statistics are used. Weights must be numeric, finite, nonnegative and have a positive total; zero weights do not contribute to fitted means or variances. The saved learning step reads weights from each training partition when refitted.
 
-**Use robust centering and scaling** replaces mean centering with median centering and standard-deviation scaling with interquartile-range scaling (25th–75th percentiles). Scaling alone preserves the median; selecting both gives median zero and unit IQR for non-degenerate distributions. Robust mode ignores observation weights, even when Use observation weights is checked. Yeo–Johnson is unchanged. Chart/table means, standard deviations, skew and kurtosis remain ordinary unweighted moments, not medians or IQRs.
+**Use robust centering and scaling** replaces mean centering with median centering and standard-deviation scaling with interquartile-range scaling (25th–75th percentiles). Scaling alone preserves the median; selecting both gives median zero and unit IQR for non-degenerate distributions. Robust mode ignores observation weights, even when Use observation weightings is checked. Yeo–Johnson is unchanged. Chart/table means, standard deviations, skew and kurtosis remain ordinary unweighted moments, not medians or IQRs.
 
 The card's Tour Guide gives a concise description of each setting.
 
@@ -65,3 +65,7 @@ Judge transformations by downstream model requirements and validation, not by ma
 * **Input:** Continuous numeric predictors, optional target, roles, and existing pipeline.
 * **Output:** A fitted transformed preview and corresponding unfitted learning step.
 * **Data journey:** Selected transformations create a Learning step; no selection is recorded as inactive.
+
+Weight components must be real numeric, finite, nonnegative and nonmissing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named `balance__...` are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data's training-weight product. Test-time importance-only weighting excludes balancing factors.
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.

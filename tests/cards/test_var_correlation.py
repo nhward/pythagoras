@@ -500,3 +500,19 @@ class TestWebKitUI:
         for heading in ("Source", "Destination", "Value"):
             expect(table).to_contain_text(heading)
         expect(table).to_contain_text("square")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('method', ['pearson', 'spearman'])
+def test_weighting_setting_and_invalid_fallback(card_module, method):
+    data = correlation_data()
+    columns = ['x', 'positive']
+    _, valid, _ = card_module._analysis_frame(data, columns, method, 1000, use_weights=True)
+    assert valid is not None
+    ordinary, disabled, _ = card_module._analysis_frame(data, columns, method, 1000, use_weights=False)
+    assert disabled is None
+    data.frame.loc[0, 'weight'] = -1.
+    with pytest.warns(UserWarning, match='Using unweighted'):
+        fallback, weights, _ = card_module._analysis_frame(data, columns, method, 1000, use_weights=True)
+    assert weights is None
+    assert_frame_equal(fallback, ordinary)

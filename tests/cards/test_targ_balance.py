@@ -43,26 +43,54 @@ def test_reweight_preserves_mass_and_combines_existing_weights():
     fitted = sampler(weight="importance", evaluation="balanced")
     out, y = fitted.fit_resample(source.frame)
     assert len(out) == 16 and y.equals(out.target)
-    totals = out.groupby("target", observed=True).importance.sum()
+    effective = out.importance * out.balance__weights
+    totals = effective.groupby(out.target, observed=True).sum()
     np.testing.assert_allclose(totals, [68., 68.])
-    assert out.importance.sum() == pytest.approx(source.frame.importance.sum())
+    assert effective.sum() == pytest.approx(source.frame.importance.sum())
+    pd.testing.assert_series_equal(out.importance, source.frame.importance)
     assert source.equals(original)
-    np.testing.assert_allclose(fitted.evaluation_weights(source.frame), out.importance)
+    np.testing.assert_allclose(fitted.evaluation_weights(source.frame), effective)
     assert not hasattr(clone(fitted), "class_factors_")
+
+
+@pytest.mark.unit
+def test_multiple_components_and_training_only_factor():
+    from card import Card
+    source = data(True)
+    source.frame["second"] = np.linspace(1., 2., len(source.frame))
+    source.role_map.set_roles("second", [Role.WEIGHTING])
+    result = m._analyze(source, {"mode": "reweight"})
+    assert not result.error, result.message
+    for column in ("importance", "second"):
+        pd.testing.assert_series_equal(source.frame[column], result.export.frame[column])
+    weights = Card.effective_weights(result.export)
+    totals = weights.groupby(result.export.frame.target, observed=True).sum()
+    assert totals.iloc[0] == pytest.approx(totals.iloc[1])
+    fitted = clone(result.export.pipeline.steps[-1][1])
+    training = source.frame.iloc[[0, 1, 2, 12, 13]].copy()
+    fitted.fit_resample(training)
+    holdout = source.frame.iloc[[3, 14]].copy()
+    np.testing.assert_allclose(fitted.evaluation_weights(holdout), holdout.importance * holdout.second)
+    # Rebalancing twice creates independent components, not another combined weight.
+    again = m._analyze(result.export, {"mode": "reweight"})
+    assert not again.error, again.message
+    np.testing.assert_allclose(again.export.frame.balance__weights_2, 1.)
+    repeated = clone(again.export.pipeline.steps[-1][1]).fit(result.export.frame)
+    np.testing.assert_allclose(repeated.evaluation_weights(holdout), holdout.importance * holdout.second)
 
 
 @pytest.mark.unit
 def test_none_is_identity_and_new_weight_name_avoids_collision():
     source = data()
-    source.frame["Weights"] = 9
+    source.frame["balance__weights"] = 9
     assert m._analyze(source, {"mode": "none"}).export is source
     result = m._analyze(source, {"mode": "reweight"})
     assert not result.error, result.message
-    assert result.export.role_map.roles_for("Weights_2") == {Role.WEIGHTING}
-    assert (result.export.frame.Weights == 9).all()
-    assert result.export.frame.Weights_2.mean() == pytest.approx(1)
+    assert result.export.role_map.roles_for("balance__weights_2") == {Role.WEIGHTING}
+    assert (result.export.frame.balance__weights == 9).all()
+    assert result.export.frame.balance__weights_2.mean() == pytest.approx(1)
     assert result.table["Class"].tolist() == ["B", "A"]
-    assert "Weights_2" not in result.export.clean_frame
+    assert "balance__weights_2" not in result.export.clean_frame
     assert not hasattr(result.export.pipeline.steps[-1][1], "class_factors_")
 
 
@@ -153,7 +181,7 @@ def test_missing_target_reweight_keeps_and_resample_removes():
     source = data()
     source.frame.loc[0, "target"] = np.nan
     reweighted, _ = sampler().fit_resample(source.frame)
-    assert reweighted.loc[0, "Weights"] == 1
+    assert reweighted.loc[0, "balance__weights"] == 1
     fitted = sampler(mode="resample")
     output, _ = fitted.fit_resample(source.frame)
     assert fitted.dropped_ == 1 and not output.target.isna().any()
@@ -161,19 +189,23 @@ def test_missing_target_reweight_keeps_and_resample_removes():
 
 @pytest.mark.parametrize("bad", [-1., np.nan, np.inf])
 @pytest.mark.unit
-def test_invalid_weights_rejected(bad):
+def test_invalid_weights_fall_back(bad):
     source = data(True)
     source.frame.loc[0, "importance"] = bad
-    with pytest.raises(ValueError, match="Weights must"):
-        sampler(weight="importance").fit_resample(source.frame)
+    with pytest.warns(UserWarning, match="Using unweighted"):
+        actual, _ = sampler(weight="importance").fit_resample(source.frame)
+    expected, _ = sampler().fit_resample(source.frame)
+    pd.testing.assert_frame_equal(actual, expected)
 
 
 @pytest.mark.unit
 def test_zero_mass_class_and_required_removal_fail_clearly():
     source = data(True)
     source.frame.loc[source.frame.target == "B", "importance"] = 0.
-    with pytest.raises(ValueError, match="Every observed"):
-        sampler(weight="importance").fit_resample(source.frame)
+    with pytest.warns(UserWarning, match="Using unweighted"):
+        actual, _ = sampler(weight="importance").fit_resample(source.frame)
+    expected, _ = sampler().fit_resample(source.frame)
+    pd.testing.assert_frame_equal(actual, expected)
     source = data()
     source.frame.loc[source.frame.target == "B", "x"] = np.nan
     with pytest.raises(ValueError, match="empties a target class"):
@@ -353,3 +385,19 @@ def test_reference_band_hover_explains_limits(page, app):
     expect(tooltip).to_contain_text('Equal-frequency band:')
     expect(tooltip).to_contain_text('95% simultaneous')
     expect(tooltip).to_contain_text('original total weight')
+
+
+@pytest.mark.unit
+def test_disabling_weights_uses_counts_and_saves_setting():
+    source = data(True)
+    source.frame['importance'] = np.arange(1., len(source.frame) + 1)
+    result = m._analyze(source, {'mode': 'reweight', 'use_weights': False})
+    source.frame['importance'] = -1.
+    ignored = m._analyze(source, {'mode': 'reweight', 'use_weights': False})
+    assert not result.error and result.after['balanced']
+    pd.testing.assert_frame_equal(ignored.table, result.table)
+    fitted = sampler(weight='importance', use_weights=False)
+    actual, _ = fitted.fit_resample(source.frame)
+    expected, _ = sampler().fit_resample(source.frame)
+    pd.testing.assert_frame_equal(actual, expected)
+    assert fitted.evaluation_weights(source.frame) is None

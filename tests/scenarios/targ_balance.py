@@ -42,7 +42,7 @@ def server(input, output, session):
     @render.text
     def ExportProbe():
         result = exported()
-        return f'rows={len(result.frame)} weights={"Weights" in result.frame} steps={len(result.pipeline_steps)} unchanged={result is source}'
+        return f'rows={len(result.frame)} weights={any(str(c).startswith("balance__") for c in result.frame)} steps={len(result.pipeline_steps)} unchanged={result is source}'
     return exported
 
 this.server = server

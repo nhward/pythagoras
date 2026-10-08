@@ -416,20 +416,10 @@ def _analysis_frame(
     columns: list[object],
     method: str,
     maximum_observations: int,
+    use_weights: bool = True,
 ) -> tuple[pd.DataFrame, pd.Series | None, bool]:
-    weighting_columns = [
-        column
-        for column in data.frame.columns
-        if column in data.role_map.columns_with_role(Role.WEIGHTING)
-        and not str(column).startswith(Card.SHADOW_PREFIX)
-        and pd.api.types.is_numeric_dtype(data.frame[column].dtype)
-        and not pd.api.types.is_bool_dtype(data.frame[column].dtype)
-    ]
-    weight_name = weighting_columns[0] if len(weighting_columns) == 1 else None
-    selected = list(columns)
-    if method in {"pearson", "spearman"} and weight_name is not None:
-        selected.append(weight_name)
-    frame = data.frame.loc[:, selected]
+    weights = Card.observation_weights(data, enabled=use_weights) if method in {"pearson", "spearman"} else None
+    frame = data.frame.loc[:, columns]
     limit = _sample_limit(method, maximum_observations)
     sampled = len(frame) > limit
     if sampled:
@@ -439,9 +429,10 @@ def _analysis_frame(
             )
         )
         frame = frame.iloc[positions].copy()
+        if weights is not None:
+            weights = weights.iloc[positions]
     else:
         frame = frame.copy()
-    weights = frame.pop(weight_name) if weight_name in frame.columns else None
     return frame, weights, sampled
 
 
@@ -485,12 +476,13 @@ def _analyse_correlation(
     method: str,
     include_target: bool,
     maximum_observations: int,
+    use_weights: bool = True,
 ) -> CorrelationAnalysis:
     definition = METHODS[method]
     columns = _eligible_columns(data, include_target)
     source_observations = len(data.frame)
     frame, weights, sampled = _analysis_frame(
-        data, columns, method, maximum_observations
+        data, columns, method, maximum_observations, use_weights
     )
     matrix = _calculate_matrix(frame, method, weights)
     return CorrelationAnalysis(
@@ -850,6 +842,9 @@ def instance():
     )
 
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
+        ui.input_checkbox("UseWeights", label="Use observation weightings", value=True,
+            guide=this, position="left", text="Use the product of assigned Weighting variables. If effective weights are invalid, use unweighted calculations."),
         ui.input_radio_buttons(
             id="Style", label="Chart style", choices={"heatmap": "Heat map", "chord": "Chord"}, selected="chord",
             guide=this, position="left", text="Switches between a heatmap chart and a chord chart.",
@@ -891,6 +886,7 @@ def instance():
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()) and input.CorrType() in ("pearson", "spearman"))
         busy = this.busy()
 
         @this.reactable(calc=True)
@@ -917,6 +913,7 @@ def instance():
                 "method": method,
                 "include_target": bool(input.IncludeTarget()),
                 "maximum_observations": 10 ** int(input.MaxObs()),
+                "use_weights": bool(input.UseWeights()),
             }
 
         @this.reactable(calc=True)

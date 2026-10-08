@@ -261,6 +261,12 @@ shiny-data-frame .shiny-data-grid > table
 background-color: var(--bs-body-bg, #fff) !important;
 }
 
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {
 background-color: rgba(233, 36, 66, 0.22) !important;
@@ -318,22 +324,22 @@ background-color: #e2e3e5 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
 background-color: #d95f02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
 background-color: #e6ab02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
 background-color: #3978a8 !important;
 color: #fff !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
 background-color: #9aa7b2 !important;
 color: #000 !important;
 }
@@ -351,7 +357,11 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
 .var-cardinality-strong-review-row,
 .var-cardinality-review-row,
 .var-cardinality-expected-row,
-.var-cardinality-not-assessed-row
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
 ) {
 color: var(--bs-body-color, #212529) !important;
 }
@@ -984,6 +994,8 @@ fill: var(--bs-primary) !important;
 <li><strong>Output:</strong> The same observations, columns, roles, and pipeline, with the selected K stored in <code>proxy_data.cluster_count</code>. Analysis sampling, scaling, and exclusions do not alter the outgoing data. No clustering method, memberships, or reduced coordinates are stored.</li>
 <li><strong>Data journey:</strong> Recording K adds no processing step or Data journey transformation entry.</li>
 </ul>
+<p>Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named <code>balance__...</code> are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data’s training-weight product. Test-time importance-only weighting excludes balancing factors.</p>
+<p>With <strong>Use observation weightings</strong> unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.</p>
 
 
 

@@ -14,7 +14,7 @@ _The Variable correlation card compares numeric predictors and treatment variabl
 
 #### 🧠 How it works
 
-The card includes numeric, non-Boolean, nonconstant variables with the Predictor or Treatment role. Numeric targets can be added with **Include target variables**. Weighting, shadow, text, Boolean, constant, and otherwise ineligible variables are excluded from the displayed matrix.
+The card includes numeric, non-Boolean, non-constant variables with the Predictor or Treatment role. Numeric targets can be added with **Include target variables**. Weighting, shadow, text, Boolean, constant, and otherwise ineligible variables are excluded from the displayed matrix.
 
 Each tab applies a different measure:
 
@@ -31,11 +31,11 @@ Each tab applies a different measure:
 
 For symmetric measures, reversing the variables gives the same value. PPS and Xi are directional: `A → B` can differ from `B → A`. The card retains those two values independently throughout calculation, visualization, and tabulation.
 
-Missing observations are removed separately for each variable pair. If exactly one suitable numeric Weighting variable is assigned, it is applied to Pearson and Spearman. Other measures are unweighted.
+Missing observations are removed separately for each variable pair. If Weighting variables are assigned, their element-wise product is applied to Pearson and Spearman. Other measures are unweighted.
 
 #### 🏞️ Front
 
-Tabs select the association measure. The heat map displays source variables by row and destination variables by column. Signed measures use a red-to-blue scale unless **Show absolute values** is selected; nonnegative and absolute values use a blue gradation. The colorbar appears in full-screen mode.
+Tabs select the association measure. The heat map displays source variables by row and destination variables by column. Signed measures use a red-to-blue scale unless **Show absolute values** is selected; nonnegative and absolute values use a blue gradation. The color-bar appears in full-screen mode.
 
 The chord chart places variables around a circle. Ribbon width at each endpoint represents the magnitude in that direction, so a directional ribbon can be wide at one end and narrow at the other. Without absolute values, blue ribbons indicate positive associations and red ribbons indicate negative associations; the two-item legend appears in full-screen mode. With absolute values, signs are removed, ribbons use one color, and no chord legend is needed. Hover reports both directions for a pair.
 
@@ -66,7 +66,7 @@ Strong symmetric associations can indicate redundant measurements, derived varia
 * Only eligible numeric variables are analyzed. The Latent measure is a rank-Gaussian approximation, not a complete mixed-type latent-correlation model.
 * PPS depends on a particular decision-tree model and cross-validation split; it is an exploratory predictive score rather than a final model assessment.
 * Large data is deterministically sampled. Distance correlation is capped at 2,000 observations and PPS at 10,000 because their calculations are comparatively expensive.
-* Observation weights apply only to Pearson and Spearman and require exactly one suitable Weighting variable.
+* Observation weights apply only to Pearson and Spearman and use the product of all assigned Weighting variables.
 
 #### 📌 Suggested workflow
 
@@ -78,6 +78,10 @@ Strong symmetric associations can indicate redundant measurements, derived varia
 
 #### 🔗 Data flow
 
-* **Input:** Numeric, nonconstant Predictor and Treatment variables, an optional numeric Target, and an optional Weighting variable.
+* **Input:** Numeric, non-constant Predictor and Treatment variables, an optional numeric Target, and optional Weighting variables.
 * **Output:** The upstream data, roles, and pipeline unchanged.
 * **Data journey:** This diagnostic card does not add a journey step.
+
+Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named `balance__...` are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data's training-weight product. Test-time importance-only weighting excludes balancing factors.
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.

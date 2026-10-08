@@ -93,16 +93,10 @@ def _analyze(data, variables, *, max_levels=15, max_cells=256, missing=False, us
         result.weighted = bool(use_weights and weight_columns)
         weights = np.ones(len(data.frame))
         if result.weighted:
-            if len(weight_columns) != 1:
-                raise ValueError('Assign exactly one Weighting variable.')
-            series = data.frame[weight_columns[0]]
-            if (not pd.api.types.is_numeric_dtype(series.dtype)
-                    or pd.api.types.is_bool_dtype(series.dtype)
-                    or pd.api.types.is_complex_dtype(series.dtype)):
-                raise ValueError('Observation weights must be numeric.')
-            weights = series.to_numpy(dtype=float, na_value=np.nan)
-            if not np.isfinite(weights).all() or (weights < 0).any():
-                raise ValueError('Observation weights must be finite and nonnegative.')
+            combined = Card.observation_weights(data)
+            result.weighted = combined is not None
+            if combined is not None:
+                weights = combined.to_numpy()
         frame = data.frame[result.variables]
         complete = np.ones(len(frame), dtype=bool) if missing else frame.notna().all(axis=1).to_numpy()
         result.omitted = int((~complete).sum())
@@ -291,6 +285,7 @@ def instance():
     this.footer = lambda: ui.TagList(ui.output_ui('Busy'), ui.output_ui('Status'))
 
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
         ui.input_selectize(
             id='Variables', label='Variables', choices=[], selected=[], multiple=True, options={'plugins':['remove_button']},
             guide=this, position='left',
@@ -327,12 +322,13 @@ def instance():
             text='Show the intersection levels and count where there is room. Hover and the reverse-side table identify all intersections.'
         ),
         ui.input_checkbox(
-            id="UseWeights", label="Use assigned observation weighting",
+            id="UseWeights", label="Use observation weightings",
             guide=this, position='left', text= "Sum assigned observation weights for all observed totals, margins, expectations, percentages, residuals and tile areas. Without a Weighting role, use counts. Weights must be finite, numeric and nonnegative; zero-weight rows are omitted. Weights are not normalized, so residual shading depends on their scale."
         ),
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, this.input_data, lambda: bool(input.UseWeights()))
         selection = SelectionRestore(this.restored_configuration_input('Variables'))
         busy = this.busy()
 

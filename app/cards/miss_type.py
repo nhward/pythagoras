@@ -412,12 +412,11 @@ def _prepare_tree_data(
     matrix = _design_matrix(working, predictors)
     weights = None
     if sample_weight is not None:
-        weights = pd.to_numeric(pd.Series(sample_weight, index=frame.index), errors="coerce")
-        weights = weights.replace([np.inf, -np.inf], np.nan)
-        fill = float(weights.dropna().median()) if weights.notna().any() else 1.0
-        weights = weights.fillna(fill).clip(lower=0).to_numpy(dtype=float)
-        if not weights.any():
-            weights = None
+        weights = Card.observation_weights(
+            pd.DataFrame({"observation_weight": sample_weight}, index=frame.index),
+            columns=("observation_weight",),
+        )
+        weights = None if weights is None else weights.to_numpy()
     return matrix, truth, task, weights, working, predictors
 
 
@@ -1188,6 +1187,7 @@ def instance():
     )
 
     this.settings = lambda: ui.TagList(
+        ui.output_ui("WeightingNotice"),
         ui.input_checkbox(
             id="AddSeq", label="Add a row-number predictor", value=True,
             guide=this, position="left", text="""
@@ -1203,7 +1203,7 @@ def instance():
         ),
         ui.input_checkbox(
             id="UseWeights",
-            label="Use observation weights",
+            label="Use observation weightings",
             value=True,
             guide=this,
             text="Use any variable assigned with the weighting role as tree observations weights.",
@@ -1274,6 +1274,7 @@ def instance():
     )
 
     def server(input, output, session):
+        this.bind_weighting_notice(output, lambda: PreparedData(), lambda: bool(input.UseWeights()))
         busy = this.busy()
         restored_target = this.restored_configuration_input("Target", OBS_COUNT)
         restored_target_pending = True
@@ -1471,15 +1472,15 @@ def instance():
                 restored_target_pending = False
 
 
-        def _weighting_column(proxy: proxy_data) -> str | None:
+        def _weighting_column(proxy: proxy_data) -> tuple[str, ...] | None:
             w = proxy.role_map.columns_with_role(Role.WEIGHTING)
             if len(w) == 0:
                 return None
-            return list(w)
+            return tuple(sorted(w))
 
         def _model_key(
             target: str,
-            weighting: str | None,
+            weighting: tuple[str, ...] | None,
             excluded: set[str],
         ) -> tuple[object, ...]:
             return (
@@ -1495,10 +1496,9 @@ def instance():
             _activate_cache(proxy)
             frame = proxy.frame
             weighting = _weighting_column(proxy) if input.UseWeights() else None
-            weights = frame[weighting] if weighting is not None else None
+            weights = Card.observation_weights(proxy) if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
-            if weighting is not None:
-                excluded.add(weighting)
+            excluded.update(proxy.role_map.columns_with_role(Role.WEIGHTING))
             this.log.debug(f"Model of {target} sought in cache")
             key = _model_key(target, weighting, excluded)
             return _cache_value(
@@ -1528,10 +1528,9 @@ def instance():
             _activate_cache(proxy)
             frame = proxy.frame
             weighting = _weighting_column(proxy) if input.UseWeights() else None
-            weights = frame[weighting] if weighting is not None else None
+            weights = Card.observation_weights(proxy) if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
-            if weighting is not None:
-                excluded.add(weighting)
+            excluded.update(proxy.role_map.columns_with_role(Role.WEIGHTING))
             key = (
                 *_model_key(OBS_COUNT, weighting, excluded),
                 int(CVFolds()),
@@ -1579,10 +1578,9 @@ def instance():
             proxy = PreparedData()
             frame = proxy.frame
             weighting = _weighting_column(proxy) if input.UseWeights() else None
-            weights = frame[weighting] if weighting is not None and input.UseWeights() else None
+            weights = Card.observation_weights(proxy) if weighting is not None else None
             excluded = set(proxy.role_map.columns_with_role(Role.GEOMETRY))
-            if weighting is not None:
-                excluded.add(weighting)
+            excluded.update(proxy.role_map.columns_with_role(Role.WEIGHTING))
             options: dict[str, object] = {
                 "targets": MissingVariables(),
                 "max_tree_depth": int(MaxTreeDepth()),

@@ -65,7 +65,11 @@ class TestProfile:
     @pytest.mark.parametrize('bad',[np.nan,-1,np.inf])
     def test_invalid_importance_is_not_silently_repaired(self,bad):
         data=source();data.frame.loc[0,'weight']=bad
-        assert 'importance' in analyze(data).message
+        with pytest.warns(UserWarning, match='Using unweighted'):
+            result = analyze(data)
+        expected = analyze(data, use_weights=False)
+        assert not result.message and not result.weighted
+        assert result.accuracy == pytest.approx(expected.accuracy)
         assert not analyze(data,use_weights=False).message
     def test_missing_predictors_are_imputed_and_missing_labels_excluded(self):
         data=source();data.frame.loc[0,'x']=np.nan;data.frame.loc[1,'category']=None;data.frame.loc[2,'cluster_partition']=None

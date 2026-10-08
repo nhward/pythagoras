@@ -93,3 +93,7 @@ The recorded K is intended for a downstream card that will fit a chosen clusteri
 * **Input:** Upstream data, variable roles, and the incoming cluster-count decision.
 * **Output:** The same observations, columns, roles, and pipeline, with the selected K stored in `proxy_data.cluster_count`. Analysis sampling, scaling, and exclusions do not alter the outgoing data. No clustering method, memberships, or reduced coordinates are stored.
 * **Data journey:** Recording K adds no processing step or Data journey transformation entry.
+
+Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named `balance__...` are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data's training-weight product. Test-time importance-only weighting excludes balancing factors.
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.

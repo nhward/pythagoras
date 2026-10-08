@@ -261,6 +261,12 @@ shiny-data-frame .shiny-data-grid > table
 background-color: var(--bs-body-bg, #fff) !important;
 }
 
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {
 background-color: rgba(233, 36, 66, 0.22) !important;
@@ -318,22 +324,22 @@ background-color: #e2e3e5 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
 background-color: #d95f02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
 background-color: #e6ab02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
 background-color: #3978a8 !important;
 color: #fff !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
 background-color: #9aa7b2 !important;
 color: #000 !important;
 }
@@ -351,7 +357,11 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
 .var-cardinality-strong-review-row,
 .var-cardinality-review-row,
 .var-cardinality-expected-row,
-.var-cardinality-not-assessed-row
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
 ) {
 color: var(--bs-body-color, #212529) !important;
 }
@@ -863,10 +873,10 @@ fill: var(--bs-primary) !important;
 <dl>
 <dt>Drag each variable into one role container. The supported roles are:</dt>
 <dd>
-<p>Table 1: Role table {tbl-colwidths=“[30,90]”} | Role | Intended use | |:———-|:———————————————————-| | <strong>Target</strong> | Outcome to be predicted. | | <strong>Predictor</strong> | Input available to a model or analysis. | | <strong>Treatment</strong> | Exposure whose possible causal effect is of interest. | | <strong>Identifier</strong> | One or more fields that identify an observation. | | <strong>Weighting</strong> | Nonnegative numeric case weight. | | <strong>Partition</strong> | Predefined training or test membership. | | <strong>Stratifier</strong> | Low-cardinality grouping used for comparison rather than prediction. | | <strong>Sequence</strong> | Meaningful observation order, commonly time. | | <strong>Sensitive</strong> | Attribute retained for fairness assessment rather than prediction. | | <strong>Geometry</strong> | Spatial object used by geographic methods. | | <strong>None</strong> | Variable removed from the data passed to downstream cards. |</p>
+<p>Table 1: Role table {tbl-colwidths=“[30,90]”} | Role | Intended use | |:———-|:———————————————————-| | <strong>Target</strong> | Outcome to be predicted. | | <strong>Predictor</strong> | Input available to a model or analysis. | | <strong>Treatment</strong> | Exposure whose possible causal effect is of interest. | | <strong>Identifier</strong> | One or more fields that identify an observation. | | <strong>Weighting</strong> | Finite, nonnegative numeric weight component; components are multiplied. | | <strong>Partition</strong> | Predefined training or test membership. | | <strong>Stratifier</strong> | Low-cardinality grouping used for comparison rather than prediction. | | <strong>Sequence</strong> | Meaningful observation order, commonly time. | | <strong>Sensitive</strong> | Attribute retained for fairness assessment rather than prediction. | | <strong>Geometry</strong> | Spatial object used by geographic methods. | | <strong>None</strong> | Variable removed from the data passed to downstream cards. |</p>
 </dd>
 </dl>
-<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.</p>
+<p>Every variable has one role at most, and the <strong>None</strong> role makes exclusion explicit. <strong>Predictor</strong>, <strong>Identifier</strong>, <strong>Weighting</strong>, and <strong>None</strong> accept multiple variables. Other roles accept at most one. Geometry, target, weighting, and low-cardinality roles also have type or value constraints.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>The front is a horizontally scrollable set of role containers. Drag variables between them. Full-screen mode provides the clearest overview. The status line reports validation problems or confirms that assignments are ready.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
@@ -901,6 +911,7 @@ fill: var(--bs-primary) !important;
 <li><strong>Output:</strong> Retained values with the committed role map; variables assigned <strong>None</strong> are omitted.</li>
 <li><strong>Data journey:</strong> A committed role change or <strong>None</strong> removal creates a Cleaning step and records any change in variable count; a committed no-change state is recorded as inactive.</li>
 </ul>
+<p>Weighting variables named <code>balance__...</code> are balancing factors; all other Weighting variables are importance weights. Renaming across this prefix changes their purpose. Training uses their product. Test importance-only weighting excludes balancing factors; uniform Test weighting ignores all components. More than 10% zero effective weights raises an error.</p>
 
 
 

@@ -29,7 +29,7 @@ $$
 
 Negative residuals indicate deficits; positive residuals indicate excesses. Colors use descriptive thresholds at −4, −2, 2, and 4. They are not adjusted significance tests.
 
-By default, rows missing any selected variable are omitted. **Include missing values as a level** retains them as explicit groups. Counts and expected proportions always use the same rows. Missing values in unrelated columns do not exclude observations. There is no sampling. With **Use assigned observation weighting** checked and a Weighting variable assigned, every observed count becomes a sum of weights. Margins, independence expectations, percentages, shortfalls, residuals, and tile areas all use those same weight sums and their total. Without a Weighting role, or with the setting unchecked, the card uses ordinary counts. Weights must be numeric, finite and nonnegative; zero-weight rows are omitted, and the remaining rows must have positive total weight. Weight sums are not normalized: multiplying weights changes Pearson residual magnitudes and the expected-value-below-five flags, so interpret these descriptively.
+By default, rows missing any selected variable are omitted. **Include missing values as a level** retains them as explicit groups. Counts and expected proportions always use the same rows. Missing values in unrelated columns do not exclude observations. There is no sampling. With **Use observation weightings** checked and Weighting variables assigned, every observed count becomes a sum of weights. Margins, independence expectations, percentages, shortfalls, residuals, and tile areas all use those same weight sums and their total. Without a Weighting role, or with the setting unchecked, the card uses ordinary counts. Weights must be numeric, finite and nonnegative; zero-weight rows are omitted, and the remaining rows must have positive total weight. Weight sums are not normalized: multiplying weights changes Pearson residual magnitudes and the expected-value-below-five flags, so interpret these descriptively.
 
 #### 🏞️ Front
 
@@ -101,3 +101,7 @@ Check whether gaps reflect collection problems, missing labels, genuine associat
 * **Input:** Upstream observations and eligible Stratifier, Treatment, and Sensitive variables.
 * **Output:** Incoming values, roles, and pipeline pass through unchanged. Counts and mosaics remain diagnostic results.
 * **Data journey:** No transformation or learned pipeline step is added.
+
+Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named `balance__...` are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data's training-weight product. Test-time importance-only weighting excludes balancing factors.
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.

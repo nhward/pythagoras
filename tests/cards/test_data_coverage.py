@@ -111,7 +111,11 @@ class TestCoverage:
     def test_invalid_or_zero_weights(self, weight):
         d = source()
         d.frame['weight'] = weight
-        assert m._analyze(d, ['stratum', 'treatment'], use_weights=True).error
+        with pytest.warns(UserWarning, match='Using unweighted'):
+            result = m._analyze(d, ['stratum', 'treatment'], use_weights=True)
+        expected = m._analyze(d, ['stratum', 'treatment'])
+        assert not result.error and not result.weighted
+        pd.testing.assert_frame_equal(result.table, expected.table)
         assert not m._analyze(d, ['stratum', 'treatment']).error
 
     def test_missing_and_unused_categories(self):

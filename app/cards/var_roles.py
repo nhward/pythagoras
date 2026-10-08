@@ -220,7 +220,7 @@ def instance():
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
     this.register_configuration_input("role_map")
     this.long_name = "Role Assignment"
-    this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data."
+    this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data. Multiple Weighting variables are multiplied: balance__ names identify balancing factors; other names identify importance weights. Each must be finite, numeric, nonnegative and nonmissing."
 
 
     def front():

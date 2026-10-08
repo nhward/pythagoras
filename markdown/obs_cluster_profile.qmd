@@ -93,3 +93,7 @@ These trees describe associations with existing memberships. They do not establi
 * **Input:** Upstream data, recognized Stratifier-role memberships, Predictor-role variables, and optional observation importance.
 * **Output:** The incoming data and pipeline pass through unchanged. Trees, imputed analysis values, and validation predictions remain diagnostic results.
 * **Data journey:** No transformation or learned pipeline step is added.
+
+Weight components must be numeric, finite, nonnegative and non-missing. The shared effective-weight calculation multiplies all assigned components; more than 10% zero effective weights is invalid (exactly 10% is allowed). Variables named `balance__...` are balancing factors; other Weighting variables are importance weights. These card diagnostics use the current data's training-weight product. Test-time importance-only weighting excludes balancing factors.
+
+With **Use observation weightings** unchecked, calculations use equal observation importance. When checked, valid assigned weights are used; invalid components or effective products cause a fallback to unweighted calculations, with an explanation in Settings. The strict shared validator remains available for checking weights.

@@ -121,18 +121,20 @@ class TestEvidence:
         assert_frame_equal(analyze(module, source)["scores"], analyze(module, expected)["scores"])
 
     @pytest.mark.parametrize("bad", [-1., np.nan, np.inf])
-    def test_invalid_weight_is_rejected_and_can_be_disabled(self, module, bad):
+    def test_invalid_weight_falls_back_and_can_be_disabled(self, module, bad):
         source = data()
         source.frame.loc[0, "importance"] = bad
-        with pytest.raises(ValueError, match="Importance weights"):
-            analyze(module, source)
+        with pytest.warns(UserWarning, match="Using unweighted"):
+            result = analyze(module, source)
+        assert_frame_equal(result["scores"], analyze(module, source, use_weights=False)["scores"])
         assert not analyze(module, source, use_weights=False)["votes"].empty
 
-    def test_all_zero_weights_rejected(self, module):
+    def test_all_zero_weights_fall_back(self, module):
         source = data()
         source.frame["importance"] = 0.
-        with pytest.raises(ValueError, match="positive"):
-            analyze(module, source)
+        with pytest.warns(UserWarning, match="Using unweighted"):
+            result = analyze(module, source)
+        assert_frame_equal(result["scores"], analyze(module, source, use_weights=False)["scores"])
 
     def test_no_numeric_predictor_gives_explanation(self, module):
         source = proxy_data(_df=pd.DataFrame({"label": ["a", "b", "c"]}))

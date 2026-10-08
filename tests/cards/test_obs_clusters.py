@@ -128,7 +128,11 @@ class TestClusters:
     def test_invalid_weights_are_explained(self):
         data = source(True)
         data.frame.loc[0, 'w'] = -1
-        assert 'Importance weights' in analyze(data).error
+        with pytest.warns(UserWarning, match='Using unweighted'):
+            result = analyze(data)
+        expected = analyze(data, use_weights=False)
+        assert not result.error
+        np.testing.assert_allclose(result.coordinates, expected.coordinates)
 
     def test_single_numeric_predictor_projection(self):
         data = proxy_data(_df=pd.DataFrame({'x': [0., .1, .2, 10., 10.1, 10.2]}), _cluster_count=2)
@@ -405,7 +409,7 @@ class TestWeightedWeb:
         assert data['weighting'] == ['importance']
         assert data['levels']['cluster_partition'] == ['c1', 'c2']
         assert set(data['levels']['cluster_density']) == {'c1', 'c2', 'unallocated'}
-        assert all(recipe['weighting'] == 'importance' for recipe in data['recipes'].values())
+        assert all(recipe['weighting'] == ['importance'] for recipe in data['recipes'].values())
         toggle(page, 'Mixture').check()
         expect(by_id(page, 'Status')).to_contain_text('Incoming K=2. 23 of 24 rows analyzed; 2 numeric predictors.')
         expect(toggle(page, 'Mixture')).not_to_be_checked()
@@ -422,7 +426,7 @@ class TestWeightedWeb:
         by_id(page, 'Centre').select_option('medoids')
         expect(by_id(page, 'Status')).to_contain_text('24 of 24', timeout=60000)
         open_settings(page)
-        assert payload(page)['recipes']['Partition'] == {'centre': 'centroids', 'weighting': 'importance'}
+        assert payload(page)['recipes']['Partition'] == {'centre': 'centroids', 'weighting': ['importance']}
         toggle(page, 'Mixture').check()
         expect(by_id(page, 'ExportProbe')).to_contain_text('methods=Partition,Mixture')
         assert payload(page)['recipes']['Mixture']['weighting'] is None

@@ -7,6 +7,13 @@ from enum import Enum
 
 import pandas as pd
 
+BALANCE_PREFIX = "balance__"
+
+
+def weighting_purpose(column: str) -> str:
+    """Purpose of a Weighting-role column; the prefix is reserved for balancing."""
+    return "balance" if str(column).startswith(BALANCE_PREFIX) else "importance"
+
 
 class Role(str, Enum):
     TARGET     = "target"
@@ -200,7 +207,3 @@ class RoleMap:
         """
         parsed = json.loads(data)
         return cls.from_primitive(parsed)
-
-
-
-    

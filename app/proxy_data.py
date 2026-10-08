@@ -760,18 +760,20 @@ class proxy_data:
                     errors.append("Sequence role has missing values")
 
             # Weighting
-            # Singular, numeric, strickly non-negative (none missing)
+            # Multiple multiplicative components; each must be finite and nonnegative.
             wgh_cols = sorted(role_map.columns_with_role(Role.WEIGHTING))
-            if len(wgh_cols) > 1:
-                errors.append("Weighting role must be singular")
-            elif len(wgh_cols) == 1:
-                value = data[wgh_cols[0]]
-                if not pd.api.types.is_numeric_dtype(value):
-                    errors.append("Weighting role must be numeric")
+            for column in wgh_cols:
+                value = data[column]
+                if (not pd.api.types.is_numeric_dtype(value)
+                        or pd.api.types.is_bool_dtype(value.dtype)
+                        or pd.api.types.is_complex_dtype(value.dtype)):
+                    errors.append(f"Weighting role must be numeric: {column}")
                 elif (value < 0).any():
-                    errors.append("Weighting role must be non-negative")
+                    errors.append(f"Weighting role must be non-negative: {column}")
+                elif not np.isfinite(value.to_numpy(dtype=float, na_value=np.nan)).all():
+                    errors.append(f"Weighting role must be finite and nonmissing: {column}")
                 if value.isna().values.any():
-                    errors.append("Weighting role has missing values")
+                    errors.append(f"Weighting role has missing values: {column}")
 
             # Treatment
             # Singular, categorical, low cardinality (none missing)
