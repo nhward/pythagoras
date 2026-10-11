@@ -36,6 +36,12 @@ def _columns(source):
 
 
 @recordable
+def _can_transform(source):
+    columns = _columns(source)
+    return bool(columns) and all(weighting_purpose(c) == "importance" for c in columns)
+
+
+@recordable
 class WeightPowerTransformer(TransformerMixin, BaseEstimator):
     """Preserve each component's training mean; never learn from Test rows.
 
@@ -55,6 +61,8 @@ class WeightPowerTransformer(TransformerMixin, BaseEstimator):
             raise WeightingError("Unknown Test weighting policy")
         if not set(self.selected).issubset(self.columns):
             raise WeightingError("The selected component is no longer assigned Weighting")
+        if self.power != 1 and self.selected and any(weighting_purpose(c) == "balance" for c in self.columns):
+            raise WeightingError("Transform importance weights before adding balance__ weightings")
         self.scales_ = {}
         for column in self.selected:
             values = weight_product(X, (column,)).to_numpy()
@@ -71,8 +79,6 @@ class WeightPowerTransformer(TransformerMixin, BaseEstimator):
         check_is_fitted(self, "scales_")
         result = X.copy()
         for column, (maximum, multiplier) in self.scales_.items():
-            if column not in X and weighting_purpose(column) == "balance":
-                continue  # Training-only balancing samplers are skipped at inference.
             values = weight_product(X, (column,)).to_numpy()
             if self.power != 1:
                 try:
@@ -94,6 +100,8 @@ def _apply(source, target=EFFECTIVE, power=1., test_policy="importance"):
     columns = tuple(_columns(source))
     if not columns:
         return source
+    if not _can_transform(source):
+        power = 1.
     if power != 1 and target != EFFECTIVE and target not in columns:
         raise WeightingError("The selected weight component is unavailable")
     selected = columns if target == EFFECTIVE else (target,)
@@ -202,8 +210,8 @@ def instance():
         ui.output_ui("Status"),
     )
     this.settings = lambda: ui.TagList(
-        ui.input_select("Component", label="Component to transform", choices={EFFECTIVE: "Effective (all components)"}, selected=EFFECTIVE,
-            guide=this, position="left", text="Effective applies the same power to all components. Select one variable to change only that contribution. balance__ names identify balancing factors."),
+        ui.input_select("Component", label="Component to transform", choices={EFFECTIVE: "All importance components"}, selected=EFFECTIVE,
+            guide=this, position="left", text="Apply the same power to all importance components, or select one. Transformations are available only before any balance__ weighting is present."),
         ui.input_select("TestPolicy", label="Test weighting", choices={"importance": "Importance only", "uniform": "Uniform (no weights)"}, selected="importance",
             guide=this, position="left", text="Saved with the pipeline. Importance excludes balance__ components. Uniform ignores all weights. This configures weight calculation; the model evaluator must request and apply it."),
         ui.input_checkbox("ShowTest", label="Preview Test weighting", value=False,
@@ -228,7 +236,8 @@ def instance():
         @output
         @render.ui
         def Powers():
-            disabled = not _columns(Incoming())
+            if not _can_transform(Incoming()):
+                return None
             with reactive.isolate():
                 try:
                     selected = input.Power() or "1"
@@ -237,12 +246,11 @@ def instance():
             return ui.tags.fieldset(
                 ui.input_radio_buttons("Power", label="Weight shape", choices={"2": "Square", "1": "Original", ".5": "Square root", str(1 / 3): "Cube root"}, selected=selected, inline=True,
                     guide=this, position="top", text="Changes downstream weights. Roots reduce relative extremes; square amplifies them. Each transformed component retains its training mean. Zeros stay zero; changing weights can alter class balance and the learning objective."),
-                disabled=disabled,
             )
 
         @this.reactable()
         def Choices():
-            choices = {EFFECTIVE: "Effective (all components)", **{c: c for c in _columns(Incoming())}}
+            choices = {EFFECTIVE: "All importance components", **{c: c for c in _columns(Incoming()) if weighting_purpose(c) == "importance"}}
             with reactive.isolate():
                 current = input.Component()
             ui.update_select("Component", choices=choices, selected=current if current in choices else EFFECTIVE)
@@ -251,7 +259,9 @@ def instance():
         @this.record_context
         def Applied():
             try:
-                exported = _apply(Incoming(), input.Component(), float(input.Power()), input.TestPolicy())
+                source = Incoming()
+                power = float(input.Power() or "1") if _can_transform(source) else 1.
+                exported = _apply(source, input.Component(), power, input.TestPolicy())
                 return exported, None
             except WeightingError as error:
                 return None, str(error)

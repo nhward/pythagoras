@@ -24,7 +24,7 @@ Pythagoras is a sequence of "cards" each of which deals with some aspect of data
 
    - Can be made full screen
    - Can be reordered by dragging their handles
-   - Has a flip side with additional information
+   - May have a flip side with additional information
    - Provides an explanation of its purpose
    - Has a sidebar with card-specific settings
    - Can reveal its code (for use in notebooks)
@@ -32,7 +32,7 @@ Pythagoras is a sequence of "cards" each of which deals with some aspect of data
 
 #### The workflow (i.e. the sequence of cards) allows
 
-   - Cards can be added and removed
+   - Cards to be added and removed
    - Data to flow from card to card sequentially
    - A workflow to be saved and restored
 

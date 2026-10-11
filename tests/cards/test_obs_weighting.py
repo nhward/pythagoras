@@ -21,11 +21,13 @@ from weighting import ExcessiveZeroWeightsError, WeightingError
 app = create_app_fixture(app="../scenarios/obs_weighting.py", scope="function")
 
 
-def source(nweights=2, zeros=1):
+def source(nweights=2, zeros=1, importance_only=False):
     frame = pd.DataFrame({"importance": np.arange(1., 21.), "balance__weights": np.tile([1., 2.], 10),
                           "extra": np.linspace(2., 3., 20)})
     if zeros:
         frame.loc[:zeros-1, "importance"] = 0
+    if importance_only:
+        frame = frame.rename(columns={"balance__weights": "importance_extra"})
     roles = RoleMap.from_primitive({"weighting": list(frame)[:nweights]})
     return proxy_data(_df=frame, _roles=roles)
 
@@ -78,7 +80,7 @@ def test_excessive_and_all_zero_weights_remain_visible():
 
 @pytest.mark.unit
 def test_power_is_applied_to_components_and_refitted_without_mutation():
-    data = source()
+    data = source(importance_only=True)
     original = data.frame.copy()
     result = m._apply(data, power=.5)
     pd.testing.assert_frame_equal(data.frame, original)
@@ -91,20 +93,20 @@ def test_power_is_applied_to_components_and_refitted_without_mutation():
     step = result.pipeline.steps[-1][1]
     assert not hasattr(step, "scales_")
     fitted = clone(step).fit(original.iloc[:10])
-    transformed = fitted.transform(original.iloc[10:].drop(columns="balance__weights"))
-    assert "balance__weights" not in transformed
+    transformed = fitted.transform(original.iloc[10:])
+    assert list(transformed) == list(original)
     assert result.role_map == data.role_map
     pd.testing.assert_frame_equal(result.clean_frame, data.clean_frame)
 
 
 @pytest.mark.unit
 def test_single_component_and_original_reset():
-    data = source()
+    data = source(importance_only=True)
     result = m._apply(data, target="importance", power=1 / 3)
     expected = np.cbrt(data.frame.importance)
     expected *= data.frame.importance.mean() / expected.mean()
     np.testing.assert_allclose(result.frame.importance, expected)
-    pd.testing.assert_series_equal(result.frame.balance__weights, data.frame.balance__weights)
+    pd.testing.assert_series_equal(result.frame.importance_extra, data.frame.importance_extra)
     reset = m._apply(data, power=1.)
     pd.testing.assert_frame_equal(reset.frame, data.frame)
 
@@ -173,7 +175,15 @@ def test_dynamic_charts_and_downstream_power(page, app, tmp_path):
     page.wait_for_function("document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.data?.length === 4")
     page.locator('[id$="-ContractButton"]').click(force=True)
     page.wait_for_function("document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.data?.length === 2")
+    expect(page.get_by_label("Square root", exact=True)).to_have_count(0)
+    page.get_by_role("button", name="One weight", exact=True).click()
     page.get_by_label("Square root", exact=True).check()
+    expect(page.locator('[id$="-Probe"]')).not_to_contain_text("last=19.000")
+    page.get_by_role("button", name="Two weights", exact=True).click()
+    expect(page.get_by_label("Square root", exact=True)).to_have_count(0)
+    expect(page.locator('[id$="-Probe"]')).to_contain_text("last=19.000")
+    page.get_by_role("button", name="One weight", exact=True).click()
+    expect(page.get_by_label("Square root", exact=True)).to_be_checked()
     expect(page.locator('[id$="-Probe"]')).not_to_contain_text("last=19.000")
     page.get_by_label("Original", exact=True).check()
     expect(page.locator('[id$="-Probe"]')).to_contain_text("last=19.000")
@@ -186,7 +196,35 @@ def test_dynamic_charts_and_downstream_power(page, app, tmp_path):
     page.get_by_role("button", name="No weights", exact=True).click()
     expect(page.locator('[id$="-Status"]')).to_contain_text("No variables have the Weighting role.")
     for label in ("Square", "Original", "Square root", "Cube root"):
-        expect(page.get_by_label(label, exact=True)).to_be_disabled()
+        expect(page.get_by_label(label, exact=True)).to_have_count(0)
     page.get_by_role("button", name="Two weights", exact=True).click()
+    expect(page.get_by_label("Original", exact=True)).to_have_count(0)
+    page.get_by_role("button", name="One weight", exact=True).click()
     expect(page.get_by_label("Original", exact=True)).to_be_enabled()
     expect(page.get_by_label("Original", exact=True)).to_be_checked()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("balance_only", [False, True])
+@pytest.mark.parametrize("target", [m.EFFECTIVE, "importance", "balance__weights", "stale"])
+def test_balance_weights_block_even_restored_transformations(balance_only, target):
+    data = source()
+    if balance_only:
+        data.role_map.set_roles("importance", [Role.NONE])
+    assert not m._can_transform(data)
+    result = m._apply(data, target=target, power=.5, test_policy="uniform")
+    pd.testing.assert_frame_equal(result.frame, data.frame)
+    step = result.pipeline.steps[-1][1]
+    assert step.power == 1 and not step.selected
+    assert Card.effective_weights(result, purpose="test") is None
+    with pytest.raises(WeightingError, match="before adding"):
+        m.WeightPowerTransformer(tuple(m._columns(data)), ("balance__weights",), .5).fit(data.frame)
+
+
+@pytest.mark.unit
+def test_transformation_requires_importance_only_weightings():
+    assert not m._can_transform(source(0))
+    assert m._can_transform(source(1))
+    assert m._can_transform(source(3, importance_only=True))
+    data = source(0)
+    assert m._apply(data, power=.5) is data

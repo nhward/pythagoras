@@ -261,6 +261,12 @@ shiny-data-frame .shiny-data-grid > table
 background-color: var(--bs-body-bg, #fff) !important;
 }
 
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
 shiny-data-frame .shiny-data-grid > table
 > tbody > tr:not(:hover) > .miss-informative-row {
 background-color: rgba(233, 36, 66, 0.22) !important;
@@ -865,7 +871,7 @@ fill: var(--bs-primary) !important;
 <ul>
 <li>Can be made full screen</li>
 <li>Can be reordered by dragging their handles</li>
-<li>Has a flip side with additional information</li>
+<li>May have a flip side with additional information</li>
 <li>Provides an explanation of its purpose</li>
 <li>Has a sidebar with card-specific settings</li>
 <li>Can reveal its code (for use in notebooks)</li>
@@ -873,7 +879,7 @@ fill: var(--bs-primary) !important;
 </ul>
 <h4 id="the-workflow-i.e.-the-sequence-of-cards-allows">The workflow (i.e. the sequence of cards) allows</h4>
 <ul>
-<li>Cards can be added and removed</li>
+<li>Cards to be added and removed</li>
 <li>Data to flow from card to card sequentially</li>
 <li>A workflow to be saved and restored</li>
 </ul>

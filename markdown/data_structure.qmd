@@ -1,0 +1,78 @@
+---
+title: Data structure overview
+---
+
+#### 🧭 Purpose
+
+*Understand how observations are organized and what temporal, spatial, and textual information they contain. Place this diagnostic card after semantic-type preparation and Variable roles. It leaves data unchanged.*
+
+A date of birth can be a predictor without defining time order. Locations can support spatial analysis while observations remain cross-sectional. This card separates these possibilities using assigned roles and observed structure; it cannot infer the study design from values alone.
+
+#### 🎯 Goals
+
+1. **Primary:** Summarize observation structure using declared roles and semantic types.
+1. **Secondary:** Explain missing prerequisites, ambiguous keys, and data-quality limitations.
+1. **Tertiary:** Assess serial dependence separately from the structural description.
+
+#### 🧠 How it works
+
+All assigned Identifier variables form a composite entity key. Exactly one numeric or datetime Sequence is needed for an ordered-series interpretation. Missing or duplicate entity–sequence keys prevent an unqualified conclusion. Numeric positions do not establish elapsed time. Repeated entities with datetime ordering support a longitudinal interpretation even when follow-up is irregular.
+
+Geometry-role variables describe intended spatial use; geometry without that role is a candidate. Plausibly named latitude/longitude columns are suggestions for upstream review, not automatically created geometry. Text semantic variables establish textual content regardless of language or length.
+
+Findings distinguish supported declarations, problematic declarations, candidates, content not identified, and checks not assessed. None of these establishes independence, causation, or a required modeling method.
+
+Serial dependence uses the same analyzer as Observation Dependence. Ljung–Box tests examine levels and squared deviations separately within each entity. Holm correction covers all available tests across variables, entities, and both diagnostics; the finding threshold is 5%. Tests require at least 20 complete, regularly spaced observations and non-constant measurements. No imputation or observation weighting is applied. Actual lags are capped at one fifth of series length.
+
+#### 🏞️ Front
+
+| Panel | Display and interpretation |
+|:------|:---------------------------|
+| **Temporal** | Entity coverage bars or a sequence histogram. Full screen adds observed positions to coverage bars. Optional standardized numeric traces illustrate a single series. Coverage bars do not imply continuous observation. |
+| **Spatial** | X/Y bounding extents for a selected geometry column, optionally by stratum. Each preview uses that column's CRS; unknown CRS remains unknown. No online map or coordinate conversion is required. |
+| **Observational structure** | Semantic-type counts and, when identifiers are usable, observations per entity. The summary reports rows, variables, and missing cells. |
+| **Textual** | Character-length distributions, counting Unicode code points. Findings distinguish missing, blank, and nonempty strings. Language is not inferred. |
+
+The footer summarizes structure and declared content independently of the selected panel. Hover over its truncated normal-view text for the full statement. Empty or unsupported inputs produce explanations.
+
+#### 🔄 Flip side
+
+The reverse follows the selected panel. Its findings table identifies the characteristic, evidence state, finding, evidence, and implication.
+
+The temporal reverse additionally lists entity–variable dependence diagnostics: observed/analyzed rows, actual lags, lag-one autocorrelation, raw p-values for levels and squared deviations, the minimum globally Holm-adjusted p-value of those tests, and eligibility status. Lag-one autocorrelation describes magnitude and direction; rejection can also reflect longer-lag or squared-deviation dependence.
+
+#### 🛠️ Controls and actions
+
+Switch panels to inspect complementary descriptions. There are no data-changing actions or Commit button. Role assignment, geometry conversion, timeline truncation, and missing-value treatment belong upstream.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+#### 🔎 Interpretation and next steps
+
+A longitudinal-compatible structure does not require significant autocorrelation. Conversely, a dependence finding does not establish that an ordering represents time. Trends and other non-stationarity can contribute to rejection. A non-significant result means dependence was not detected in the assessed series; it does not establish independence.
+
+Resolve ambiguous roles or keys upstream. Use Observation Dependence for further serial diagnostics. Confirm coordinate meanings and CRS before spatial measurements, and consider appropriate text encoding before modeling textual predictors.
+
+#### ⛔️ Limitations
+
+* The observational unit and sampling design cannot be recovered reliably from a table alone. Unique row identifiers can conceal repeated real entities.
+* Gaps are not counted as missing observations without an expected schedule. Irregular, short, constant, or incomplete series have unavailable dependence tests.
+* Dependence analysis shares limits of 100,000 rows, 2,000 entity–variable series, and 20 million row–variable–lag products. Exceeding them produces an explanation, not sampled significance tests.
+* Charts are bounded and may omit displayed entities, strings, positions, or strata. Detailed findings use all rows. Spatial bounds can be misleading across the anti-meridian; Z coordinates are reported but previews use X/Y.
+* Spatial autocorrelation, language detection, sentiment, and causal conclusions are not assessed.
+
+#### 📌 Suggested workflow
+
+1. Assign semantic types and roles, including meaningful entity identifiers.
+1. Read the footer and inspect any ambiguous or problematic declarations.
+1. Compare coverage, geometry, and textual content across the panels.
+1. Review temporal dependence effect sizes, p-values, and unavailable-test reasons.
+1. Resolve preparation issues upstream and choose downstream diagnostics appropriate to the intended analysis.
+
+#### 🔗 Data flow
+
+* **Input:** Current data, role map, semantic types, and geometry metadata.
+* **Output:** The unchanged incoming data, including row order, roles, and existing pipeline.
+* **Data journey:** No transformation or learned pipeline step is added. Display settings are bookmarkable.

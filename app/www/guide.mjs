@@ -158,13 +158,12 @@ function runTour(steps, onFinish = () => {}) {
                 flip.click()
             }
         }
-        // const sb = card.querySelector(".sidebar")
-        // if (sb && isVisibleInLayout(sb)) {
-        //     const toggle = card.querySelector(".collapse-toggle");
-        //     if (toggle) {
-        //         toggle.click();
-        //     }
-        // }
+        // A tour may finish or be cancelled while showing a settings step.
+        // Use bslib's state, not element dimensions during sidebar transitions.
+        const layout = card.querySelector(".bslib-sidebar-layout");
+        if (layout && !layout.classList.contains("sidebar-collapsed")) {
+            layout.querySelector(":scope > .collapse-toggle")?.click();
+        }
     };
 
     tour.on("complete", () => reset(card));

@@ -1,0 +1,191 @@
+---
+title: Data structure overview
+---
+
+## Objective
+
+Give an interpretable overview of the kind of data available for analysis, using the semantic variable types and roles already assigned upstream. Place `data_type` after `var_roles` and semantic-type preparation. The overview should help the analyst choose appropriate diagnostics and recognize when ordinary row-based analysis might overlook temporal, entity, spatial, or textual structure.
+
+The central question is not whether a table contains a date or a location. It is whether those attributes organize the observations in the intended analysis. A date of birth can be an ordinary predictor in a cross-sectional study. Household locations can support spatial analysis while the study remains cross-sectional. Data values alone cannot establish the sampling design, observational unit, or intended prediction task.
+
+The card must distinguish three layers:
+
+| Layer | Question | Main evidence |
+|:------|:---------|:--------------|
+| Content | What information is represented? | Semantic types, geometry metadata, observed values. |
+| Structure | How are observations organized? | Assigned Sequence and Identifier roles, key uniqueness, repeated entities, spatial representation. |
+| Analytical implications | What may need consideration? | The declared structure and its limitations; no automatic claim that a particular model is necessary. |
+
+Results are complementary descriptions, not mutually exclusive dataset classes. Do not use additive support scores, confidence percentages, or adjustable classification thresholds. The proposed scores conflate data quality with data identity, reward the number of columns, and make irregular longitudinal data appear less longitudinal.
+
+## Evidence and conclusions
+
+Roles describe intended use; semantic types describe representation. Neither alone proves the study design. Assigned roles take precedence over guesses from names or ranges, but incompatible assignments must be reported rather than silently repaired.
+
+Each panel contains a short conclusion and findings with **Characteristic / Finding / Evidence / Implication**. Evidence names the relevant variables and gives counts or denominators where useful. Use these states consistently:
+
+* **Declared and supported:** An assigned role or semantic type has usable supporting data.
+* **Declared but problematic:** Required values or metadata are missing, incompatible, or ambiguous.
+* **Candidate only:** Unassigned content suggests a possibility; confirmation upstream is needed.
+* **Not identified:** No supporting declaration or candidate was found by the implemented checks. This is not proof of absence.
+* **Not assessed:** A calculation is deferred, unsupported, or unavailable within resource limits.
+
+Separate structural conclusions from quality warnings. Irregular spacing, missing measurements, and unequal follow-up do not disqualify temporal data. Failure to detect dependence does not establish independence. Significant dependence does not establish causation or determine the dataset's type.
+
+Do not infer an entity key from whichever columns happen to repeat. Use all assigned Identifier columns as a composite key, consistent with Observation Dependence. Show that key explicitly. Warn that unique row identifiers can conceal repeated real-world entities. Multiple Identifier columns do not automatically establish a hierarchy.
+
+## Front and flip side
+
+The front has four panels: **Temporal**, **Spatial**, **Observational structure**, and **Textual**. The third replaces “Cross-sectional”: cross-sectional design is a possible interpretation, not the default label for anything left over. All four panels remain available, including explanatory empty states.
+
+Each panel shows its conclusion, a compact evidence summary, and a chart when a chart adds information. The flip side follows the active panel and provides detailed findings and limitations. Tables are preferable to decorative charts when evidence is primarily categorical or unavailable.
+
+An optional assigned Stratifier can color or group displays. It must not change the whole-dataset conclusion or imply independence between strata. Missing stratum values remain an explicit group. Report entities whose stratum varies over observations rather than arbitrarily choosing one color.
+
+## Temporal
+
+### Structural rules
+
+1. No assigned Sequence: report “No temporal ordering declared.” Datetime variables are temporal content, not automatically time indices. List them as candidates without promoting them to Sequence.
+2. More than one Sequence: report ambiguous ordering and request resolution upstream. Do not choose a variable automatically.
+3. Exactly one Sequence: accept the numeric or datetime ordering supported by the existing role-aware diagnostics. Reject nonfinite numeric keys and unsupported representations for structural calculations. Numeric order alone does not establish physical time or constant elapsed intervals; label it “ordered sequence; time interpretation unconfirmed.”
+4. No Identifier: a unique usable Sequence supports a single ordered series representation. Datetime order supports a time-indexed representation, but the card cannot distinguish one evolving entity from a chronological event log using timestamps alone.
+5. Identifier present: inspect the composite Identifier–Sequence key. Repeated entities at distinct sequence positions support repeated-measures structure; with datetime Sequence, describe it as longitudinal-compatible. With numeric Sequence, retain the qualification about time interpretation.
+6. All identifiers unique: report one observed row per declared entity, not longitudinal data. A survey date on these rows can represent observations collected over time rather than repeated follow-up.
+7. Duplicate entity–sequence keys (or duplicate sequence keys without entities) prevent a unique series representation. They can represent valid simultaneous events, replicates, or missing key components. Report the ambiguity; do not aggregate or delete them.
+
+Missing key values prevent an unqualified whole-data structural conclusion. Report their number and, if useful, explicitly labeled summaries of complete-key rows. Never silently bridge missing keys or treat incomplete identifiers as confirmed entities.
+
+### Descriptive diagnostics
+
+Report entity count, singleton/repeated-entity counts, observations per entity, sequence range, duplicate keys, missing keys, and whether current row order agrees with sequence order within entities. Sorting a diagnostic copy must not change exported row order.
+
+For comparable datetime or numeric sequences, report positive within-entity interval distributions and start/end coverage. Summarize identical observed sequence grids separately from equal observation counts; equal counts need not mean aligned observations. Irregular and unequal-length series are legitimate structures.
+
+Do not call a sequence gap a missing observation without an expected schedule. First version reports gaps and observed spacing only. An integer Sequence does not imply that every intervening integer should have a record. Calendar-aware expected schedules and missing-record estimates are deferred. Incompatible time zones or unorderable mixed representations produce an explanation rather than automatic conversion.
+
+### Display
+
+For repeated entities, show horizontal coverage bars with Sequence on the horizontal axis and entities on the vertical axis. Full screen can add observed-position markers so internal gaps are visible. A coverage bar does not imply continuous observation.
+
+For a single ordered series, show observation counts across sequence bins or an interval distribution. Optional numeric Predictor/Target traces are exploratory and use explicitly labeled display-only standardization; omit constant-variable standardized traces with an explanation. Do not connect across entities or tied sequence keys. No numeric measurement is required to identify temporal structure.
+
+### Serial-dependence diagnostic
+
+Include a separate serial-dependence finding alongside the structural conclusion. Reuse the role-aware analysis from Observation Dependence directly; never depend on whether another card has been visited. Test numeric Predictors and optionally Targets separately within each entity, with exactly one assigned Sequence and complete, unique entity–sequence keys. Do not offer exploratory row order here.
+
+Use Ljung–Box tests on levels and squared deviations, with Holm adjustment across every available entity–variable test and both diagnostics. Default maximum lag is 10, capped at one fifth of series length; default adjusted threshold is 0.05. Require at least 20 observed values, regular spacing under the shared analyzer's rules, and non-constant measurements. Default to no imputation; unavailable tests retain their reasons. Tests ignore observation weights. Trends and other non-stationarity can contribute to rejection; results are exploratory evidence, not a causal or forecasting claim.
+
+Report lag-one autocorrelation as an effect-size description alongside raw and adjusted p-values, actual lags, analyzed counts, and reasons for unavailable tests. Summarize flagged/tested series and unavailable series without equating these counts with independent replications. Distinguish dependence in levels from squared deviations using the named raw p-value columns; the shared adjusted value is the minimum globally adjusted value of the two tests.
+
+A result may say “Longitudinal-compatible structure; serial dependence detected in 3 of 8 tested series.” A nonsignificant result must say “No serial dependence detected in assessed variables; independence is not established.” The test never establishes temporal identity or changes the structural classification. Irregular event timing remains a separate question. Share existing resource limits and report when exceeded, without sampling series to obtain significance. Display the detailed test table on the temporal flip side and direct users to Observation Dependence for further exploration.
+
+## Spatial
+
+Distinguish **location-bearing content**, **declared geometry**, and **readiness for spatial operations**. Geometry makes spatial analysis possible; it does not prove spatial dependence or make a cross-sectional study cease to be cross-sectional.
+
+For each Geometry-role variable, report semantic/storage representation, geometry types, coordinate dimensionality, missing/empty/invalid counts, and coordinate reference system (CRS) when available. Keep absent CRS distinct from invalid geometry. Multiple geometry columns may have different CRSs; do not combine their bounds without a valid transformation.
+
+Geometry is not restricted to global latitude/longitude or two dimensions. Recognize local/projected coordinate systems and report Z coordinates when present; any front chart using only X/Y must say so. Do not calculate geographic distances or areas from unspecified coordinate units.
+
+Unassigned geometry semantic types are candidates. A recognizable latitude/longitude name pair with plausible numeric ranges can be listed as a candidate, using latitude [-90, 90] and longitude [-180, 180]. Ranges alone are insufficient. Do not guess a CRS, reverse axes automatically, or create geometry. WKT/WKB parsing and arbitrary address geocoding are deferred unless already handled by upstream semantic conversion.
+
+The front shows an extent/geometry preview for one selected usable geometry column, without requiring online tiles. Show a basemap only when a known CRS permits transformation and an optional tile service is available. Unknown CRS still permits a coordinate-space preview labeled with unknown units. Handle empty extents and note that longitude bounds can be misleading around the antimeridian. The flip side lists all geometry columns and their metadata.
+
+Spatial autocorrelation, neighbor construction, and spatial validation design require additional methodological choices and are deferred to dedicated diagnostics. Do not infer them from a geometry's presence.
+
+## Observational structure
+
+Describe the table's observed organization rather than asserting a sampling design:
+
+* Row and column counts; semantic-type and role composition.
+* Composite Identifier completeness and uniqueness; counts of singleton and repeated entities.
+* Whether repeated entities have a usable Sequence, an unresolved sequence, or no declared ordering.
+* Number of Predictor and Treatment variables and rows per such variable; mark the ratio unavailable when its denominator is zero. It is descriptive, not a sample-size adequacy test.
+* Missing-cell counts and fractions, with denominators.
+
+“One observed row per declared entity; compatible with cross-sectional analysis” is appropriate when the identifiers support it. Without an entity definition, report “Observational unit not established.” Repeated identifiers without Sequence support repeated/grouped observations, not necessarily longitudinal observations. Absence of Sequence or Geometry does not prove independent observations.
+
+Sensitive, Treatment, Stratifier, and Weighting roles describe analytical responsibilities; they are not evidence for a cross-sectional design. Wide tables remain valid tables. Avoid extensive per-variable means and category tables already provided by other cards.
+
+The front uses a semantic-type composition bar chart and, when identifiers exist, a distribution of observations per entity. Summary badges show rows, variables, and missingness. This directly exposes the single-observation versus repeated-observation distinction.
+
+Repeated cross-sectional surveys and longitudinal panels can both contain dates. Distinguishing them requires knowing whether the same real entities are followed. A multivariate time series has multiple measured variables at each sequence position; multiple columns alone do not establish either temporal or cross-sectional design.
+
+## Textual
+
+Assigned Text semantic types establish declared textual content regardless of language, string length, or role. Separately show how many are Predictors or Targets versus descriptive or excluded fields. Short comments, non-Latin scripts, and mixed alphanumeric text remain text. Failure to recognize a language must never produce “Not textual.”
+
+For each Text variable, report missing and empty/whitespace-only values separately, nonempty counts, and character-length distributions. Define character length as Unicode code-point count, not bytes or perceived graphemes. Do not convert missing values to literal text or silently classify non-string values as documents.
+
+The front shows text-length distributions by variable, optionally grouped by Stratifier. Word counts require an explicit tokenizer and are deferred; whitespace splitting is not a language-neutral word count. Word clouds are not a default because preprocessing and language choices can dominate the result.
+
+Language detection, topics, sentiment, and chapter/document dependence are deferred. They require methods, resources, uncertainty reporting, and suitable document/group definitions. Text columns can coexist with any observational structure.
+
+## Settings and actions
+
+First-version settings include maximum lag (1–50, default 10), inclusion of numeric Targets (default on), and display choices: assigned Stratifier, geometry column to preview, optional numeric temporal traces, and display limits. Do not expose a threshold that turns a dataset into a temporal or spatial one.
+
+There are no data-changing actions. Truncating follow-up, resampling time, converting WKT/coordinates, assigning roles, or encoding text belongs upstream in an appropriate preparation card. Provide explanatory guidance to those steps. Keep this card immutable.
+
+## Footer
+
+Generate a deterministic, evidence-based summary from all panels, independent of which panel has been visited. Prefer observational organization followed by content qualifications. Avoid “purely,” unsupported certainty, and lists of winning types.
+
+Examples:
+
+* “One row per declared entity; date attributes present, no time ordering declared.”
+* “One row per declared entity with spatial geometry and textual content.”
+* “Repeated entities over time; irregular follow-up and spatial geometry.”
+* “Ordered observations; entity and time interpretation unconfirmed.”
+* “Structure unresolved: duplicate entity–sequence keys.”
+
+Use a single visually truncated line in normal view with accessible full text; allow wrapping in full screen. Candidate hints belong in panels unless they materially explain an unresolved conclusion.
+
+## Computation and data flow
+
+Input is the current proxy data, role map, semantic types, and geometry metadata. Output is the unchanged incoming proxy data: no altered values, roles, row order, pipeline steps, or Data journey transformations. Persist display settings using normal card configuration behavior.
+
+Compute structural counts and footer evidence over all rows. Charts may use deterministic thinning with a visible displayed/total count; sampled charts never determine uniqueness, interval statistics, or structural classification. Bound temporal trace selection to 12 variables and entity coverage displays to 200 entities by default. Entity display selection follows first appearance and reports omissions. The implementation must avoid dense entity-by-time matrices and all-pairs distances.
+
+Use existing semantic-type and role utilities rather than a second competing inference system. Findings must be reproducible for the same input and settings. Empty data retains declared metadata but reports no observations; unsupported types and unavailable optional libraries affect only their relevant findings. Do not silently replace failed checks with negative conclusions.
+
+Expensive geometry checks may be lazy, but the footer must depend only on eagerly available declarations and structural checks. Detailed panels must label unfinished or unavailable checks. No network access, package downloads, or external language/geocoding services are needed for first-version analysis.
+
+## Package research and design implications
+
+These packages provide useful distinctions and diagnostics, not an automatic oracle for study design. The following are design inferences from their documented capabilities; they do not require adding dependencies to the card.
+
+* [sktime's Series, Panel, and Hierarchical representations](https://www.sktime.net/docs/examples/hierarchical-forecasting/) distinguish one series from collections of series and allow unequal spacing/support. Borrow the structural vocabulary; do not make regular spacing or shared starts prerequisites for longitudinal-compatible data. A hierarchy requires declared meaning, not merely several Identifier columns.
+* [tsfresh's data formats](https://tsfresh.readthedocs.io/en/latest/text/data_formats.html) separate entity identifiers, ordering, measurement kinds, and values. Borrow that separation. Feature extraction assumes these have been specified; it does not resolve whether a date field should define time. The documentation also distinguishes general support for unequal spacing from individual features' requirements.
+* [Bursty Dynamics](https://ai-multiply.github.io/bursty_dynamics/) describes burstiness, memory coefficients, and event trains. Its useful insight here is that irregular event timing can be informative rather than defective. Event-timing diagnostics could be a later extension once events and time units are defined; burstiness is not evidence that establishes temporal identity.
+* [Kats](https://github.com/facebookresearch/Kats) offers time-series characteristics, anomaly/change-point analysis, and forecasting. These are potential follow-on diagnostics after a series has been established, not prerequisites for identifying one. Do not import a broad feature extractor merely to produce a type score.
+* [GeoPandas' CRS guidance](https://geopandas.org/en/stable/docs/user_guide/projections.html) distinguishes assigning CRS metadata from transforming coordinates and supports CRS metadata for multiple geometry columns. Borrow explicit per-column CRS handling; never repair missing spatial meaning by guessing a projection.
+
+## Acceptance examples
+
+| Input | Required conclusion or behavior |
+|:------|:-------------------------------|
+| Unique person Identifier, birth date as Predictor, no Sequence | One observed row per person; date content, no declared time ordering. |
+| Same table with usable Geometry | Same observational organization, plus declared spatial geometry; no claim of spatial dependence. |
+| Latitude/longitude candidates without Geometry | Candidate location fields; no automatic geometry creation or spatial-role assignment. |
+| Repeated patients, datetime Sequence, unique paired keys | Longitudinal-compatible structure even with unequal follow-up and no detected autocorrelation. |
+| One numeric Sequence, no Identifier | Ordered series representation; elapsed-time interpretation unconfirmed. |
+| Unique timestamps on transaction rows, no entity definition | Time-indexed observations; event log versus single-entity series unresolved. |
+| Repeated identifiers, no Sequence | Repeated/grouped observations with no declared ordering. |
+| Every composite Identifier is unique despite a patient-ID component | Report singleton composite keys and warn about possible row-ID over-specification. |
+| Duplicate or missing entity–sequence keys | Qualified structural finding with explicit counts; no aggregation or removal. |
+| Several Sequence variables | Ambiguous ordering; no arbitrary selection. |
+| Short non-Latin Text values | Textual content present; language not assessed. |
+| Geometry with unknown CRS | Geometry present, CRS unresolved; no inferred global location or metric distance. |
+| Different active panel or chart limit | Same footer, structural counts, and exported data. |
+| Empty dataset | Declared metadata shown; no empirical structural assertion. |
+
+## Summary
+
+Name: `data_type`  
+Displayed name: Data structure overview  
+Mutable: No  
+Sklearn/pipeline contribution: None  
+First version: Role- and semantic-type-driven structural overview, descriptive diagnostics, bounded charts, and explicit uncertainty.  
+Deferred: Spatial autocorrelation, expected-schedule inference, missing-record estimation, event burstiness, hierarchical metadata, language/topic/sentiment models, geometry conversion, timeline truncation, automatic study-design inference, and new role definitions for events or observational units.

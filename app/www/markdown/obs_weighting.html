@@ -861,68 +861,115 @@ fill: var(--bs-primary) !important;
 </header>
 
 
-<h4 id="purpose">Purpose</h4>
-<p>Inspect every variable assigned the <strong>Weighting</strong> role and the effective weight obtained by multiplying them. Optionally change the shape of a component or the effective distribution, and configure importance-only or uniform Test weighting. The card has no flip side.</p>
-<h4 id="reading-the-front">Reading the front</h4>
-<p>Normal view shows only effective-weight bars and a horizontal effective-distribution chart. Full screen adds a top row of equally sized component bar charts when there are two or more Weighting variables. All components share that top row. The effective bar chart and distribution remain together below, sharing a Y scale with a narrow gap and a 70:30 width split. With a single Weighting variable, both views show the same two charts. Scroll vertically in full screen when more panels are needed.</p>
-<p>Observation bars have <strong>Observations</strong> on the horizontal axis and <strong>Weights</strong> on the vertical axis. Observation numbers are one-based positions in the current input, not unique identifiers. The display limit thins bars at evenly spaced positions without changing the data. The distribution has <strong>Counts</strong> on the horizontal axis and <strong>Weights</strong> on the vertical axis; it counts every observation, including zero weights.</p>
-<p>The footer reports:</p>
-<ul>
-<li>The number and proportion of observations with zero effective weight.</li>
-<li>Effective sample size, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo>∑</mo><mi>w</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mi>/</mi><mo>∑</mo><msup><mi>w</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(\sum w)^2/\sum w^2</annotation></semantics></math>, as a concentration diagnostic rather than a claim about independent observations.</li>
-<li>The largest observation’s fraction of total weight.</li>
-</ul>
-<p>More than 10% zero effective weights is flagged. Such weights remain visible here for investigation, but downstream statistical cards fall back to unweighted calculations and explain this in Settings. Exactly 10% is allowed. An all-zero distribution has effective sample size zero. Missing, negative, nonnumeric or infinite components produce an explanation instead of a misleading plot.</p>
-<h4 id="shape-buttons-and-component-selection">Shape buttons and component selection</h4>
-<p>The footer buttons apply immediately to downstream data:</p>
+<h4 id="purpose">🧭 Purpose</h4>
+<p><em>Inspect how observation weights distribute influence across the data. This card considers every variable assigned the <strong>Weighting</strong> role. It provides diagnostics, can reshape importance weights before target balancing, and saves a Test-weighting policy. Place it after role assignment and before Target Balance when adjusting weights.</em></p>
+<h4 id="goals">🎯 Goals</h4>
+<ol type="1">
+<li><strong>Primary:</strong> Identify concentrated or zero effective weights and their contributing components.</li>
+<li><strong>Secondary:</strong> Adjust importance weights deliberately while preserving each component’s training mean.</li>
+<li><strong>Tertiary:</strong> Specify whether Test evaluation uses importance weights or uniform weights.</li>
+</ol>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>An observation’s effective weight is the product of its assigned Weighting components. Names beginning with <code>balance__</code> identify balancing factors; other Weighting variables are importance components.</p>
 <table class="caption-top">
+<caption>Table 1 - Weight diagnostics</caption>
+<colgroup>
+<col style="width: 40%">
+<col style="width: 60%">
+</colgroup>
 <thead>
 <tr class="header">
-<th>Button</th>
-<th style="text-align: right;">Power</th>
-<th>Effect</th>
+<th style="text-align: left;">Term</th>
+<th style="text-align: left;">Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Square</td>
-<td style="text-align: right;">2</td>
-<td>Increase relative extremes.</td>
+<td style="text-align: left;"><strong>Zero-weight fraction</strong></td>
+<td style="text-align: left;">Proportion of observations whose effective weight is zero.</td>
 </tr>
 <tr class="even">
-<td>Original</td>
-<td style="text-align: right;">1</td>
-<td>Restore this card’s incoming component values.</td>
+<td style="text-align: left;"><strong>Effective sample size</strong></td>
+<td style="text-align: left;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mo>∑</mo><mi>w</mi><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup><mi>/</mi><mo>∑</mo><msup><mi>w</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(\sum w)^2/\sum w^2</annotation></semantics></math>, a measure of weight concentration, not a count of independent observations. All-zero weights give zero.</td>
 </tr>
 <tr class="odd">
-<td>Square root</td>
-<td style="text-align: right;">0.5</td>
-<td>Reduce relative extremes.</td>
-</tr>
-<tr class="even">
-<td>Cube root</td>
-<td style="text-align: right;">1/3</td>
-<td>Reduce relative extremes more strongly.</td>
+<td style="text-align: left;"><strong>Largest weight share</strong></td>
+<td style="text-align: left;">Largest observation weight divided by total effective weight.</td>
 </tr>
 </tbody>
 </table>
-<p>Choose <strong>Component to transform</strong> in settings. <strong>Effective (all components)</strong> applies the same power to each component, making the resulting product proportional to the original product raised to that power. Alternatively select one component to alter only that contribution. Component names and roles are preserved; <code>balance__</code> continues to identify balancing factors.</p>
-<p>For a selected component, the transformation is</p>
+<p>For a selected importance component, power <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math> gives</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>w</mi><mi>i</mi><mo>′</mo></msubsup><mo>=</mo><msubsup><mi>w</mi><mi>i</mi><mi>p</mi></msubsup><mfrac><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></munder><msub><mi>w</mi><mi>j</mi></msub></mrow><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></munder><msubsup><mi>w</mi><mi>j</mi><mi>p</mi></msubsup></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">w&#39;_i = w_i^p\frac{\sum_{j\in\mathrm{Train}}w_j}{\sum_{j\in\mathrm{Train}}w_j^p}.</annotation></semantics></math></p>
-<p>The implementation rescales the calculation for numerical stability. Each component retains its training mean; the <strong>total effective product need not be preserved</strong> when several components are changed. All-zero components remain zero. Positive powers preserve zeros: these buttons cannot repair a large zero-weight fraction.</p>
-<p>This is a nonnegative power transformation, not ordinary Box–Cox. <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.boxcox.html">The Box–Cox formula</a> subtracts one and divides by the power (or takes a logarithm), so it can produce negative weights and has restrictions at zero. Here powers are deliberately positive and the output stays nonnegative.</p>
-<h4 id="what-is-a-good-distribution">What is a good distribution?</h4>
-<p>There is no universally desirable shape and no requirement for normally distributed weights. Uniform weights maximize the concentration-based effective sample size for a fixed row count, but may discard intended importance or balancing information. A distribution dominated by a few observations, a small effective sample size, or many zeros warrants investigation; none alone establishes that the weighting is wrong.</p>
-<p>First check which component causes the concentration and why it exists. Transform a particular component when that contribution is the concern. Transform the effective distribution when the combined importance is intentionally being moderated. Changing balancing factors can undo equal class-weight totals; changing importance weights changes the learning and scoring objective. Compare downstream performance using the intended evaluation policy rather than choosing the smoothest-looking histogram.</p>
-<h4 id="training-test-and-persistence">Training, Test and persistence</h4>
-<p>The chart is an <strong>all-data Training preview</strong>. A saved, unfitted pipeline step learns each normalization constant afresh from its training fold. Future transformations reuse those constants and never normalize on Test data. Missing training-only <code>balance__</code> columns are skipped during inference; required selected importance columns must still exist.</p>
-<p><strong>Test weighting</strong> is saved in the pipeline:</p>
+<p>Each component retains its training mean. All-zero components remain zero. Applying the same power to all components makes their product proportional to the original product raised to that power, but need not preserve its total. This is a nonnegative power transformation, not ordinary Box–Cox.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>Normal view pairs blue effective-weight bars with an orange horizontal distribution chart. The bars show <strong>Observations</strong> against <strong>Weights</strong>; observation numbers are one-based input positions, not identifiers. Hover reports the observation and weight. The distribution shows <strong>Counts</strong> against <strong>Weights</strong>, with hover reporting interval bounds and counts. Both charts share the weight scale.</p>
+<p>Full screen adds individual component charts when there are multiple Weighting variables. With one variable, both views show the same two charts. The bar display can be thinned to evenly spaced observations; the distribution and footer diagnostics always use all observations.</p>
+<p>The footer reports zero weights, effective sample size, and largest weight share. More than 10% zero weights triggers a warning: downstream weighted consumers fall back to unweighted calculations. Exactly 10% is allowed. Missing, negative, nonnumeric, or infinite components produce an explanation instead of a plot. No assigned weightings or no observations also produces an explanatory message.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>There is no flip side. The front combines distributions and summary diagnostics; full screen provides the component detail.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p>The <strong>Weight shape</strong> buttons appear only when at least one importance weighting is assigned and <strong>no assigned weighting has a <code>balance__</code> prefix</strong>. They are hidden for no weightings, balancing-only weightings, or mixed importance and balancing weightings.</p>
+<table class="caption-top">
+<caption>Table 2 - Shape actions</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Button</th>
+<th style="text-align: right;">Power</th>
+<th style="text-align: left;">Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Square</strong></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">Increase relative extremes.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Original</strong></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">Restore this card’s incoming weights.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Square root</strong></td>
+<td style="text-align: right;">0.5</td>
+<td style="text-align: left;">Reduce relative extremes.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Cube root</strong></td>
+<td style="text-align: right;">1/3</td>
+<td style="text-align: left;">Reduce relative extremes more strongly.</td>
+</tr>
+</tbody>
+</table>
+<p>Actions change downstream data immediately; there is no Commit button. <strong>Component to transform</strong> selects one importance component or <strong>All importance components</strong>. <strong>Original</strong> reverses this card’s transformation while retaining its Test policy and pipeline entry.</p>
+<p>When balancing weights are present, every incoming weight stays unchanged. Saved power selections are ignored while transformation is unavailable and may resume if the input becomes importance-only again. Power, component, and policy selections are bookmarkable.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<p>The card’s Tour Guide gives a concise description of each setting.</p>
+<h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
+<p>There is no ideal distribution or requirement for normally distributed weights. Concentration, low effective sample size, and many zeros warrant investigation; they do not establish that weights are wrong. Reshaping importance weights changes the learning objective and may alter the meaning of sampling or other precisely defined corrections.</p>
+<p><strong>Transform importance weights first, then calculate target balancing weights.</strong> Changing either balancing factors or their accompanying importance weights can undo the intended class balance, even when component means are preserved. The restriction on shape buttons enforces this ordering. After balancing, use this card to inspect the combined weights.</p>
+<h4 id="limitations">⛔️ Limitations</h4>
 <ul>
-<li><strong>Importance only</strong> multiplies Weighting components whose names do not start with <code>balance__</code>.</li>
-<li><strong>Uniform (no weights)</strong> ignores every component.</li>
+<li>Positive powers preserve zeros and cannot repair a large zero-weight fraction.</li>
+<li>The charts are an all-data preview. <strong>Preview Test weighting</strong> illustrates a policy on current observations; it does not create held-out data.</li>
+<li>Concentration diagnostics do not account for dependence between observations.</li>
+<li>The evaluator must explicitly apply the saved weighting policy; saving it does not automatically make a model or scoring method consume weights.</li>
 </ul>
-<p>The latest observation-weighting step supplies the default policy when <code>Card.effective_weights(data, purpose=&quot;test&quot;)</code> is called on its downstream proxy data. An explicit <code>test_policy</code> argument overrides it. A fitted step also exposes <code>evaluation_weights(transformed_frame)</code> for already-transformed Test rows. The evaluator must request and pass these weights to its scoring method; storing a policy does not automatically route <code>sample_weight</code> into an arbitrary estimator.</p>
-<p><strong>Preview Test weighting</strong> illustrates the policy on the current observations. It does not create a holdout or refit on Test observations. Display limits, bins, and the Test-preview switch do not affect exported data. Power, component, and policy selections are bookmarkable. Original resets this card’s transformation while keeping its Test-policy setting.</p>
+<h4 id="suggested-workflow">📌 Suggested workflow</h4>
+<ol type="1">
+<li>Assign Weighting roles and check what each component represents.</li>
+<li>Inspect effective weights, warnings, and full-screen component charts.</li>
+<li>If justified, adjust importance weights before adding balancing factors.</li>
+<li>Apply target balancing downstream and inspect the resulting combined weights.</li>
+<li>Compare performance on untouched validation data using the intended Test policy.</li>
+</ol>
+<h4 id="data-flow">🔗 Data flow</h4>
+<ul>
+<li><strong>Input:</strong> Current data, Weighting roles, and the existing pipeline.</li>
+<li><strong>Output:</strong> A preview and an unfitted pipeline step. Normalization is learned within each training fold and reused on Test rows; selected importance columns must remain available. Rows, columns, roles, and the original clean frame are preserved. No weightings means unchanged pass-through with no added step.</li>
+<li><strong>Evaluation:</strong> <strong>Test weighting</strong> saves <strong>Importance only</strong>, excluding <code>balance__</code> components, or <strong>Uniform (no weights)</strong>. With balancing weights present, the step saves this policy without transforming components. Display settings do not change exported data.</li>
+<li><strong>Data journey:</strong> Assigned weightings add a Learning entry, “Configure observation weighting,” including when <strong>Original</strong> is selected or balancing weights prevent transformation. No assigned weightings add no entry.</li>
+</ul>
 
 
 
