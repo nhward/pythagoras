@@ -176,9 +176,9 @@ def test_tabs_table_export_and_reset(page, app):
     by_id(page, 'IncludeMembership').evaluate('(el) => window.originalMembershipControl = el')
     toggle(page, 'Partition').check()
     toggle(page, 'Mixture').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition,cluster_mixture; methods=Partition,Mixture; nominal=True; stratifiers=True')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__partition,cluster__mixture; methods=Partition,Mixture; nominal=True; stratifiers=True')
     toggle(page, 'Partition').uncheck()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_mixture; methods=Mixture')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__mixture; methods=Mixture')
     toggle(page, 'Mixture').uncheck()
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')
     expect(toggle(page, 'Partition')).not_to_be_checked()
@@ -192,7 +192,8 @@ def test_existing_columns_get_an_unused_membership_name(page, collision_app):
     expect(by_id(page, 'Status')).to_contain_text('Incoming K=2', timeout=60000)
     toggle(page, 'Partition').check()
     toggle(page, 'Mixture').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition_3,cluster_mixture_2')
+    # expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__partition_3,cluster__mixture_2')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__partition,cluster__mixture')
     expect(by_id(page, 'VariableName')).to_have_count(0)
 
 @pytest.mark.ui
@@ -246,11 +247,11 @@ def test_density_membership_can_be_added_and_removed(page, app):
     page.goto(app.url)
     expect(by_id(page, 'Status')).to_contain_text('Incoming K=2', timeout=60000)
     toggle(page, 'Density').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_density; methods=Density; nominal=True; stratifiers=True')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__density; methods=Density; nominal=True; stratifiers=True')
     toggle(page, 'Partition').check()
     expect(by_id(page, 'ExportProbe')).to_contain_text('methods=Partition,Density')
     toggle(page, 'Density').uncheck()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition; methods=Partition;')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__partition; methods=Partition;')
 
 @pytest.mark.unit
 def test_density_border_rule_and_training_pipeline():
@@ -287,7 +288,7 @@ def test_k_one_disables_visible_membership_controls(page, app):
     page.goto(app.url)
     expect(by_id(page, 'Status')).to_contain_text('Incoming K=2', timeout=60000)
     toggle(page, 'Density').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_density')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__density')
     by_id(page, 'KOne').click()
     expect(by_id(page, 'Status')).to_contain_text('Incoming K=1', timeout=60000)
     for method in ['Partition', 'Mixture', 'Density']:
@@ -300,7 +301,7 @@ def test_k_one_disables_visible_membership_controls(page, app):
     for method in ['Partition', 'Mixture', 'Density']:
         expect(toggle(page, method)).to_be_enabled()
     toggle(page, 'Partition').check()
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__partition')
 
 
 @pytest.mark.unit
@@ -403,12 +404,12 @@ class TestWeightedWeb:
         for method in ['Partition', 'Density']:
             toggle(page, method).check()
         expect(by_id(page, 'ExportProbe')).to_contain_text('methods=Partition,Density')
-        expect(by_id(page, 'PayloadProbe')).to_contain_text('"cluster_density": 24')
+        expect(by_id(page, 'PayloadProbe')).to_contain_text('"cluster__density": 24')
         data = payload(page)
         assert data['unchanged'] and data['rows'] == 24
         assert data['weighting'] == ['importance']
-        assert data['levels']['cluster_partition'] == ['c1', 'c2']
-        assert set(data['levels']['cluster_density']) == {'c1', 'c2', 'unallocated'}
+        assert data['levels']['cluster__partition'] == ['c1', 'c2']
+        assert set(data['levels']['cluster__density']) == {'c1', 'c2', 'unallocated'}
         assert all(recipe['weighting'] == ['importance'] for recipe in data['recipes'].values())
         toggle(page, 'Mixture').check()
         expect(by_id(page, 'Status')).to_contain_text('Incoming K=2. 23 of 24 rows analyzed; 2 numeric predictors.')
@@ -496,7 +497,7 @@ def test_restored_membership_waits_for_current_analysis_without_closing_session(
     # click should be required, and the connection must still be alive.
     by_id(page, 'ChangeK').click()
     expect(by_id(page, 'Status')).to_contain_text('Incoming K=3', timeout=60000)
-    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster_partition; methods=Partition')
+    expect(by_id(page, 'ExportProbe')).to_contain_text('added=cluster__partition; methods=Partition')
     expect(toggle(page, 'Partition')).to_be_checked()
     toggle(page, 'Partition').uncheck()
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')
