@@ -401,3 +401,16 @@ def test_disabling_weights_uses_counts_and_saves_setting():
     expected, _ = sampler().fit_resample(source.frame)
     pd.testing.assert_frame_equal(actual, expected)
     assert fitted.evaluation_weights(source.frame) is None
+
+
+unmounted_app = create_app_fixture(app='../scenarios/targ_balance_unmounted.py', scope='function')
+
+
+@pytest.mark.ui
+def test_numeric_target_passes_through_without_mounted_controls(page, unmounted_app):
+    page.goto(unmounted_app.url)
+    probe = page.locator('[id$="-ExportProbe"]')
+    expect(page.locator('[id$="-Mode"]')).to_have_count(0)
+    expect(probe).to_have_text('identity=True;rows=3;steps=0', timeout=30000)
+    page.get_by_role('button', name='Change source', exact=True).click()
+    expect(probe).to_have_text('identity=True;rows=2;steps=0', timeout=30000)

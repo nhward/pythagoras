@@ -17,6 +17,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from cleaning_record import CleaningRecord
+from evaluation_plan import EvaluationPlan
 from processing_record import ProcessingRecord
 from roles import Role, RoleMap
 from sklearn.base import BaseEstimator, clone
@@ -49,6 +50,7 @@ class proxy_data:
     _processing_records: tuple[ProcessingRecord, ...] = field(default_factory=tuple)
 
     _cluster_count: int | None = 1
+    _evaluation_plan: EvaluationPlan | None = None
 
     # ----------------- post-init: default roles -------------------------
 
@@ -107,6 +109,12 @@ class proxy_data:
             for col in self._df.columns:
                 rm.set_roles(col, [Role.PREDICTOR])
             self._roles = rm
+
+        if self._evaluation_plan is not None:
+            if not isinstance(self._evaluation_plan, EvaluationPlan):
+                raise TypeError("evaluation_plan must be an EvaluationPlan or None")
+            if not self._evaluation_plan.compatible(self):
+                self._evaluation_plan = self._evaluation_plan.invalidate()
 
     # ----------------- construction & inspection ------------------------
 
@@ -183,6 +191,8 @@ class proxy_data:
             )
         self._df = value
         self._clean_df = value.copy()
+        if self._evaluation_plan is not None:
+            self._evaluation_plan = self._evaluation_plan.invalidate()
 
     @property
     def name(self) -> str:
@@ -209,6 +219,80 @@ class proxy_data:
         value = self._validate_cluster_count(value)
         result = self.clone()
         result._cluster_count = value
+        return result
+
+    @property
+    def evaluation_plan(self) -> EvaluationPlan | None:
+        """Current plan, with stale-source protection even after legacy mutation."""
+        plan = self._evaluation_plan
+        if plan is not None and not plan.compatible(self):
+            return plan.invalidate()
+        return plan
+
+    def with_evaluation_plan(self, plan: EvaluationPlan, *, card: str) -> proxy_data:
+        if not isinstance(plan, EvaluationPlan):
+            raise TypeError("plan must be an EvaluationPlan")
+        result = self.clone()
+        result._evaluation_plan = plan if plan.compatible(result) else plan.invalidate()
+        record = ProcessingRecord(
+            stage="Learning", card=card, operation="Define evaluation resampling",
+            attempted=True, parameters=plan.recipe, input_shape=self.shape,
+            output_shape=self.shape, method=plan.recipe.get("strategy", ""),
+        )
+        result._processing_records = (*self.processing_records, record)
+        return result
+
+    def evaluation_splits(self, *, development_only=False):
+        """Source positions by default; optionally positions in development-only data."""
+        plan = self.evaluation_plan
+        if plan is None:
+            raise ValueError("Select a valid evaluation plan before training.")
+        yield from plan.splits(self, development_only=development_only)
+
+    def training_partitions(self):
+        """Yield fresh pipelines and raw source subsets, never fitted previews.
+
+        Each tuple is (pipeline, training_frame, validation_frame). A consumer
+        appends its estimator and supplies the selected Target as y. The full
+        role-bearing frame is needed by Pythagoras transformation/sampler steps.
+        """
+        plan = self.evaluation_plan
+        if plan is None:
+            raise ValueError("Select a valid evaluation plan before training.")
+        plan.require(self, supervised=True)
+        for train, validation in plan.splits(self):
+            pipeline = self.pipeline_for_training() if self.has_pipeline else Pipeline([])
+            yield pipeline, self.clean_frame.iloc[train].copy(), self.clean_frame.iloc[validation].copy()
+
+    def final_training_partition(self, *, purpose=None):
+        """Return a fresh pipeline, development rows and reserved rows after selection.
+
+        Refitting includes explicit validation rows after model selection.
+        Select purpose when both holdout and prediction subsets are present.
+        Call with_holdout_used after scoring a final holdout; prediction sets
+        have no local score. This method never fits a preview or a model.
+        """
+        plan = self.evaluation_plan
+        if plan is None:
+            raise ValueError("Select a valid evaluation plan before training.")
+        plan.require(self, supervised=True)
+        available = {key: getattr(plan, key) for key in ("holdout", "prediction") if getattr(plan, key)}
+        if purpose is None and len(available) == 1:
+            purpose = next(iter(available))
+        if purpose not in available:
+            raise ValueError("Select an available final subset: purpose='holdout' or purpose='prediction'.")
+        return (self.pipeline_for_training() if self.has_pipeline else Pipeline([]),
+                self.clean_frame.iloc[list(plan.refit_positions)].copy(),
+                self.clean_frame.iloc[list(available[purpose])].copy())
+
+    def with_holdout_used(self) -> proxy_data:
+        from dataclasses import replace
+        plan = self.evaluation_plan
+        if plan is None or not plan.holdout:
+            raise ValueError("There is no final holdout to mark as used.")
+        plan.require(self, supervised=True)
+        result = self.clone()
+        result._evaluation_plan = replace(plan, holdout_used=True)
         return result
 
     @property
@@ -375,6 +459,7 @@ class proxy_data:
             _roles=roles,
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _pipeline=pipeline_type(steps),
             _clean_df=self.clean_frame.copy(),
@@ -405,6 +490,7 @@ class proxy_data:
             _roles=self._copy_roles(),
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -465,6 +551,7 @@ class proxy_data:
             _roles=roles,
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=(*self.cleaning_records, record),
             _clean_df=frame.copy(),
             _processing_records=(*self.processing_records, processing),
@@ -490,6 +577,7 @@ class proxy_data:
             _roles=new_rm,
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -561,6 +649,7 @@ class proxy_data:
             _roles=new_rm,
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -619,6 +708,7 @@ class proxy_data:
             _roles=self._copy_roles(),
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -634,6 +724,7 @@ class proxy_data:
             _roles=role_map,
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -654,6 +745,7 @@ class proxy_data:
             _roles=roles_copy,
             _name=self.name,
             _cluster_count=self.cluster_count,
+            _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -738,14 +830,14 @@ class proxy_data:
                     errors.append("Identifier/Sequence combination must be unique")
 
             # Partition
-            # Singular, cardinality=2 (None missing)
+            # Singular, at least two levels (None missing)
             par_cols = sorted(role_map.columns_with_role(Role.PARTITION))
             if len(par_cols) > 1:
                 errors.append("Partition role must be singular")
             elif len(par_cols) == 1:
                 value = data[par_cols[0]]
-                if value.nunique(dropna=False) != 2:
-                    errors.append("Partition role must have cardinality 2")
+                if value.nunique(dropna=True) < 2:
+                    errors.append("Partition role must have at least two levels")
                 if value.isna().values.any():
                     errors.append("Partition role has missing values")
 
@@ -800,12 +892,10 @@ class proxy_data:
                     errors.append("Sensitive role has missing values")
 
             # Stratifier
-            # Singular, categorical, low cardinality (none missing)
+            # Each variable: categorical, low cardinality (none missing)
             str_cols = sorted(role_map.columns_with_role(Role.STRATIFIER))
-            if len(str_cols) > 1:
-                errors.append("Stratifier role must be singular")
-            elif len(str_cols) == 1:
-                value = data[str_cols[0]]
+            for column in str_cols:
+                value = data[column]
                 if value.nunique(dropna=False) > low_cardinality:
                     errors.append("Stratifier role must have low cardinality")
                 if value.isna().values.any():
@@ -829,7 +919,7 @@ class proxy_data:
     def __len__(self) -> int:
         return len(self._df)
     
-    def equals(self, other: object, *, check_name: bool = True, check_roles: bool = True, check_crs: bool = True, check_geometry_column: bool = True, check_cleaning_records: bool = True, check_pipeline: bool = True, check_processing_records: bool | None = None, check_cluster_count: bool = True) -> bool:
+    def equals(self, other: object, *, check_name: bool = True, check_roles: bool = True, check_crs: bool = True, check_geometry_column: bool = True, check_cleaning_records: bool = True, check_pipeline: bool = True, check_processing_records: bool | None = None, check_cluster_count: bool = True, check_evaluation_plan: bool = True) -> bool:
         """
         Compare two proxy_data instances for equality.
         By default this checks:
@@ -840,6 +930,8 @@ class proxy_data:
         - same GeoDataFrame CRS and active geometry column, where relevant
         """
         if not isinstance(other, proxy_data):
+            return False
+        if check_evaluation_plan and self.evaluation_plan != other.evaluation_plan:
             return False
         if check_cluster_count and self.cluster_count != other.cluster_count:
             return False

@@ -347,7 +347,7 @@ def instance(
                     return
                 pending_purge = (data_name, directory, candidates)
                 ui.modal_show(ui.modal(
-                    f"Delete {len(candidates)} bookmarks of '{data_name}'?",
+                    f"Delete {len(candidates)} old bookmarks of '{data_name}'?",
                     footer=ui.TagList(
                         ui.input_action_button(id="ConfirmPurge", label="Okay", class_="btn-danger"),
                         ui.input_action_button(id="CancelPurge", label="Cancel"),

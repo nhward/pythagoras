@@ -332,23 +332,31 @@ def instance():
 
         @this.reactable()
         def Start():
-            source, options = Incoming(), Options()
             Calculate.cancel()
+            source = Incoming()
+            if Eligibility()[1]:
+                return
+            options = Options()
             Calculate.invoke(source, options)
 
         @this.reactable(calc=True)
         def Results():
+            current = Incoming()
+            reason = Eligibility()[1]
+            if reason:
+                return BalanceResult(current, pd.DataFrame(), None, None, reason)
             try:
                 source, options, result = Calculate.result()
             except SilentOperationInProgressException:
                 req(False)
-            current = Incoming()
             req((source is current or source.equals(current)) and options == Options() == RawOptions())
             return result
 
         @this.reactable(calc=True)
         def Export():
-            if input.Mode() in (None, "none") or Eligibility()[1]:
+            # Mode does not exist until its dynamic footer has rendered.
+            # Ineligible sources must pass through without reading that input.
+            if Eligibility()[1] or input.Mode() in (None, "none"):
                 return Incoming()
             # Block downstream while a new option is settling, not just while
             # the extended task runs; never export a previous mode's preview.

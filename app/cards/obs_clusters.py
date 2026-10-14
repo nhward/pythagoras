@@ -529,7 +529,7 @@ def instance():
                         continue
                     model = deepcopy(result.transformers[method])
                     used = [*source.columns, *(t.output_column for t in plans.values())]
-                    model.set_params(output_column=_membership_name(used, f"cluster_{method.lower()}"))
+                    model.set_params(output_column=_membership_name(used, f"cluster__{method.lower()}"))
                     plans[method] = model
                 if set(plans) == (set(saved[1]) if saved else set()):
                     # A rejected addition must not rebuild the unchanged control:
