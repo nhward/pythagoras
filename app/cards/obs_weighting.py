@@ -233,7 +233,8 @@ def instance():
             req(source is not None)
             return source
 
-        @output
+        # Downstream data needs these inputs even in an unopened upstream section.
+        @output(suspend_when_hidden=False)
         @render.ui
         def Powers():
             if not _can_transform(Incoming()):

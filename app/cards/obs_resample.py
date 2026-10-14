@@ -300,7 +300,8 @@ def instance():
             mapping_variable = Partition()[0]
             mapping_cache = values.copy()
 
-        @output
+        # Downstream data needs these inputs even in an unopened upstream section.
+        @output(suspend_when_hidden=False)
         @render.ui
         def PartitionMapping():
             column, levels = Partition()
@@ -323,7 +324,8 @@ def instance():
                               ui.tags.tbody(*rows), class_="table table-sm"),
                 ui.tags.small("Validation rows define the split. Otherwise the footer goal splits development data. Holdout and prediction rows remain outside tuning."))
 
-        @output
+        # Downstream data needs these inputs even in an unopened upstream section.
+        @output(suspend_when_hidden=False)
         @render.ui
         def GoalControl():
             with reactive.isolate():
@@ -365,7 +367,7 @@ def instance():
             return options
 
         @this.reactable(calc=True)
-        @this.settle(seconds=2)
+        @this.settle(seconds=2, bypass_during_tests=False)
         def Options():
             return CurrentOptions()
 
@@ -393,31 +395,33 @@ def instance():
 
         @this.reactable(calc=True)
         def Results():
-            req(CurrentOptions()["goal"] != "none")
+            req(Options()["goal"] != "none")
             try:
                 source, options, result = Calculate.result()
             except SilentOperationInProgressException:
                 req(False)
-            req(options == CurrentOptions() and source.equals(Incoming()))
+            req(options == Options() and source.equals(Incoming()))
             return result
 
         @this.reactable(calc=True)
         @this.record_context
         def Export():
             source = Incoming()
-            if CurrentOptions()["goal"] == "none":
+            if Options()["goal"] == "none":
                 return source
             return source.with_evaluation_plan(Results()[0], card=this.name)
 
         def state():
-            return None if CurrentOptions()["goal"] == "none" else Results()[0].bookmark()
+            if Options()["goal"] == "none":
+                return None
+            return Results()[0].bookmark()
         this.register_configuration_state_provider("evaluation_plan", state)
         this.register_configuration_state_provider("partition_mapping", lambda: {"variable": Partition()[0], "levels": Mapping()})
 
         @output
         @render.ui
         def Summary():
-            if CurrentOptions()["goal"] == "none":
+            if Options()["goal"] == "none":
                 return ui.div("Choose a prediction goal", class_="text-primary text-center small")
             try:
                 plan = Results()[0]
@@ -435,7 +439,7 @@ def instance():
         @output
         @render.ui
         def Status():
-            if CurrentOptions()["goal"] == "none":
+            if Options()["goal"] == "none":
                 return ui.span("Incoming evaluation metadata passes through unchanged.", class_="text-secondary")
             try:
                 plan = Results()[0]

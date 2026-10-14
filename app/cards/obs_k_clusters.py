@@ -744,7 +744,8 @@ def instance():
             return value
 
 
-        @output
+        # Downstream data needs these inputs even in an unopened upstream section.
+        @output(suspend_when_hidden=False)
         @render.ui
         @this.record_context
         def KControl():

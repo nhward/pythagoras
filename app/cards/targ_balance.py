@@ -291,7 +291,8 @@ def instance():
         def Eligibility():
             return _eligibility(Incoming())
 
-        @output
+        # Downstream data needs these inputs even in an unopened upstream section.
+        @output(suspend_when_hidden=False)
         @render.ui
         def Modes():
             _, reason = Eligibility()

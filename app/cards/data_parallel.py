@@ -34,6 +34,8 @@ MAX_CATEGORICAL_LEVELS = 15
 DEFAULT_AXES = 8
 SAMPLE_SEED = 1729
 
+#TODO: Maybe make flip-side show the allocations tabulated (as per the current download). The current table seems rather pointless.
+#TODO: Drop the download button.
 
 @recordable
 @dataclass(frozen=True)

@@ -1511,3 +1511,54 @@ def test_legacy_bookmark_inherits_restore_section_default(app_module, sample_con
     assert restored["active_section"] == "Missing values"
     assert restored["settings"]["restore_last_active_section"] is True
     assert "restore_last_active_section" not in saved["settings"]
+
+
+@pytest.mark.ui
+@pytest.mark.parametrize("style", ["tab", "accordion"])
+def test_hidden_learning_controls_feed_data_journey(page, workflow_restore_app, tmp_path, style):
+    shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+    BOOKMARK_RESTORE_DIR.mkdir(parents=True)
+    data = tmp_path / "clusters.csv"
+    data.write_text("x,y\n" + "\n".join(f"{i},{i % 3}" for i in [*range(12), *range(30, 42)]))
+    candidate = json.loads(CONFIG_FILE.read_text())
+    candidate["settings"].update(section_style=style, show_start=True, restore_last_active_section=True)
+    candidate["active_section"] = "Journey"
+    candidate["layout"] = [
+        {"section": "Source", "cards": [{"module": "data_import", "state": {
+            "last_committed_tab": "File based",
+            "inputs": {"LocalFilePath": str(data), "FName": "clusters", "Separator": ","},
+        }}]},
+        {"section": "Count", "cards": [{"module": "obs_k_clusters", "state": {"inputs": {"K": "2", "Maximum": 3}}}]},
+        {"section": "Clusters", "cards": [{"module": "obs_clusters", "state": {
+            "inputs": {"IncludeMembership": ["Partition"], "Projection": "pca", "Neighbours": 3},
+        }}]},
+        {"section": "Evaluation", "cards": [{"module": "obs_resample", "state": {
+            "inputs": {"Goal": "observations", "Folds": 2},
+        }}]},
+        {"section": "Journey", "cards": [{"module": "data_provenance"}]},
+        {"section": "Later", "cards": [{"module": "sys_configuration"}]},
+    ]
+    bookmark = BOOKMARK_RESTORE_DIR / "clusters--20261014T090000+1300.pythagoras.json"
+    bookmark.write_text(json.dumps(candidate))
+    try:
+        page.goto(workflow_restore_app.url)
+        wait_for_shiny_ready(page)
+        journey = page.locator('#data_provenance-Card')
+        expect(journey).to_be_visible(timeout=30000)
+        expect(page.locator('#obs_clusters-Card')).to_be_hidden()
+        expect(page.locator('#data_provenance-Status')).to_contain_text('2 learning steps', timeout=60000)
+        expect(page.locator('#data_provenance-JourneyChart .js-plotly-plot')).to_be_visible()
+        expect(page.locator('#sys_configuration-Card')).to_have_count(0)
+        journey.hover()
+        journey.locator('button.flip-btn').click()
+        table = page.locator('#data_provenance-JourneyTable')
+        expect(table).to_contain_text('Add cluster membership', timeout=30000)
+        expect(table).to_contain_text('Define evaluation resampling')
+        before = table.inner_text()
+        page.get_by_role('tab' if style == 'tab' else 'button', name='Clusters', exact=True).click()
+        expect(page.locator('#obs_clusters-Card')).to_be_visible()
+        page.get_by_role('tab' if style == 'tab' else 'button', name='Journey', exact=True).click()
+        expect(table).to_have_text(before, use_inner_text=True)
+        expect(page.locator('#sys_configuration-Card')).to_have_count(0)
+    finally:
+        shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)

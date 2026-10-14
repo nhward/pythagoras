@@ -456,7 +456,8 @@ def instance():
                 saved = committed.get()
                 OutputData.set(_export_memberships(source, saved[1]) if saved is not None else source)
 
-        @output
+        # Downstream data needs these inputs even in an unopened upstream section.
+        @output(suspend_when_hidden=False)
         @render.ui
         @this.record_context
         def MembershipControl():
