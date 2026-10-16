@@ -10,15 +10,20 @@ path = Path(__file__).resolve().parents[1] / "app"
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
-from app import CardNode, required_sections, wire_card_nodes
+from app import CardNode, required_sections, update_card_activity, wire_card_nodes
 
 
 class FakeCard:
     def __init__(self):
         self.resume_count = 0
+        self.active = False
 
     def resume(self):
         self.resume_count += 1
+        self.active = True
+
+    def suspend(self):
+        self.active = False
 
 
 def make_node(output):
@@ -101,9 +106,19 @@ def test_required_sections_preserves_workflow_prefix(current, expected):
 
 
 @pytest.mark.unit
-def test_wiring_resumes_every_upstream_card_without_evaluating_outputs():
+def test_section_activity_tracks_navigation_without_evaluating_outputs():
     def unread_output():
         raise AssertionError("Wiring must remain lazy")
     nodes = {name: make_node(unread_output) for name in ("source", "transform", "result")}
-    wire_card_nodes(tuple(nodes), nodes)
-    assert all(node.card.resume_count == 1 for node in nodes.values())
+    for name, node in nodes.items():
+        node.card.section = name
+    order = ("source", "empty", "transform", "result")
+    for current, expected in (
+        ("result", [True, True, True]),
+        ("transform", [True, True, False]),
+        ("source", [True, False, False]),
+        ("result", [True, True, True]),
+    ):
+        update_card_activity(order, current, nodes)
+        wire_card_nodes(tuple(nodes), nodes)
+        assert [node.card.active for node in nodes.values()] == expected

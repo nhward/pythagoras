@@ -5,9 +5,32 @@ author: ""
 backgroundcolor: rgba(212, 241, 244, 0.76)
 ---
 
-<div id="welcome-page" style="position: relative; display: flow-root; overflow: hidden; margin-left: 10%; margin-right: 10%; background-color: {{< meta backgroundcolor >}};">
+```{=html}
+<style>
+#welcome-page .welcome-portrait {
+  float: right;
+  width: 40%;
+  max-width: 22rem;
+  height: auto;
+  margin: 0 0 1rem 1.5rem;
+  opacity: 0.65;
+  mix-blend-mode: multiply;
+}
+@media (max-width: 600px) {
+  #welcome-page .welcome-portrait {
+    float: none;
+    display: block;
+    width: 70%;
+    max-width: 18rem;
+    margin: 0 auto 1.5rem;
+  }
+}
+</style>
+```
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Pythagoras_knapp.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Portrait of Pythagoras by JA Knapp" style="position: absolute; top: 0; right: 0; height: 100%; width: auto; max-width: none; opacity: 0.65; mix-blend-mode: multiply; pointer-events: none;">
+<div id="welcome-page" style="display: flow-root; margin-left: 10%; margin-right: 10%; background-color: {{< meta backgroundcolor >}};">
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Pythagoras_knapp.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Portrait of Pythagoras by JA Knapp" class="welcome-portrait">
 
 # Welcome to Pythagoras
 
@@ -51,9 +74,9 @@ Pythagoras is a sequence of "cards" each of which deals with some aspect of data
 
 #### Everything runs within your browser - there is no installation. There are three running styles:
 
-   1. Running locally under shinylive.
-   1. Running a client browser remotely from a shiny server.
-   1. Running the code locally as both server and client.
+   1. Running a client browser that points to a remote server hosting a static shinylive version of Pythagoras - all processing is local.
+   1. Running a client browser that points to a remote server hosting Pythagoras - all processing is remote.
+   1. Running the code locally as both server and client - all processing is local.
 
 > _Pythagoras is the scaffold that holds the cards together._
 

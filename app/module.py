@@ -65,7 +65,7 @@ import shinywidgets as _sw
 from code_recording import recordable, recording_context, source_for
 from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
-from session_task import SessionExtendedTask
+from session_task import SessionExtendedTask, task_restart_context
 from shiny import App, reactive, req, ui
 from shiny import ui as _ui
 from shiny.types import SilentException
@@ -304,6 +304,7 @@ class Module(ABC):
         self.log.setLevel(Module.min_log_level)
         # instance registries
         self.reactables = [] # An instance-level list of all reactable reactives
+        self.extended_tasks = []
         # Code recording
         self.code_registry = {} # An instance-level Code-Registry
         # Generic bookmark state. Special cards may disable this and provide
@@ -748,6 +749,7 @@ class Module(ABC):
                     elapsed,
                 )
 
+        self.extended_tasks.append(wrapped)
         return wrapped
 
     def _make_wrapper(self, func, kind = "input"):
@@ -854,86 +856,88 @@ class Module(ABC):
         default=_UNSET,
         calc: bool = False,
     ):
-        # Universal reactable decorator
-        #   reactable decorator to replace @reactive.calc, @reactive.event, @reactive.effect, @reactive.calc
-        #   Suspends all registered reactable reactives.
-        #   Auto-detects the nature of the wrapped function and applies the appropriate reactive decorators (use calc=True for @reactive.calc)
-        #   Can be suspended/resumed with self.suspend() & self.resume()
-        #   It handles async functions
-        # Args:
-        #   triggers: Optional reactive inputs (for event observers).
-        #   suspended: Start suspended (default True).
-        #   default: Value returned if a suspended calc is called. When omitted,
-        #            a suspended calc stops its consumers with req(False).
-        #   calc: Whether the function is a "reactive.calc"
+        """Pause effects and gate reads without invalidating cached calculations."""
         def decorator(func):
-            enabled = reactive.Value(not suspended)
-            is_calc = calc
+            active = not suspended
             is_async = asyncio.iscoroutinefunction(func)
-            if is_calc:
-                # Handle calc: async or sync
+            wake = reactive.Value(0)
+
+            def resume_reads():
+                nonlocal active
+                if not active:
+                    active = True
+                    with reactive.isolate():
+                        wake.set(wake.get() + 1)
+
+            def suspend_reads():
+                nonlocal active
+                active = False
+
+            if calc:
+                cached = reactive.calc(func)
+
+                def ready():
+                    if active:
+                        return True
+                    # Only blocked readers depend on resumption. Normal readers
+                    # depend on the cached calculation's actual inputs.
+                    wake.get()
+                    if default is _UNSET:
+                        req(False)
+                    return False
+
                 if is_async:
-                    @reactive.calc
                     @functools.wraps(func)
                     async def wrapped():
-                        if not enabled():
-                            if default is _UNSET:
-                                req(False)
-                            return default
-                        return await func()
+                        return await cached() if ready() else default
                 else:
-                    @reactive.calc
                     @functools.wraps(func)
                     def wrapped():
-                        if not enabled():
-                            if default is _UNSET:
-                                req(False)
-                            return default
-                        return func()
+                        return cached() if ready() else default
+                wrapped.suspend = suspend_reads
+                wrapped.resume = resume_reads
             else:
-                # Handle effect/event
-                if triggers:
-                    if is_async:
-                        @reactive.effect
-                        @reactive.event(*triggers)
-                        @functools.wraps(func)
-                        async def wrapped():
-                            if not enabled():
-                                return
-                            await func()
-                    else:
-                        @reactive.effect
-                        @reactive.event(*triggers)
-                        @functools.wraps(func)
-                        def wrapped():
-                            if not enabled():
-                                return
-                            func()
+                restart = reactive.Value(0)
+                action = reactive.event(*triggers)(func) if triggers else func
+
+                if is_async:
+                    @functools.wraps(func)
+                    async def run():
+                        if not active:
+                            wake.get()
+                            return
+                        restart.get()
+                        token = task_restart_context.set(restart)
+                        try:
+                            await action()
+                        finally:
+                            task_restart_context.reset(token)
                 else:
-                    if is_async:
-                        @reactive.effect
-                        @functools.wraps(func)
-                        async def wrapped():
-                            if not enabled():
-                                return
-                            await func()
-                    else:
-                        @reactive.effect
-                        @functools.wraps(func)
-                        def wrapped():
-                            if not enabled():
-                                return
-                            func()
-            # Preserve the source-function link for introspection decorators.
-            # Shiny's Calc_ keeps the name but does not provide __wrapped__.
+                    @functools.wraps(func)
+                    def run():
+                        if not active:
+                            wake.get()
+                            return
+                        restart.get()
+                        token = task_restart_context.set(restart)
+                        try:
+                            action()
+                        finally:
+                            task_restart_context.reset(token)
+                wrapped = reactive.effect(run, suspended=suspended)
+                native_suspend, native_resume = wrapped.suspend, wrapped.resume
+
+                def suspend_effect():
+                    suspend_reads()
+                    native_suspend()
+
+                def resume_effect():
+                    resume_reads()
+                    native_resume()
+
+                wrapped.suspend = suspend_effect
+                wrapped.resume = resume_effect
             wrapped.__wrapped__ = func
-            # Control methods
-            def suspend():
-                enabled.set(False)
-            def resume():
-                enabled.set(True)
-            wrapped.suspend = suspend
-            wrapped.resume = resume
             self.reactables.append(wrapped)
             return wrapped
         return decorator
@@ -941,9 +945,13 @@ class Module(ABC):
 
     # Utility functions for mass control
     def suspend(self):
+        for task in self.extended_tasks:
+            task.suspend()
         for w in self.reactables:
             w.suspend()
     def resume(self):
+        for task in self.extended_tasks:
+            task.resume()
         for w in self.reactables:
             w.resume()
 
@@ -958,7 +966,7 @@ class Module(ABC):
 
     def record_code(self, func):
         """Record a computational function when called, including its helpers."""
-        if not inspect.isroutine(func):
+        if not inspect.isroutine(func) or any(func is item for item in self.reactables):
             # Preserve already-created reactive objects and lifecycle controls.
             # Prefer record_code INSIDE the reactive decorator for run-only capture.
             name = getattr(func, "__name__", type(func).__name__)

@@ -1,9 +1,13 @@
 """Extended tasks that stop publishing results when their session closes."""
 import asyncio
+from contextvars import ContextVar
 
-from shiny import reactive
+from shiny import reactive, req
 from shiny.reactive._reactives import DestroyedReactiveError
 from shiny.session import get_current_session
+from shiny.types import SilentOperationInProgressException
+
+task_restart_context = ContextVar("task_restart_context", default=None)
 
 
 class SessionExtendedTask(reactive.ExtendedTask):
@@ -17,6 +21,9 @@ class SessionExtendedTask(reactive.ExtendedTask):
     def __init__(self, func):
         super().__init__(func)
         self._closed = False
+        self._generation = 0
+        self._restart_owner = None
+        self._pending_restart = None
         session = get_current_session()
         if session is not None:
             session.on_ended(self.close)
@@ -28,18 +35,57 @@ class SessionExtendedTask(reactive.ExtendedTask):
 
     def invoke(self, *args, **kwargs):
         if not self._closed:
-            super().invoke(*args, **kwargs)
+            self._restart_owner = task_restart_context.get()
+            try:
+                super().invoke(*args, **kwargs)
+            except DestroyedReactiveError:
+                self.close()
+
+    def suspend(self):
+        with reactive.isolate():
+            if not self._closed and self.status() == "running":
+                self._pending_restart = self._restart_owner
+                self.cancel()
+
+    def resume(self):
+        owner, self._pending_restart = self._pending_restart, None
+        if owner is not None and not self._closed:
+            with reactive.isolate():
+                owner.set(owner.get() + 1)
+
+    def result(self):
+        """Clear pending outputs normally; busy trackers own progress display."""
+        try:
+            return super().result()
+        except SilentOperationInProgressException:
+            req(False)
+
+    def cancel(self):
+        """Cancel queued/running work and invalidate deferred publication."""
+        self._generation += 1
+        super().cancel()
+        self._task = None
+        if not self._closed:
+            try:
+                with reactive.isolate():
+                    if self.status() == "running":
+                        self.status.set("cancelled")
+            except DestroyedReactiveError:
+                self._closed = True
 
     def _done_callback(self, task):
         if self._task is not task:
+            if not task.cancelled():
+                task.exception()
             return
         self._task = None
+        generation = self._generation
         # Retrieve failures even when shutdown prevents publishing them.
         error = None if task.cancelled() else task.exception()
 
         async def publish():
             async with reactive.lock():
-                if self._closed:
+                if self._closed or generation != self._generation:
                     return
                 try:
                     if task.cancelled():
@@ -55,7 +101,8 @@ class SessionExtendedTask(reactive.ExtendedTask):
                     self.close()
                     return
                 await reactive.flush()
-                if not self._closed and self._invocation_queue:
+                if (not self._closed and generation == self._generation
+                        and self._invocation_queue):
                     self._invocation_queue.pop(0)()
                     await reactive.flush()
 

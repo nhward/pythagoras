@@ -76,8 +76,13 @@ shinylive-force:
 	$(SHINYLIVE) export app site
 	touch $(SHINYLIVE_STAMP)
 
+# 
+shiny-serve:
+	shiny run --host 0.0.0.0 --port 8000 app/app.py
+
 # Requires rsconnect-python in .venv and configured Connect Cloud authentication.
 .PHONY: publish
+
 # Content fingerprints include recursive app/assets, tests, build scripts, and
 # installed package versions. Changed inputs must pass the full suite first.
 publish:

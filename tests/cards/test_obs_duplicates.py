@@ -312,6 +312,30 @@ def test_chart_is_empty_when_no_duplicates_or_near_duplicates(card_module):
 
 class TestWebKitUI:
     @pytest.mark.ui
+    def test_suspend_resume_does_not_leave_persistent_outputs(
+        self, page: Page, app: ShinyAppProc,
+    ):
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(app.url)
+        expect(by_id(page, "BarChart").locator(".plotly")).to_be_attached(timeout=15_000)
+        page.evaluate("""() => {
+            Shiny.addCustomMessageHandler('test_activity', value => window.testActivity = value);
+            window.originalDuplicateChart = document.querySelector('[id$="-BarChart"] .plotly');
+        }""")
+        for _ in range(2):
+            expect(by_id(page, "BarChart").locator(".plotly")).to_be_attached(timeout=15_000)
+            expect(by_id(page, "Check")).to_contain_text("redundant exact-duplicate", timeout=15_000)
+            page.evaluate("Shiny.setInputValue('TestActive', false, {priority: 'event'})")
+            page.wait_for_function("window.testActivity === false")
+            page.evaluate("Shiny.setInputValue('TestActive', true, {priority: 'event'})")
+            page.wait_for_function("window.testActivity === true")
+        expect(by_id(page, "Check")).to_contain_text("redundant exact-duplicate", timeout=15_000)
+        expect(by_id(page, "BarChart").locator(".plotly")).to_be_attached(timeout=15_000)
+        assert errors == []
+        assert page.evaluate("window.originalDuplicateChart === document.querySelector('[id$=\"-BarChart\"] .plotly')")
+
+    @pytest.mark.ui
     @pytest.mark.parametrize("use_target, count, remaining", [(True, 1, 4), (False, 2, 3)])
     def test_use_target_controls_analysis_and_removal(
         self, page: Page, app: ShinyAppProc, use_target, count, remaining

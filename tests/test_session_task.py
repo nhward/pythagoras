@@ -6,6 +6,7 @@ import pytest
 from shiny import reactive
 import session_task as m
 from shiny.reactive._core import _reactive_environment
+from shiny.types import SilentException, SilentOperationInProgressException
 
 
 @pytest.fixture(autouse=True)
@@ -17,6 +18,81 @@ def fresh_reactive_lock(monkeypatch):
 async def drain():
     for _ in range(12):
         await asyncio.sleep(0)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_pending_result_clears_output_and_remains_reactive():
+    release = asyncio.Event()
+
+    @m.SessionExtendedTask
+    async def task():
+        await release.wait()
+        return 42
+
+    @reactive.calc
+    def result():
+        return task.result()
+
+    task.invoke()
+    with reactive.isolate(), pytest.raises(SilentException) as caught:
+        result()
+    assert not isinstance(caught.value, SilentOperationInProgressException)
+    release.set()
+    await drain()
+    with reactive.isolate():
+        assert result() == 42
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_cancel_running_task_drops_queue_and_ignores_late_result():
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = []
+
+    @m.SessionExtendedTask
+    async def task(value):
+        calls.append(value)
+        if value == "old":
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                await release.wait()
+        return value
+
+    task.invoke("old")
+    await started.wait()
+    task.invoke("queued")
+    task.cancel()
+    task.invoke("new")
+    await drain()
+    release.set()
+    await drain()
+    with reactive.isolate():
+        assert task.result() == "new"
+    assert calls == ["old", "new"]
+    assert not task._invocation_queue
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_cancel_discards_deferred_result_and_allows_immediate_restart():
+    @m.SessionExtendedTask
+    async def task(value):
+        return value
+
+    async with reactive.lock():
+        task.invoke("old")
+        await drain()  # Worker finished, publication is waiting for the lock.
+        task.cancel()
+        with reactive.isolate():
+            assert task.status() == "cancelled"
+        task.invoke("new")
+    await drain()
+    with reactive.isolate():
+        assert task.result() == "new"
 
 
 @pytest.mark.unit
@@ -52,10 +128,10 @@ async def test_completion_after_values_destroyed(monkeypatch, outcome, close_ses
                 value.destroy()
         await drain()
         assert not failures
-        assert task._closed
         assert not task._invocation_queue
         assert task._task is None
-        task.invoke()  # Late invocation after closure is a no-op.
+        task.invoke()  # Also detects destruction when cancellation skipped publication.
+        assert task._closed
         assert task._task is None
     finally:
         loop.set_exception_handler(previous)

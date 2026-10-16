@@ -95,9 +95,20 @@ def wire_card_nodes(
         node = nodes.get(namespace)
         if node is None:
             continue
-        node.card.resume()
         node.upstream.set(None if source is None else source.output)
         source = node
+
+
+def update_card_activity(
+    order: Sequence[str], current: str, nodes: dict[str, CardNode],
+) -> None:
+    """Resume the selected workflow prefix and suspend later sections."""
+    active = set(required_sections(order, current))
+    for node in nodes.values():
+        if node.card.section in active:
+            node.card.resume()
+        else:
+            node.card.suspend()
 
 
 def configuration_from_card_state(
@@ -1288,7 +1299,7 @@ def application():
                 output=card_output,
             )
             instance.section = current
-            instance.resume()
+            update_card_activity(SectionOrder(), currentSection(), card_nodes)
             card_id = instance.ns("Card")
             container = f"{current}-cards-container"
             imp_id = f"{current}_CardOrder"
@@ -1493,6 +1504,12 @@ def application():
         def wire_flow():
             log.debug(msg="𑙬 Card flow topology changed")
             wire_card_nodes(FlowOrder(), card_nodes)
+
+        @reactive.effect
+        def activate_sections():
+            SectionsVisited.get()
+            TopologyVersion.get()
+            update_card_activity(SectionOrder(), currentSection(), card_nodes)
 
     return App(
         ui = app_ui, 

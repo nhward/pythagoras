@@ -1,4 +1,5 @@
 import json
+import asyncio
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -525,7 +526,7 @@ def test_reactable_calc_respects_suspend_and_resume():
     m.resume()
     with reactive.isolate():
         assert f() == 99
-        assert calls["count"] == 2
+        assert calls["count"] == 1
     # Registered as reactable
     assert f in m.reactables
 
@@ -715,6 +716,95 @@ def test_extended_task_can_be_tracked_by_busy_decorator():
 
     assert callable(Calculate.status)
     assert busy._tasks == [(Calculate, "Calculating…")]
+    assert module.extended_tasks == [Calculate]
+
+
+@pytest.mark.unit
+def test_suspend_cancels_owned_tasks_before_reactables():
+    module = DummyModule("suspended-card")
+    other = DummyModule("other-card")
+    events = []
+    module.extended_tasks.append(SimpleNamespace(suspend=lambda: events.append("cancel")))
+    module.reactables.append(SimpleNamespace(suspend=lambda: events.append("suspend")))
+    module.suspend()
+    assert events == ["cancel", "suspend"]
+    assert other.extended_tasks == []
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("event_triggered", [False, True])
+async def test_navigation_preserves_cache_and_restarts_only_cancelled_work(monkeypatch, event_triggered):
+    from shiny.reactive._core import _reactive_environment
+    monkeypatch.setattr(_reactive_environment, "_lock", None)
+    module = DummyModule("navigation")
+    source = reactive.Value(1)
+    release = asyncio.Event()
+    release.set()
+    calculations, invocations, renders = [], [], []
+
+    @module.reactable(calc=True)
+    def data():
+        value = source()
+        calculations.append(value)
+        return value
+
+    @module.extended_task
+    async def task(value):
+        invocations.append(value)
+        await release.wait()
+        return value
+
+    @module.reactable(triggers=[source] if event_triggered else None)
+    def start():
+        task.cancel()
+        task.invoke(data())
+
+    @reactive.effect
+    def output():
+        renders.append(data())
+
+    async def drain():
+        await reactive.flush()
+        for _ in range(15):
+            await asyncio.sleep(0)
+
+    try:
+        module.resume()
+        await drain()
+        assert calculations == invocations == renders == [1]
+        module.suspend()
+        await drain()
+        module.resume()
+        await drain()
+        assert calculations == invocations == renders == [1]
+
+        module.suspend()
+        source.set(2)
+        await drain()
+        assert calculations == invocations == renders == [1]
+        module.resume()
+        await drain()
+        assert calculations == invocations == renders == [1, 2]
+
+        release.clear()
+        source.set(3)
+        await drain()
+        assert invocations == [1, 2, 3]
+        module.suspend()
+        await drain()
+        release.set()
+        module.resume()
+        await drain()
+        assert invocations == [1, 2, 3, 3]
+        assert calculations == [1, 2, 3]
+        with reactive.isolate():
+            assert task.result() == 3
+    finally:
+        output.destroy()
+        start.destroy()
+        task.close()
+        await drain()
 
 
 class FakeExtendedTask:

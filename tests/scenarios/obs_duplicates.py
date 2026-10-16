@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from shiny import reactive, req
 
 APP_ROOT = Path(__file__).resolve().parents[2] / "app"
 os.chdir(APP_ROOT)
@@ -32,4 +33,24 @@ roles.set_roles("stratum", [Role.STRATIFIER])
 
 this = instance()
 this._imports.set(proxy_data(_df=frame, _roles=roles, _name="Observation duplicates test"))
+original_server = this.call_server
+
+
+def server_with_activity_control(input, output, session):
+    original_server(input, output, session)
+
+    @reactive.effect
+    async def activity():
+        active = input.TestActive()
+        req(active is not None)
+        if active:
+            this.resume()
+        else:
+            this.suspend()
+        async def acknowledged():
+            await session.send_custom_message("test_activity", active)
+        session.on_flushed(acknowledged, once=True)
+
+
+this.call_server = server_with_activity_control
 app = this.application()
