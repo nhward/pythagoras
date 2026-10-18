@@ -357,7 +357,10 @@ def instance():
         def Export():
             # Mode does not exist until its dynamic footer has rendered.
             # Ineligible sources must pass through without reading that input.
-            if Eligibility()[1] or input.Mode() in (None, "none"):
+            if Eligibility()[1]:
+                return Incoming()
+            req(input.Mode() is not None)
+            if input.Mode() == "none":
                 return Incoming()
             # Block downstream while a new option is settling, not just while
             # the extended task runs; never export a previous mode's preview.
@@ -410,6 +413,14 @@ def instance():
             return busy.ui()
 
         session.on_ended(Calculate.cancel)
+        this.export_inputs("Mode", "UseWeights", "Up", "Down", "CountFraction", "Metric", "Normalize", "Evaluation", "Voting", "Neighbors", "MedoidLimit", "Iterations", when=lambda: not Eligibility()[1])
+
+        @this.export_check
+        def export_ready():
+            if not Eligibility()[1] and input.Mode() != "none":
+                this.require_settled(Options)
+                Calculate.require_current(Incoming(), Options())
+
         return Export
 
     this.server = server

@@ -235,6 +235,7 @@ def _duplicates_figure(
 def instance():
     """Create the mutable observation-duplicates card."""
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('RemoveExact', 'SignificantFigures', 'UseTarget')
     this.long_name = "Observation duplicates"
     this.description = "This card explores the diversity of observations of a dataset with respect to duplicates and near duplicates."
     
@@ -508,6 +509,11 @@ def instance():
             )
 
         session.on_ended(CalculateDuplicates.cancel)
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(SignificantFigures)
+            ExactDuplicateCount()  # SomeDupl must resolve its control update first.
 
         return TransformedData
 

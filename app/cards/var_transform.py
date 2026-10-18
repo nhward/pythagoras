@@ -30,7 +30,7 @@ from shiny import render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
-from sklearn.pipeline import Pipeline
+from pipeline import Pipeline
 from sklearn.preprocessing import PowerTransformer, RobustScaler, StandardScaler
 
 TRANSFORM_LABELS = {
@@ -643,6 +643,7 @@ def _distribution_figure(
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Transform', 'IncludeTarget', 'UseWeights', 'Robust')
     this.long_name = "Variable Transform"
     this.description = "This card explores and applies transformations to the location, spread, and shape of continuous numeric predictors and, when explicitly enabled, one continuous target."
 
@@ -854,6 +855,11 @@ def instance():
                 )
 
         session.on_ended(Calculate.cancel)
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(Options)
+            Calculate.require_current(incomingproxy_data(), Options())
 
         return TransformedData
 

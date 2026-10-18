@@ -24,15 +24,29 @@ plan = build_plan(source, goal="future", window=5, horizon=2, step=2, gap=1)
 this.restore_configuration_state({"inputs": {"Goal": "future", "Window": 5, "Horizon": 2, "Step": 2, "Gap": 1}, "evaluation_plan": plan.bookmark()})
 this._imports.set(source)
 original_server, original_footer = this.server, this._footer
-this.footer = lambda: ui.TagList(original_footer(), ui.output_text("ExportState"),
+this.footer = lambda: ui.TagList(original_footer(), ui.output_text("ExportState"), ui.output_text("ExportHistory"),
     ui.input_action_button("ChangeSource", label="Change source"), ui.input_action_button("Empty", label="Empty source"))
 def server(input, output, session):
     exported = original_server(input, output, session)
+    history = reactive.Value(())
+
+    @reactive.effect
+    def observe_exports():
+        value = this.output_data()
+        with reactive.isolate():
+            history.set((*history(), value.evaluation_plan is not None))
+
+    @output
+    @render.text
+    def ExportHistory():
+        return str(history())
+
     @output
     @render.text
     def ExportState():
-        p = exported().evaluation_plan
-        return f"plan={p is not None};ready={p.ready if p else False};rows={len(exported().frame)}"
+        value = this.output_data()
+        p = value.evaluation_plan
+        return f"plan={p is not None};ready={p.ready if p else False};rows={len(value.frame)}"
     @reactive.effect
     @reactive.event(input.ChangeSource)
     def change():

@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 from cleaning_record import CleaningRecord
 from evaluation_plan import EvaluationPlan
+from pipeline import Pipeline
 from processing_record import ProcessingRecord
 from roles import Role, RoleMap
 from sklearn.base import BaseEstimator, clone
-from sklearn.pipeline import Pipeline
 
 
 @dataclass
@@ -33,7 +33,7 @@ class proxy_data:
     - Retains the stable post-cleaning source through `.clean_frame`.
     - Tracks per-column roles via `RoleMap`.
     - Carries descriptive records of non-pipeline cleaning operations.
-    - Carries an unfitted sklearn pipeline for learned transformations.
+    - Carries an unfitted combined pipeline for learned transformations.
     - Provides a consistent `.sample()` that preserves row order.
 
     Card code should use `.frame` to read the DataFrame,
@@ -317,7 +317,7 @@ class proxy_data:
 
     @property
     def pipeline(self) -> Pipeline | None:
-        """Return an unfitted clone of the accumulated sklearn pipeline."""
+        """Return an unfitted clone of the accumulated learning pipeline."""
         return clone(self._pipeline) if self._pipeline is not None else None
 
     @property
@@ -342,16 +342,18 @@ class proxy_data:
         preview_frame: pd.DataFrame | gpd.GeoDataFrame,
         added_roles: RoleMap | None = None,
         removed_columns: _Iterable[str] = (),
+        allow_row_removal: bool = False,
     ) -> proxy_data:
-        """Append an unfitted row-preserving transformer and its fitted preview.
+        """Append an unfitted transformer and its fitted preview.
 
         Declare added/removed columns explicitly. Preserve index and column
         order; retain clean_frame as the source for subsequent training fits.
-        Existing training-only samplers remain in an imblearn Pipeline.
+        Row removal requires explicit opt-in and a target-aligned transform_x_y.
         """
         return self._with_learned_step(
             transformer, name=name, operation=operation, preview_frame=preview_frame,
             added_roles=added_roles, removed_columns=removed_columns,
+            row_removal=allow_row_removal,
         )
 
     def with_sampling_step(
@@ -374,7 +376,7 @@ class proxy_data:
 
     def _with_learned_step(
         self, transformer, *, name, operation, preview_frame,
-        added_roles=None, removed_columns=(), resampling=False,
+        added_roles=None, removed_columns=(), resampling=False, row_removal=False,
     ):
         """Return a successor with an unfitted learned transformer appended.
 
@@ -383,8 +385,8 @@ class proxy_data:
         that preview cannot leak into later train/test or cross-validation fits.
         Appended columns must be declared in ``added_roles``. Removals must be
         explicit in ``removed_columns``; remaining column order and row indices
-        stay intact except for explicitly registered samplers, which may change
-        rows. clean_frame remains the original pipeline input.
+        stay intact except for explicitly registered samplers or row-removing
+        transformers. clean_frame remains the original pipeline input.
         """
         if not isinstance(transformer, BaseEstimator):
             raise TypeError("transformer must be a scikit-learn estimator")
@@ -409,7 +411,18 @@ class proxy_data:
             if not assigned:
                 raise ValueError("Added pipeline columns require a role")
             roles.set_roles(column, assigned)
-        if not resampling and not preview_frame.index.equals(self.frame.index):
+        if row_removal:
+            if not callable(getattr(transformer, "transform_x_y", None)):
+                raise TypeError("Row-removing transformers must implement transform_x_y")
+            # Require an ordered subset, including multiplicities of duplicate labels.
+            labels, _ = pd.factorize(
+                self.frame.index.append(preview_frame.index), use_na_sentinel=False,
+            )
+            source_labels = iter(labels[:len(self.frame)])
+            for label in labels[len(self.frame):]:
+                if not any(candidate == label for candidate in source_labels):
+                    raise ValueError("Row removal must preserve source row order and labels")
+        if not resampling and not row_removal and not preview_frame.index.equals(self.frame.index):
             raise ValueError("pipeline steps must preserve the DataFrame index")
 
         base_name = str(name).strip().replace(" ", "_")
@@ -450,10 +463,6 @@ class proxy_data:
             method=type(transformer).__name__,
             variables=tuple(map(str, variables or ())),
         )
-        pipeline_type = Pipeline
-        if resampling or any(callable(getattr(step, "fit_resample", None)) for _, step in steps):
-            from imblearn.pipeline import Pipeline as SamplingPipeline
-            pipeline_type = SamplingPipeline
         return proxy_data(
             _df=preview_frame.copy(),
             _roles=roles,
@@ -461,7 +470,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _cleaning_records=self.cleaning_records,
-            _pipeline=pipeline_type(steps),
+            _pipeline=Pipeline(steps),
             _clean_df=self.clean_frame.copy(),
             _processing_records=(*self.processing_records, processing),
         )

@@ -1466,6 +1466,11 @@ def instance():
                 return series.astype("boolean")
             raise ValueError(f"Unsupported conversion type: {new_type}")
 
+        @this.export_check
+        def export_ready():
+            OutputData.get()
+            req(not restored_commit_pending)
+
         return OutputData
 
     this.server = server

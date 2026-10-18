@@ -216,6 +216,7 @@ def instance():
     Creates an instance of Card configured as MissPlaceholders.
     """
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this.export_inputs('Replace', 'NA_CaseSensitive', 'NA_Extrema')
     this.long_name = "Missing value placeholders"
     this.description = "This card detects any potential missing-value placeholders and allows their replacement with NA."
 
@@ -863,6 +864,10 @@ def instance():
                 "codes": codes_df,
                 "legend": legend,
             }
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(Replace)
 
         return TransformedData
 

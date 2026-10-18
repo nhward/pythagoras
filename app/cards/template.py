@@ -132,6 +132,8 @@ def instance():
     # The file stem supplies the card identity and namespace. Copy under the
     # intended name; do not manually prefix UI IDs with a namespace.
     this = Card(file=__file__, mutable=MUTABLE)
+    if MUTABLE:
+        this.export_inputs("Apply")
     this.long_name = "Card template"
     this.description = "Developer example: missing cells by variable."
 
@@ -291,6 +293,14 @@ def instance():
         session.on_ended(Calculate.cancel)
         # Return a CALLABLE reactive source, not Export() or a DataFrame.
         # An immutable card's downstream data need not wait for diagnostics.
+        if MUTABLE:
+            @this.export_check
+            def export_ready():
+                this.require_settled(Enabled)
+                # If an extended task PRODUCES exported data, also call:
+                # Calculate.require_current(Incoming(), Options())
+                # This template's task is diagnostic-only, so do not wait for it.
+
         return Export if MUTABLE else Incoming
 
     this.server = server

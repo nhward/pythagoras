@@ -165,7 +165,7 @@ class TestInstance:
         assert not card.mutable
         assert card.hasSidebar()
         assert card.hasFlipSide()
-        assert not card.hasFooter()
+        assert card.hasFooter()
 
     @pytest.mark.unit
     def test_front_and_back_have_expected_outputs(self, card):

@@ -63,6 +63,7 @@ def _apply(source,result):
 
 def instance():
     this=Card(file=__file__,mutable=True)
+    this.export_inputs('Encode', 'Features', 'RemoveOriginal')
     this.long_name='Time feature encoding'
     this.description='Generate numeric and cyclic time predictors before Variable encoding.'
     
@@ -231,6 +232,12 @@ def instance():
         @this.record_context
         def Busy():return busy.ui()
         session.on_ended(Calculate.cancel)
+        @this.export_check
+        def export_ready():
+            if "time" in (input.Encode() or []):
+                this.require_settled(Options)
+                Calculate.require_current(incomingproxy_data(), Options())
+
         return Export
 
     

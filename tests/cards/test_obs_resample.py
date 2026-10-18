@@ -6,6 +6,16 @@ app = create_app_fixture(app="../scenarios/obs_resample.py", scope="function")
 
 
 @pytest.mark.ui
+def test_restoration_never_exports_an_intermediate_no_plan(page, app):
+    page.goto(app.url)
+    expect(page.locator('[id$="-ExportState"]')).to_have_text(
+        "plan=True;ready=True;rows=60", timeout=30000,
+    )
+    expect(page.locator('[id$="-ExportHistory"]')).not_to_contain_text("False")
+    expect(page.locator('[id$="-ExportHistory"]')).to_contain_text("True")
+
+
+@pytest.mark.ui
 def test_restore_compact_fullscreen_flip_and_stale_source(page, app):
     page.set_viewport_size({"width": 850, "height": 950})
     page.goto(app.url)

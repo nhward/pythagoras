@@ -469,6 +469,7 @@ def _shadow_choices(eligible, importance, informative_only=True):
 def instance():
     """Create the mutable missingness-type card."""
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Shadow', 'InformativeOnly')
     this.long_name = "Informative Missingness"
     this.description = "This card uses a Random Forest model to assess the informative missingness of each predictor's missing values."
 
@@ -714,8 +715,11 @@ def instance():
         @this.reactable(calc=True)
         @this.record_context
         def TransformedData():
-            choices = ShadowChoices()
-            selected = [column for column in (Shadow() or []) if column in choices]
+            selected = list(Shadow() or [])
+            if not selected:
+                return _add_shadow_variables(incomingproxy_data(), [])
+            choices = ShadowChoices() if input.InformativeOnly() else MissingVariables()
+            selected = [column for column in selected if column in choices]
             if selected:
                 this.log.info(f"Adding shadow to predictors: {selected}")
             return _add_shadow_variables(incomingproxy_data(), selected)
@@ -812,6 +816,26 @@ def instance():
             )
 
         session.on_ended(CalculateAnalysis.cancel)
+
+        this.export_inputs("MaxObs", "MinMissProp", when=lambda: bool(input.Shadow()))
+        this.export_inputs("CVFolds", "MinBalancedAccuracy", "UseWeights",
+                           when=lambda: bool(input.Shadow()) and bool(input.InformativeOnly()))
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(Shadow)
+            if not Shadow():
+                return
+            this.require_settled(MaxObs, MinMissProp)
+            if not input.InformativeOnly():
+                return
+            this.require_settled(CVFolds, MinBalancedAccuracy)
+            proxy = PreparedData()
+            CalculateAnalysis.require_current(
+                proxy.frame, Target(), PredictorVariables(), MissingVariables(),
+                Card.observation_weights(proxy, enabled=bool(input.UseWeights())),
+                int(CVFolds()), float(MinBalancedAccuracy()),
+            )
 
         return TransformedData
 

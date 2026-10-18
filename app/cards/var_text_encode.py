@@ -93,6 +93,8 @@ def _detail(result,method):
 
 def instance():
     this=Card(file=__file__,mutable=True)
+    this.export_inputs('Encode', 'RemoveOriginal')
+    this.export_inputs('Weighting', 'Analyzer', 'NgramMax', 'Lowercase', 'StripAccents', 'StopWords', 'MinDF', 'MaxDF', 'MaxFeatures', 'Components', 'LSANormalize', 'EmbeddingLowercase')
     this.exclude_configuration_input('EmbeddingFile')
     this.long_name='Text encoding'
     this.description='Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.'
@@ -374,6 +376,13 @@ def instance():
         
         session.on_ended(Calculate.cancel)
         
+        @this.export_check
+        def export_ready():
+            this.require_settled(Encode)
+            if Encode():
+                this.require_settled(Options)
+                Calculate.require_current(incomingproxy_data(), Options())
+
         return Export
     this.server=server
     

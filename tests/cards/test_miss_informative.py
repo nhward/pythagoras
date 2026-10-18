@@ -28,6 +28,44 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 app = create_app_fixture(app="../scenarios/miss_informative.py", scope="function")
+restored_app = create_app_fixture(app="../scenarios/miss_informative_restored.py", scope="function")
+pending_app = create_app_fixture(app="../scenarios/miss_informative_pending.py", scope="function")
+assmnt_app = create_app_fixture(app="../scenarios/miss_informative_assmnt.py", scope="function")
+
+
+@pytest.mark.ui
+def test_assmnt_restored_export(page, assmnt_app):
+    page.goto(assmnt_app.url)
+    expect(page.locator('[id$="-ExportProbe"]')).to_contain_text("rows=", timeout=60000)
+
+
+@pytest.mark.ui
+def test_export_waits_only_when_forest_result_is_required(page, pending_app):
+    page.goto(pending_app.url)
+    probe = page.locator('[id$="-ExportProbe"]')
+    expect(probe).to_have_text("rows=40;shadow=True", timeout=15000)
+    expect(page.locator('[id$="-Busy"]')).to_contain_text("Analysing")
+    checkbox = page.locator('[id$="-InformativeOnly"]')
+    checkbox.evaluate("el => Shiny.setInputValue(el.id, true, {priority: 'event'})")
+    expect(probe).to_have_text("", timeout=15000)
+    page.locator('[id$="-Shadow"] input[value="x"]').uncheck()
+    expect(probe).to_have_text("rows=40;shadow=False", timeout=15000)
+    expect(page.locator('[id$="-Busy"]')).to_contain_text("Analysing")
+
+
+@pytest.mark.ui
+def test_unavailable_restored_shadow_does_not_block_export(page, restored_app):
+    page.goto(restored_app.url)
+    expect(page.locator('[id$="-ExportProbe"]')).to_have_text("rows=40;shadow=False", timeout=30000)
+
+
+@pytest.mark.ui
+def test_public_export_reaches_downstream_and_updates_shadow(page, app):
+    page.goto(app.url)
+    probe = page.locator('[id$="-ExportProbe"]')
+    expect(probe).to_have_text("rows=40;shadow=False", timeout=30000)
+    page.locator('[id$="-Shadow"] input[value="x"]').check()
+    expect(probe).to_have_text("rows=40;shadow=True", timeout=30000)
 
 
 @pytest.fixture(scope="session")

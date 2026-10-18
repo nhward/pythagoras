@@ -1,6 +1,7 @@
 """Extended tasks that stop publishing results when their session closes."""
 import asyncio
 from contextvars import ContextVar
+from export_readiness import equivalent
 
 from shiny import reactive, req
 from shiny.reactive._reactives import DestroyedReactiveError
@@ -24,6 +25,7 @@ class SessionExtendedTask(reactive.ExtendedTask):
         self._generation = 0
         self._restart_owner = None
         self._pending_restart = None
+        self._arguments = reactive.Value()
         session = get_current_session()
         if session is not None:
             session.on_ended(self.close)
@@ -40,6 +42,15 @@ class SessionExtendedTask(reactive.ExtendedTask):
                 super().invoke(*args, **kwargs)
             except DestroyedReactiveError:
                 self.close()
+
+    def require_current(self, *args, **kwargs):
+        """Require a successful result for these export-producing arguments."""
+        req(equivalent(self._arguments(), (args, kwargs)))
+        self.result()
+
+    def _invoke(self, *args, **kwargs):
+        super()._invoke(*args, **kwargs)
+        self._running_arguments = (args, kwargs)
 
     def suspend(self):
         with reactive.isolate():
@@ -80,6 +91,7 @@ class SessionExtendedTask(reactive.ExtendedTask):
             return
         self._task = None
         generation = self._generation
+        arguments = self._running_arguments
         # Retrieve failures even when shutdown prevents publishing them.
         error = None if task.cancelled() else task.exception()
 
@@ -91,9 +103,11 @@ class SessionExtendedTask(reactive.ExtendedTask):
                     if task.cancelled():
                         self.status.set("cancelled")
                     elif error is not None:
+                        self._arguments.set(arguments)
                         self.error.set(error)
                         self.status.set("error")
                     else:
+                        self._arguments.set(arguments)
                         self.value.set(task.result())
                         self.status.set("success")
                 except DestroyedReactiveError:

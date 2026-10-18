@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from cards import miss_impute, var_transform
+from pipeline import Pipeline
 from proxy_data import proxy_data
 
 
@@ -35,6 +36,9 @@ def test_transform_then_impute_builds_one_trainable_pipeline():
     result = miss_impute._apply_analysis(transformed, _imputation(transformed))
 
     assert result.pipeline_steps == ("var_transform", "miss_impute")
+    assert type(result.pipeline) is Pipeline
+    assert type(result.pipeline_for_training()) is Pipeline
+    assert type(var_transform._build_pipeline(["Scale"])) is Pipeline
     pd.testing.assert_frame_equal(result.clean_frame, source.frame)
     assert result.frame.isna().sum().sum() == 0
 

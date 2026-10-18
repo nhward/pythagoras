@@ -582,6 +582,7 @@ def _missingness_figure(summary: pd.DataFrame, applied: bool, full_screen: bool 
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Apply', 'Method', 'Neighbours', 'Iterations', 'Repeats', 'Holdout', 'Jobs')
     this.long_name = "Learned Imputation"
     this.description = "This card imputes eligible predictor values with scikit-learn and evaluates the selected imputation method using repeated artificial masking."
 
@@ -759,6 +760,12 @@ def instance():
             return ui.span(f"Ready to impute {eligible} predictors using {METHOD_LABELS.get(Options()['method'], Options()['method'])}.", class_="text-primary")
 
         session.on_ended(Calculate.cancel)
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(Options)
+            if "Apply" in (input.Apply() or []):
+                Calculate.require_current(incomingproxy_data(), Options())
 
         return TransformedData
 

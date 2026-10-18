@@ -325,6 +325,9 @@ def _figure(result, method, fullscreen=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('IncludeMembership')
+    this.export_inputs("Limit", "Standardize", "UseWeights", "Metric", "Centre", "Linkage",
+                       "MinPoints", "Border", "Neighbours", "Projection", "Perplexity")
     this.long_name = "Cluster membership"
     this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers."
 
@@ -489,6 +492,7 @@ def instance():
         @this.record_context
         def MembershipToggle():
             nonlocal reset_pending
+            this.export_readiness.check_inputs(input)
             requested = set(input.IncludeMembership() or []) & {"Partition", "Mixture", "Density"}
             if (incomingproxy_data().cluster_count or 1) == 1:
                 with reactive.isolate():
@@ -515,6 +519,7 @@ def instance():
             additions = requested - set(plans)
             result = CurrentAnalysis() if additions else None
             if additions:
+                this.require_settled(Options)
                 # Effects understand ordinary silent validation, whereas the
                 # output-only cancellation exception would close the session.
                 req(result is not None)
@@ -601,6 +606,15 @@ def instance():
 
         session.on_ended(Calculate.cancel)
         
+        @this.export_check
+        def export_ready():
+            source = incomingproxy_data()
+            requested = set(input.IncludeMembership() or [])
+            saved = committed.get()
+            if (source.cluster_count or 1) > 1 and requested:
+                req(saved is not None and saved[0].equals(source))
+                req(requested == set(saved[1]))
+
         return OutputData
     this.server = server
     return this

@@ -280,33 +280,31 @@ def instance(
     this.description = "Save and restore analysis bookmarks."
     catalogue_version = reactive.Value(0)
 
-    def front():
-        return ui.div(
-            ui.tags.br(),
-            ui.output_text("StorageMode"),
-            ui.output_ui("BookmarkDataChooser"),
-            ui.output_ui("BookmarkTimeChooser"),
-            ui.output_ui("BookmarkImport"),
-            style="margin: 50px 50px 50px 90px;"  # top | right | bottom | left 
-        )
-
-    this.front = front
+    this.front=lambda: ui.TagList(
+        ui.span(ui.output_text("StorageMode"),class_="text-primary text-center d-block"),
+        ui.tags.br(),
+        ui.output_ui("BookmarkDataChooser"),
+        ui.tags.br(),
+        ui.tags.br(),
+        ui.output_ui("BookmarkTimeChooser"),
+        ui.output_ui("BookmarkImport")
+    )
 
     this.back=lambda: ui.TagList(
-        ui.p("Bookmarks restore the workflow, system settings, data source, and the inputs of each analysis card. The Restore last active section setting controls whether to reopen the saved section or the first workflow section."),
         ui.output_text_verbatim("StorageLocation"),
+        ui.output_ui("LocalBookmarkFiles")
     )
 
     this.footer=lambda: ui.div(
         ui.input_action_button(
             id="SaveBookmark", label="Save bookmark", icon=icon("bookmark", title="Save bookmark", a11y="sem"),
-            width="250px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
+            width="150px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
             guide=this, position="top",
             text="This button saves a bookmark for the current state of Pythagoras. It will use the current data 'name' and suffix this with the current timestamp."
         ),
         ui.input_action_button(
             id="LoadBookmark", label="Load selected", icon=icon("folder-open", title="Load bookmark", a11y="sem"),
-            width="250px", class_="btn rounded-pill btn-sm btn-secondary", style="border: 0px; box-shadow: none;",
+            width="150px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
             guide=this, position="top",
             text="This button loads the selected bookmark by restarting Pythagoras using these settings."
         ),
@@ -323,8 +321,8 @@ def instance(
             if Module.runtime_mode(session) != "local":
                 return None
             return ui.input_action_button(
-                id="Purge", label="Purge", icon=icon("trash"),
-                class_="btn rounded-pill btn-sm btn-outline-danger",
+                id="Purge", label="Purge", icon=icon("trash"), width="150px",
+                class_="btn rounded-pill btn-sm btn-primary",
                 guide=this, position="top",
                 text="Delete older bookmarks for the selected data name, keeping the latest.",
             )
@@ -401,8 +399,32 @@ def instance(
         @this.record_context
         def StorageLocation():
             if Module.runtime_mode(session) == "local":
-                return str(bookmark_directory())
+                return f"Location: {bookmark_directory()}"
             return "Configurations are catalogued within this browser and are also downloaded as JSON files when saved."
+
+        @output
+        @render.ui
+        @this.record_context
+        def LocalBookmarkFiles():
+            if Module.runtime_mode(session) != "local":
+                return None
+            catalogue_version()
+            filenames = sorted(
+                path.name for path in bookmark_directory().glob("*.json")
+                if path.is_file()
+            )
+            if not filenames:
+                return ui.p("No JSON files found.", class_="text-muted")
+            return ui.div(
+                ui.tags.table(
+                    ui.tags.thead(ui.tags.tr(ui.tags.th("JSON filename"))),
+                    ui.tags.tbody(
+                        *[ui.tags.tr(ui.tags.td(filename)) for filename in filenames]
+                    ),
+                    class_="table table-sm table-striped",
+                ),
+                class_="table-responsive",
+            )
 
         @reactive.calc
         @this.record_context

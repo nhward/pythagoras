@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 import shinywidgets
 from card import Card
 from code_recording import recordable
+from MissingnessTransformer import MissingnessTransformer
 from module import Module
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
@@ -67,7 +68,9 @@ def _variable_summary(
             "Missing proportion": proportion,
             "Issue": issue,
         })
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=[
+        "Variable", "Role", "Missing", "Missing proportion", "Issue",
+    ])
 
 
 @recordable
@@ -86,12 +89,9 @@ def _remove_excessive_observations(
     data: proxy_data,
     threshold: float,
 ) -> proxy_data:
-    frame = data.frame
-    return data.with_cleaned_data(
-        frame.loc[~_excessive_observation_mask(frame, threshold)].copy(),
-        card="miss_map",
-        operation="Remove excessively incomplete observations",
-        parameters={"threshold": float(threshold)},
+    return _transform_data(
+        data, remove_variables=False, remove_observations=True,
+        variable_threshold=0.5, observation_threshold=threshold,
     )
 
 
@@ -100,14 +100,10 @@ def _remove_excessive_variables(
     data: proxy_data,
     threshold: float,
 ) -> proxy_data:
-    """Remove columns whose missing proportion is above the threshold."""
-    frame = data.frame
-    keep = list(frame.columns[frame.isna().mean(axis=0) <= threshold])
-    return data.with_cleaned_data(
-        frame.loc[:, keep].copy(),
-        card="miss_map",
-        operation="Remove excessively incomplete variables",
-        parameters={"threshold": float(threshold)},
+    """Register fold-fitted removal of excessively incomplete columns."""
+    return _transform_data(
+        data, remove_variables=True, remove_observations=False,
+        variable_threshold=threshold, observation_threshold=0.5,
     )
 
 
@@ -120,11 +116,7 @@ def _transform_data(
     variable_threshold: float,
     observation_threshold: float,
 ) -> proxy_data:
-    """Apply selected removals and record the card as one cleaning step.
-
-    Variable removal still precedes observation removal, but the two related
-    controls describe one card operation in the data journey.
-    """
+    """Register one learning step, removing variables before observations."""
     parameters = {
         "remove_variables": bool(remove_variables),
         "variable_threshold": float(variable_threshold),
@@ -135,32 +127,26 @@ def _transform_data(
     operation = "Remove excessive missingness"
     if not remove_variables and not remove_observations:
         return data.with_inactive_step(
-            stage="Cleaning",
+            stage="Learning",
             card="miss_map",
             operation=operation,
             parameters=parameters,
         )
 
-    frame = data.frame.copy()
-    if remove_variables:
-        keep = list(
-            frame.columns[
-                frame.isna().mean(axis=0) <= float(variable_threshold)
-            ]
-        )
-        frame = frame.loc[:, keep].copy()
-    if remove_observations:
-        excessive = _excessive_observation_mask(
-            frame,
-            float(observation_threshold),
-        )
-        frame = frame.loc[~excessive].copy()
-
-    return data.with_cleaned_data(
-        frame,
-        card="miss_map",
+    transformer = MissingnessTransformer(
+        remove_variables=remove_variables,
+        remove_observations=remove_observations,
+        variable_threshold=variable_threshold,
+        observation_threshold=observation_threshold,
+    )
+    preview = transformer.fit_transform(data.frame)
+    return data.with_pipeline_step(
+        transformer,
+        name="miss_map",
         operation=operation,
-        parameters=parameters,
+        preview_frame=preview,
+        removed_columns=transformer.removed_columns_,
+        allow_row_removal=remove_observations,
     )
 
 
@@ -316,6 +302,7 @@ def _missingness_figure(
 def instance():
     """Create the mutable missingness-map card."""
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Remove', 'VariableThreshold', 'ObservationThreshold')
     this.long_name = "Excessive missingness"
     this.description = "This card maps missing values across variables and observations and can remove excessive missingness from the dataset."
 
@@ -337,7 +324,7 @@ def instance():
         ui.input_checkbox_group(
             id="Remove", label="Remove excessive missingness in", choices=["Variables", "Observations"], inline=True, 
             guide=this, title="Remove excessive missingness", position="top",
-            text="Removes variables or observations above their respective thresholds. When both are selected, variables are removed first.",
+            text="Removes variables or observations above their respective thresholds. When both are selected, variables are removed first. Removals are recorded as a learning step; column selection is refitted on each training fold.",
         ),
         ui.output_ui(id="Check"),
         class_="vertically-scrollable-footer",
@@ -469,12 +456,12 @@ def instance():
             original = source.frame
             transformed = TransformedData().frame
             selected = Remove()
-            after_variables = _remove_excessive_variables(source, VariableThreshold())
+            after_variables = original.loc[:, original.isna().mean() <= VariableThreshold()]
             removed_variables = original.shape[1] - transformed.shape[1]
             removed_observations = original.shape[0] - transformed.shape[0]
-            excessive_variables = original.shape[1] - after_variables.frame.shape[1]
+            excessive_variables = original.shape[1] - after_variables.shape[1]
             observation_basis = (
-                after_variables.frame
+                after_variables
                 if "Variables" in selected
                 else original
             )
@@ -493,6 +480,10 @@ def instance():
             if not messages:
                 return ui.span("No variables or observations exceed their thresholds.", class_="text-success")
             return ui.span("; ".join(messages), class_="text-warning")
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(Remove, VariableThreshold, ObservationThreshold)
 
         return TransformedData
 

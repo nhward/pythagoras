@@ -16,6 +16,7 @@ from cards.miss_informative import instance
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
+from shiny import render, ui
 
 # Keep the browser scenario deterministic and avoid starting joblib workers.
 Module.N_JOBS = 1
@@ -38,4 +39,21 @@ roles.set_roles("target", [Role.TARGET])
 
 this = instance()
 this._imports.set(proxy_data(_df=frame, _roles=roles, _name="Test"))
+original_server, original_footer = this.server, this._footer
+this.footer = lambda: ui.TagList(original_footer(), ui.output_text("ExportProbe"))
+
+
+def server(input, output, session):
+    exported = original_server(input, output, session)
+
+    @output
+    @render.text
+    def ExportProbe():
+        value = this.output_data()
+        return f"rows={len(value.frame)};shadow={'shadow__x' in value.frame.columns}"
+
+    return exported
+
+
+this.server = server
 app = this.application()

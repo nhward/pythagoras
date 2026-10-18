@@ -218,6 +218,7 @@ def instance():
     Creates an instance of Card configured as "roleAssign".
     """
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this.export_inputs('Separator', 'CardinalityThreshold', 'MaxObs')
     this.register_configuration_input("role_map")
     this.long_name = "Role Assignment"
     this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data. Multiple Weighting variables are multiplied: balance__ names identify balancing factors; other names identify importance weights. Each must be finite, numeric, nonnegative and nonmissing."
@@ -348,6 +349,7 @@ def instance():
         @this.record_context
         def PxdChange():
             data = incomingproxy_data()
+            this.export_readiness.check(input)
             # Only upstream changes trigger replay. Reading settings in isolation
             # prevents a draft edit or validation-setting change from committing.
             with reactive.isolate():

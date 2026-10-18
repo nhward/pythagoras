@@ -271,6 +271,8 @@ def _encoding_audit(source, results, selected):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Encode', 'RemoveOriginal')
+    this.export_inputs('MinFrequency', 'MaxCategories', 'Unknown', 'CodeMethod', 'CodeSmoothing', 'CodeFolds', 'CodeTargetType', 'OrderedMethod', 'OrderedDegree', 'OrderedUnknown', 'CyclicUnknown')
     this.long_name = 'Variable encoding'
     this.description = 'Encode nominal, Code, Ordered, Cyclic, Logical and Basket predictors through sklearn pipeline steps.'
 
@@ -749,6 +751,13 @@ def instance():
             return busy.ui()
 
         session.on_ended(Calculate.cancel)
+
+        @this.export_check
+        def export_ready():
+            this.require_settled(Encode)
+            if Encode():
+                this.require_settled(Settings)
+                Calculate.require_current(IncomingData(), Options())
 
         return Export
     this.server = server

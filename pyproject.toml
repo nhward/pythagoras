@@ -27,6 +27,7 @@ dependencies = [
   "mlxtend>=0.23",
   "scikit-learn>=1.4",
   "imbalanced-learn>=0.14,<0.15",
+  "feature-engine>=1.9,<1.10",
   "shinylive==0.8.12",
   "seaborn==0.13.2",
   "statsmodels==0.15.0",

@@ -198,6 +198,7 @@ def _figure(source, result, *, limit=500, bins=30, full=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Component', 'TestPolicy')
     this.long_name = "Observation Weighting"
     this.description = "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights."
     this.front = lambda: ui.div(
@@ -306,6 +307,8 @@ def instance():
                            f"Effective sample size: {result['ess']:.1f}/{n:,}; largest weight share: {result['largest_share']:.1%}."
                            + warning + scroll + " Summaries and distribution use all observations; bars may be thinned.",
                            class_="text-warning" if warning else "text-secondary")
+
+        this.export_inputs("Power", when=lambda: _can_transform(Incoming()))
 
         return Export
 

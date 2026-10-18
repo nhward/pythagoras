@@ -63,11 +63,13 @@ from typing import ClassVar
 
 import shinywidgets as _sw
 from code_recording import recordable, recording_context, source_for
+from export_readiness import ExportReadiness, equivalent
 from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
 from session_task import SessionExtendedTask, task_restart_context
 from shiny import App, reactive, req, ui
 from shiny import ui as _ui
+from shiny.session import get_current_session
 from shiny.types import SilentException
 
 _UNSET = object()
@@ -147,8 +149,9 @@ class ApplicationLogHandler(logging.Handler):
 class BusyTracker:
     """Collect session-local extended tasks for a reactive busy display."""
 
-    def __init__(self):
+    def __init__(self, owner=None):
         self._tasks: list[tuple[object, str]] = []
+        self.owner = owner
 
     def track(self, message: str):
         """Register an ExtendedTask without changing its invocation or result."""
@@ -166,11 +169,19 @@ class BusyTracker:
 
     def ui(self):
         """Return a spinner and the messages for tasks currently running."""
+        if self.owner is not None and (
+            not self.owner._active() or self.owner.waiting.message()
+        ):
+            return None
         messages = [
             message
             for task, message in self._tasks
             if task.status() == "running"
         ]
+        return self.render_messages(messages)
+
+    @staticmethod
+    def render_messages(messages):
         if not messages:
             return None
         return ui.div(
@@ -184,6 +195,33 @@ class BusyTracker:
             role="status",
             aria_live="polite",
         )
+
+
+class WaitingIndicator:
+    """Delay transient pipeline messages without delaying the pipeline itself."""
+
+    def __init__(self, delay=0.25):
+        self.delay = delay
+        self._state = reactive.Value((None, 0.0))
+
+    def set(self, message):
+        with reactive.isolate():
+            if self._state()[0] == message:
+                return
+        self._state.set((message, time.monotonic()))
+
+    def message(self):
+        return self._state()[0]
+
+    def ui(self):
+        message, started = self._state()
+        if message is None:
+            return None
+        remaining = self.delay - (time.monotonic() - started)
+        if remaining > 0:
+            reactive.invalidate_later(remaining)
+            return None
+        return BusyTracker.render_messages([message])
 
 
 class Module(ABC):
@@ -305,6 +343,10 @@ class Module(ABC):
         # instance registries
         self.reactables = [] # An instance-level list of all reactable reactives
         self.extended_tasks = []
+        self.export_readiness = ExportReadiness()
+        self._active = reactive.Value(False)
+        self.waiting = WaitingIndicator()
+        self._busy_trackers = []
         # Code recording
         self.code_registry = {} # An instance-level Code-Registry
         # Generic bookmark state. Special cards may disable this and provide
@@ -338,6 +380,20 @@ class Module(ABC):
                 _ACTIVE_CONFIGURATION_MODULE.reset(self.token)
 
         return ConfigurationContext()
+
+    def export_inputs(self, *names, allow_none=False, when=lambda: True):
+        """Declare controls whose browser values are required for export."""
+        self.export_readiness.require_inputs(*names, allow_none=allow_none, when=when)
+
+    def export_check(self, check):
+        """Register a reactive prerequisite without blocking initialization."""
+        self.export_readiness.checks.append(check)
+        return check
+
+    def require_settled(self, *calculations):
+        for calculation in calculations:
+            current = getattr(calculation, "current", calculation)
+            req(equivalent(calculation(), current()))
 
     @staticmethod
     def _json_value(value):
@@ -763,6 +819,9 @@ class Module(ABC):
             owner = guide or _ACTIVE_CONFIGURATION_MODULE.get()
             if kind == "input" and isinstance(owner, Module):
                 kwargs = owner._configuration_kwargs(func, id, dict(kwargs))
+                for parameter in ("selected", "value"):
+                    if parameter in kwargs and kwargs[parameter] is not None:
+                        owner.export_readiness.expect(id, kwargs[parameter])
             # Call original Shiny UI function
             sig = inspect.signature(func)
             if "label" in sig.parameters:
@@ -805,6 +864,18 @@ class Module(ABC):
 
     _ui_patch_lock = threading.Lock()
 
+    def _make_update_wrapper(self, func):
+        @functools.wraps(func)
+        def wrapped(id, *args, **kwargs):
+            session = kwargs.get("session") or get_current_session()
+            contract = getattr(session, "_export_readiness", None)
+            if contract is not None:
+                for parameter in ("selected", "value"):
+                    if parameter in kwargs and kwargs[parameter] is not None:
+                        contract.expect(id, kwargs[parameter])
+            return func(id, *args, **kwargs)
+        return wrapped
+
 
     def _patch_module(self, module) -> None:
         """
@@ -821,6 +892,10 @@ class Module(ABC):
             module._original_funcs = {}
             for name, obj in list(vars(module).items()):
                 if not callable(obj):
+                    continue
+                if name.startswith("update_"):
+                    module._original_funcs[name] = obj
+                    setattr(module, name, self._make_update_wrapper(obj))
                     continue
                 if name.startswith("navset_"):
                     module._original_funcs[name] = obj
@@ -945,11 +1020,14 @@ class Module(ABC):
 
     # Utility functions for mass control
     def suspend(self):
+        self._active.set(False)
+        self.waiting.set(None)
         for task in self.extended_tasks:
             task.suspend()
         for w in self.reactables:
             w.suspend()
     def resume(self):
+        self._active.set(True)
         for task in self.extended_tasks:
             task.resume()
         for w in self.reactables:
@@ -966,7 +1044,7 @@ class Module(ABC):
 
     def record_code(self, func):
         """Record a computational function when called, including its helpers."""
-        if not inspect.isroutine(func) or any(func is item for item in self.reactables):
+        if not inspect.isroutine(func) or any(func is item for item in getattr(self, "reactables", ())):
             # Preserve already-created reactive objects and lifecycle controls.
             # Prefer record_code INSIDE the reactive decorator for run-only capture.
             name = getattr(func, "__name__", type(func).__name__)
@@ -1113,14 +1191,16 @@ class Module(ABC):
                                 published.set(_settle_snapshot(candidate))
                     producer = publish_when_settled
                 return published.get()
+            wrapper.current = function
             return wrapper
 
         return decorator
 
-    @staticmethod
-    def busy() -> BusyTracker:
+    def busy(self) -> BusyTracker:
         """Create a busy tracker for one server session."""
-        return BusyTracker()
+        tracker = BusyTracker(self)
+        self._busy_trackers.append(tracker)
+        return tracker
     
 
     # Abstract methods

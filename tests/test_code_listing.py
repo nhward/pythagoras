@@ -44,7 +44,7 @@ CASES = [
 for scenario, _ in CASES:
     app_file = "data_import_server" if scenario == "data_import" else scenario
     globals()["code_app_" + scenario] = create_app_fixture(
-        app=str(Path(__file__).resolve().parents[1] / "scenarios" / f"{app_file}.py"),
+        app=str(Path(__file__).resolve().parent / "scenarios" / f"{app_file}.py"),
         scope="function",
     )
 

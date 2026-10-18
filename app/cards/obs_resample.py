@@ -189,8 +189,11 @@ def _figure(overview, *, full=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.export_inputs('Goal', 'Stratifier')
+    this.export_inputs('Folds', 'Seed', 'Gap', 'Expanding')
     this.long_name = "Observation resampling"
     this.description = "Choose a prediction goal; assigned roles determine evaluation splits."
+    this.export_inputs("Window", "Horizon", "Step", allow_none=True)
     this.defer_configuration_input("Goal")
     this.defer_configuration_input("Stratifier")
     this.register_configuration_state_field("evaluation_plan")
@@ -355,7 +358,8 @@ def instance():
             def integer(name):
                 value = input[name]()
                 return int(value) if value is not None and float(value).is_integer() else value
-            goal = input.Goal() or "none"
+            req(input.Goal() is not None)
+            goal = input.Goal()
             options = {"goal": goal}
             if goal == "none":
                 return options
@@ -501,6 +505,12 @@ def instance():
                 yield frame.to_csv(index=False, header=j == 0)
 
         session.on_ended(Calculate.cancel)
+        @this.export_check
+        def export_ready():
+            this.require_settled(Options)
+            if Options()["goal"] != "none":
+                Calculate.require_current(Incoming(), Options())
+
         return Export
 
     this.server = server

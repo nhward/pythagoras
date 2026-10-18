@@ -82,6 +82,9 @@ def instance():
         ),
     )
 
+    this.footer = lambda: ui.TagList(
+    )
+    
     this.settings = lambda: ui.TagList(
         ui.input_checkbox(
             id="Robust", label="Employ robust statistics for central tendency and spread", value=True, 

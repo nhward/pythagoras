@@ -61,10 +61,13 @@ def test_removal_preserves_proxy_metadata(card_module):
     assert list(result.frame.index) == [1, 3]
     assert result.role_map == source.role_map
     assert len(source.frame) == 4
-    assert len(result.cleaning_records) == 1
-    record = result.cleaning_records[0]
+    assert result.cleaning_records == ()
+    record = result.processing_records[0]
+    assert record.stage == "Learning"
     assert record.card == "miss_map"
-    assert record.parameters == {"threshold": 0.5}
+    assert record.parameters["observation_threshold"] == 0.5
+    assert result.pipeline_steps == ("miss_map",)
+    pd.testing.assert_frame_equal(result.clean_frame, source.frame)
     assert record.input_shape == (4, 3)
     assert record.output_shape == (2, 3)
 
@@ -81,9 +84,8 @@ def test_variable_removal_preserves_remaining_roles(card_module):
     assert result.name == "sample"
     assert result.role_map.roles_for("C") == {Role.PREDICTOR}
     assert not result.role_map.roles_for("A")
-    assert result.cleaning_records[-1].operation == (
-        "Remove excessively incomplete variables"
-    )
+    assert result.processing_records[-1].operation == "Remove excessive missingness"
+    assert result.processing_records[-1].stage == "Learning"
 
 
 @pytest.mark.unit
@@ -106,16 +108,17 @@ def test_combined_removal_processes_variables_before_observations(card_module):
 
     assert list(result.frame.columns) == ["kept", "complete"]
     assert len(result.frame) == 4
-    assert len(result.cleaning_records) == 1
+    assert result.cleaning_records == ()
     assert len(result.processing_records) == 1
-    record = result.cleaning_records[0]
+    record = result.processing_records[0]
+    assert record.stage == "Learning"
     assert record.operation == "Remove excessive missingness"
     assert dict(record.parameters) == {
         "remove_variables": True,
         "variable_threshold": 0.5,
         "remove_observations": True,
         "observation_threshold": 0.5,
-        "execution_order": "variables before observations",
+        "removed_columns": ["mostly_missing"],
     }
 
 
@@ -138,6 +141,8 @@ def test_disabled_removals_produce_one_inactive_card_step(card_module):
     assert record.card == "miss_map"
     assert record.operation == "Remove excessive missingness"
     assert record.attempted is False
+    assert record.stage == "Learning"
+    assert not result.has_pipeline
 
 
 @pytest.mark.unit

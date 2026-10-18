@@ -37,10 +37,10 @@ from pathlib import Path
 import plotly.graph_objects as go
 from faicons import icon_svg as icon
 from module import Module
+from roles import BALANCE_PREFIX
 from shiny import module, reactive, render, ui
 from shiny.types import SilentException
-from roles import BALANCE_PREFIX
-from weighting import effective_weights, observation_weights, WeightingError
+from weighting import WeightingError, effective_weights, observation_weights
 
 
 class Card(Module):
@@ -355,9 +355,13 @@ class Card(Module):
                 )
 
             def myfooter():
-                if self.hasFooter():
-                    return ui.card_footer(self.footer, class_ = "text-center bg-info bg-opacity-25")
-                return None
+                if not self.hasFooter():
+                    return None
+                return ui.card_footer(
+                    ui.output_ui("PipelineBusy"),
+                    self.footer,
+                    class_ = "text-center bg-info bg-opacity-25"
+                )
                 
 
             if not self.hasSidebar():
@@ -439,6 +443,7 @@ class Card(Module):
 
             self._upstream = upstream
             self._configuration_input = input
+            session._export_readiness = self.export_readiness
 
 
             # isFullScreen
@@ -605,7 +610,42 @@ class Card(Module):
                 raise TypeError(
                     f"Card {self.namespace!r} returned a non-reactive output"
                 )
+            if self.mutable:
+                card_output = self.export_readiness.bind(self, card_output, input, session)
             self.output_data = card_output
+
+            @reactive.effect
+            def pipeline_activity():
+                if not self._active():
+                    self.waiting.set(None)
+                    return
+                try:
+                    if upstream() is not None:
+                        self.input_data()
+                except SilentException:
+                    self.waiting.set("Awaiting upstream data")
+                    return
+                except Exception:  # noqa: BLE001
+                    # Consumers still report the error; do not mask it with a
+                    # spinner that suggests more waiting will fix the problem.
+                    self.waiting.set(None)
+                    return
+                phase = self.export_readiness.phase()
+                if phase == "configuration":
+                    self.waiting.set("Applying bookmark")
+                elif phase == "calculation":
+                    running = any(task.status() == "running" for task in self.extended_tasks)
+                    tracked = any(task.status() == "running"
+                                  for tracker in self._busy_trackers for task, _ in tracker._tasks)
+                    self.waiting.set(None if tracked else "Calculating…" if running else "Applying bookmark")
+                else:
+                    self.waiting.set(None)
+
+            @output
+            @render.ui
+            def PipelineBusy():
+                return self.waiting.ui()
+
             return card_output
 
         return server_func(

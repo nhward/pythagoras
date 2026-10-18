@@ -10,7 +10,7 @@ if path not in sys.path:
 
 import module as module_lib
 import pytest
-from module import BusyTracker, Module
+from module import BusyTracker, Module, WaitingIndicator
 from shiny import reactive, ui
 from shiny.types import SilentException
 
@@ -813,6 +813,43 @@ class FakeExtendedTask:
 
     def status(self):
         return self.current_status
+
+
+@pytest.mark.unit
+def test_waiting_indicator_delays_messages_and_clears_immediately(monkeypatch):
+    now = [0.0]
+    timers = []
+    monkeypatch.setattr(module_lib.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(reactive, "invalidate_later", timers.append)
+    indicator = WaitingIndicator()
+    indicator.set("Awaiting upstream data")
+    with reactive.isolate():
+        assert indicator.ui() is None
+        assert timers == [0.25]
+        now[0] = 0.3
+        indicator.set("Awaiting upstream data")
+        assert "Awaiting upstream data" in str(indicator.ui())
+        indicator.set(None)
+        assert indicator.ui() is None
+        indicator.set("Applying configuration")
+        assert indicator.ui() is None
+
+
+@pytest.mark.unit
+def test_task_busy_display_yields_to_shared_waiting_status():
+    module = DummyModule("waiting-card")
+    tracker = module.busy()
+    tracker.track("Fitting model")(FakeExtendedTask("running"))
+    with reactive.isolate():
+        assert tracker.ui() is None
+        module.resume()
+        assert "Fitting model" in str(tracker.ui())
+        module.waiting.set("Awaiting upstream data")
+        assert tracker.ui() is None
+        module.waiting.set(None)
+        assert "Fitting model" in str(tracker.ui())
+        module.suspend()
+        assert tracker.ui() is None
 
 
 @pytest.mark.unit
