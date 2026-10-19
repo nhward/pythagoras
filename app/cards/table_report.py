@@ -1,0 +1,292 @@
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    ROOT = Path(__file__).resolve().parent.parent
+    # Ensure local modules and packages are resolved from the app directory.
+    os.chdir(ROOT)
+    root_string = str(ROOT)
+    if root_string not in sys.path:
+        sys.path.insert(0, root_string)
+
+import pandas as pd  # needed for test / solo modes
+from card import Card
+from cyclic_pandas import is_cyclic
+from faicons import icon_svg as icon
+from geometry_pandas import is_geometry
+from list_pandas import is_list
+from module import Module
+from proxy_data import proxy_data
+from shiny import render, req, ui
+from shiny.types import SilentOperationInProgressException
+from skrub import TableReport, set_config
+from text_pandas import is_text
+
+
+def instance():
+    """
+    Creates an instance of Card configured as "TableReport".
+    """
+    this = Card(file=__file__, mutable=False) # "mutable" means it can change the pxd - probably with a commit button
+    this.long_name = "Table report"
+    this.description = "This card enables the data to be interactively reported."
+    
+    this.front = lambda: ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
+        id = "Tablereport",
+        title = "A data table report", 
+        guide = this,
+        text = 'An interactive table report. This is best viewed in full-screen. See <a href="https://skrub-data.org/stable/modules/tablereport/exploring_dataframes_interactively.html" target="_blank" rel="noopener noreferrer">here</a> for documentation.',
+        position = "left"
+    ) 
+    
+    this.back = lambda: ui.output_ui(
+        id = "StructTable",
+        title = "The meta-data", 
+        guide = this,
+        text = 'The structure of the dataset.',
+        position = "left"
+    ) 
+    
+    this.footer = lambda: ui.download_button(
+            id = "Export", 
+            label = 'Export', 
+            icon = icon("file-arrow-down", title = "Export the data", a11y = "sem"),
+            width = "250px", 
+            class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
+            style = "border: 0px; box-shadow: none;",
+            guide = this, 
+            title = "Export button",
+            text = "Downloads the complete incoming data as CSV. Display filters and rounding are not applied, but CSV cannot preserve roles, pipeline metadata, geometry metadata, or every pandas extension type.",
+            position = "top"
+        )
+
+
+    this.settings = lambda: ui.TagList(
+        ui.input_slider(
+            id = "Decimals", label = "Number of decimal places to show", min = -2, max = 10, value = 2, 
+            guide = this, text = "Rounds numeric values in the browser table to this many decimal places. Negative values round to tens or hundreds. Stored and exported values retain their original precision.", position = "left"
+        ),
+        ui.input_slider(
+            id = "CardinalityThreshold", label = "The cardinality warning threshold", min = 15, max = 70, value = 30, 
+            guide = this, text = "Controls the maximum threshold value used to warn if there are any high cardinality columns in the dataset.", position = "left"
+        )
+    )
+
+    def server(input, output, session):
+
+        @this.reactable(calc = True)
+        @this.record_context
+        def incomingproxy_data():
+            try:
+                value = this.input_data()
+            except SilentOperationInProgressException:
+                # This card does not own the upstream task's progress lifecycle.
+                # Clear it normally while waiting, avoiding Shiny's persistent
+                # output state when hidden/unhidden or refreshed during that task.
+                req(False)
+            req(value is not None)
+            return value
+
+        @this.reactable(calc = True)
+        @this.settle(seconds=2)
+        def Config():
+            return {
+                "decimals": input.Decimals(),
+                "CardinalityThreshold": input.CardinalityThreshold(),
+            }
+        
+        @this.reactable(calc = False)
+        def SetConfig():
+            conf = Config()
+            set_config(
+                table_report_verbosity = 1,
+                subsampling_seed = 2025,
+                enable_subsampling = "default",
+                float_precision = conf["decimals"],
+                cardinality_threshold = conf["CardinalityThreshold"]
+            )
+
+
+        @this.record_code
+        def _dtype_label_from_dtype(dtype) -> str:
+            if is_cyclic(dtype):
+                return "cyc"
+            if is_text(dtype):
+                return "txt"
+            if is_geometry(dtype):
+                return "geo"
+            if is_list(dtype):
+                return "bkt"
+            if isinstance(dtype, pd.StringDtype):
+                return "cde"
+            if isinstance(dtype, pd.CategoricalDtype):
+                return "ord" if dtype.ordered else "nom"
+            if pd.api.types.is_integer_dtype(dtype):
+                return "int"
+            if pd.api.types.is_float_dtype(dtype):
+                return "dec"
+            if pd.api.types.is_bool_dtype(dtype):
+                return "log"
+            if pd.api.types.is_datetime64_any_dtype(dtype):
+                return "dte"
+            if pd.api.types.is_object_dtype(dtype):
+                return "obj"
+            return str(dtype)
+
+
+        @this.reactable(calc = True)
+        @this.record_context
+        def PreparedData():
+            req(incomingproxy_data() is not None)
+            return incomingproxy_data().data()
+
+        @this.record_code
+        def _safe_unique_count(series: pd.Series) -> int | None:
+            """Count distinct scalar values, or return None when unsupported."""
+            if is_list(series.dtype) or is_geometry(series.dtype):
+                return None
+            try:
+                return int(series.nunique(dropna=True))
+            except (TypeError, ValueError):
+                return None
+
+        @this.record_code
+        def _column_summary(series: pd.Series) -> str:
+            """Return a compact summary appropriate for the column's dtype."""
+            dtype = series.dtype
+            observed = series.dropna()
+            if observed.empty:
+                return "No observed values"
+
+            if is_geometry(dtype):
+                geometry_types = ", ".join(
+                    sorted(observed.geom_type.dropna().unique().tolist())
+                )
+                crs = getattr(series, "crs", None)
+                parts = [f"geometry: {geometry_types or 'unknown'}"]
+                if crs is not None:
+                    parts.append(f"CRS: {crs}")
+                return "; ".join(parts)
+
+            if is_list(dtype):
+                lengths = observed.map(len)
+                return (
+                    f"list length: median {lengths.median():g}, "
+                    f"range {lengths.min()}–{lengths.max()}"
+                )
+
+            if is_cyclic(dtype):
+                if dtype.is_categorical:
+                    categories = ", ".join(map(str, dtype.categories))
+                    return f"cycle: {categories}"
+                return f"cycle period: {dtype.period:g}"
+
+            if is_text(dtype):
+                lengths = observed.astype("string").str.len()
+                return f"text length: median {lengths.median():g} characters"
+
+            if pd.api.types.is_datetime64_any_dtype(dtype):
+                return f"range: {observed.min()} to {observed.max()}"
+
+            if (
+                pd.api.types.is_numeric_dtype(dtype)
+                and not pd.api.types.is_bool_dtype(dtype)
+            ):
+                return (
+                    f"min {observed.min():g}; median {observed.median():g}; "
+                    f"mean {observed.mean():g}; max {observed.max():g}"
+                )
+
+            try:
+                counts = observed.value_counts(dropna=True)
+            except (TypeError, ValueError):
+                return "No scalar summary"
+            if counts.empty:
+                return "No observed values"
+            return f"mode: {counts.index[0]} ({int(counts.iloc[0])})"
+
+        @this.record_code
+        def _structure_data(source):
+            """Return one structural-summary row for each source variable."""
+            px = source
+            df = px.frame
+            if hasattr(df, "to_pandas"):
+                df = df.to_pandas()
+            role_map = getattr(px, "role_map", None)
+            row_count = len(df)
+            rows = []
+            for column in df.columns:
+                series = df[column]
+                missing = int(series.isna().sum())
+                roles = role_map.roles_for(column) if role_map is not None else set()
+                rows.append({
+                    "Variable": str(column),
+                    "Data type": _dtype_label_from_dtype(series.dtype),
+                    "Storage type": str(series.dtype),
+                    "Role": ", ".join(sorted(role.value for role in roles)),
+                    "Complete": row_count - missing,
+                    "Missing": missing,
+                    "Missing %": round(100 * missing / row_count, 1) if row_count else 0.0,
+                    "Unique": _safe_unique_count(series),
+                    "Summary": _column_summary(series),
+                })
+            return pd.DataFrame(rows, columns=[
+                "Variable", "Data type", "Storage type", "Role", "Complete",
+                "Missing", "Missing %", "Unique", "Summary",
+            ])
+
+        @this.reactable(calc = True)
+        @this.record_context
+        def StructureData() -> pd.DataFrame:
+            req(incomingproxy_data() is not None)
+            return _structure_data(incomingproxy_data())
+
+        @output
+        @render.ui
+        @this.record_context
+        def Tablereport():
+            req(incomingproxy_data() is not None)
+            return TableReport(incomingproxy_data().frame, n_rows = 20 if this.isFullScreen() else 4)
+
+        @output
+        @render.download_button(filename=f"{this.namespace}_data.csv", media_type="text/csv")
+        def Export():
+            req(incomingproxy_data() is not None)
+            frame = incomingproxy_data()
+            yield frame.to_csv(index=False, header=True)
+
+        @output
+        @render.ui
+        @this.record_context
+        def StructTable():
+            req(incomingproxy_data() is not None)
+            # As above, rebuilding discards duplicate roots after DOM moves.
+            return ui.output_data_frame(id = "Structure")
+
+        @output
+        @render.data_frame
+        @this.record_context
+        def Structure():
+            req(incomingproxy_data() is not None)
+            return render.DataTable(
+                StructureData(),
+                summary=False,
+                filters=False,
+                width="100%",
+                height="98%",
+            )
+
+    this.server = server
+
+    return this
+
+
+if Module.running_directly(name =__name__):
+    this = instance()
+    df = pd.read_csv( Card.ROOT / "data" / "Ass2.csv")
+    pxd = proxy_data(_df = df, _name = "Ass2")
+    this._imports.set(pxd)
+    this.run()

@@ -1,0 +1,88 @@
+---
+title: Table report
+---
+
+#### 🧭 Purpose
+
+_The Table report card provides an interactive overview of the dataset reaching it. Use it after import or another preparation step to inspect values, distributions, missingness, and relationships between variables. It is a diagnostic, read-only card: viewing the report and exporting a copy do not change what downstream cards receive._
+
+#### 🎯 Goals
+
+1. **Primary:** Explore the incoming dataset through an interactive report.
+1. **Secondary:** Check variable types, assigned roles, and structural summaries.
+1. **Tertiary:** Export the incoming dataset as a portable CSV copy.
+
+#### 🧠 How it works
+
+The front embeds skrub's `TableReport`, generated from the incoming data frame. The flip side provides the same Pythagoras structural summary as Data tabulation, including assigned roles and summaries for specialized data types.
+
+The front receives all incoming columns, rather than selecting only predictors or targets. Its associations are exploratory comparisons; assigning a Target role does not make this report a fitted prediction model or a model evaluation.
+
+The row preview is deliberately short: the card requests four rows in compact mode and twenty in full-screen mode, split between the beginning and end of the dataset. This preview length is not a limit on CSV export and should not be interpreted as the number of observations underlying every report statistic.
+
+#### 🏞️ Front
+
+Expand the card to full screen for the most usable report layout. The report combines a row preview with several views:
+
+| View | What to inspect |
+|:-----|:----------------|
+| **Stats** | Column-level statistics for a quick overview. |
+| **Distributions** | Summary plots showing how values are distributed. |
+| **Associations** | Pairwise relationships, including Pearson correlation and Cramér's V. |
+
+Use the report's built-in column filters to focus on particular types or conditions. In the distribution view, selecting columns with the checkmark adds their names to a bar for copying. These selections affect exploration, not the workflow's variable roles or contents. See skrub's [interactive TableReport guide](https://skrub-data.org/stable/modules/tablereport/exploring_dataframes_interactively.html) for the report's own controls.
+
+#### 🔄 Flip side
+
+The structure table contains one row per incoming variable, in source-column order.
+
+| Field | Meaning |
+|:------|:--------|
+| **Variable** | Column name. |
+| **Data type** | Pythagoras's compact type label, such as `dec`, `nom`, `txt`, or `bkt`. |
+| **Storage type** | The underlying pandas dtype. |
+| **Role** | Assigned workflow roles. |
+| **Complete**, **Missing**, **Missing %** | Counts of observed and missing values, and the missing percentage. |
+| **Unique** | Number of distinct non-missing scalar values; unavailable for unsupported types such as baskets and geometry. |
+| **Summary** | A description appropriate to the variable's type. |
+
+Numeric summaries include minimum, median, mean, and maximum. Other summaries include date ranges, modal values, text or basket lengths, cycle definitions, and geometry types with coordinate reference information where available. An entirely missing variable is identified as having no observed values.
+
+#### 🛠️ Controls and actions
+
+**Export** downloads the complete incoming dataset as `<card namespace>_data.csv`, with column headers and without the row index. Report selections, preview length, and display precision do not restrict or round the downloaded values.
+
+The card has no data-changing action. Its Export button downloads data, not the interactive report itself.
+
+#### ⚙️ Settings
+
+The card's Tour Guide gives a concise description of each setting.
+
+The display-precision and cardinality-warning settings concern report presentation. Cardinality means the number of distinct values in a column; a warning is a reason to inspect that column, not a rule for removing it.
+
+#### 🔎 Interpretation and next steps
+
+Compare the report with the flip-side roles and types. An identifier with many distinct values may be entirely appropriate, while an unexpectedly large set of category labels may indicate inconsistent spelling or parsing. Investigate missingness and unusual distributions with the relevant missing-value or variable cards.
+
+Treat associations as prompts for investigation. They do not establish causation, independence, or suitability for prediction, and strong relationships involving identifiers may be misleading.
+
+#### ⛔️ Limitations
+
+* The head-and-tail preview can miss unusual observations elsewhere in the data.
+* Skrub may limit plots or subsample expensive summaries; inspect any report notices before interpreting them as full-data results.
+* Specialized Pythagoras types may be represented differently in Skrub's report. Consult the flip side for their storage types and assigned roles.
+* CSV does not preserve roles, learning pipelines, category definitions, geometry metadata, or all pandas extension types.
+
+#### 📌 Suggested workflow
+
+1. Expand the card and check column names and preview values.
+1. Review missingness and distributions for unexpected patterns.
+1. Explore associations that are relevant to the analytical question.
+1. Flip the card to verify roles, types, and structural summaries.
+1. Use a preparation card for changes, or export CSV when a value-only copy is useful.
+
+#### 🔗 Data flow
+
+* **Input:** The complete upstream dataset and its metadata.
+* **Output:** The upstream data unchanged; report interactions are not propagated.
+* **Data journey:** This diagnostic card does not add a cleaning or learning step.

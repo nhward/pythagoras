@@ -1,14 +1,8 @@
 """Pipelines combining resampling with joint feature/target transformations."""
 
 from feature_engine.pipeline import Pipeline as FeatureEnginePipeline
-from imblearn.pipeline import (
-    Pipeline as ImbalancedPipeline,
-)
-from imblearn.pipeline import (
-    _fit_resample_one,
-    _fit_transform_one,
-    _print_elapsed_time,
-)
+from imblearn.pipeline import Pipeline as ImbalancedPipeline
+from imblearn.pipeline import _fit_resample_one, _fit_transform_one, _print_elapsed_time
 from sklearn.base import clone
 from sklearn.utils.validation import check_memory
 
@@ -35,6 +29,27 @@ class Pipeline(ImbalancedPipeline, FeatureEnginePipeline):
     """
 
     score = FeatureEnginePipeline.score
+
+    @classmethod
+    def from_tabular(cls, estimator, *, n_jobs=None, memory=None, verbose=False,
+                     transform_input=None):
+        """Build skrub's tabular preprocessing using this pipeline implementation.
+
+        Accepts the same estimator instances, pipeline instances, and task names
+        as ``skrub.tabular_pipeline``. Skrub chooses and names the steps; this
+        class supplies sampler-aware fitting and paired X/y transformations.
+
+        As in skrub, supplied pipeline steps follow automatic preprocessing.
+        To filter raw rows before imputation, prepend that transformer to the
+        returned pipeline's steps instead. Construction does not fit the data.
+        """
+        from skrub import tabular_pipeline as skrub_tabular_pipeline
+
+        generated = skrub_tabular_pipeline(estimator, n_jobs=n_jobs)
+        return cls(
+            generated.steps, memory=memory, verbose=verbose,
+            transform_input=transform_input,
+        )
 
     def _fit(self, X, y=None, routed_params=None, raw_params=None):
         self.steps = list(self.steps)
@@ -67,3 +82,15 @@ class Pipeline(ImbalancedPipeline, FeatureEnginePipeline):
                 )
             self.steps[index] = (name, fitted)
         return X, y
+
+
+def tabular_pipeline(estimator, *, n_jobs=None, memory=None, verbose=False,
+                     transform_input=None):
+    """Return skrub's automatic tabular steps in the combined Pipeline.
+
+    See :meth:`Pipeline.from_tabular` for ordering and supported options.
+    """
+    return Pipeline.from_tabular(
+        estimator, n_jobs=n_jobs, memory=memory, verbose=verbose,
+        transform_input=transform_input,
+    )

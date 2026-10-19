@@ -26,3 +26,4 @@ session_info
 scipy
 imbalanced-learn>=0.14,<0.15
 feature-engine>=1.9,<1.10
+skrub==0.11.0

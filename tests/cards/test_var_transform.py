@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -401,18 +402,22 @@ class TestWebKitUI:
         page.goto(app.url)
         expect(by_id(page, "IncludeTarget")).to_be_attached(timeout=20_000)
 
-        by_id(page, "ExpandButton").click(force=True)
+        # init_card installs the handlers before hiding the contract wrapper.
+        expect(get_card(page).locator(".hidden > .contract-btn")).to_have_count(1)
+        get_card(page).hover()
+        by_id(page, "ExpandButton").click()
+        expect(get_card(page)).to_have_attribute("aria-expanded", "true")
         expect(get_card(page).locator(".collapse-toggle")).to_be_visible()
         get_card(page).locator(".collapse-toggle").click()
         expect(by_id(page, "IncludeTarget")).to_be_visible()
         by_id(page, "IncludeTarget").check()
         expect(by_id(page, "Check")).to_contain_text(
-            "3 available continuous numeric variables",
+            "4 available continuous numeric variables, including the target",
             timeout=20_000,
         )
         by_id(page, "Transform").locator('input[value="Scale"]').check(force=True)
         expect(by_id(page, "Check")).to_contain_text(
-            "Transformed 4 variables using Common spread",
+            re.compile(r"Transformed 4 variables(?:, including the target,)? using Common spread"),
             timeout=20_000,
         )
 

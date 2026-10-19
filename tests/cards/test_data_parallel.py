@@ -95,11 +95,9 @@ def test_eligible_columns_include_supported_scalar_types(card_module):
     frame["too_many"] = [f"value-{index}" for index in range(len(frame))]
     frame["shadow__number"] = frame["number"]
     frame["all_missing"] = np.nan
-
     eligible, excluded = card_module._eligible_columns(
         frame, maximum_levels=3,
     )
-
     assert eligible == ["number", "integer", "group", "when", "flag"]
     assert "3 observed levels" in excluded["too_many"]
     assert excluded["shadow__number"] == "Shadow variable"
@@ -112,23 +110,19 @@ def test_complete_cases_remove_missing_and_infinite_values(card_module):
         "x": [1.0, np.nan, 3.0, np.inf, 5.0],
         "group": ["A", "A", None, "B", "B"],
     })
-
     result = card_module._finite_complete_cases(frame)
-
     assert result.index.tolist() == [0, 4]
 
 
 @pytest.mark.unit
 def test_ordered_categories_and_booleans_receive_labelled_ticks(card_module):
     frame = sample_frame()
-
     category, category_values = card_module._encode_series(
         frame["group"], "group",
     )
     boolean, boolean_values = card_module._encode_series(
         frame["flag"], "flag",
     )
-
     assert category["ticktext"] == ["low", "middle", "high"]
     assert category["tickvals"] == [0, 1, 2]
     assert category_values.tolist() == [0, 2, 1, 0, 2, 1]
@@ -141,7 +135,6 @@ def test_datetime_axis_has_readable_ticks_and_numeric_values(card_module):
     dimension, values = card_module._encode_series(
         sample_frame()["when"], "when",
     )
-
     assert dimension["label"] == "when"
     assert len(dimension["tickvals"]) == 5
     assert dimension["ticktext"][0].startswith("2025-01-01")
@@ -152,7 +145,6 @@ def test_datetime_axis_has_readable_ticks_and_numeric_values(card_module):
 @pytest.mark.unit
 def test_preparation_uses_colour_for_complete_cases_and_samples_stably(card_module):
     from proxy_data import proxy_data
-
     frame = sample_frame()
     first = card_module._prepare_parallel_data(
         proxy_data.from_native(frame),
@@ -168,7 +160,6 @@ def test_preparation_uses_colour_for_complete_cases_and_samples_stably(card_modu
         maximum_observations=3,
         show_colour_scale=True,
     )
-
     assert first.source_observations == 6
     assert first.complete_observations == 5
     assert len(first.frame) == 3
@@ -183,7 +174,6 @@ def test_categorical_colour_has_discrete_scale_and_labelled_colorbar(card_module
     line = card_module._colour_line(
         sample_frame()["group"], "group", show_scale=True,
     )
-
     assert line["showscale"] is True
     assert line["colorbar"]["title"]["text"] == "group"
     assert line["colorbar"]["ticktext"] == ["low", "middle", "high"]
@@ -196,7 +186,6 @@ def test_categorical_colour_has_discrete_scale_and_labelled_colorbar(card_module
 def test_identity_uses_assigned_key_with_row_number_fallback(card_module):
     from proxy_data import proxy_data
     from roles import Role, RoleMap
-
     frame = pd.DataFrame({
         "site": ["A", "A", None],
         "record": [10, 11, 12],
@@ -206,27 +195,21 @@ def test_identity_uses_assigned_key_with_row_number_fallback(card_module):
     roles.set_roles("site", [Role.IDENTIFIER])
     roles.set_roles("record", [Role.IDENTIFIER])
     data = proxy_data(_df=frame, _roles=roles)
-
     labels = card_module._observation_identities(data)
-
     assert labels == [
         "site = A; record = 10",
         "site = A; record = 11",
         "Row 3",
     ]
-
     roles.set_roles("record", [Role.PREDICTOR])
     without_key = proxy_data(_df=frame, _roles=roles)
     without_key.role_map.clear_roles("site")
-    assert card_module._observation_identities(without_key) == [
-        "Row 1", "Row 2", "Row 3",
-    ]
+    assert card_module._observation_identities(without_key) == ["Row 1", "Row 2", "Row 3"]
 
 
 @pytest.mark.unit
 def test_parallel_figure_contains_one_axis_per_selected_variable(card_module):
     from proxy_data import proxy_data
-
     prepared = card_module._prepare_parallel_data(
         proxy_data.from_native(sample_frame()),
         ["number", "integer", "group", "when", "flag"],
@@ -234,24 +217,17 @@ def test_parallel_figure_contains_one_axis_per_selected_variable(card_module):
         maximum_observations=100,
         show_colour_scale=False,
     )
-
     figure = card_module._parallel_figure(prepared, full_screen=False)
-
     assert len(figure.data) == 1
     assert figure.data[0].type == "parcoords"
-    assert list(figure.data[0].customdata) == [
-        "Row 1", "Row 2", "Row 3", "Row 4", "Row 6",
-    ]
-    assert [axis.label for axis in figure.data[0].dimensions] == [
-        "number", "integer", "group", "when", "flag",
-    ]
+    assert list(figure.data[0].customdata) == ["Row 1", "Row 2", "Row 3", "Row 4", "Row 6"]
+    assert [axis.label for axis in figure.data[0].dimensions] == ["number", "integer", "group", "when", "flag"]
     assert figure.layout.font.size == 10
 
 
 @pytest.mark.unit
 def test_parallel_figure_reports_too_few_axes_and_no_complete_rows(card_module):
     from proxy_data import proxy_data
-
     one_axis = card_module._prepare_parallel_data(
         proxy_data.from_native(sample_frame()),
         ["number"],
@@ -270,10 +246,8 @@ def test_parallel_figure_reports_too_few_axes_and_no_complete_rows(card_module):
         maximum_observations=100,
         show_colour_scale=False,
     )
-
     one_axis_figure = card_module._parallel_figure(one_axis, full_screen=False)
     no_rows_figure = card_module._parallel_figure(no_rows, full_screen=False)
-
     assert "at least two" in one_axis_figure.layout.annotations[0].text.lower()
     assert "no observations" in no_rows_figure.layout.annotations[0].text.lower()
 
@@ -293,17 +267,38 @@ class TestWebKitUI:
         expect(by_id(page, "FlipButton")).to_have_count(0)
 
     @pytest.mark.ui
-    def test_hovering_a_line_displays_its_identifier(
-        self, page: Page, app: ShinyAppProc
-    ):
+    def test_hovering_a_line_displays_its_identifier(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         plot = by_id(page, "Chart").locator(".js-plotly-plot")
         expect(plot).to_be_attached(timeout=15_000)
-
-        point = plot.evaluate(
+        # Check readiness and read geometry in one browser task: a reactive redraw
+        # can replace the trace between separate wait/evaluate calls.
+        point = page.wait_for_function(
             """
-            plot => {
-                const trace = plot.data[0];
+            selector => {
+                const plot = document.querySelector(selector);
+                const trace = plot?.data?.[0];
+                if (!plot?.closest('[data-parallel-hover="true"]')
+                    ?.querySelector('.parallel-comparison-overlay')) return false;
+                if (trace?.type !== 'parcoords' || !trace.customdata?.length
+                    || !(trace.dimensions?.length >= 2)) return false;
+                const readyDimensions = new Map(
+                    trace.dimensions.map(d => [String(d.label), d])
+                );
+                const renderedAxes = Array.from(
+                    plot.querySelectorAll('.parcoords-control-view .y-axis')
+                );
+                if (renderedAxes.length !== trace.dimensions.length || !renderedAxes.every(axis => {
+                    const title = axis.querySelector('.axis-title');
+                    const brush = axis.querySelector('.axis-brush .background');
+                    const label = title?.getAttribute('data-unformatted')
+                        || title?.textContent;
+                    const dimension = readyDimensions.get(String(label));
+                    const rect = brush?.getBoundingClientRect();
+                    return dimension?.values?.length > 0
+                        && dimension.range?.length === 2
+                        && rect?.width > 0 && rect?.height > 0;
+                })) return false;
                 const dimensions = trace.dimensions;
                 const byLabel = new Map(
                     dimensions.map(dimension => [String(dimension.label), dimension])
@@ -345,55 +340,39 @@ class TestWebKitUI:
                     y: clientY,
                 };
             }
-            """
-        )
-
+            """,
+            arg=f"#{namespaced_id(page, 'Chart')} .js-plotly-plot",
+            timeout=15_000,
+        ).json_value()
         tooltip = get_card(page).locator(".parallel-hover-tooltip")
         expect(tooltip).to_be_visible(timeout=5_000)
         expect(tooltip).to_have_text(point["identity"])
         assert point["identity"] == "high_cardinality = id-01"
-
         plot.dispatch_event(
             "click",
             {"clientX": point["x"], "clientY": point["y"]},
         )
-
         comparison = get_card(page).locator(".parallel-comparison-label")
         expect(comparison).to_be_visible(timeout=5_000)
         expect(comparison).to_contain_text(point["identity"])
         expect(get_card(page).locator(".parallel-comparison-overlay")).to_be_visible()
-
         get_card(page).locator(".parallel-clear-comparison").click()
         expect(comparison).to_be_hidden()
         expect(get_card(page).locator(".parallel-comparison-overlay")).to_be_hidden()
 
     @pytest.mark.ui
-    def test_variable_selection_changes_complete_case_population(
-        self, page: Page, app: ShinyAppProc
-    ):
+    def test_variable_selection_changes_complete_case_population(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
-        expect(by_id(page, "Check")).to_contain_text(
-            "Showing 17 observations", timeout=15_000,
-        )
-
+        expect(by_id(page, "Check")).to_contain_text("Showing 17 observations", timeout=15_000)
         set_shiny_input(page, "Variables", ["score", "group"])
-
-        expect(by_id(page, "Check")).to_contain_text(
-            "Showing 18 observations.", timeout=15_000,
-        )
+        expect(by_id(page, "Check")).to_contain_text("Showing 18 observations.", timeout=15_000)
 
     @pytest.mark.ui
-    def test_colour_scale_is_shown_after_expanding(
-        self, page: Page, app: ShinyAppProc
-    ):
+    def test_colour_scale_is_shown_after_expanding(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
-        expect(by_id(page, "Chart").locator(".plotly")).to_be_attached(
-            timeout=15_000,
-        )
-
+        expect(by_id(page, "Chart").locator(".plotly")).to_be_attached(timeout=15_000)
         set_shiny_input(page, "Colour", "group")
         by_id(page, "ExpandButton").click(force=True)
-
         plot = by_id(page, "Chart").locator(".js-plotly-plot")
         expect(plot).to_be_attached(timeout=15_000)
         selector = f"#{namespaced_id(page, 'Chart')} .js-plotly-plot"
