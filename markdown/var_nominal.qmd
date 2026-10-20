@@ -1,0 +1,71 @@
+---
+title: Nominal variables
+---
+
+#### 🧭 Purpose
+
+_Inspect nominal labels and explicitly approve corrections or rare-level pooling._
+
+#### 🎯 Goals
+
+1. Find plausible spelling and abbreviation variants.
+2. Review expected levels and low-frequency categories.
+3. Commit reversible, human-approved mappings across variables.
+
+#### 🧠 How it works
+
+Suggestions normally point from less frequent labels to more frequent labels. Typo similarity is one minus Levenshtein distance divided by the longer label length. Comparisons trim whitespace and ignore case without changing stored labels. Abbreviation suggestions require a matching prefix of at least three characters; a trailing period is ignored and omitted suffix characters have a lower cost. These scores rank suggestions, not probabilities of correctness. Language matching is not implemented.
+
+An expected vocabulary can supply canonical destinations even when those labels are absent. Expected counts are diagnostic references, never instructions to force merges. Pooling into **Other** is a separate proposal: rare labels need not mean the same thing.
+
+#### 🏞️ Front
+
+Each eligible variable has a tab containing a frequency bar chart, with levels on the X axis, and a scrollable proposal table. Hover over a bar or shortened label for the full label and count. The chart scrolls horizontally for wide vocabularies. Expected but absent labels appear with zero counts.
+
+Each proposal has **Undecided**, **Accept**, and **Reject** choices. Accepting `a → b` hides other proposals involving `a` as either source or destination. Proposals sharing destination `b` remain available. Returning to Undecided restores suppressed proposals unless another acceptance still suppresses them. The accepted row remains visible until Commit.
+
+Charts show committed data. Full-screen mode adds observed, declared, and expected cardinalities, plus counts of unexpected and absent expected labels.
+
+#### 🔄 Flip side
+
+The decision history shows pending and recorded decisions, their variables, source labels, destinations, and reasons. Expected vocabularies also show the absent and unexpected labels. Rejected rows remain visible here after leaving the front.
+
+#### 🛠️ Controls and actions
+
+**Commit merges** applies accepted mappings across all variables simultaneously and dismisses rejected proposals. Accepted and rejected proposals remain dismissed until Reset. Subsequent review rounds are optional. Changing thresholds does not silently rewrite a reviewed proposal.
+
+**Reset** restores this card's incoming data and clears decisions and committed changes. Expected vocabularies and manual proposals are retained. Reset does not reverse upstream operations.
+
+Expand the card, select a variable tab, and open **Expected levels and manual merges** beneath its chart. Enter expected labels one per line or an expected count; changes are saved automatically. Unfinished manual entries are retained separately for each variable during the session. A vocabulary determines its own expected count. To make an ungenerated proposal, select source labels, enter a different destination, and choose **Add manual proposal**; it still requires acceptance and Commit.
+
+#### ⚙️ Settings
+
+**Minimum similarity** controls automatic spelling suggestions. **Low-frequency threshold (%)** uses the proportion of nonmissing observations; labels strictly below it can be pooled. Zero disables pooling.
+
+Nominal predictors are included by default. **Include nominal Targets and Stratifiers** explicitly expands eligibility. Identifiers, ordered categories, and non-string category labels are excluded. Role assignments are preserved.
+
+#### 🔎 Interpretation and next steps
+
+A rare label may be valid, and the most frequent spelling may be wrong. Inspect the stated reason and expected vocabulary before accepting. Matching an expected count does not establish that the labels are correct. Pooling into an existing **Other** category adds to its observations; pooling outside an expected vocabulary is flagged in the reason.
+
+#### ⛔️ Limitations
+
+* Cleaning commits must precede learning steps. The card remains inspectable afterward, but Commit reports why changes cannot be applied.
+* Automatic matching is limited to 200 observed levels and at most 100 similarity proposals per variable. Manual proposals remain available.
+* Abbreviations are restricted to prefixes; arbitrary shortened forms require manual proposals.
+* Incoming nominal data or role changes reset decisions rather than silently replaying them on different data.
+* Missing values remain missing. Unused declared categories are retained unless explicitly merged.
+
+#### 📌 Suggested workflow
+
+1. Inspect a variable's frequencies and, if known, enter its expected vocabulary.
+2. Accept or reject plausible corrections, observing the reduced proposal list.
+3. Add any missing proposals and review pooling separately.
+4. Review the decision history and commit across all variables.
+5. Reset if the reconciliation should be discarded.
+
+#### 🔗 Data flow
+
+* **Input:** The incoming data and assigned roles.
+* **Output:** Incoming data until Commit; afterward, a copy with approved categorical mappings applied. Row order, missing values, and roles are preserved.
+* **Data journey:** Committed mappings produce a Cleaning record. No learned pipeline step is added. Decisions and committed mappings are saved in bookmark state.
