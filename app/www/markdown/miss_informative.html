@@ -877,7 +877,7 @@ fill: var(--bs-primary) !important;
 <h4 id="flip-side">🔄 Flip side</h4>
 <p>The flip side lists variable type, source variable, missing proportion, mean importance, importance variability, positive fraction, and interpretation. Use it for exact results and to distinguish an informative shadow from an important ordinary predictor.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
-<p>The footer offers confirmed shadow candidates. Selecting one permanently adds a Boolean predictor named from its source variable; clearing the selection restores the upstream structure. Added shadows should remain predictors so later feature selection can decide whether they improve a final model.</p>
+<p>The footer offers confirmed shadow candidates. Selecting one adds a binary predictor named <code>shadow__&lt;source&gt;</code> through the learning pipeline; clearing the selection restores the upstream structure. Added shadows should remain predictors so later feature selection can decide whether they improve a final model.</p>
 <h4 id="settings">⚙️ Settings</h4>
 <p>The card’s Tour Guide gives a concise description of each setting.</p>
 <h4 id="interpretation-and-next-steps">🔎 Interpretation and next steps</h4>
@@ -903,7 +903,7 @@ fill: var(--bs-primary) !important;
 <ul>
 <li><strong>Input:</strong> The assigned target and predictors in the upstream data.</li>
 <li><strong>Output:</strong> Upstream data plus any selected Boolean shadow predictors.</li>
-<li><strong>Data journey:</strong> Adding shadows creates a materialized Cleaning step.</li>
+<li><strong>Data journey:</strong> Adding shadows registers a Learning pipeline step using Feature-engine’s <code>AddMissingIndicator</code>. Selected indicators are generated in every training fold, including folds without missing values. Original values remain unchanged.</li>
 </ul>
 <details class="deep-dive">
 <summary>

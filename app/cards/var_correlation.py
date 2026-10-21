@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,13 +26,16 @@ from roles import Role
 from scipy.cluster.hierarchy import leaves_list, linkage, optimal_leaf_ordering
 from scipy.spatial.distance import squareform
 from scipy.stats import norm, rankdata
-from shiny import render, req, ui
+from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
-from sklearn.feature_selection import mutual_info_regression
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+from sklearn.metrics import f1_score, mean_absolute_error, mutual_info_score
+from sklearn.metrics.cluster import contingency_matrix
+from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 SAMPLE_SEED = 1729
 DISTANCE_CORRELATION_LIMIT = 2_000
@@ -72,6 +76,7 @@ class CorrelationAnalysis:
     analyzed_observations: int
     sampled: bool
     weighted: bool
+    notices: tuple[str, ...] = ()
 
 
 METHODS = {
@@ -102,12 +107,16 @@ METHODS = {
             "Rank concordance between pairs of observations.",
         ),
         CorrelationMethod(
+            "cramers_v", "Cramér’s V", "Cramér’s V association", False, False,
+            "Categorical association; numeric variables use optional quantile binning (five bins by default).",
+        ),
+        CorrelationMethod(
             "mutual_information",
             "Mutual info",
             "Normalized mutual information",
             False,
             False,
-            "A k-nearest-neighbour estimate of general statistical dependence.",
+            "Continuous, discrete, or mixed mutual information, transformed to a 0–1 association score.",
         ),
         CorrelationMethod(
             "distance_correlation",
@@ -217,33 +226,98 @@ def _ordinary_correlation(frame: pd.DataFrame, method: str) -> pd.DataFrame:
 
 
 @recordable
+def _discrete(series):
+    return (isinstance(series.dtype, pd.CategoricalDtype)
+            or pd.api.types.is_bool_dtype(series.dtype)
+            or pd.api.types.is_string_dtype(series.dtype)
+            or pd.api.types.is_object_dtype(series.dtype))
+
+
+@recordable
+def _mixed_pair(left, right):
+    arrays = []
+    keep = np.ones(len(left), dtype=bool)
+    for series in (left, right):
+        if _discrete(series):
+            values = pd.factorize(series, sort=False)[0]
+            keep &= values >= 0
+        else:
+            values = pd.to_numeric(series, errors="coerce").to_numpy(dtype=float, na_value=np.nan)
+            keep &= np.isfinite(values)
+        arrays.append(values)
+    return arrays[0][keep], arrays[1][keep]
+
+
+@recordable
+def _bin_numeric(frame, bins):
+    """Bin each numeric column once, preserving categorical and Boolean data."""
+    result = frame.copy()
+    for column in frame:
+        if _discrete(frame[column]):
+            continue
+        values = pd.to_numeric(frame[column], errors="coerce").to_numpy(dtype=float, na_value=np.nan, copy=True)
+        values[~np.isfinite(values)] = np.nan
+        binned = pd.qcut(values, q=bins, duplicates="drop")
+        result[column] = binned
+    return result
+
+
+@recordable
+def _cramers_v(frame, notices=None):
+    sparse_pairs = 0
+    matrix = _empty_matrix(list(frame.columns))
+    for i, left in enumerate(frame.columns):
+        matrix.iat[i, i] = 1.0
+        for j in range(i + 1, len(frame.columns)):
+            x, y = _mixed_pair(frame[left], frame.iloc[:, j])
+            # Sparse counts avoid allocating a quadratic table for continuous inputs.
+            x, y = pd.factorize(x)[0], pd.factorize(y)[0]
+            if len(x) < 2 or len(np.unique(x)) < 2 or len(np.unique(y)) < 2:
+                continue
+            counts = contingency_matrix(x, y, sparse=True).tocoo()
+            rows = np.asarray(counts.sum(axis=1)).ravel()
+            cols = np.asarray(counts.sum(axis=0)).ravel()
+            if rows.min() * cols.min() / len(x) < 5:
+                sparse_pairs += 1
+            phi2 = np.sum(counts.data.astype(float)**2 / (rows[counts.row] * cols[counts.col])) - 1
+            value = np.sqrt(max(0., phi2) / (min(counts.shape) - 1))
+            matrix.iat[i, j] = matrix.iat[j, i] = np.clip(value, 0, 1)
+    if notices is not None and sparse_pairs:
+        notices.append(f"Sparse tables: {sparse_pairs} variable pairs have expected cell counts below 5; interpret cautiously")
+    return matrix
+
+
+@recordable
 def _mutual_information(frame: pd.DataFrame) -> pd.DataFrame:
     columns = list(frame.columns)
     matrix = _empty_matrix(columns)
-    for index in range(len(columns)):
-        matrix.iat[index, index] = 1.0
-    for i, left_name in enumerate(columns):
+    for i, left in enumerate(columns):
+        matrix.iat[i, i] = 1.0
         for j in range(i + 1, len(columns)):
-            x, y = _finite_pair(frame[left_name], frame[columns[j]])
-            if len(x) < 4 or np.all(x == x[0]) or np.all(y == y[0]):
+            right = columns[j]
+            x, y = _mixed_pair(frame[left], frame[right])
+            if len(x) < 4 or len(np.unique(x)) < 2 or len(np.unique(y)) < 2:
                 continue
-            neighbours = min(3, len(x) - 1)
-            forward = mutual_info_regression(
-                x.reshape(-1, 1),
-                y,
-                discrete_features=False,
-                n_neighbors=neighbours,
-                random_state=SAMPLE_SEED,
-            )[0]
-            reverse = mutual_info_regression(
-                y.reshape(-1, 1),
-                x,
-                discrete_features=False,
-                n_neighbors=neighbours,
-                random_state=SAMPLE_SEED,
-            )[0]
-            estimate = max(0.0, float(forward + reverse) / 2)
-            value = float(np.sqrt(1 - np.exp(-2 * estimate)))
+            dx, dy = _discrete(frame[left]), _discrete(frame[right])
+            if dx and dy:
+                estimate = mutual_info_score(x, y)
+            elif dx or dy:
+                continuous, discrete = (y, x) if dx else (x, y)
+                # The mixed estimator drops singleton classes; require usable data.
+                _, counts = np.unique(discrete, return_counts=True)
+                if counts[counts > 1].sum() < 2:
+                    continue
+                estimate = mutual_info_classif(
+                    continuous.reshape(-1, 1), discrete, discrete_features=False,
+                    n_neighbors=min(3, len(x)-1), random_state=SAMPLE_SEED,
+                )[0]
+            else:
+                estimates = [mutual_info_regression(
+                    a.reshape(-1, 1), b, discrete_features=False,
+                    n_neighbors=min(3, len(x)-1), random_state=SAMPLE_SEED,
+                )[0] for a, b in ((x, y), (y, x))]
+                estimate = np.mean(estimates)
+            value = np.sqrt(1 - np.exp(-2 * max(0., float(estimate))))
             matrix.iat[i, j] = matrix.iat[j, i] = np.clip(value, 0, 1)
     return matrix
 
@@ -290,39 +364,53 @@ def _distance_correlation(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 @recordable
-def _predictive_power_pair(x: np.ndarray, y: np.ndarray) -> float:
-    if len(x) < 6 or np.all(x == x[0]) or np.all(y == y[0]):
+def _predictive_power_pair(x, y, *, source_discrete=False, target_discrete=False):
+    if len(x) < 6 or len(np.unique(x)) < 2 or len(np.unique(y)) < 2:
         return np.nan
     folds = min(4, max(2, len(x) // 3))
-    splitter = KFold(n_splits=folds, shuffle=True, random_state=SAMPLE_SEED)
-    model_errors: list[float] = []
-    baseline_errors: list[float] = []
-    for train, test in splitter.split(x):
-        model = DecisionTreeRegressor(random_state=SAMPLE_SEED)
+    if target_discrete:
+        _, counts = np.unique(y, return_counts=True)
+        folds = min(folds, int(counts.min()))
+        if folds < 2:
+            return np.nan
+        splitter = StratifiedKFold(n_splits=folds, shuffle=True, random_state=SAMPLE_SEED)
+    else:
+        splitter = KFold(n_splits=folds, shuffle=True, random_state=SAMPLE_SEED)
+    scores, baselines = [], []
+    for train, test in splitter.split(x, y):
+        model = (DecisionTreeClassifier if target_discrete else DecisionTreeRegressor)(random_state=SAMPLE_SEED)
+        if source_discrete:
+            model = make_pipeline(OneHotEncoder(handle_unknown="ignore"), model)
         model.fit(x[train].reshape(-1, 1), y[train])
         prediction = model.predict(x[test].reshape(-1, 1))
-        baseline = np.full(len(test), np.median(y[train]), dtype=float)
-        model_errors.append(mean_absolute_error(y[test], prediction))
-        baseline_errors.append(mean_absolute_error(y[test], baseline))
-    model_error = float(np.mean(model_errors))
-    baseline_error = float(np.mean(baseline_errors))
-    if baseline_error <= 0:
-        return np.nan
-    return float(np.clip(1 - model_error / baseline_error, 0, 1))
+        if target_discrete:
+            labels, counts = np.unique(y[train], return_counts=True)
+            baseline = np.full(len(test), labels[np.argmax(counts)])
+            scores.append(f1_score(y[test], prediction, average="weighted", zero_division=0))
+            baselines.append(f1_score(y[test], baseline, average="weighted", zero_division=0))
+        else:
+            baseline = np.full(len(test), np.median(y[train]), dtype=float)
+            scores.append(mean_absolute_error(y[test], prediction))
+            baselines.append(mean_absolute_error(y[test], baseline))
+    score, baseline = float(np.mean(scores)), float(np.mean(baselines))
+    if target_discrete:
+        return float(np.clip((score-baseline)/(1-baseline), 0, 1)) if baseline < 1 else np.nan
+    return float(np.clip(1-score/baseline, 0, 1)) if baseline > 0 else np.nan
 
 
 @recordable
 def _predictive_power(frame: pd.DataFrame) -> pd.DataFrame:
-    columns = list(frame.columns)
-    matrix = _empty_matrix(columns)
-    for index in range(len(columns)):
-        matrix.iat[index, index] = 1.0
-    for i, source in enumerate(columns):
-        for j, destination in enumerate(columns):
+    matrix = _empty_matrix(list(frame.columns))
+    for i, source in enumerate(frame.columns):
+        matrix.iat[i, i] = 1.0
+        for j, destination in enumerate(frame.columns):
             if i == j:
                 continue
-            x, y = _finite_pair(frame[source], frame[destination])
-            matrix.iat[i, j] = _predictive_power_pair(x, y)
+            x, y = _mixed_pair(frame[source], frame[destination])
+            matrix.iat[i, j] = _predictive_power_pair(
+                x, y, source_discrete=_discrete(frame[source]),
+                target_discrete=_discrete(frame[destination]),
+            )
     return matrix
 
 
@@ -383,7 +471,7 @@ def _xi_correlation(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 @recordable
-def _eligible_columns(data: proxy_data, include_target: bool) -> list[object]:
+def _eligible_columns(data: proxy_data, include_target: bool, method: str = "pearson") -> list[object]:
     roles = {Role.PREDICTOR, Role.TREATMENT}
     if include_target:
         roles.add(Role.TARGET)
@@ -395,8 +483,13 @@ def _eligible_columns(data: proxy_data, include_target: bool) -> list[object]:
         if column in selected
         and not str(column).startswith(Card.SHADOW_PREFIX)
         and Role.WEIGHTING not in data.role_map.roles_for(column)
-        and pd.api.types.is_numeric_dtype(frame[column].dtype)
-        and not pd.api.types.is_bool_dtype(frame[column].dtype)
+        and ((pd.api.types.is_numeric_dtype(frame[column].dtype)
+              and not pd.api.types.is_bool_dtype(frame[column].dtype))
+             or (method in {"spearman", "kendall"}
+                 and isinstance(frame[column].dtype, pd.CategoricalDtype)
+                 and frame[column].dtype.ordered)
+             or (method in {"cramers_v", "pps", "mutual_information"}
+                 and _discrete(frame[column])))
         and frame[column].nunique(dropna=True) > 1
     ]
 
@@ -442,6 +535,12 @@ def _calculate_matrix(
     method: str,
     weights: pd.Series | None,
 ) -> pd.DataFrame:
+    if method in {"spearman", "kendall"}:
+        frame = frame.copy()
+        for column in frame:
+            if isinstance(frame[column].dtype, pd.CategoricalDtype) and frame[column].dtype.ordered:
+                codes = frame[column].cat.codes
+                frame[column] = codes.astype(float).where(codes >= 0)
     if method == "pearson":
         return (
             _weighted_matrix(frame, weights, rank=False)
@@ -454,6 +553,8 @@ def _calculate_matrix(
             if weights is not None
             else _ordinary_correlation(frame, "spearman")
         )
+    if method == "cramers_v":
+        return _cramers_v(frame)
     if method == "kendall":
         return _ordinary_correlation(frame, "kendall")
     if method == "mutual_information":
@@ -477,14 +578,27 @@ def _analyse_correlation(
     include_target: bool,
     maximum_observations: int,
     use_weights: bool = True,
+    bin_numeric: bool = True,
+    bins: int = 5,
 ) -> CorrelationAnalysis:
     definition = METHODS[method]
-    columns = _eligible_columns(data, include_target)
+    columns = _eligible_columns(data, include_target, method)
     source_observations = len(data.frame)
     frame, weights, sampled = _analysis_frame(
         data, columns, method, maximum_observations, use_weights
     )
-    matrix = _calculate_matrix(frame, method, weights)
+    notices = []
+    if method == "cramers_v":
+        if bin_numeric:
+            if not 2 <= bins <= 20:
+                raise ValueError("Cramér’s V bins must be between 2 and 20")
+            frame = _bin_numeric(frame, bins)
+            notices.append(f"Quantile binning (requested {bins})")
+        else:
+            notices.append("Numeric binning off: distinct values are categories; high cardinality can inflate association")
+        matrix = _cramers_v(frame, notices)
+    else:
+        matrix = _calculate_matrix(frame, method, weights)
     return CorrelationAnalysis(
         method=definition,
         matrix=matrix,
@@ -492,6 +606,7 @@ def _analyse_correlation(
         analyzed_observations=len(frame),
         sampled=sampled,
         weighted=weights is not None,
+        notices=tuple(notices),
     )
 
 
@@ -546,7 +661,7 @@ def _heatmap_figure(
     full_screen: bool,
 ) -> go.Figure:
     if analysis.matrix.shape[0] < 2:
-        return Card.empty_figure("At least two eligible numeric variables are required")
+        return Card.empty_figure("At least two eligible variables are required")
     shown = _display_matrix(
         analysis,
         threshold=threshold,
@@ -622,7 +737,7 @@ def _chord_figure(
     full_screen: bool,
 ) -> go.Figure:
     if analysis.matrix.shape[0] < 2:
-        return Card.empty_figure("At least two eligible numeric variables are required")
+        return Card.empty_figure("At least two eligible variables are required")
     order = _matrix_order(analysis.matrix, ordering)
     matrix = analysis.matrix.loc[order, order]
     values = np.abs(matrix.to_numpy(dtype=float))
@@ -714,7 +829,7 @@ def _chord_figure(
         hovertemplate="%{text}<extra></extra>",
         showlegend=False,
     ))
-    if full_screen and not absolute:
+    if full_screen and not absolute and analysis.method.signed:
         for name, colour in (
             ("Positive association", "rgba(31,119,180,0.70)"),
             ("Negative association", "rgba(214,39,40,0.70)"),
@@ -737,7 +852,7 @@ def _chord_figure(
         xaxis={"visible": False, "range": [-1.25, 1.25], "fixedrange": True},
         yaxis={"visible": False, "range": [-1.25, 1.25], "scaleanchor": "x", "fixedrange": True},
         margin={"l": 5, "r": 5, "t": 5, "b": 5},
-        showlegend=full_screen and not absolute,
+        showlegend=full_screen and not absolute and analysis.method.signed,
         legend={
             "orientation": "h",
             "x": 0.5,
@@ -778,9 +893,9 @@ def _values_table(analysis: CorrelationAnalysis, threshold: float) -> pd.DataFra
 def instance():
     """Create the immutable variable-correlation card."""
     this = Card(file=__file__, mutable=False)
-    this.long_name = "Variable correlation"
+    this.long_name = "Variable association"
     this.description = (
-        "This card compares numeric variables using linear, rank, non-linear, "
+        "This card compares eligible numeric and categorical variables using linear, rank, non-linear, "
         "predictive, and directional measures of association."
     )
 
@@ -842,6 +957,10 @@ def instance():
     )
 
     this.settings = lambda: ui.TagList(
+        ui.input_checkbox(id="BinNumeric", label="Bin numeric variables for Cramér’s V", value=True,
+            guide=this, position="left", text="Quantile bins are computed once per numeric column on the analyzed sample. Other association methods are unaffected."),
+        ui.input_slider(id="Bins", label="Cramér’s V requested bins", min=2, max=20, value=5, step=1,
+            guide=this, position="left", text="Ties can reduce the actual bin count. Columns with no more distinct values than this setting are unchanged."),
         ui.output_ui("WeightingNotice"),
         ui.input_checkbox("UseWeights", label="Use observation weightings", value=True,
             guide=this, position="left", text="Use the product of assigned Weighting variables. If effective weights are invalid, use unweighted calculations."),
@@ -860,7 +979,7 @@ def instance():
         ),
         ui.input_checkbox(
             id="IncludeTarget", label="Include target variables", value=False,
-            guide=this, position="left", text="Adds numeric, nonconstant target variables to predictors and treatment variables.",
+            guide=this, position="left", text="Adds method-eligible, nonconstant target variables to predictors and treatment variables.",
         ),
         ui.input_checkbox(
             id="Absolute", label="Show absolute values", value=False,
@@ -913,7 +1032,9 @@ def instance():
                 "method": method,
                 "include_target": bool(input.IncludeTarget()),
                 "maximum_observations": 10 ** int(input.MaxObs()),
-                "use_weights": bool(input.UseWeights()),
+                "use_weights": bool(input.UseWeights()) if method in {"pearson", "spearman"} else False,
+                "bin_numeric": bool(input.BinNumeric()) if method == "cramers_v" else False,
+                "bins": int(input.Bins()) if method == "cramers_v" and input.BinNumeric() else 5,
             }
 
         @this.reactable(calc=True)
@@ -927,22 +1048,51 @@ def instance():
                 "ordering": str(input.Ordering()),
             }
 
+        @reactive.calc
+        def AnalysisCache():
+            # A new upstream publication gets a fresh, session-local cache.
+            # Do not hash mutable frames or retain results from older datasets.
+            incomingproxy_data()
+            return OrderedDict()
+
+        def analysis_key(options):
+            return tuple(sorted(options.items()))
+
         @busy.track("Calculating variable associations…")
         @this.extended_task
         @this.record_context
-        async def Calculate(data: proxy_data, options: dict[str, object]):
-            return await asyncio.to_thread(_analyse_correlation, data, **options)
+        async def Calculate(data: proxy_data, options: dict[str, object], cache):
+            result = await asyncio.to_thread(_analyse_correlation, data, **options)
+            # Cancelled/failed tasks never reach this point. An obsolete task
+            # can only write to its own old upstream cache.
+            key = analysis_key(options)
+            cache[key] = result
+            cache.move_to_end(key)
+            while len(cache) > 32:
+                cache.popitem(last=False)
+            return cache, key, result
 
         @this.reactable()
         @this.record_context
         def StartAnalysis():
+            data, options, cache = incomingproxy_data(), AnalysisOptions(), AnalysisCache()
             Calculate.cancel()
-            Calculate.invoke(incomingproxy_data(), AnalysisOptions())
+            key = analysis_key(options)
+            if key in cache:
+                cache.move_to_end(key)
+                return
+            Calculate.invoke(data, options, cache)
 
         @this.reactable(calc=True)
         @this.record_context
         def Analysis():
-            return Calculate.result()
+            options, cache = AnalysisOptions(), AnalysisCache()
+            key = analysis_key(options)
+            if key in cache:
+                return cache[key]
+            completed_cache, completed_key, result = Calculate.result()
+            req(completed_cache is cache and completed_key == key)
+            return result
 
         @output
         @render.ui
@@ -985,6 +1135,12 @@ def instance():
                 "responsive": True,
             }
             return widget
+
+        @output
+        @render_widget
+        @this.record_context
+        def Chart_cramers_v():
+            return chart("cramers_v")
 
         @output
         @render_widget
@@ -1068,7 +1224,7 @@ def instance():
             variables = analysis.matrix.shape[0]
             if variables < 2:
                 return ui.span(
-                    f"Only {variables} eligible numeric variable{' is' if variables == 1 else 's are'} available; at least two are required.",
+                    f"Only {variables} eligible variable{' is' if variables == 1 else 's are'} available; at least two are required.",
                     class_="text-warning",
                 )
             basis = (
@@ -1082,6 +1238,7 @@ def instance():
                 basis,
                 "directional matrix" if analysis.method.directional else "symmetric matrix",
             ]
+            details.extend(analysis.notices)
             if analysis.weighted:
                 details.append("observation weights applied")
             return ui.span("; ".join(details) + ".", class_="text-primary")

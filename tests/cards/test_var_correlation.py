@@ -134,7 +134,7 @@ class TestCardDefinition:
     @pytest.mark.unit
     def test_metadata_regions_and_immutability(self, card):
         assert card.name == "var_correlation"
-        assert card.long_name == "Variable correlation"
+        assert card.long_name == "Variable association"
         assert "directional measures" in card.description
         assert card.mutable is False
         assert card.hasSidebar()
@@ -147,7 +147,7 @@ class TestCardDefinition:
         back = str(card.back.tagify())
         for method in (
             "pearson", "spearman", "kendall", "mutual_information",
-            "distance_correlation", "pps", "latent", "xi",
+            "distance_correlation", "pps", "latent", "xi", "cramers_v",
         ):
             assert f'id="Chart_{method}"' in front
         assert 'id="Table"' in back
@@ -516,3 +516,156 @@ def test_weighting_setting_and_invalid_fallback(card_module, method):
         fallback, weights, _ = card_module._analysis_frame(data, columns, method, 1000, use_weights=True)
     assert weights is None
     assert_frame_equal(fallback, ordinary)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('method', ['pps', 'mutual_information', 'cramers_v'])
+def test_mixed_eligibility(card_module, method):
+    data = correlation_data()
+    data.frame['label'] = pd.Categorical(data.frame['label'], ordered=True)
+    selected = card_module._eligible_columns(data, False, method)
+    assert {'label', 'flag', 'treatment', 'x'} <= set(selected)
+    assert not {'target', 'shadow__x', 'weight', 'constant'} & set(selected)
+    assert 'target' in card_module._eligible_columns(data, True, method)
+    assert 'label' in card_module._eligible_columns(data, False, 'spearman')
+
+
+@pytest.mark.unit
+def test_cramers_v_known_associations(card_module):
+    frame = pd.DataFrame({'number': [0, 0, 1, 1]*10,
+                          'category': pd.Categorical(['a', 'a', 'b', 'b']*10,
+                                                     categories=['a', 'b', 'unused']),
+                          'independent': [False, True, False, True]*10})
+    matrix = card_module._cramers_v(frame)
+    assert matrix.loc['number', 'category'] == pytest.approx(1)
+    assert matrix.loc['number', 'independent'] == pytest.approx(0)
+    assert_frame_equal(matrix, matrix.T)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('method', ['pps', 'mutual_information'])
+def test_mixed_associations_and_label_invariance(card_module, method):
+    frame = pd.DataFrame({'number': [0., 1.]*60,
+                          'category': pd.Categorical(['a', 'b']*60),
+                          'flag': [False, True]*60})
+    frame.loc[0, 'number'] = np.inf
+    frame.loc[1, 'category'] = None
+    matrix = card_module._calculate_matrix(frame, method, None)
+    assert matrix.loc['number', 'category'] > .8
+    assert matrix.loc['category', 'number'] > .8
+    renamed = frame.copy()
+    renamed['category'] = renamed['category'].cat.rename_categories({'a': 'z', 'b': 'q'})
+    assert_frame_equal(matrix, card_module._calculate_matrix(renamed, method, None))
+
+
+@pytest.mark.unit
+def test_sparse_classes_are_unavailable_not_errors(card_module):
+    frame = pd.DataFrame({'number': np.arange(10.), 'label': [f'v{i}' for i in range(10)]})
+    assert np.isnan(card_module._mutual_information(frame).loc['number', 'label'])
+    assert np.isnan(card_module._predictive_power(frame).loc['number', 'label'])
+
+
+@pytest.mark.ui
+def test_method_specific_variables_and_new_tab(page, app):
+    page.goto(app.url)
+    expect(by_id(page, "Check")).to_contain_text("5 variables", timeout=20000)
+    for method, label in (("cramers_v", "Cramér’s V"), ("pps", "PPS"), ("mutual_information", "Mutual info")):
+        page.get_by_role("tab", name=label, exact=True).click()
+        expect(by_id(page, f"Chart_{method}").locator(".js-plotly-plot")).to_be_attached(timeout=20000)
+        expect(by_id(page, "Check")).to_contain_text("7 variables", timeout=20000)
+    page.get_by_role("tab", name="Pearson", exact=True).click()
+    expect(by_id(page, "Check")).to_contain_text("5 variables", timeout=20000)
+
+
+@pytest.mark.unit
+def test_quantile_bins_preserve_types_ties_and_input(card_module):
+    frame = pd.DataFrame({'x': np.arange(20.), 'low': [0, 1]*10,
+                          'ties': [0]*14 + list(range(1, 7)),
+                          'category': pd.Categorical(list(range(20)), ordered=True),
+                          'flag': [True, False]*10}, index=[1]*20)
+    original = frame.copy(deep=True)
+    result = card_module._bin_numeric(frame, 5)
+    assert result.x.nunique() == 5
+    assert result.ties.nunique() < 5
+    # Numeric columns are binned even when they have few distinct values.
+    # Dropping duplicate quantile boundaries collapses this binary column.
+    assert isinstance(result['low'].dtype, pd.CategoricalDtype)
+    assert result['low'].nunique() == 1
+    assert result['low'].notna().all()
+    assert_frame_equal(result[['category', 'flag']], frame[['category', 'flag']])
+    assert result.index.equals(frame.index)
+    assert_frame_equal(frame, original)
+
+
+@pytest.mark.unit
+def test_binning_analysis_is_optional_and_cramer_specific(card_module):
+    data = correlation_data()
+    options = {"include_target": False, "maximum_observations": 80}
+    binned = card_module._analyse_correlation(data, method='cramers_v', **options)
+    raw = card_module._analyse_correlation(data, method='cramers_v', bin_numeric=False, **options)
+    assert any('requested 5' in note for note in binned.notices)
+    assert any('Sparse tables' in note for note in raw.notices)
+    assert binned.matrix.loc['x', 'noise'] < raw.matrix.loc['x', 'noise']
+    for method in ('pearson', 'pps', 'mutual_information'):
+        first = card_module._analyse_correlation(data, method=method, bins=2, **options)
+        second = card_module._analyse_correlation(data, method=method, bin_numeric=False, bins=20, **options)
+        assert_frame_equal(first.matrix, second.matrix)
+        assert first.notices == ()
+
+
+@pytest.mark.ui
+def test_cramer_binning_settings_update_analysis(page, app):
+    page.goto(app.url)
+    page.get_by_role('tab', name='Cramér’s V', exact=True).click()
+    expect(by_id(page, 'Check')).to_contain_text('requested 5', timeout=20000)
+    set_shiny_input(page, 'Bins', 3)
+    set_shiny_input(page, 'BinNumeric', False)
+    expect(by_id(page, 'Check')).to_contain_text('Numeric binning off', timeout=20000)
+    expect(by_id(page, 'Check')).to_contain_text('Sparse tables')
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('method,weighted', [('spearman', False), ('spearman', True), ('kendall', False)])
+def test_ordered_rank_correlations_use_declared_order(card_module, method, weighted):
+    frame = pd.DataFrame({
+        'numeric': [1., 2., 3., 2., 100.],
+        'ordered': pd.Categorical(['z', 'a', 'm', 'a', None], categories=['z', 'a', 'm'], ordered=True),
+        'reverse': pd.Categorical(['z', 'a', 'm', 'a', None], categories=['m', 'a', 'z'], ordered=True),
+        'nominal': pd.Categorical(['z', 'a', 'm', 'a', None]),
+        'flag': [True, False, True, False, True],
+    })
+    source = proxy_data(frame)
+    assert card_module._eligible_columns(source, False, method) == ['numeric', 'ordered', 'reverse']
+    assert card_module._eligible_columns(source, False, 'pearson') == ['numeric']
+    original = frame.copy(deep=True)
+    weights = pd.Series([1., 2., 3., 4., 5.]) if weighted else None
+    result = card_module._calculate_matrix(frame[['numeric', 'ordered', 'reverse']], method, weights)
+    assert result.loc['numeric', 'ordered'] == pytest.approx(1.)
+    assert result.loc['numeric', 'reverse'] == pytest.approx(-1.)
+    assert_frame_equal(frame, original)
+
+
+@pytest.mark.ui
+def test_analysis_cache_reuses_methods_and_invalidates_upstream(page, app):
+    page.goto(app.url)
+    status = by_id(page, 'Check')
+    calls = by_id(page, 'AnalysisCalls')
+    expect(status).to_contain_text('5 variables', timeout=20000)
+    expect(calls).to_have_text('1')
+    page.get_by_role('tab', name='Spearman', exact=True).click()
+    expect(by_id(page, 'Chart_spearman').locator('.js-plotly-plot')).to_be_attached(timeout=20000)
+    expect(calls).to_have_text('2')
+    page.get_by_role('tab', name='Pearson', exact=True).click()
+    expect(by_id(page, 'TableTitle')).to_contain_text('Pearson', timeout=20000)
+    expect(calls).to_have_text('2')
+    set_shiny_input(page, 'IncludeTarget', True)
+    expect(status).to_contain_text('6 variables', timeout=20000)
+    expect(calls).to_have_text('3')
+    set_shiny_input(page, 'IncludeTarget', False)
+    expect(status).to_contain_text('5 variables', timeout=20000)
+    expect(calls).to_have_text('3')
+    by_id(page, 'ReplaceData').click()
+    expect(calls).to_have_text('4', timeout=20000)
+    expect(status).to_contain_text('5 variables', timeout=20000)
+    page.get_by_role('tab', name='Spearman', exact=True).click()
+    expect(calls).to_have_text('5', timeout=20000)

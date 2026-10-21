@@ -241,7 +241,7 @@ class TestCardDefinition:
 
 class TestPreparation:
     @pytest.mark.unit
-    def test_adding_shadow_updates_current_and_clean_frames(
+    def test_adding_shadow_registers_pipeline_and_preserves_clean_frame(
         self, miss_informative
     ):
         from proxy_data import proxy_data
@@ -257,13 +257,18 @@ class TestPreparation:
         assert list(result.frame.columns) == [
             "value", "other", "shadow__value",
         ]
-        assert list(result.clean_frame.columns) == list(result.frame.columns)
+        pd.testing.assert_frame_equal(result.clean_frame, source.frame)
         assert result.frame["shadow__value"].tolist() == [0, 1, 0]
         assert result.role_map.roles_for("shadow__value") == {Role.PREDICTOR}
         assert list(source.frame.columns) == ["value", "other"]
-        assert len(result.cleaning_records) == 1
-        assert result.cleaning_records[0].card == "miss_informative"
-        assert list(result.clone().frame.columns) == list(result.clean_frame.columns)
+        assert not result.cleaning_records
+        assert result.pipeline_steps == ("miss_informative",)
+        assert list(result.clone().frame.columns) == list(result.frame.columns)
+        pipeline = result.pipeline_for_training()
+        pipeline.fit(source.frame.iloc[[0, 2]])
+        transformed = pipeline.transform(source.frame)
+        assert transformed["shadow__value"].tolist() == [0, 1, 0]
+        pd.testing.assert_frame_equal(transformed, result.frame)
 
     @pytest.mark.unit
     def test_empty_analysis_has_stable_schema(self, miss_informative):
@@ -644,3 +649,27 @@ def test_invalid_weight_notice_and_setting_toggle(page, invalid_weights_app):
     expect(by_id(page, 'Significance')).to_contain_text('Potentially informative missingness: x.', timeout=30000)
     by_id(page, 'UseWeights').check()
     expect(by_id(page, 'WeightingNotice')).to_contain_text('Using unweighted calculations', timeout=30000)
+
+
+@pytest.mark.unit
+def test_shadow_pipeline_follows_missingness_step(miss_informative):
+    from cards.miss_map import _transform_data
+    from feature_engine.imputation import AddMissingIndicator
+    from proxy_data import proxy_data
+
+    frame = pd.DataFrame({'x': pd.Categorical(['a', None, 'b']),
+                          'x_na': [4, 5, 6]}, index=[7, 7, 9])
+    source = proxy_data(frame)
+    upstream = _transform_data(source, remove_variables=True,
+                               remove_observations=False,
+                               variable_threshold=0.9, observation_threshold=0.5)
+    result = miss_informative._add_shadow_variables(upstream, ['x'])
+    assert result.pipeline_steps == ('miss_map', 'miss_informative')
+    assert isinstance(result.pipeline.steps[-1][1], AddMissingIndicator)
+    pd.testing.assert_frame_equal(result.clean_frame, frame)
+    pd.testing.assert_frame_equal(result.frame[frame.columns], frame)
+    assert result.frame['shadow__x'].tolist() == [0, 1, 0]
+    fitted = result.pipeline_for_training().fit(frame)
+    pd.testing.assert_frame_equal(fitted.transform(frame), result.frame)
+    unchanged = miss_informative._add_shadow_variables(upstream, [])
+    assert unchanged.pipeline_steps == upstream.pipeline_steps

@@ -862,15 +862,18 @@ fill: var(--bs-primary) !important;
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>The Variable correlation card compares numeric predictors and treatment variables using several complementary measures of association. It helps you distinguish linear, monotonic, nonlinear, predictive, and directional relationships before feature selection or modeling. The card is diagnostic and does not change the data.</em></p>
+<p><em>The Variable correlation card compares predictors and treatment variables using several complementary measures of association. It helps you distinguish linear, monotonic, nonlinear, predictive, and directional relationships before feature selection or modeling. The card is diagnostic and does not change the data.</em></p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
-<li><strong>Primary:</strong> Reveal strong relationships between eligible numeric variables.</li>
+<li><strong>Primary:</strong> Reveal strong relationships between eligible variables.</li>
 <li><strong>Secondary:</strong> Compare how different association measures describe the same variables.</li>
 <li><strong>Tertiary:</strong> Identify redundancy, nonlinear structure, and directional predictive relationships requiring further investigation.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>The card includes numeric, non-Boolean, non-constant variables with the Predictor or Treatment role. Numeric targets can be added with <strong>Include target variables</strong>. Weighting, shadow, text, Boolean, constant, and otherwise ineligible variables are excluded from the displayed matrix.</p>
+<p>Variables must have the Predictor or Treatment role; <strong>Include target variables</strong> also admits Targets. Weighting, shadow, and constant variables remain excluded. Pearson, Distance, Latent, and Xi retain numeric, non-Boolean eligibility. Spearman and Kendall additionally admit ordered categorical variables, using their declared category order and preserving missing values. Unordered categories and Booleans remain excluded from these rank methods. PPS, Mutual info, and Cramér’s V also admit categorical, ordered categorical, Boolean, and string variables. Ordered categories are treated as discrete labels by these three methods; their order is not used.</p>
+<p>Cramér’s V bins numeric variables by default into five quantile bins (approximately equal observation counts). <strong>Bin numeric variables for Cramér’s V</strong> can disable this; <strong>Cramér’s V requested bins</strong> accepts 2–20. Bins are computed once per numeric column on the analyzed sample and reused across pairs. Ties can reduce the actual number of bins. Numeric columns with no more distinct values than the requested bin count, and categorical, ordered categorical, and Boolean columns, remain unchanged. The summary reports actual bin counts and flags variable pairs with expected contingency-cell counts below five. Other association methods are unaffected. With binning disabled, every distinct numeric value is treated as a category. High-cardinality numeric or categorical variables can produce inflated association, including perfect association between unique-valued columns. Missing pairs and nonfinite numeric values are omitted.</p>
+<p>PPS uses fold-fitted one-hot encoding for categorical sources. Numeric destinations use regression and MAE improvement over a training-median baseline; categorical destinations use stratified classification and weighted-F1 improvement over a training-majority baseline. Scores are clipped to [0, 1]; classification requires at least two observations per class. This is the card’s exploratory PPS variant.</p>
+<p>Mutual info uses discrete contingency-based estimation for two discrete variables, a continuous/discrete estimator for mixed pairs, and the existing bidirectional continuous estimator for numeric pairs. All retain the transformation <code>sqrt(1 - exp(-2 * MI))</code>; unavailable estimates remain blank.</p>
 <p>Each tab applies a different measure:</p>
 <table class="caption-top" style="width:100%;">
 <colgroup>
@@ -919,18 +922,24 @@ fill: var(--bs-primary) !important;
 <td>Linear or nonlinear dependence measured from pairwise distances.</td>
 </tr>
 <tr class="even">
+<td><strong>Cramér’s V</strong></td>
+<td style="text-align: right;">0 to 1</td>
+<td>No</td>
+<td>Association between discrete values, including numeric values optionally grouped into quantile bins.</td>
+</tr>
+<tr class="odd">
 <td><strong>PPS</strong></td>
 <td style="text-align: right;">0 to 1</td>
 <td>Yes</td>
 <td>Improvement of a decision-tree prediction over a naive baseline.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Latent</strong></td>
 <td style="text-align: right;">−1 to 1</td>
 <td>No</td>
 <td>Pearson correlation after empirical ranks are mapped to normal scores.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>Xi</strong></td>
 <td style="text-align: right;">0 to 1</td>
 <td>Yes</td>
@@ -957,7 +966,7 @@ fill: var(--bs-primary) !important;
 <ul>
 <li>Association does not establish causation, and thresholds are visual screening choices rather than significance tests.</li>
 <li>Pairwise removal of missing values means different cells may use different observations; the resulting matrix need not behave like a single complete-data correlation matrix.</li>
-<li>Only eligible numeric variables are analyzed. The Latent measure is a rank-Gaussian approximation, not a complete mixed-type latent-correlation model.</li>
+<li>Only eligible variables are analyzed. The Latent measure is a rank-Gaussian approximation, not a complete mixed-type latent-correlation model.</li>
 <li>PPS depends on a particular decision-tree model and cross-validation split; it is an exploratory predictive score rather than a final model assessment.</li>
 <li>Large data is deterministically sampled. Distance correlation is capped at 2,000 observations and PPS at 10,000 because their calculations are comparatively expensive.</li>
 <li>Observation weights apply only to Pearson and Spearman and use the product of all assigned Weighting variables.</li>
@@ -972,7 +981,7 @@ fill: var(--bs-primary) !important;
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> Numeric, non-constant Predictor and Treatment variables, an optional numeric Target, and optional Weighting variables.</li>
+<li><strong>Input:</strong> Method-eligible, non-constant Predictor and Treatment variables, optional Targets, and optional Weighting variables.</li>
 <li><strong>Output:</strong> The upstream data, roles, and pipeline unchanged.</li>
 <li><strong>Data journey:</strong> This diagnostic card does not add a journey step.</li>
 </ul>

@@ -12,7 +12,19 @@ os.chdir(APP_ROOT)
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
+from cards import var_correlation
 from cards.var_correlation import instance
+from shiny import reactive, render, ui
+
+analysis_calls = 0
+original_analysis = var_correlation._analyse_correlation
+
+def counted_analysis(*args, **kwargs):
+    global analysis_calls
+    analysis_calls += 1
+    return original_analysis(*args, **kwargs)
+
+var_correlation._analyse_correlation = counted_analysis
 from proxy_data import proxy_data
 from roles import Role, RoleMap
 
@@ -48,4 +60,26 @@ this._imports.set(proxy_data(
     _roles=roles,
     _name="Variable correlation test",
 ))
+original_server, original_footer = this.server, this._footer
+this.footer = lambda: ui.TagList(original_footer(), ui.output_text('AnalysisCalls'),
+                                ui.input_action_button(id='ReplaceData', label='Replace data'))
+
+def server(input, output, session):
+    result = original_server(input, output, session)
+
+    @output
+    @render.text
+    def AnalysisCalls():
+        reactive.invalidate_later(0.1)
+        return str(analysis_calls)
+
+    @reactive.effect
+    @reactive.event(input.ReplaceData, ignore_init=True)
+    def replace_data():
+        updated = frame.copy()
+        updated['x'] = updated['x'] ** 2
+        this._imports.set(proxy_data(_df=updated, _roles=roles, _name='Updated data'))
+    return result
+
+this.server = server
 app = this.application()

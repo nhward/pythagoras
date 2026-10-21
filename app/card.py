@@ -37,6 +37,7 @@ from pathlib import Path
 import plotly.graph_objects as go
 from faicons import icon_svg as icon
 from module import Module
+from card_position import CardPositionError
 from roles import BALANCE_PREFIX
 from shiny import module, reactive, render, ui
 from shiny.types import SilentException
@@ -65,6 +66,7 @@ class Card(Module):
         self.allow_remove = allow_remove
         self.allow_drag = allow_drag
         self.mutable = mutable
+        self.position_error = reactive.Value(None)
         self.initially_hidden = False
         self.description = None
         self.long_name = long_name
@@ -76,6 +78,19 @@ class Card(Module):
 
     max_height = Module.config.get("settings", {}).get("max_card_height")
     SHADOW_PREFIX = "shadow__"
+
+    def guard_position(self, export):
+        """Disable an incompatible export without interrupting downstream cards."""
+        @reactive.calc
+        def guarded():
+            try:
+                result = export()
+            except CardPositionError as error:
+                self.position_error.set(str(error))
+                return self.input_data()
+            self.position_error.set(None)
+            return result
+        return guarded
     BALANCE_PREFIX = BALANCE_PREFIX
     effective_weights = staticmethod(effective_weights)
     observation_weights = staticmethod(observation_weights)
@@ -333,6 +348,7 @@ class Card(Module):
 
             def front_back():
                 return ui.card_body(
+                    ui.output_ui("PositionNotice"),
                     ui.div(
                         ui.div(
                             self.front,
@@ -612,7 +628,27 @@ class Card(Module):
                 )
             if self.mutable:
                 card_output = self.export_readiness.bind(self, card_output, input, session)
+                card_output = self.guard_position(card_output)
             self.output_data = card_output
+
+            @output
+            @render.ui
+            def PositionNotice():
+                # Also evaluate the guard when this is the last workflow card
+                # and no downstream card has requested its export yet.
+                if self.mutable:
+                    try:
+                        card_output()
+                    except SilentException:
+                        pass
+                reason = self.position_error()
+                if reason:
+                    return ui.div(
+                        ui.strong("Card disabled in this position. "),
+                        reason + ". Move this card before the first learning step. "
+                        "Incoming data is passed through unchanged.",
+                        class_="alert alert-warning", role="status",
+                    )
 
             @reactive.effect
             def pipeline_activity():

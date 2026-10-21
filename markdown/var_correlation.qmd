@@ -4,17 +4,23 @@ title: Variable correlation
 
 #### 🧭 Purpose
 
-_The Variable correlation card compares numeric predictors and treatment variables using several complementary measures of association. It helps you distinguish linear, monotonic, nonlinear, predictive, and directional relationships before feature selection or modeling. The card is diagnostic and does not change the data._
+_The Variable correlation card compares predictors and treatment variables using several complementary measures of association. It helps you distinguish linear, monotonic, nonlinear, predictive, and directional relationships before feature selection or modeling. The card is diagnostic and does not change the data._
 
 #### 🎯 Goals
 
-1. **Primary:** Reveal strong relationships between eligible numeric variables.
+1. **Primary:** Reveal strong relationships between eligible variables.
 1. **Secondary:** Compare how different association measures describe the same variables.
 1. **Tertiary:** Identify redundancy, nonlinear structure, and directional predictive relationships requiring further investigation.
 
 #### 🧠 How it works
 
-The card includes numeric, non-Boolean, non-constant variables with the Predictor or Treatment role. Numeric targets can be added with **Include target variables**. Weighting, shadow, text, Boolean, constant, and otherwise ineligible variables are excluded from the displayed matrix.
+Variables must have the Predictor or Treatment role; **Include target variables** also admits Targets. Weighting, shadow, and constant variables remain excluded. Pearson, Distance, Latent, and Xi retain numeric, non-Boolean eligibility. Spearman and Kendall additionally admit ordered categorical variables, using their declared category order and preserving missing values. Unordered categories and Booleans remain excluded from these rank methods. PPS, Mutual info, and Cramér’s V also admit categorical, ordered categorical, Boolean, and string variables. Ordered categories are treated as discrete labels by these three methods; their order is not used.
+
+Cramér’s V bins numeric variables by default into five quantile bins (approximately equal observation counts). **Bin numeric variables for Cramér’s V** can disable this; **Cramér’s V requested bins** accepts 2–20. Bins are computed once per numeric column on the analyzed sample and reused across pairs. Ties can reduce the actual number of bins. Numeric columns with no more distinct values than the requested bin count, and categorical, ordered categorical, and Boolean columns, remain unchanged. The summary reports actual bin counts and flags variable pairs with expected contingency-cell counts below five. Other association methods are unaffected. With binning disabled, every distinct numeric value is treated as a category. High-cardinality numeric or categorical variables can produce inflated association, including perfect association between unique-valued columns. Missing pairs and nonfinite numeric values are omitted.
+
+PPS uses fold-fitted one-hot encoding for categorical sources. Numeric destinations use regression and MAE improvement over a training-median baseline; categorical destinations use stratified classification and weighted-F1 improvement over a training-majority baseline. Scores are clipped to [0, 1]; classification requires at least two observations per class. This is the card’s exploratory PPS variant.
+
+Mutual info uses discrete contingency-based estimation for two discrete variables, a continuous/discrete estimator for mixed pairs, and the existing bidirectional continuous estimator for numeric pairs. All retain the transformation `sqrt(1 - exp(-2 * MI))`; unavailable estimates remain blank.
 
 Each tab applies a different measure:
 
@@ -25,6 +31,7 @@ Each tab applies a different measure:
 | **Kendall** | −1 to 1 | No | Rank concordance between pairs of observations. |
 | **Mutual info** | 0 to 1 | No | General dependence estimated with nearest neighbors and normalized to a correlation-like scale. |
 | **Distance** | 0 to 1 | No | Linear or nonlinear dependence measured from pairwise distances. |
+| **Cramér’s V** | 0 to 1 | No | Association between discrete values, including numeric values optionally grouped into quantile bins. |
 | **PPS** | 0 to 1 | Yes | Improvement of a decision-tree prediction over a naive baseline. |
 | **Latent** | −1 to 1 | No | Pearson correlation after empirical ranks are mapped to normal scores. |
 | **Xi** | 0 to 1 | Yes | Dependence of a destination variable on a source variable using Chatterjee's rank statistic. |
@@ -63,7 +70,7 @@ Strong symmetric associations can indicate redundant measurements, derived varia
 
 * Association does not establish causation, and thresholds are visual screening choices rather than significance tests.
 * Pairwise removal of missing values means different cells may use different observations; the resulting matrix need not behave like a single complete-data correlation matrix.
-* Only eligible numeric variables are analyzed. The Latent measure is a rank-Gaussian approximation, not a complete mixed-type latent-correlation model.
+* Only eligible variables are analyzed. The Latent measure is a rank-Gaussian approximation, not a complete mixed-type latent-correlation model.
 * PPS depends on a particular decision-tree model and cross-validation split; it is an exploratory predictive score rather than a final model assessment.
 * Large data is deterministically sampled. Distance correlation is capped at 2,000 observations and PPS at 10,000 because their calculations are comparatively expensive.
 * Observation weights apply only to Pearson and Spearman and use the product of all assigned Weighting variables.
@@ -78,7 +85,7 @@ Strong symmetric associations can indicate redundant measurements, derived varia
 
 #### 🔗 Data flow
 
-* **Input:** Numeric, non-constant Predictor and Treatment variables, an optional numeric Target, and optional Weighting variables.
+* **Input:** Method-eligible, non-constant Predictor and Treatment variables, optional Targets, and optional Weighting variables.
 * **Output:** The upstream data, roles, and pipeline unchanged.
 * **Data journey:** This diagnostic card does not add a journey step.
 

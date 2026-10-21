@@ -17,6 +17,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from cleaning_record import CleaningRecord
+from card_position import CardPositionError
 from evaluation_plan import EvaluationPlan
 from pipeline import Pipeline
 from processing_record import ProcessingRecord
@@ -186,7 +187,7 @@ class proxy_data:
     @data.setter
     def data(self, value):
         if self.has_pipeline:
-            raise RuntimeError(
+            raise CardPositionError(
                 "Cannot replace data directly after the learning pipeline has begun"
             )
         self._df = value
@@ -522,7 +523,7 @@ class proxy_data:
         and leaves the incoming proxy unchanged.
         """
         if self.has_pipeline:
-            raise RuntimeError(
+            raise CardPositionError(
                 "Cleaning operations cannot run after the learning pipeline has begun"
             )
         if not isinstance(frame, pd.DataFrame):

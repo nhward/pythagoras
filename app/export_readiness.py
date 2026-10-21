@@ -1,5 +1,6 @@
 """Explicit prerequisites for publishing a mutable card's data."""
 import asyncio
+from card_position import CardPositionError
 
 from shiny import reactive, req
 from shiny.reactive._core import get_current_context
@@ -107,6 +108,11 @@ class ExportReadiness:
                     check()
                 value = source()
                 req(value is not None)
+            except CardPositionError as error:
+                # Publish the positioning failure so Card can explain it and
+                # pass through upstream data, rather than wait indefinitely.
+                value = error
+                self.phase.set(None)
             except SilentException:
                 return
             except Exception as error:  # noqa: BLE001

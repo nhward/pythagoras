@@ -24,7 +24,8 @@ from code_recording import recordable
 from joblib import parallel_config
 from module import Module
 from proxy_data import proxy_data
-from roles import Role
+from roles import Role, RoleMap
+from ShadowMissingIndicator import ShadowMissingIndicator
 from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
@@ -419,31 +420,22 @@ def _add_shadow_variables(
     data: proxy_data,
     columns: list[str] | tuple[str, ...],
 ) -> proxy_data:
-    """Add selected missingness indicators through ProxyData's mutation API."""
+    """Register selected missingness indicators as a reusable pipeline step."""
     selected = list(dict.fromkeys(map(str, columns)))
     if not selected:
         return data.clone()
 
-    result = data.clone()
-    frame = result.frame.copy()
-    shadow_columns = []
+    transformer = ShadowMissingIndicator(variables=selected, missing_only=False)
+    preview = transformer.fit_transform(data.frame)
+    added_roles = RoleMap()
     for column in selected:
-        if column not in frame.columns:
-            raise KeyError(f"Cannot create a shadow for unknown variable {column!r}")
-        shadow = f"{Card.SHADOW_PREFIX}{column}"
-        frame[shadow] = frame[column].isna().to_numpy(dtype=np.int8)
-        result.role_map.set_roles(shadow, [Role.PREDICTOR])
-        shadow_columns.append(shadow)
-
-    return data.with_cleaned_data(
-        frame,
-        card="miss_informative",
+        added_roles.set_roles(f"{Card.SHADOW_PREFIX}{column}", [Role.PREDICTOR])
+    return data.with_pipeline_step(
+        transformer,
+        name="miss_informative",
         operation="Add informative-missingness shadow variables",
-        parameters={
-            "source_variables": selected,
-            "shadow_variables": shadow_columns,
-        },
-        role_map=result.role_map,
+        preview_frame=preview,
+        added_roles=added_roles,
     )
 
 @recordable
