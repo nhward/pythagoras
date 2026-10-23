@@ -1,0 +1,131 @@
+---
+title: Model candidates
+---
+
+#### 🧭 Purpose
+
+*Compare documented model configurations with the current outcome, predictor types,
+missing values and observation structure. Use this diagnostic card after data
+preparation and Observation resampling, before choosing a model to train.*
+
+The card displays recipes from the versioned capability catalogue. It does not fit,
+benchmark, install or automatically select a model, and it leaves incoming data and
+pipeline metadata unchanged.
+
+#### 🎯 Goals
+
+1. **Primary:** Find recipes that meet the current data requirements.
+2. **Secondary:** Explain exclusions, unknown capabilities and preparation requirements.
+3. **Tertiary:** Distinguish runtime evidence from documentation and expert judgment.
+
+#### 🧠 How it works
+
+The outcome task comes from the upstream modeling context. Automatic inference uses
+a numeric Target for regression, a nominal or Boolean Target for classification, and
+an ordered categorical Target for ordinal classification. Numeric class codes need
+an explicit classification choice upstream. Without a resolved outcome, the card
+asks for a Target or an explicit task.
+
+Only Predictor-role columns are inspected. Target and declared survival outcome
+components are excluded. Treatment, Identifier, Sequence, Geometry and Weighting
+columns are not silently added to the design matrix. Assign predictor roles
+intentionally when defining the analysis.
+
+The card distinguishes missing numeric and missing categorical values. Boolean and
+ordered categorical predictors request categorical support; preserving ordinal order
+is a recipe-specific consideration. Infinite numeric values and unsupported types,
+such as raw datetime predictors, prevent a compatible match until prepared upstream.
+
+Each row describes one joint configuration. A model that handles categories only
+after encoding is shown with its input requirements; capabilities from separate recipes
+are never combined. Readiness combines input and broader requirements: Meets requirements, specific
+preprocessing actions, unsupported requirements, or Untested. With excluded models
+hidden, every displayed row meets requirements. Evidence remains separate. Requirements describe the
+needed result, such as numeric representations or no missing values, without
+prescribing imputation or one-hot encoding. The flip-side separately records the
+specific tested preparation. Alternative techniques may satisfy the requirements,
+but are not validated by that recorded probe. Compatibility and evidence continue
+to refer to the complete tested recipe, not the bare estimator. Identifier repetition, Sequence and Geometry roles introduce
+longitudinal, temporal and spatial requirements. Content that merely looks like a
+date or coordinate does not establish those roles.
+
+| Status | Interpretation |
+|:--|:--|
+| Meets requirements | Current inputs and broader requirements meet the checks performed here. |
+| Preprocessing: … | Resolve the stated input conditions before fitting. |
+| Does not support … | A required capability is explicitly unsupported. |
+| Untested: … | At least one input condition, capability or structural use has not been reviewed. |
+| Probe passed | The recorded configuration passed small compatibility checks. |
+| Documentation only | Official documentation was reviewed; adapters and runtime probes remain outstanding. |
+
+Installation/version status is independent of these judgments. A missing optional
+package does not mean its model is analytically unsuitable. A matching package
+version does not validate an untested adapter.
+
+#### 🏞️ Front
+
+The summary names the task, structural requirements and predictor count. The table
+shows model, input requirements, readiness, evidence, installation and scale guidance. Column filters help narrow the displayed rows. Fullscreen gives
+the table more vertical space.
+
+Select a row, then flip the card to inspect it. An empty table is explained in the
+footer. It may mean insufficient catalogue coverage rather than absence of suitable
+models in the wider ecosystem.
+
+#### 🔄 Flip side
+
+The flip side shows evaluation-readiness warnings and catalogue limitations. For the
+selected row it presents configuration parameters, preparation/fitting instructions,
+conditions, subjective assessment and official source links. Judgments are guidance,
+not measured accuracy or timing results.
+
+#### 🛠️ Controls and actions
+
+- **Show excluded and unreviewed recipes:** Include incompatible and unknown recipes
+  for the current task, with reasons. This does not list every unreviewed estimator
+  in the raw inventory; entries need a recipe.
+- **Show installed packages only:** Hide packages absent from the current environment.
+  Installed versions may still differ from the reviewed snapshot.
+- **Use observation weightings:** Require fitting-weight support when the assigned
+  effective weights are valid and nonuniform. Invalid weights produce a visible
+  unweighted fallback; this card does not apply weights or rebalance data.
+- **Explore forecasting recipes:** Browse forecasting contracts explicitly. Sequence
+  supplies time-index metadata, but forecast horizons and lag windows still require
+  a future adapter. A resampling window is not automatically a forecasting horizon.
+- **Required prediction output:** Request probabilities, survival risk, a forecast or
+  prediction intervals. Unreviewed output support is shown as unknown.
+
+Settings affect display and matching only and use ordinary card configuration
+persistence. There is no training or apply button.
+
+#### 🔎 Interpretation and next steps
+
+Review preparation and assumptions before choosing a candidate. A survival risk
+ranking and a survival probability curve are different outputs. Spatial fitted
+values do not establish prediction support at new locations. A repeated-entity model
+may require different prediction rules for known and unseen subjects.
+
+#### ⛔️ Limitations
+
+The catalogue is intentionally incomplete. Specialist recipes currently require
+integration work and runtime validation. Predictor summaries describe the current
+preview; preprocessing must be refitted within each training fold. A compatible row
+does not certify task assumptions, valid metrics, calibration, runtime, memory use or
+out-of-sample accuracy. The card does not infer a spatial weights matrix, forecast
+horizon or lag configuration. Evaluation readiness remains separate from browsing.
+
+#### 📌 Suggested workflow
+
+1. Assign roles and confirm outcome semantics upstream.
+2. Define and inspect an evaluation plan in Observation resampling.
+3. Review compatible recipes and their preparation.
+4. Show excluded/unreviewed recipes to understand coverage gaps.
+5. Inspect the selected recipe and validate it in the eventual training workflow.
+
+#### 🔗 Data flow
+
+- **Input:** Current predictors, stable outcome data, roles, modeling context and
+  evaluation metadata, plus the JSON catalogue and installed-package metadata.
+- **Output:** The incoming proxy passes through unchanged.
+- **Data journey:** No cleaning operation, learned transformation or evaluation plan
+  is added. Display changes do not train models or start extended tasks.

@@ -1,0 +1,3094 @@
+[
+  {
+    "id": "sklearn.ensemble.HistGradientBoostingRegressor:native_mixed_missing",
+    "estimator": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "label": "native_mixed_missing",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "categorical_features": "from_dtype",
+        "random_state": 1729
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Each categorical feature must have <= max_bins (default 255) nonmissing categories.",
+      "Ordinal categories are treated as nominal; category order is not a monotonic constraint.",
+      "Native support exists despite categorical=False in default sklearn input tags.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram-based boosting; useful for many-row tabular data. Tune iterations and leaves.",
+      "many_features_reason": "Dense input only; many features increase histogram work. Each categorical column has at most max_bins categories.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.RandomForestRegressor:numeric_missing",
+    "estimator": "sklearn.ensemble.RandomForestRegressor",
+    "label": "numeric_missing",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "This missing-value profile uses dense numeric inputs and the default supported criterion.",
+      "Sparse support of the estimator does not imply sparse+NaN support.",
+      "Monotonic constraints and alternative criteria may restrict missing-value support.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Parallelizable across trees, but exact split searches and large forests can be expensive.",
+      "many_features_reason": "Numeric encoding required; one-hot expansion can increase feature count substantially.",
+      "memory_reason": "Forest size grows with number and depth of trees. No partial_fit.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestRegressor.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.ExtraTreesRegressor:numeric_missing",
+    "estimator": "sklearn.ensemble.ExtraTreesRegressor",
+    "label": "numeric_missing",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "This missing-value profile uses dense numeric inputs and the default supported criterion.",
+      "Sparse support of the estimator does not imply sparse+NaN support.",
+      "Monotonic constraints and alternative criteria may restrict missing-value support.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Parallelizable across trees, but exact split searches and large forests can be expensive.",
+      "many_features_reason": "Numeric encoding required; one-hot expansion can increase feature count substantially.",
+      "memory_reason": "Forest size grows with number and depth of trees. No partial_fit.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.tree.DecisionTreeRegressor:numeric_missing",
+    "estimator": "sklearn.tree.DecisionTreeRegressor",
+    "label": "numeric_missing",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Dense input, splitter=best and default criterion; not every splitter/criterion supports NaNs.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Tree depth and split search determine cost; a single tree is usually cheaper than an ensemble.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.tree.DecisionTreeRegressor.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.linear_model.Ridge:mixed_missing_via_preprocessing",
+    "estimator": "sklearn.linear_model.Ridge",
+    "label": "mixed_missing_via_preprocessing",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "alpha": 1.0
+      },
+      "preparation": "impute_onehot",
+      "wrapper": "sklearn.pipeline.Pipeline"
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Native estimator requires numeric complete features; this profile supplies median imputation, categorical imputation, one-hot encoding and numeric scaling.",
+      "Dense one-hot output can be expensive with high-cardinality columns.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Linear-model fitting scales more favourably in rows than exact kernel methods; solver and feature count matter.",
+      "many_features_reason": "Dense one-hot expansion is the bottleneck in this recipe; use sparse-compatible solvers/encodings for very wide data.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "potential_onehot_memory_bottleneck",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=impute_onehot as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "model__sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.linear_model.Ridge.html",
+      "https://scikit-learn.org/1.9/modules/compose.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.RandomForestRegressor:mixed_missing_via_preprocessing",
+    "estimator": "sklearn.ensemble.RandomForestRegressor",
+    "label": "mixed_missing_via_preprocessing",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "preparation": "impute_onehot",
+      "wrapper": "sklearn.pipeline.Pipeline"
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "One-hot encoding is not native categorical splitting.",
+      "Fit imputation/encoding only on training data.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "potential_onehot_memory_bottleneck",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=impute_onehot as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "model__sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestRegressor.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.linear_model.SGDRegressor:incremental_numeric",
+    "estimator": "sklearn.linear_model.SGDRegressor",
+    "label": "incremental_numeric",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": true,
+      "sample_weight_fit": true,
+      "incremental_training": true
+    },
+    "conditions": [
+      "For classification, supply all classes on the first partial_fit call.",
+      "No native missing values or raw categories.",
+      "partial_fit must be called by the application; Pipeline does not automatically provide it.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Minibatch partial_fit supports streaming; cost approximately proportional to nonzero features per pass.",
+      "many_features_reason": "Suitable for wide sparse features; scale numeric values and preserve feature dimensions across batches.",
+      "memory_reason": "Batch-sized input plus coefficient arrays; preprocessing must also support streaming.",
+      "out_of_core": "supported_with_streaming_preprocessing",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "favourable_for_sparse_numeric",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/computing/scaling_strategies.html",
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.linear_model.SGDRegressor.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_wide_or_streaming_data",
+      "rationale": "Prefer for large sparse or approximately linear problems; nonlinear structure may require feature engineering.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.HistGradientBoostingClassifier:native_mixed_missing",
+    "estimator": "sklearn.ensemble.HistGradientBoostingClassifier",
+    "label": "native_mixed_missing",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "categorical_features": "from_dtype",
+        "random_state": 1729,
+        "class_weight": "balanced"
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Each categorical feature must have <= max_bins (default 255) nonmissing categories.",
+      "Ordinal categories are treated as nominal; category order is not a monotonic constraint.",
+      "Native support exists despite categorical=False in default sklearn input tags.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "class_weight=balanced",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram-based boosting; useful for many-row tabular data. Tune iterations and leaves.",
+      "many_features_reason": "Dense input only; many features increase histogram work. Each categorical column has at most max_bins categories.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.HistGradientBoostingClassifier.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.RandomForestClassifier:numeric_missing",
+    "estimator": "sklearn.ensemble.RandomForestClassifier",
+    "label": "numeric_missing",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "class_weight": "balanced"
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "This missing-value profile uses dense numeric inputs and the default supported criterion.",
+      "Sparse support of the estimator does not imply sparse+NaN support.",
+      "Monotonic constraints and alternative criteria may restrict missing-value support.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "class_weight=balanced",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Parallelizable across trees, but exact split searches and large forests can be expensive.",
+      "many_features_reason": "Numeric encoding required; one-hot expansion can increase feature count substantially.",
+      "memory_reason": "Forest size grows with number and depth of trees. No partial_fit.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestClassifier.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.ExtraTreesClassifier:numeric_missing",
+    "estimator": "sklearn.ensemble.ExtraTreesClassifier",
+    "label": "numeric_missing",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "class_weight": "balanced"
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "This missing-value profile uses dense numeric inputs and the default supported criterion.",
+      "Sparse support of the estimator does not imply sparse+NaN support.",
+      "Monotonic constraints and alternative criteria may restrict missing-value support.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "class_weight=balanced",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Parallelizable across trees, but exact split searches and large forests can be expensive.",
+      "many_features_reason": "Numeric encoding required; one-hot expansion can increase feature count substantially.",
+      "memory_reason": "Forest size grows with number and depth of trees. No partial_fit.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.ExtraTreesClassifier.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.tree.DecisionTreeClassifier:numeric_missing",
+    "estimator": "sklearn.tree.DecisionTreeClassifier",
+    "label": "numeric_missing",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Dense input, splitter=best and default criterion; not every splitter/criterion supports NaNs.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Tree depth and split search determine cost; a single tree is usually cheaper than an ensemble.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.tree.DecisionTreeClassifier.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "no_special_advantage_expected",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.linear_model.LogisticRegression:mixed_missing_via_preprocessing",
+    "estimator": "sklearn.linear_model.LogisticRegression",
+    "label": "mixed_missing_via_preprocessing",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "class_weight": "balanced",
+        "max_iter": 1000,
+        "random_state": 1729
+      },
+      "preparation": "impute_onehot",
+      "wrapper": "sklearn.pipeline.Pipeline"
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Native estimator requires numeric complete features; this profile supplies median imputation, categorical imputation, one-hot encoding and numeric scaling.",
+      "Dense one-hot output can be expensive with high-cardinality columns.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "class_weight=balanced",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Linear-model fitting scales more favourably in rows than exact kernel methods; solver and feature count matter.",
+      "many_features_reason": "Dense one-hot expansion is the bottleneck in this recipe; use sparse-compatible solvers/encodings for very wide data.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "potential_onehot_memory_bottleneck",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=impute_onehot as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "model__sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.linear_model.LogisticRegression.html",
+      "https://scikit-learn.org/1.9/modules/compose.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.ensemble.RandomForestClassifier:mixed_missing_via_preprocessing",
+    "estimator": "sklearn.ensemble.RandomForestClassifier",
+    "label": "mixed_missing_via_preprocessing",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "preparation": "impute_onehot",
+      "wrapper": "sklearn.pipeline.Pipeline"
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "One-hot encoding is not native categorical splitting.",
+      "Fit imputation/encoding only on training data.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "per-row sample_weight supplied by caller",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "potential_onehot_memory_bottleneck",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=impute_onehot as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "model__sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestClassifier.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.linear_model.SGDClassifier:incremental_numeric",
+    "estimator": "sklearn.linear_model.SGDClassifier",
+    "label": "incremental_numeric",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": true,
+      "sample_weight_fit": true,
+      "incremental_training": true
+    },
+    "conditions": [
+      "For classification, supply all classes on the first partial_fit call.",
+      "No native missing values or raw categories.",
+      "partial_fit must be called by the application; Pipeline does not automatically provide it.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "caller-supplied per-row weights; use fixed class-weight dict rather than balanced in partial_fit",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Minibatch partial_fit supports streaming; cost approximately proportional to nonzero features per pass.",
+      "many_features_reason": "Suitable for wide sparse features; scale numeric values and preserve feature dimensions across batches.",
+      "memory_reason": "Batch-sized input plus coefficient arrays; preprocessing must also support streaming.",
+      "out_of_core": "supported_with_streaming_preprocessing",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "favourable_for_sparse_numeric",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/computing/scaling_strategies.html",
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.linear_model.SGDClassifier.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_wide_or_streaming_data",
+      "rationale": "Prefer for large sparse or approximately linear problems; nonlinear structure may require feature engineering.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.svm.SVC:rbf_kernel",
+    "estimator": "sklearn.svm.SVC",
+    "label": "rbf_kernel",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "kernel": "rbf"
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": true,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric features required.",
+      "Using kernel=linear in SVC/SVR does not switch to the scalable LinearSVC/LinearSVR solver.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "poor",
+      "many_rows_reason": "Exact kernel fitting grows at least quadratically in sample count for SVC; SVR is also superlinear and expensive on many rows.",
+      "many_features_reason": "Scale numeric features. Prediction cost grows with the number of support vectors.",
+      "memory_reason": "Kernel cache and support vectors can dominate memory; not an out-of-core estimator.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "favourable_for_sparse_numeric",
+      "prediction_reason": "Cost grows with support-vector count."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.svm.SVC.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "specialist_small_to_medium_data",
+      "rationale": "Potentially strong after scaling and tuning, but exact kernel fitting is a poor default for large row counts.",
+      "confidence": "medium",
+      "large_data_preference": "avoid_as_large_row_default",
+      "class_imbalance_preference": "no_special_advantage_expected",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "sklearn.svm.LinearSVC:linear_solver",
+    "estimator": "sklearn.svm.LinearSVC",
+    "label": "linear_solver",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "max_iter": 5000
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": true,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric features required; not incremental.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Optimized linear solver avoids an exact nonlinear kernel matrix.",
+      "many_features_reason": "Good candidate for wide sparse numeric representations; scale inputs.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "favourable_for_sparse_numeric",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.svm.LinearSVC.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_wide_or_streaming_data",
+      "rationale": "Prefer for large sparse or approximately linear problems; nonlinear structure may require feature engineering.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "no_special_advantage_expected",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label"
+    ]
+  },
+  {
+    "id": "sklearn.svm.SVR:rbf_kernel",
+    "estimator": "sklearn.svm.SVR",
+    "label": "rbf_kernel",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "kernel": "rbf"
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": true,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric features required.",
+      "Using kernel=linear in SVC/SVR does not switch to the scalable LinearSVC/LinearSVR solver.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "poor",
+      "many_rows_reason": "Exact kernel fitting grows at least quadratically in sample count for SVC; SVR is also superlinear and expensive on many rows.",
+      "many_features_reason": "Scale numeric features. Prediction cost grows with the number of support vectors.",
+      "memory_reason": "Kernel cache and support vectors can dominate memory; not an out-of-core estimator.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "favourable_for_sparse_numeric",
+      "prediction_reason": "Cost grows with support-vector count."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.svm.SVR.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "specialist_small_to_medium_data",
+      "rationale": "Potentially strong after scaling and tuning, but exact kernel fitting is a poor default for large row counts.",
+      "confidence": "medium",
+      "large_data_preference": "avoid_as_large_row_default",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.svm.LinearSVR:linear_solver",
+    "estimator": "sklearn.svm.LinearSVR",
+    "label": "linear_solver",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "max_iter": 5000
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": true,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric features required; not incremental.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Optimized linear solver avoids an exact nonlinear kernel matrix.",
+      "many_features_reason": "Good candidate for wide sparse numeric representations; scale inputs.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "favourable_for_sparse_numeric",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.svm.LinearSVR.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_wide_or_streaming_data",
+      "rationale": "Prefer for large sparse or approximately linear problems; nonlinear structure may require feature engineering.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "sklearn.gaussian_process.GaussianProcessRegressor:exact_gp",
+    "estimator": "sklearn.gaussian_process.GaussianProcessRegressor",
+    "label": "exact_gp",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {},
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric predictors; standard fit does not accept sample_weight.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "poor",
+      "many_rows_reason": "Exact Gaussian-process training typically requires O(n^3) factorization.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "O(n^2) training covariance matrix.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "specialist_small_data",
+      "rationale": "Useful for small-data uncertainty modelling; exact covariance calculations make large-row use unattractive.",
+      "confidence": "medium",
+      "large_data_preference": "avoid_as_large_row_default",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "imblearn.ensemble.BalancedRandomForestClassifier:internal_class_balancing",
+    "estimator": "imblearn.ensemble.BalancedRandomForestClassifier",
+    "label": "internal_class_balancing",
+    "task": "classifier",
+    "reviewed_package_version": "0.14.2",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Use complete numeric inputs in this recipe; base-estimator capability varies.",
+      "Resampling changes class prevalence; assess calibration on representative held-out data.",
+      "Do not infer arbitrary external-weight support from internal resampling.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "internal random undersampling during ensemble training",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Resampled ensembles can reduce per-model rows; total cost depends on number of learners.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.BalancedRandomForestClassifier.html",
+      "https://imbalanced-learn.org/stable/ensemble.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_imbalance",
+      "rationale": "Internal balancing directly addresses minority-class exposure; compare to class-weighted boosting and calibrate probabilities if needed.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "strong_starting_point",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "imblearn.ensemble.BalancedBaggingClassifier:internal_class_balancing",
+    "estimator": "imblearn.ensemble.BalancedBaggingClassifier",
+    "label": "internal_class_balancing",
+    "task": "classifier",
+    "reviewed_package_version": "0.14.2",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Use complete numeric inputs in this recipe; base-estimator capability varies.",
+      "Resampling changes class prevalence; assess calibration on representative held-out data.",
+      "Do not infer arbitrary external-weight support from internal resampling.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "internal random undersampling during ensemble training",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Resampled ensembles can reduce per-model rows; total cost depends on number of learners.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.BalancedBaggingClassifier.html",
+      "https://imbalanced-learn.org/stable/ensemble.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_imbalance",
+      "rationale": "Internal balancing directly addresses minority-class exposure; compare to class-weighted boosting and calibrate probabilities if needed.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "strong_starting_point",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "imblearn.ensemble.EasyEnsembleClassifier:internal_class_balancing",
+    "estimator": "imblearn.ensemble.EasyEnsembleClassifier",
+    "label": "internal_class_balancing",
+    "task": "classifier",
+    "reviewed_package_version": "0.14.2",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Use complete numeric inputs in this recipe; base-estimator capability varies.",
+      "Resampling changes class prevalence; assess calibration on representative held-out data.",
+      "Do not infer arbitrary external-weight support from internal resampling.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "internal random undersampling during ensemble training",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Resampled ensembles can reduce per-model rows; total cost depends on number of learners.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.EasyEnsembleClassifier.html",
+      "https://imbalanced-learn.org/stable/ensemble.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_imbalance",
+      "rationale": "Internal balancing directly addresses minority-class exposure; compare to class-weighted boosting and calibrate probabilities if needed.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "strong_starting_point",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "imblearn.ensemble.RUSBoostClassifier:internal_class_balancing",
+    "estimator": "imblearn.ensemble.RUSBoostClassifier",
+    "label": "internal_class_balancing",
+    "task": "classifier",
+    "reviewed_package_version": "0.14.2",
+    "construction": {
+      "parameters": {
+        "random_state": 1729
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Use complete numeric inputs in this recipe; base-estimator capability varies.",
+      "Resampling changes class prevalence; assess calibration on representative held-out data.",
+      "Do not infer arbitrary external-weight support from internal resampling.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "internal random undersampling during ensemble training",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Resampled ensembles can reduce per-model rows; total cost depends on number of learners.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.RUSBoostClassifier.html",
+      "https://imbalanced-learn.org/stable/ensemble.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate_for_imbalance",
+      "rationale": "Internal balancing directly addresses minority-class exposure; compare to class-weighted boosting and calibrate probabilities if needed.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "strong_starting_point",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "xgboost.XGBRegressor:mixed_missing_histogram",
+    "estimator": "xgboost.XGBRegressor",
+    "label": "mixed_missing_histogram",
+    "task": "regressor",
+    "reviewed_package_version": "3.2.0",
+    "construction": {
+      "parameters": {
+        "tree_method": "hist",
+        "enable_categorical": true,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Use pandas category dtype for nominal columns.",
+      "Use JSON/UBJSON model serialization to preserve categorical metadata.",
+      "scale_pos_weight is a binary-class option; multiclass rebalancing can use sample_weight.",
+      "GPU device=cuda requires a supported GPU/runtime; not tested here.",
+      "External-memory/distributed training is a separate XGBoost API/workflow, not guaranteed by this sklearn-wrapper recipe.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram/quantized tree boosting is a good many-row candidate; iterations, depth, threads and hardware dominate actual cost.",
+      "many_features_reason": "Categorical treatment avoids a blanket one-hot expansion; high cardinality still costs memory and computation.",
+      "memory_reason": "In-memory sklearn-wrapper recipe; GPU/distributed/external-memory capabilities require separate configurations.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://xgboost.readthedocs.io/en/release_3.2.0/tutorials/categorical.html",
+      "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html",
+      "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "xgboost.XGBClassifier:mixed_missing_histogram",
+    "estimator": "xgboost.XGBClassifier",
+    "label": "mixed_missing_histogram",
+    "task": "classifier",
+    "reviewed_package_version": "3.2.0",
+    "construction": {
+      "parameters": {
+        "tree_method": "hist",
+        "enable_categorical": true,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Use pandas category dtype for nominal columns.",
+      "Use JSON/UBJSON model serialization to preserve categorical metadata.",
+      "scale_pos_weight is a binary-class option; multiclass rebalancing can use sample_weight.",
+      "GPU device=cuda requires a supported GPU/runtime; not tested here.",
+      "External-memory/distributed training is a separate XGBoost API/workflow, not guaranteed by this sklearn-wrapper recipe.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "caller-supplied sample_weight; optional scale_pos_weight for binary classification",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram/quantized tree boosting is a good many-row candidate; iterations, depth, threads and hardware dominate actual cost.",
+      "many_features_reason": "Categorical treatment avoids a blanket one-hot expansion; high cardinality still costs memory and computation.",
+      "memory_reason": "In-memory sklearn-wrapper recipe; GPU/distributed/external-memory capabilities require separate configurations.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://xgboost.readthedocs.io/en/release_3.2.0/tutorials/categorical.html",
+      "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html",
+      "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "lightgbm.LGBMRegressor:mixed_missing_histogram",
+    "estimator": "lightgbm.LGBMRegressor",
+    "label": "mixed_missing_histogram",
+    "task": "regressor",
+    "reviewed_package_version": "4.7.0",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "verbosity": -1
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Unordered pandas category columns are inferred with categorical_feature=auto.",
+      "For ordered categories requiring nominal treatment, supply categorical_feature explicitly.",
+      "Missing categories use negative codes; numeric missing values are supported.",
+      "is_unbalance and scale_pos_weight are binary/one-vs-all options; do not combine them.",
+      "Class reweighting can impair probability calibration.",
+      "GPU and distributed execution need separate builds/configuration; not tested here.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram/quantized tree boosting is a good many-row candidate; iterations, depth, threads and hardware dominate actual cost.",
+      "many_features_reason": "Categorical treatment avoids a blanket one-hot expansion; high cardinality still costs memory and computation.",
+      "memory_reason": "In-memory sklearn-wrapper recipe; GPU/distributed/external-memory capabilities require separate configurations.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.LGBMRegressor.html",
+      "https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "lightgbm.LGBMClassifier:mixed_missing_histogram",
+    "estimator": "lightgbm.LGBMClassifier",
+    "label": "mixed_missing_histogram",
+    "task": "classifier",
+    "reviewed_package_version": "4.7.0",
+    "construction": {
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "verbosity": -1,
+        "class_weight": "balanced"
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Unordered pandas category columns are inferred with categorical_feature=auto.",
+      "For ordered categories requiring nominal treatment, supply categorical_feature explicitly.",
+      "Missing categories use negative codes; numeric missing values are supported.",
+      "is_unbalance and scale_pos_weight are binary/one-vs-all options; do not combine them.",
+      "Class reweighting can impair probability calibration.",
+      "GPU and distributed execution need separate builds/configuration; not tested here.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "class_weight=balanced",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram/quantized tree boosting is a good many-row candidate; iterations, depth, threads and hardware dominate actual cost.",
+      "many_features_reason": "Categorical treatment avoids a blanket one-hot expansion; high cardinality still costs memory and computation.",
+      "memory_reason": "In-memory sklearn-wrapper recipe; GPU/distributed/external-memory capabilities require separate configurations.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.LGBMClassifier.html",
+      "https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "catboost.CatBoostRegressor:mixed_missing_with_category_token",
+    "estimator": "catboost.CatBoostRegressor",
+    "label": "mixed_missing_with_category_token",
+    "task": "regressor",
+    "reviewed_package_version": "1.2.10",
+    "construction": {
+      "parameters": {
+        "random_seed": 1729,
+        "verbose": false,
+        "allow_writing_files": false,
+        "thread_count": 1
+      },
+      "preparation": "catboost_strings",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Pass categorical column names through cat_features.",
+      "Categorical missing values must be replaced by a collision-free string token; native numeric missing-value support does not imply native categorical-NaN support.",
+      "This preparation treats categories as nominal.",
+      "Do not combine auto_class_weights, class_weights and scale_pos_weight.",
+      "task_type=GPU needs a supported runtime; not tested here.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "not_applicable",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram/quantized tree boosting is a good many-row candidate; iterations, depth, threads and hardware dominate actual cost.",
+      "many_features_reason": "Categorical treatment avoids a blanket one-hot expansion; high cardinality still costs memory and computation.",
+      "memory_reason": "In-memory sklearn-wrapper recipe; GPU/distributed/external-memory capabilities require separate configurations.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=catboost_strings as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
+      "https://catboost.ai/docs/en/concepts/faq",
+      "https://catboost.ai/docs/en/references/training-parameters/common"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  },
+  {
+    "id": "catboost.CatBoostClassifier:mixed_missing_with_category_token",
+    "estimator": "catboost.CatBoostClassifier",
+    "label": "mixed_missing_with_category_token",
+    "task": "classifier",
+    "reviewed_package_version": "1.2.10",
+    "construction": {
+      "parameters": {
+        "random_seed": 1729,
+        "verbose": false,
+        "allow_writing_files": false,
+        "thread_count": 1,
+        "auto_class_weights": "Balanced"
+      },
+      "preparation": "catboost_strings",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Pass categorical column names through cat_features.",
+      "Categorical missing values must be replaced by a collision-free string token; native numeric missing-value support does not imply native categorical-NaN support.",
+      "This preparation treats categories as nominal.",
+      "Do not combine auto_class_weights, class_weights and scale_pos_weight.",
+      "task_type=GPU needs a supported runtime; not tested here.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "sample_weight",
+      "rebalance_weights": "sample_weight",
+      "class_imbalance_mechanism": "auto_class_weights=Balanced",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "favourable",
+      "many_rows_reason": "Histogram/quantized tree boosting is a good many-row candidate; iterations, depth, threads and hardware dominate actual cost.",
+      "many_features_reason": "Categorical treatment avoids a blanket one-hot expansion; high cardinality still costs memory and computation.",
+      "memory_reason": "In-memory sklearn-wrapper recipe; GPU/distributed/external-memory capabilities require separate configurations.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=catboost_strings as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": "sample_weight"
+    },
+    "sources": [
+      "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
+      "https://catboost.ai/docs/en/concepts/faq",
+      "https://catboost.ai/docs/en/references/training-parameters/common"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "strong_candidate",
+      "rationale": "Strong practical starting point for nonlinear tabular problems; native categorical handling reduces preprocessing burden.",
+      "confidence": "medium",
+      "large_data_preference": "prefer_to_exact_kernels",
+      "class_imbalance_preference": "reasonable_with_weighting",
+      "imbalance_rationale": "Balancing mechanisms make this a plausible candidate, not evidence of superiority. Measure minority recall/precision or PR-AUC and cost-sensitive utility; accuracy alone is insufficient.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ]
+  },
+  {
+    "id": "feature_engine.imputation.AddMissingIndicator:mixed_table_transform",
+    "estimator": "feature_engine.imputation.AddMissingIndicator",
+    "label": "mixed_table_transform",
+    "task": "transformer",
+    "reviewed_package_version": "1.9.4",
+    "construction": {
+      "parameters": {
+        "missing_only": false
+      },
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Appends missingness indicators; does not fill missing original values.",
+      "Fit preprocessing and resampling only on training folds."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://feature-engine.trainindata.com/en/1.9.x/api_doc/imputation/AddMissingIndicator.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_transform",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "preprocessing_component",
+      "rationale": "Evaluate as part of a predictive pipeline; this transformer is not a standalone prediction model.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [],
+    "outputs": []
+  },
+  {
+    "id": "feature_engine.imputation.MeanMedianImputer:numeric_transform",
+    "estimator": "feature_engine.imputation.MeanMedianImputer",
+    "label": "numeric_transform",
+    "task": "transformer",
+    "reviewed_package_version": "1.9.4",
+    "construction": {
+      "parameters": {},
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Imputes numeric variables only; categorical variables require separate treatment.",
+      "Fit preprocessing and resampling only on training folds."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://feature-engine.trainindata.com/en/1.9.x/api_doc/imputation/MeanMedianImputer.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_transform",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "preprocessing_component",
+      "rationale": "Evaluate as part of a predictive pipeline; this transformer is not a standalone prediction model.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [],
+    "outputs": []
+  },
+  {
+    "id": "feature_engine.encoding.OneHotEncoder:mixed_table_transform",
+    "estimator": "feature_engine.encoding.OneHotEncoder",
+    "label": "mixed_table_transform",
+    "task": "transformer",
+    "reviewed_package_version": "1.9.4",
+    "construction": {
+      "parameters": {},
+      "preparation": "categorical_complete",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "This profile requires categorical missing values to be filled first.",
+      "Fit preprocessing and resampling only on training folds."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=categorical_complete as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://feature-engine.trainindata.com/en/1.9.x/api_doc/encoding/OneHotEncoder.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_transform",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "preprocessing_component",
+      "rationale": "Evaluate as part of a predictive pipeline; this transformer is not a standalone prediction model.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [],
+    "outputs": []
+  },
+  {
+    "id": "skrub.TableVectorizer:mixed_table_transform",
+    "estimator": "skrub.TableVectorizer",
+    "label": "mixed_table_transform",
+    "task": "transformer",
+    "reviewed_package_version": "0.11.0",
+    "construction": {
+      "parameters": {},
+      "preparation": "pandas_categories",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Produces numeric features from mixed tables; downstream estimator may still need numeric imputation.",
+      "StringEncoder can be expensive for large text vocabularies.",
+      "Fit preprocessing and resampling only on training folds."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=pandas_categories as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://skrub.org/stable/generated/skrub.TableVectorizer.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_transform",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "preprocessing_component",
+      "rationale": "Evaluate as part of a predictive pipeline; this transformer is not a standalone prediction model.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [],
+    "outputs": []
+  },
+  {
+    "id": "mlxtend.regressor.LinearRegression:numeric_complete",
+    "estimator": "mlxtend.regressor.LinearRegression",
+    "label": "numeric_complete",
+    "task": "regressor",
+    "reviewed_package_version": "0.25.0",
+    "construction": {
+      "parameters": {
+        "method": "direct"
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric data; legacy estimator does not expose modern sklearn tags.",
+      "A direct solver is sensitive to feature count and conditioning.",
+      "Missing target values are not supported by these supervised recipes."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "conditional",
+      "many_rows_reason": "Depends on sample count and configured model size.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "In-memory training; budget data copies and fitted model.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Instantiate the estimator with construction.parameters.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://rasbt.github.io/mlxtend/user_guide/regressor/LinearRegression/"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "reasonable_baseline",
+      "rationale": "A useful baseline; suitability depends on data geometry, loss and evaluation design.",
+      "confidence": "medium",
+      "large_data_preference": "benchmark_before_large_deployment",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ]
+  }
+]

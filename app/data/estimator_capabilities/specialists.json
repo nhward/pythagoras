@@ -1,0 +1,585 @@
+[
+  {
+    "id": "sksurv.linear_model.CoxPHSurvivalAnalysis:documented_recipe",
+    "estimator": "sksurv.linear_model.CoxPHSurvivalAnalysis",
+    "package": "scikit-survival",
+    "task": "survival",
+    "documentation_version": "0.28.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "baseline_subjects"
+    ],
+    "outputs": [
+      "risk_score",
+      "survival_probability",
+      "cumulative_hazard"
+    ],
+    "requirements": [
+      "event_time_target"
+    ],
+    "parameters": {
+      "alpha": 0.1
+    },
+    "steps": [
+      "Fit imputation and categorical encoding within each training fold if required; pass a finite numeric design matrix.",
+      "Build a structured event/time target with event=True for observed events; never impute censored event times.",
+      "Fit on training subjects; evaluate survival functions only at supported times."
+    ],
+    "assumptions": [
+      "Proportional hazards and linear log-risk; assess model fit."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sample_weight_fit": false,
+      "right_censoring": true,
+      "delayed_entry": false,
+      "interval_censoring": false,
+      "time_varying_predictors": false,
+      "competing_risks": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Interpretable baseline; regularization helps collinearity, but wide matrices can be expensive."
+    },
+    "sources": [
+      "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.linear_model.CoxPHSurvivalAnalysis.html"
+    ]
+  },
+  {
+    "id": "sksurv.ensemble.RandomSurvivalForest:documented_recipe",
+    "estimator": "sksurv.ensemble.RandomSurvivalForest",
+    "package": "scikit-survival",
+    "task": "survival",
+    "documentation_version": "0.28.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "baseline_subjects"
+    ],
+    "outputs": [
+      "risk_score",
+      "survival_probability",
+      "cumulative_hazard"
+    ],
+    "requirements": [
+      "event_time_target"
+    ],
+    "parameters": {
+      "n_estimators": 100,
+      "random_state": 1729,
+      "low_memory": false
+    },
+    "steps": [
+      "Fit imputation and categorical encoding within each training fold if required; pass a finite numeric design matrix.",
+      "Build a structured event/time target with event=True for observed events; never impute censored event times.",
+      "Fit on training subjects; evaluate survival functions only at supported times."
+    ],
+    "assumptions": [
+      "Independent censoring conditional on the model; sufficient events per leaf."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sample_weight_fit": true,
+      "right_censoring": true,
+      "delayed_entry": false,
+      "interval_censoring": false,
+      "time_varying_predictors": false,
+      "competing_risks": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Useful nonlinear candidate; many trees and event-time curves increase memory."
+    },
+    "sources": [
+      "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.RandomSurvivalForest.html"
+    ]
+  },
+  {
+    "id": "sksurv.ensemble.GradientBoostingSurvivalAnalysis:documented_recipe",
+    "estimator": "sksurv.ensemble.GradientBoostingSurvivalAnalysis",
+    "package": "scikit-survival",
+    "task": "survival",
+    "documentation_version": "0.28.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "baseline_subjects"
+    ],
+    "outputs": [
+      "risk_score",
+      "survival_probability",
+      "cumulative_hazard"
+    ],
+    "requirements": [
+      "event_time_target"
+    ],
+    "parameters": {
+      "loss": "coxph",
+      "random_state": 1729
+    },
+    "steps": [
+      "Fit imputation and categorical encoding within each training fold if required; pass a finite numeric design matrix.",
+      "Build a structured event/time target with event=True for observed events; never impute censored event times.",
+      "Fit on training subjects; evaluate survival functions only at supported times."
+    ],
+    "assumptions": [
+      "Cox loss imposes proportional hazards; tune complexity inside folds."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sample_weight_fit": true,
+      "right_censoring": true,
+      "delayed_entry": false,
+      "interval_censoring": false,
+      "time_varying_predictors": false,
+      "competing_risks": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Flexible risk function; sequential boosting and tuning can be costly."
+    },
+    "sources": [
+      "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.GradientBoostingSurvivalAnalysis.html"
+    ]
+  },
+  {
+    "id": "lifelines.CoxPHFitter:documented_recipe",
+    "estimator": "lifelines.CoxPHFitter",
+    "package": "lifelines",
+    "task": "survival",
+    "documentation_version": "0.30.3",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "baseline_subjects"
+    ],
+    "outputs": [
+      "risk_score",
+      "survival_probability"
+    ],
+    "requirements": [
+      "duration_event_columns"
+    ],
+    "parameters": {
+      "penalizer": 0.1
+    },
+    "steps": [
+      "Fit numeric encoding/imputation inside each fold.",
+      "Fit(df, duration_col=duration, event_col=event, entry_col=entry); omit entry_col when no delayed entry.",
+      "For sampling weights supply weights_col and assess robust=True; this is not class rebalancing."
+    ],
+    "assumptions": [
+      "Proportional hazards; delayed entry and censoring assumptions require assessment."
+    ],
+    "capabilities": {
+      "right_censoring": true,
+      "delayed_entry": true,
+      "numeric_predictors": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Good interpretable candidate with delayed entry; requires a DataFrame adapter and explicit prediction conventions."
+    },
+    "sources": [
+      "https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html"
+    ]
+  },
+  {
+    "id": "lifelines.WeibullAFTFitter:documented_recipe",
+    "estimator": "lifelines.WeibullAFTFitter",
+    "package": "lifelines",
+    "task": "survival",
+    "documentation_version": "0.30.3",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "baseline_subjects"
+    ],
+    "outputs": [
+      "survival_probability",
+      "median_survival"
+    ],
+    "requirements": [
+      "interval_bounds"
+    ],
+    "parameters": {},
+    "steps": [
+      "Prepare a finite numeric covariate matrix within each fold.",
+      "Use fit_interval_censoring(df, lower_bound_col=lower, upper_bound_col=upper); preserve interval semantics."
+    ],
+    "assumptions": [
+      "Weibull accelerated failure time specification."
+    ],
+    "capabilities": {
+      "interval_censoring": true,
+      "numeric_predictors": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Useful parametric option for interval censoring when the distributional assumption is plausible."
+    },
+    "sources": [
+      "https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html"
+    ]
+  },
+  {
+    "id": "sksurv.nonparametric.SurvivalFunctionEstimator:documented_recipe",
+    "estimator": "sksurv.nonparametric.SurvivalFunctionEstimator",
+    "package": "scikit-survival",
+    "task": "survival",
+    "documentation_version": "0.28.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "baseline_subjects"
+    ],
+    "outputs": [
+      "survival_probability"
+    ],
+    "requirements": [
+      "event_time_target"
+    ],
+    "parameters": {},
+    "steps": [
+      "Fit the training event/time target without predictors.",
+      "Use as an unconditional Kaplan\u2013Meier reference, not an individual risk model."
+    ],
+    "assumptions": [
+      "Independent censoring."
+    ],
+    "capabilities": {
+      "right_censoring": true,
+      "numeric_predictors": false,
+      "categorical_predictors": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Essential simple reference; no predictor-specific discrimination."
+    },
+    "sources": [
+      "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.nonparametric.SurvivalFunctionEstimator.html"
+    ]
+  },
+  {
+    "id": "sktime.forecasting.naive.NaiveForecaster:documented_recipe",
+    "estimator": "sktime.forecasting.naive.NaiveForecaster",
+    "package": "sktime",
+    "task": "forecasting",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "single_series"
+    ],
+    "outputs": [
+      "point_forecast"
+    ],
+    "requirements": [
+      "time_index",
+      "forecast_horizon"
+    ],
+    "parameters": {
+      "strategy": "last"
+    },
+    "steps": [
+      "Use a time-indexed target series.",
+      "Fit(y_train); predict(fh=horizon)."
+    ],
+    "assumptions": [
+      "Consistent time index and meaningful last-value baseline."
+    ],
+    "capabilities": {},
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Cheap reference that should accompany more complex forecasts."
+    },
+    "sources": [
+      "https://www.sktime.org/en/stable/examples/01_forecasting.html"
+    ]
+  },
+  {
+    "id": "sktime.forecasting.compose.make_reduction:documented_recipe",
+    "estimator": "sktime.forecasting.compose.make_reduction",
+    "package": "sktime",
+    "task": "forecasting",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "single_series"
+    ],
+    "outputs": [
+      "point_forecast"
+    ],
+    "requirements": [
+      "time_index",
+      "forecast_horizon",
+      "lag_window"
+    ],
+    "parameters": {
+      "strategy": "recursive",
+      "window_length": 10
+    },
+    "steps": [
+      "Construct make_reduction(Ridge(), strategy=\"recursive\", window_length=10).",
+      "Fit lag generation and regressor inside each temporal training fold.",
+      "Predict(fh=horizon); do not use future observed target values as lags."
+    ],
+    "assumptions": [
+      "Enough complete history; this recipe does not claim exogenous or panel support."
+    ],
+    "capabilities": {},
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Practical bridge to sklearn regressors; recursive forecast errors can accumulate."
+    },
+    "sources": [
+      "https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.forecasting.compose.make_reduction.html"
+    ]
+  },
+  {
+    "id": "statsmodels.miscmodels.ordinal_model.OrderedModel:documented_recipe",
+    "estimator": "statsmodels.miscmodels.ordinal_model.OrderedModel",
+    "package": "statsmodels",
+    "task": "ordinal",
+    "documentation_version": "0.15.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_probability"
+    ],
+    "requirements": [
+      "ordered_target"
+    ],
+    "parameters": {
+      "distr": "logit"
+    },
+    "steps": [
+      "Encode ordered target levels explicitly; use a full-rank numeric design with no constant.",
+      "Construct OrderedModel(y, X, distr=\"logit\"); fit; predict probabilities through the fitted results."
+    ],
+    "assumptions": [
+      "Proportional odds."
+    ],
+    "capabilities": {
+      "numeric_predictors": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Interpretable ordinal baseline; ordering and constant handling are critical."
+    },
+    "sources": [
+      "https://www.statsmodels.org/stable/generated/statsmodels.miscmodels.ordinal_model.OrderedModel.html"
+    ]
+  },
+  {
+    "id": "statsmodels.regression.mixed_linear_model.MixedLM:documented_recipe",
+    "estimator": "statsmodels.regression.mixed_linear_model.MixedLM",
+    "package": "statsmodels",
+    "task": "regression",
+    "documentation_version": "0.15.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "longitudinal"
+    ],
+    "outputs": [
+      "conditional_mean"
+    ],
+    "requirements": [
+      "subject_groups"
+    ],
+    "parameters": {},
+    "steps": [
+      "Prepare a finite numeric design and group labels.",
+      "Construct MixedLM(y, X, groups); fit.",
+      "Specify whether predictions include known-group random effects or only fixed effects for new groups."
+    ],
+    "assumptions": [
+      "Linear mean and chosen random-effects distribution."
+    ],
+    "capabilities": {
+      "numeric_predictors": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Useful for repeated entities; many random effects can make fitting expensive."
+    },
+    "sources": [
+      "https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLM.html"
+    ]
+  },
+  {
+    "id": "statsmodels.tsa.statespace.sarimax.SARIMAX:documented_recipe",
+    "estimator": "statsmodels.tsa.statespace.sarimax.SARIMAX",
+    "package": "statsmodels",
+    "task": "forecasting",
+    "documentation_version": "0.15.0",
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "single_series"
+    ],
+    "outputs": [
+      "point_forecast",
+      "prediction_interval"
+    ],
+    "requirements": [
+      "time_index",
+      "forecast_horizon"
+    ],
+    "parameters": {
+      "order": [
+        1,
+        0,
+        0
+      ]
+    },
+    "steps": [
+      "Construct SARIMAX(y_train, order=(1,0,0)); fit.",
+      "Use fitted.get_forecast(steps=horizon); exogenous variants require future exogenous values."
+    ],
+    "assumptions": [
+      "Selected ARIMA specification and residual assumptions."
+    ],
+    "capabilities": {},
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Strong classical baseline for serial structure; large seasonal state spaces increase cost."
+    },
+    "sources": [
+      "https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAX.html"
+    ]
+  },
+  {
+    "id": "spreg.ML_Lag:documented_recipe",
+    "estimator": "spreg.ML_Lag",
+    "package": "spreg",
+    "task": "regression",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "spatial"
+    ],
+    "outputs": [
+      "fitted_mean"
+    ],
+    "requirements": [
+      "spatial_weights"
+    ],
+    "parameters": {},
+    "steps": [
+      "Prepare a complete numeric design and a spatial weights object aligned to observation identifiers.",
+      "Construct the estimator with y, x and w; specify panel layout when applicable.",
+      "Design held-out-location prediction separately; fitted values are not evidence of out-of-sample prediction support."
+    ],
+    "assumptions": [
+      "Spatial lag specification and exogeneity; spatial validation must address neighbour leakage."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "spatial_weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Specialist dependence model; spatial matrix operations can dominate runtime and memory."
+    },
+    "sources": [
+      "https://pysal.org/spreg/generated/spreg.ML_Lag.html"
+    ]
+  },
+  {
+    "id": "spreg.Panel_FE_Lag:documented_recipe",
+    "estimator": "spreg.Panel_FE_Lag",
+    "package": "spreg",
+    "task": "regression",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-22",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "spatial",
+      "longitudinal"
+    ],
+    "outputs": [
+      "fitted_mean"
+    ],
+    "requirements": [
+      "spatial_weights",
+      "subject_groups",
+      "time_index"
+    ],
+    "parameters": {},
+    "steps": [
+      "Prepare a complete numeric design and a spatial weights object aligned to observation identifiers.",
+      "Construct the estimator with y, x and w; specify panel layout when applicable.",
+      "Design held-out-location prediction separately; fitted values are not evidence of out-of-sample prediction support."
+    ],
+    "assumptions": [
+      "Spatial lag specification and exogeneity; spatial validation must address neighbour leakage."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "spatial_weights": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "confidence": "medium",
+      "rationale": "Specialist dependence model; spatial matrix operations can dominate runtime and memory."
+    },
+    "sources": [
+      "https://pysal.org/spreg/generated/spreg.Panel_FE_Lag.html"
+    ]
+  }
+]

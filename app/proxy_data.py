@@ -19,6 +19,7 @@ import pandas as pd
 from cleaning_record import CleaningRecord
 from card_position import CardPositionError
 from evaluation_plan import EvaluationPlan
+from modelling_context import ModellingContext
 from pipeline import Pipeline
 from processing_record import ProcessingRecord
 from roles import Role, RoleMap
@@ -52,6 +53,7 @@ class proxy_data:
 
     _cluster_count: int | None = 1
     _evaluation_plan: EvaluationPlan | None = None
+    _modelling_context: ModellingContext = field(default_factory=ModellingContext)
 
     # ----------------- post-init: default roles -------------------------
 
@@ -65,6 +67,9 @@ class proxy_data:
           which is more useful than putting everything in Role.NONE.
         """
         self._cluster_count = self._validate_cluster_count(self._cluster_count)
+
+        if not isinstance(self._modelling_context, ModellingContext):
+            raise TypeError("_modelling_context must be a ModellingContext")
 
         # Normalise _roles to a RoleMap instance
         if not isinstance(self._roles, RoleMap):
@@ -220,6 +225,27 @@ class proxy_data:
         value = self._validate_cluster_count(value)
         result = self.clone()
         result._cluster_count = value
+        return result
+
+    @property
+    def modelling_context(self) -> ModellingContext:
+        return self._modelling_context
+
+    @property
+    def model_predictors(self):
+        """Predictor-role columns excluding all declared outcome components."""
+        excluded = set(self.modelling_context.outcome_columns)
+        excluded.update(self.role_map.columns_with_role(Role.TARGET))
+        return [c for c in self.role_map.columns_with_role(Role.PREDICTOR)
+                if c in self.frame and c not in excluded]
+
+    def with_modelling_context(self, context: ModellingContext):
+        if not isinstance(context, ModellingContext):
+            raise TypeError("context must be a ModellingContext")
+        result = self.clone()
+        result._modelling_context = context
+        if context != self.modelling_context and result._evaluation_plan is not None:
+            result._evaluation_plan = result._evaluation_plan.invalidate("Modelling context changed; regenerate evaluation plan.")
         return result
 
     @property
@@ -470,6 +496,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _pipeline=Pipeline(steps),
             _clean_df=self.clean_frame.copy(),
@@ -501,6 +528,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -562,6 +590,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=(*self.cleaning_records, record),
             _clean_df=frame.copy(),
             _processing_records=(*self.processing_records, processing),
@@ -588,6 +617,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -660,6 +690,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -719,6 +750,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -735,6 +767,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -756,6 +789,7 @@ class proxy_data:
             _name=self.name,
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
+            _modelling_context=self.modelling_context,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -940,6 +974,8 @@ class proxy_data:
         - same GeoDataFrame CRS and active geometry column, where relevant
         """
         if not isinstance(other, proxy_data):
+            return False
+        if self.modelling_context != other.modelling_context:
             return False
         if check_evaluation_plan and self.evaluation_plan != other.evaluation_plan:
             return False

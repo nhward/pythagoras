@@ -34,6 +34,7 @@ from evaluation_plan import (
     role_columns,
     stratifier_choices,
 )
+from modelling_context import ModellingContext
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
@@ -70,7 +71,7 @@ def _overview(source, plan, *, columns=600, rows=60):
     if not plan.ready:
         return None
     r = plan.recipe
-    frame = evaluation_frame(source)
+    frame = evaluation_frame(source, (r.get(key) for key in ("stratifier", "group", "sequence", "entity")))
     n = plan.size
     order = np.arange(n)
     ordering = "Source order"
@@ -81,6 +82,13 @@ def _overview(source, plan, *, columns=600, rows=60):
         codes, _ = pd.factorize(frame[r["stratifier"]], sort=False)
         order = np.argsort(codes, kind="stable")
         ordering = "Stratifier order"
+        if r["strategy"] in {"kfold", "stratified"} and r["objective"] == "independent":
+            # Fold codes identify validation membership. Reserved rows follow CVn;
+            # source position breaks ties without changing the evaluation splits.
+            folds = np.asarray(plan.codes)
+            folds = np.where(folds >= 0, folds, plan.count)
+            order = np.lexsort((np.arange(n), folds, codes))
+            ordering = "Stratifier then validation fold order"
     elif r["strategy"] in {"grouped", "logo"}:
         codes, _ = pd.factorize(frame[r["group"]], sort=False)
         order = np.argsort(codes, kind="stable")
@@ -190,6 +198,7 @@ def _figure(overview, *, full=False):
 def instance():
     this = Card(file=__file__, mutable=True)
     this.export_inputs('Goal', 'Stratifier')
+    this.export_inputs('Task', 'Duration', 'Event', 'EventValue', 'CensoredValue', 'TimeUnit', 'TimeOrigin')
     this.export_inputs('Folds', 'Seed', 'Gap', 'Expanding')
     this.long_name = "Observation resampling"
     this.description = "Choose a prediction goal; assigned roles determine evaluation splits."
@@ -208,11 +217,16 @@ def instance():
             text="Splits show training, validation and unused rows. The separate Stratifier strip identifies strata. Fullscreen adds category legends and source-position hover; aggregated bins show the most frequent state, with ties resolved in legend order."),
     )
     this.back = lambda: ui.TagList(
+        ui.output_ui("Roles"),
+        ui.output_ui("PartitionMapping"),
         ui.output_ui("Details"),
         ui.output_data_frame("Table", guide=this, title="Split checks", position="left",
             text="Exact counts, group overlap, time ranges and target-class checks for every split."),
-        ui.download_button("Membership", label="Download membership", class_="btn-sm",
-            guide=this, position="top", text="One row per source observation per split. Zero-based source positions remain unchanged by chart sorting."),
+        # ui.tags.small("Survival fields use exact column names. Censored observations retain their observed follow-up. "
+        #               "Repeated records, other censoring types and temporal survival evaluation are not yet supported. "
+        #               "To stratify by event, assign the event column a Stratifier role and select it below."),
+        # ui.download_button("Membership", label="Download membership", class_="btn-sm",
+        #     guide=this, position="top", text="One row per source observation per split. Zero-based source positions remain unchanged by chart sorting."),
     )
     this.footer = lambda: ui.TagList(
         ui.output_ui(id="GoalControl"), 
@@ -224,21 +238,45 @@ def instance():
                                 guide=this, position="left", text=text)
 
     this.settings = lambda: ui.TagList(
-        ui.output_ui("Roles"),
+        ui.input_select(
+            id="Task", label="Outcome task",
+            choices={
+                "inherit": "Use incoming context / infer from Target",
+                "regression": "Regression",
+                "classification": "Classification",
+                "ordinal": "Ordinal classification",
+                "survival": "Survival (right censored, baseline records)"
+            }, selected="inherit", guide=this, position="left",
+            text="Use the incoming modelling context or infer the task from Target, or choose an explicit outcome task. Survival requires the duration, event codes, unit and time origin below."),
         ui.input_select("Stratifier", label="Stratifier", choices={"": "None"}, selected="",
             guide=this, position="left",
-            text="Choose an assigned Stratifier to preserve proportions or withhold whole strata. Cluster memberships appear last. None disables stratification; New strata requires a selection."),
-        ui.output_ui("PartitionMapping"),
+            text="Choose a single Stratifier to preserve proportions or withhold whole strata. Cluster memberships appear last. None disables stratification; New strata requires a selection."),
         number("Folds", "Number of folds (K)", 5, 2,
                "For generated New observations, New strata and New entities splits. For grouped goals, use the smaller of K and the available development groups; at least two groups are required."),
         number("Seed", "Random seed", 42, 0,
                "For generated observation and group folds. Randomly assign whole strata/entities to folds reproducibly. Not used by supplied validation or temporal windows."),
+
+        ui.tags.small("Temporal:"),
         number("Window", "Initial training window (distinct values)", None, 1, "For generated Future observations only: size of the first training window."),
         number("Horizon", "Validation window (distinct values)", None, 1, "For generated Future observations only: forecast window in distinct Sequence values. Ties stay together."),
         number("Gap", "Gap (distinct values)", 0, 0, "For generated Future observations only: unused values between training and validation."),
         number("Step", "Step (blank = validation window)", None, 1, "For generated Future observations only: advance by at least the validation-window size."),
         ui.input_checkbox("Expanding", label="Expand training window", value=True, guide=this, position="left",
             text="For generated Future observations only: retain earlier training values; unchecked keeps a fixed width. All settings remain available even when irrelevant to the active goal."),
+
+        ui.tags.small("Survival:"),
+        ui.input_text("Duration", label="Survival duration column", value="", guide=this, position="left",
+            text="Enter the exact column name containing time to the event or last observed follow-up. Durations must be finite, nonnegative numbers outside prediction sets; censored records retain their observed follow-up."),
+        ui.input_text("Event", label="Survival event column", value="", guide=this, position="left",
+            text="Enter the exact column name indicating whether the event was observed or the record was right censored. Choose a different column from duration. Survival supports one baseline record per observation."),
+        ui.input_text("EventValue", label="Observed event code (as displayed)", value="1", guide=this, position="left",
+            text="Enter the event-column value, exactly as displayed, that means the event was observed. It must differ from the censored code."),
+        ui.input_text("CensoredValue", label="Censored code (as displayed)", value="0", guide=this, position="left",
+            text="Enter the event-column value, exactly as displayed, that means follow-up ended before the event was observed. Only right censoring is supported."),
+        ui.input_text("TimeUnit", label="Survival duration unit", value="days", guide=this, position="left",
+            text="Specify the unit used by the duration column, such as days, months or years. This records the unit in the modelling context; it does not convert duration values."),
+        ui.input_text("TimeOrigin", label="Survival time origin", value="Study entry", guide=this, position="left",
+            text="Describe when duration measurement begins, such as study entry or diagnosis. This records the shared time origin in the modelling context; it does not shift duration values.")
     )
 
     def server(input, output, session):
@@ -264,11 +302,18 @@ def instance():
             except SilentOperationInProgressException:
                 req(False)
             req(source is not None)
-            return source
+            task = input.Task()
+            req(task is not None)
+            if task == "inherit":
+                return source
+            context = ModellingContext(task=task, duration=input.Duration() or "", event=input.Event() or "",
+                event_value=input.EventValue() or "", censored_value=input.CensoredValue() or "",
+                time_unit=input.TimeUnit() or "", time_origin=input.TimeOrigin() or "")
+            return source.with_modelling_context(context)
 
         @this.reactable()
         def StratifierChoices():
-            choices = stratifier_choices(Incoming())
+            choices = stratifier_choices(Incoming()) # Cluster__ choices last
             with reactive.isolate():
                 current = input.Stratifier()
             selected = selection.resolve([current] if current else [], choices, choices[:1])
@@ -447,7 +492,7 @@ def instance():
         @render.ui
         def Status():
             if Options()["goal"] == "none":
-                return ui.span("Incoming evaluation metadata passes through unchanged.", class_="text-secondary")
+                return ui.span("Outcome context is retained; incoming evaluation metadata passes through (invalidated if context changed).", class_="text-secondary")
             try:
                 plan = Results()[0]
             except SilentException:
@@ -464,8 +509,8 @@ def instance():
                 messages.append("Target checks pending")
             if any("dependence" in note for note in plan.warnings):
                 messages.append("Dependence warning — see flip side")
-            if any("omit target" in note for note in plan.warnings):
-                messages.append("Class warning — see flip side")
+            if any("metric checks" in note for note in plan.warnings):
+                messages.append("Metric warning — see flip side")
             if plan.holdout_used:
                 messages.append("Final holdout already used")
             if Incoming().evaluation_plan:

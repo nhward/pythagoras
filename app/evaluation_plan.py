@@ -19,7 +19,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from var_types import key_from_dtype
 
 VERSION = 2
-SPLITTER_VERSION = f"3/sklearn-{sklearn.__version__}"
+SPLITTER_VERSION = f"5/sklearn-{sklearn.__version__}"
 STRATEGIES = {"none": "None", "predefined": "Predefined", "kfold": "K-fold",
               "stratified": "Stratified K-fold", "grouped": "Grouped K-fold",
               "logo": "Leave-one-group-out", "temporal": "Forward temporal"}
@@ -38,15 +38,31 @@ def _generated_stratifiers(source):
             and Role.STRATIFIER in source.role_map.roles_for(c)]
 
 
-def evaluation_frame(source):
-    """Attach row-preserving preview strata without changing the training source."""
-    columns = _generated_stratifiers(source)
+def _recipe_columns(recipe):
+    return tuple(dict.fromkeys(recipe[key] for key in
+                 ("stratifier", "stratify", "group", "sequence", "entity") if recipe.get(key)))
+
+
+def evaluation_frame(source, columns=()):
+    """Attach only requested generated strata, preserving stable source positions."""
+    generated = set(_generated_stratifiers(source))
+    columns = [column for column in dict.fromkeys(columns) if column in generated]
     if not columns:
         return source.clean_frame
-    if (not source.frame.index.equals(source.clean_frame.index)
-            or (source.has_pipeline and any(callable(getattr(step, "fit_resample", None))
-                                           for _, step in source.pipeline.steps))):
-        raise ValueError("Generated stratifiers require a row-preserving preview aligned with the stable source; place resampling before observation sampling.")
+    label = ", ".join(repr(column) for column in columns)
+    prefix = f"Generated Stratifier {label} requires a row-preserving preview: "
+    remedy = " Choose a stable-source Stratifier or None, or define evaluation before the row-changing step."
+    if len(source.frame) != len(source.clean_frame):
+        raise ValueError(prefix + f"preview has {len(source.frame)} rows but the stable source has "
+                         f"{len(source.clean_frame)}." + remedy)
+    if not source.frame.index.equals(source.clean_frame.index):
+        raise ValueError(prefix + "preview index labels or row order differ from the stable source." + remedy)
+    samplers = [name for name, step in source.pipeline.steps
+                if callable(getattr(step, "fit_resample", None))
+                and getattr(step, "preserves_row_order", False) is not True] if source.has_pipeline else []
+    if samplers:
+        raise ValueError(prefix + f"sampling step(s) {', '.join(map(repr, samplers))} do not guarantee "
+                         "source row identity, even when row counts and index labels match." + remedy)
     frame = source.clean_frame.copy()
     for column in columns:
         # Assign positionally: source indices need not be unique.
@@ -84,9 +100,10 @@ def partition_levels(series):
     return {level_key(v): str(v) for v in pd.unique(series.dropna())}
 
 
-def source_fingerprint(source):
+def source_fingerprint(source, columns=()):
     frame = source.clean_frame
     digest = hashlib.sha256()
+    digest.update(json.dumps(source.modelling_context.to_primitive(), sort_keys=True).encode())
     digest.update(repr([(c, repr(values.dtype), sorted(r.value for r in source.role_map.roles_for(c)))
                         for c, values in frame.items()]).encode())
     digest.update(pd.util.hash_pandas_object(frame.index, index=True).values.tobytes())
@@ -96,13 +113,11 @@ def source_fingerprint(source):
         except TypeError:
             hashes = pd.util.hash_pandas_object(values.map(repr), index=False)
         digest.update(hashes.values.tobytes())
-    columns = _generated_stratifiers(source)
+    columns = [c for c in dict.fromkeys(columns) if c in _generated_stratifiers(source)]
     if columns:
-        preview = source.frame[columns]
+        preview = evaluation_frame(source, columns)[columns]
         digest.update(repr([(c, repr(preview[c].dtype)) for c in columns]).encode())
         digest.update(pd.util.hash_pandas_object(preview, index=True).values.tobytes())
-        digest.update(str(source.has_pipeline and any(callable(getattr(step, "fit_resample", None))
-                                                    for _, step in source.pipeline.steps)).encode())
     return digest.hexdigest()
 
 
@@ -140,7 +155,10 @@ class EvaluationPlan:
         return replace(self, errors=tuple(dict.fromkeys((*self.errors, reason))))
 
     def compatible(self, source):
-        return self.fingerprint == source_fingerprint(source)
+        try:
+            return self.fingerprint == source_fingerprint(source, _recipe_columns(self.recipe))
+        except (ValueError, TypeError):
+            return False
 
     def require(self, source, *, supervised=False):
         if not self.compatible(source):
@@ -204,7 +222,7 @@ class EvaluationPlan:
                 "original_index": source.clean_frame.index.map(str)})
             for name in ("group", "sequence", "stratifier"):
                 if r.get(name):
-                    result[name] = evaluation_frame(source)[r[name]].to_numpy()
+                    result[name] = evaluation_frame(source, (r[name],))[r[name]].to_numpy()
             yield result
 
 
@@ -215,7 +233,7 @@ def _integer(value, label, minimum):
 
 
 def _variable(source, name, label):
-    frame = evaluation_frame(source)
+    frame = evaluation_frame(source, (name,))
     if not name or name not in frame:
         raise ValueError(f"Select a {label} available in the stable source.")
     values = frame[name]
@@ -334,13 +352,23 @@ def build_plan(source, **options):
 
 @recordable
 def _build(source, r, o, base):
-    frame = evaluation_frame(source)
+    frame = source.clean_frame
     n = len(frame)
     strategy = r["strategy"]
     if not frame.columns.is_unique:
         raise ValueError("Source variable names must be unique.")
     if not n:
         raise ValueError("No observations in the stable source.")
+    context = source.modelling_context
+    survival = context.task == "survival"
+    r["modelling_context"] = context.to_primitive()
+    r["task"] = context.resolved_task(source)
+    if survival:
+        if r["objective"] in {"future", "known"}:
+            raise ValueError("Survival temporal evaluation requires fold-specific administrative censoring; not yet supported.")
+        identifiers = role_columns(source, Role.IDENTIFIER)
+        if any(not frame[c].is_unique for c in identifiers):
+            raise ValueError("Survival currently requires one baseline record per subject; repeated records are not yet supported.")
     roles = structure(source, o.get("stratifier", _AUTO_STRATIFIER))
     r["stratifier"] = roles["stratifier"]
     if strategy not in STRATEGIES or strategy == "none":
@@ -362,6 +390,7 @@ def _build(source, r, o, base):
         if needed:
             r[key] = o.get(key)
             _variable(source, r[key], key)
+    frame = evaluation_frame(source, _recipe_columns(r))
     dev, reserved = np.arange(n), np.array([], dtype=int)
     validation = holdout = prediction = np.array([], dtype=int)
     if r.get("group"):
@@ -475,9 +504,9 @@ def _build(source, r, o, base):
                 codes[dev[fold_validation]] = j
 
     targets = list(source.role_map.columns_with_role(Role.TARGET))
-    if len(targets) > 1:
+    if len(targets) > 1 and not survival:
         raise ValueError("Assign at most one Target for supervised checks.")
-    target = targets[0] if targets else None
+    target = targets[0] if targets and not survival else None
     if target:
         if target not in frame:
             raise ValueError("The Target must be available in the stable source, not only in a fitted preview.")
@@ -485,10 +514,13 @@ def _build(source, r, o, base):
         required = np.setdiff1d(np.arange(n), prediction)
         if frame[target].iloc[required].isna().any():
             raise ValueError("Target contains missing values outside a prediction set; resolve them upstream.")
+    if survival:
+        required = np.setdiff1d(np.arange(n), prediction)
+        context.survival_outcome(source, required)
     notes = []
     if r.get("requested_folds", count) > count:
         notes.append(f"Using K={count}: requested K={r['requested_folds']}, but only {count} development groups are available.")
-    if not target:
+    if not target and not survival:
         notes.append("Structurally checked; assign a Target before supervised training.")
     if strategy in {"kfold", "stratified"} and (role_columns(source, Role.SEQUENCE) or
             any(not frame[c].is_unique for c in role_columns(source, Role.IDENTIFIER))):
@@ -498,11 +530,12 @@ def _build(source, r, o, base):
         notes.append("Spatial dependence is not controlled automatically; region grouping does not remove boundary dependence.")
     if strategy == "temporal":
         notes.append("Windows count distinct Sequence values, not elapsed time; verify a common clock and label availability.")
-    plan = replace(base, recipe_json=json.dumps(r, sort_keys=True), development=tuple(map(int, dev)),
+    plan = replace(base, recipe_json=json.dumps(r, sort_keys=True),
+                   fingerprint=source_fingerprint(source, _recipe_columns(r)), development=tuple(map(int, dev)),
                    reserved=tuple(map(int, reserved)), validation=tuple(map(int, validation)),
-                   holdout=tuple(map(int, holdout)), prediction=tuple(map(int, prediction)), codes=tuple(map(int, codes)), count=count, supervised=bool(target))
+                   holdout=tuple(map(int, holdout)), prediction=tuple(map(int, prediction)), codes=tuple(map(int, codes)), count=count, supervised=bool(target) or survival)
     diagnostics = []
-    classes = set(frame[target].iloc[dev]) if target and categorical(frame[target]) else None
+    classes = set(frame[target].iloc[dev]) if target and r["task"] in {"classification", "ordinal"} else None
     coverage = np.zeros(n, dtype=bool)
     for j, (train, validation) in enumerate(plan._splits(), 1):
         if not len(train) or not len(validation) or np.intersect1d(train, validation).size:
@@ -512,6 +545,16 @@ def _build(source, r, o, base):
         row = {"Split": f"CV{j}", "Training": len(train), "Validation": len(validation),
                "Unused": n - len(train) - len(validation) - (len(holdout) + len(prediction))}
         warnings = []
+        if survival:
+            for label, indices in (("Train", train), ("Validation", validation)):
+                outcome = context.survival_outcome(source, indices)
+                events = int(outcome['event'].sum())
+                row[f"{label} events"] = events
+                row[f"{label} censored"] = len(indices) - events
+                row[f"{label} follow-up"] = f"{outcome['time'].min()} – {outcome['time'].max()}"
+                if not events:
+                    raise ValueError(f"CV{j} {label.lower()} has no observed events; survival evaluation is not ready.")
+            warnings.append("Metric-specific comparable pairs and censoring support require evaluation checks")
         if r.get("group"):
             groups = frame[r["group"]]
             a, b = set(groups.iloc[train]), set(groups.iloc[validation])
@@ -532,7 +575,7 @@ def _build(source, r, o, base):
         row["Status"] = "; ".join(warnings) or "Valid"
         diagnostics.append(row)
     if any(row["Status"] != "Valid" for row in diagnostics):
-        notes.append("Some validation folds omit target classes; see the flip-side before choosing metrics.")
+        notes.append("Some folds need metric checks; see the flip-side before choosing metrics.")
     notes.append(f"Validation covers {coverage.sum():,} of {len(dev) if strategy != 'predefined' else len(plan.validation):,} {'development' if strategy != 'predefined' else 'reserved validation'} observations.")
     return replace(plan, warnings=tuple(notes), diagnostics_json=json.dumps(diagnostics))
 

@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pythagoras.local/schemas/estimator-capabilities-1.1.0.json",
+  "title": "Versioned estimator capability catalogue",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "catalogue_version",
+    "generated_at",
+    "python_version",
+    "scope",
+    "packages",
+    "semantics",
+    "estimators",
+    "profiles",
+    "discovery_issues",
+    "specialists"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "catalogue_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "python_version": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "version",
+          "status"
+        ],
+        "properties": {
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "enum": [
+              "inspected",
+              "not_installed",
+              "import_failed"
+            ]
+          },
+          "module_scope": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "semantics": {
+      "type": "object"
+    },
+    "discovery_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "module",
+          "error"
+        ]
+      }
+    },
+    "estimators": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/estimator"
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    },
+    "specialists": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/specialist"
+      }
+    }
+  },
+  "$defs": {
+    "estimator": {
+      "type": "object",
+      "required": [
+        "id",
+        "implementation",
+        "package",
+        "package_version",
+        "kinds",
+        "constructor",
+        "default_tags",
+        "tag_error",
+        "tag_evidence",
+        "methods",
+        "weighting",
+        "incremental_api_present",
+        "achievable_profile_ids",
+        "unreviewed_capabilities"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constructor": {
+          "type": "object",
+          "required": [
+            "signature",
+            "required_arguments"
+          ]
+        },
+        "default_tags": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "tag_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tag_evidence": {
+          "enum": [
+            "installed_instance_introspection",
+            "unavailable"
+          ]
+        },
+        "methods": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "weighting": {
+          "type": "object"
+        },
+        "incremental_api_present": {
+          "type": "boolean"
+        },
+        "achievable_profile_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unreviewed_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id",
+        "estimator",
+        "label",
+        "task",
+        "reviewed_package_version",
+        "construction",
+        "capabilities",
+        "conditions",
+        "weighting",
+        "scalability",
+        "recipe",
+        "sources",
+        "probe",
+        "subjective_assessment",
+        "inspected_package_version",
+        "version_match",
+        "validation",
+        "reviewed_dependencies",
+        "inspected_dependencies"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "estimator": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "task": {
+          "enum": [
+            "classifier",
+            "regressor",
+            "transformer",
+            "sampler"
+          ]
+        },
+        "reviewed_package_version": {
+          "type": "string"
+        },
+        "inspected_package_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version_match": {
+          "type": "boolean"
+        },
+        "construction": {
+          "type": "object",
+          "required": [
+            "parameters",
+            "preparation",
+            "wrapper"
+          ],
+          "properties": {
+            "parameters": {
+              "type": "object"
+            },
+            "preparation": {
+              "enum": [
+                "numeric",
+                "pandas_categories",
+                "catboost_strings",
+                "impute_onehot",
+                "categorical_complete"
+              ]
+            },
+            "wrapper": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "required": [
+            "numeric_predictors",
+            "categorical_predictors",
+            "missing_numeric_predictors",
+            "missing_categorical_predictors",
+            "sparse_input",
+            "sample_weight_fit",
+            "incremental_training"
+          ],
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "weighting": {
+          "type": "object"
+        },
+        "scalability": {
+          "type": "object"
+        },
+        "recipe": {
+          "type": "object"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^https://"
+          }
+        },
+        "probe": {
+          "type": "object"
+        },
+        "subjective_assessment": {
+          "type": "object",
+          "required": [
+            "kind",
+            "overall",
+            "confidence",
+            "rationale",
+            "assumptions"
+          ],
+          "properties": {
+            "kind": {
+              "const": "expert_judgement_not_benchmark"
+            }
+          }
+        },
+        "validation": {
+          "enum": [
+            "not_run",
+            "passed",
+            "failed",
+            "version_mismatch",
+            "unavailable"
+          ]
+        },
+        "validation_details": {
+          "type": "object"
+        },
+        "reviewed_dependencies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "inspected_dependencies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "structure": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "specialist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "estimator",
+        "package",
+        "task",
+        "documentation_version",
+        "reviewed_on",
+        "evidence",
+        "validation",
+        "integration",
+        "structure",
+        "outputs",
+        "requirements",
+        "parameters",
+        "steps",
+        "assumptions",
+        "capabilities",
+        "subjective_assessment",
+        "sources"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "estimator": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "task": {
+          "enum": [
+            "regression",
+            "ordinal",
+            "survival",
+            "forecasting",
+            "classification"
+          ]
+        },
+        "documentation_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reviewed_on": {
+          "type": "string"
+        },
+        "evidence": {
+          "const": "official_documentation"
+        },
+        "validation": {
+          "const": "not_run"
+        },
+        "integration": {
+          "const": "adapter_required"
+        },
+        "structure": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "subjective_assessment": {
+          "type": "object"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

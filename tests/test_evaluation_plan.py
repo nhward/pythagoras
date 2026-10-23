@@ -335,9 +335,12 @@ def test_stratifier_strip_order_aggregation_and_temporal_priority():
     p = build_plan(data, goal="observations", folds=3)
     before = list(p.splits(data))
     overview = _overview(data, p)
-    assert overview["order"] == "Stratifier order"
+    assert overview["order"] == "Stratifier then validation fold order"
     codes, _ = pd.factorize(data.clean_frame.group, sort=False)
     assert np.all(np.diff(codes[overview["positions"]]) >= 0)
+    for stratum in np.unique(codes):
+        positions = overview["positions"][codes[overview["positions"]] == stratum]
+        assert np.all(np.diff(np.asarray(p.codes)[positions]) >= 0)
     assert overview["strata"]["counts"].sum() == 24
     small, full = _figure(overview), _figure(overview, full=True)
     assert sum(t.type == "heatmap" for t in small.data) == 2
@@ -355,6 +358,10 @@ def test_stratifier_strip_order_aggregation_and_temporal_priority():
     assert overview["order"] == "Sequence order"
     assert np.all(np.diff(data.clean_frame.time.iloc[overview["positions"]]) >= 0)
     assert overview["strata"] is not None
+    plain = build_plan(data, goal="observations", stratifier=None, folds=3)
+    plain_overview = _overview(data, plain)
+    assert plain_overview["order"] == "Source order"
+    np.testing.assert_array_equal(plain_overview["positions"], np.arange(len(data.clean_frame)))
 
 
 def test_predefined_future_boundary_includes_validation_before_holdout():
@@ -467,3 +474,76 @@ def test_generated_cluster_stratifiers_follow_pipeline_export():
     sampled = exported.with_sampling_step(SpySampler(), name="sample", preview_frame=exported.frame.iloc[::-1])
     invalid = build_plan(sampled, goal="observations", stratifier="cluster__partition", folds=2)
     assert not invalid.ready and "row-preserving" in invalid.errors[0]
+
+
+def generated_source():
+    from cards.obs_clusters import _export_memberships
+    from ClusterMembershipTransformer import ClusterMembershipTransformer
+    data = source()
+    transformer = ClusterMembershipTransformer(("x",), n_clusters=3,
+        output_column="cluster__partition").fit(data.frame)
+    return _export_memberships(data, {"Partition": transformer})
+
+
+@pytest.mark.parametrize("stratifier", [None, "group"])
+def test_unused_generated_strata_do_not_block_sampling_or_invalidate_plan(stratifier):
+    data = generated_source()
+    p = build_plan(data, goal="observations", stratifier=stratifier, folds=2)
+    sampled = data.with_sampling_step(SpySampler(), name="sample",
+        preview_frame=data.frame.iloc[:12])
+    current = build_plan(sampled, goal="observations", stratifier=stratifier, folds=2)
+    assert current.ready, current.errors
+    assert p.compatible(sampled)
+    assert current.codes == p.codes
+    assert _overview(sampled, current) is not None
+    assert len(next(current.membership_frames(sampled))) == len(data.clean_frame)
+    assert restore_plan(sampled, p.bookmark()) == p
+
+
+def test_reweighting_preserves_generated_strata_with_duplicate_indices():
+    from TargetBalanceSampler import TargetBalanceSampler
+    data = generated_source()
+    sampler = TargetBalanceSampler(target="y", mode="reweight")
+    preview, _ = sampler.fit_resample(data.frame)
+    assert sampler.preserves_row_order
+    assert not TargetBalanceSampler(target="y", mode="resample").preserves_row_order
+    pd.testing.assert_frame_equal(preview[data.frame.columns], data.frame)
+    weighted = data.with_sampling_step(sampler, name="balance", preview_frame=preview,
+        added_roles=RoleMap.from_primitive({"weighting": ["balance__weights"]}))
+    p = build_plan(weighted, goal="strata", stratifier="cluster__partition", folds=2)
+    assert p.ready, p.errors
+    assert list(next(p.membership_frames(weighted)).stratifier) == list(data.frame.cluster__partition)
+    assert restore_plan(weighted, p.bookmark()) == p
+
+
+@pytest.mark.parametrize("change, message", [
+    ("count", "preview has 12 rows"),
+    ("index", "index labels or row order differ"),
+    ("same_index", "sampling step(s) 'sample'"),
+])
+def test_generated_strata_alignment_errors_identify_actual_cause(change, message):
+    data = generated_source()
+    p = build_plan(data, goal="strata", stratifier="cluster__partition", folds=2)
+    preview = data.frame.copy()
+    if change == "count":
+        preview = preview.iloc[:12]
+    elif change == "index":
+        preview.index = pd.RangeIndex(len(preview))
+    else:
+        preview = preview.iloc[::-1]  # Equal duplicate labels cannot prove identity.
+    sampled = data.with_sampling_step(SpySampler(), name="sample", preview_frame=preview)
+    invalid = build_plan(sampled, goal="strata", stratifier="cluster__partition", folds=2)
+    assert not invalid.ready
+    assert "cluster__partition" in invalid.errors[0]
+    assert message in invalid.errors[0]
+    assert not p.compatible(sampled)
+
+
+def test_index_mismatch_without_sampling_is_not_reported_as_sampling():
+    data = generated_source()
+    data.frame.index = pd.RangeIndex(len(data.frame))
+    invalid = build_plan(data, goal="strata", stratifier="cluster__partition", folds=2)
+    assert not invalid.ready
+    assert "index labels or row order differ" in invalid.errors[0]
+    assert "sampling step(s)" not in invalid.errors[0]
+    assert build_plan(data, goal="observations", stratifier=None, folds=2).ready

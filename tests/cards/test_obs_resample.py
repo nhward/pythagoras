@@ -170,3 +170,21 @@ def test_multilevel_partition_settings_and_invalid_assignments(page, partition_a
     expect(by_id("Summary")).to_contain_text("K-fold", timeout=30000)
     expect(by_id("ExportState")).to_have_text("ready=True;development=60;reserved=0", timeout=30000)
     expect(by_id("Stratifier")).to_have_value("")
+
+survival_app = create_app_fixture(app="../scenarios/obs_resample_survival.py", scope="function")
+
+
+@pytest.mark.ui
+def test_survival_restoration_and_invalid_event_code(page, survival_app):
+    page.goto(survival_app.url)
+    by_id = lambda name: page.locator(f'[id$="-{name}"]')
+    expect(by_id('ExportState')).to_have_text('survival;months;ready=True', timeout=30000)
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    expect(by_id('EventValue')).to_have_value('dead')
+    by_id('EventValue').fill('unknown')
+    expect(by_id('Status')).to_contain_text('explicit event/censored codes', timeout=30000)
+    expect(by_id('ExportState')).to_have_text('survival;months;ready=False', timeout=30000)
+    by_id('EventValue').fill('dead')
+    expect(by_id('ExportState')).to_have_text('survival;months;ready=True', timeout=30000)

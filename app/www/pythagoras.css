@@ -270,7 +270,15 @@ body.bslib-gap-spacing {
     border-bottom: 1px solid var(--bs-table-border-color) !important;
 }
 
-/* Keep even rows neutral across all table implementations. */
+/* Strong alternating shading; semantic, hover and selection fills override below. */
+:is(
+    table.table,
+    table.dataframe,
+    shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+    background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+
 :is(
     table.table,
     table.dataframe,
@@ -416,6 +424,13 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
     overflow: visible;
     background-color: var(--py-table-cell-hover) !important;
     white-space: normal;
+}
+
+/* Selection must remain visible over striping, diagnostic fills and hover. */
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+    background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+    color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
 }
 
 /* Border at top of table */

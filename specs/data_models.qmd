@@ -1,0 +1,28 @@
+---
+title: Model candidates specification
+---
+
+`data_models` is an immutable diagnostic card after preparation and `obs_resample`.
+It reads the JSON catalogue through `estimator_catalogue` and performs no estimator
+imports, fitting, installation or automatic execution selection. Pure `_analyze`
+and `_table` helpers separate requirements from display filters.
+
+Requirements derive from the modeling context and `model_predictors`. Structural
+requirements use assigned Sequence/Geometry and repeated Identifier roles. Forecasting
+is an explicit exploration control because upstream outcome task and forecasting
+objective are distinct. Unknown domain support never passes as compatible.
+
+Default display includes compatible recipes regardless of package availability;
+optional controls expose excluded/unreviewed recipes and hide uninstalled packages.
+The table supports row selection and filtering. Details include parameters, conditions,
+subjective assessments and evidence URLs. Missing evaluation plans remain browsable.
+Unsupported types, infinities and empty datasets produce no compatible matches.
+
+Settings persist through standard immutable-card configuration. Display-only settings
+must not invalidate analysis. Exports return the incoming proxy independently of
+settings and table rendering. No extended task or mutable-card commit is necessary.
+
+Acceptance checks cover mixed/missing predictors, roles, survival requirements,
+unsupported input, unresolved targets, structural uncertainty, installation filtering,
+unchanged data, visible diagnostics and browser table/flip interactions. Catalogue
+schema/version/probe checks remain in `tests/test_estimator_catalogue.py`.

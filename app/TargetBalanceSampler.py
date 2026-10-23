@@ -132,6 +132,11 @@ class TargetBalanceSampler(BaseEstimator):
         self.max_rows = max_rows
         self.distance_limit = distance_limit
 
+    @property
+    def preserves_row_order(self):
+        """Reweighting preserves every source row in order; resampling may not."""
+        return self.mode == "reweight"
+
     def fit(self, X, y=None):
         self.fit_resample(X, y)
         return self

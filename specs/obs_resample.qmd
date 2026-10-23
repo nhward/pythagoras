@@ -193,3 +193,39 @@ The [sklearn cross-validation guide](https://scikit-learn.org/stable/modules/cro
 **Output:** One goal-derived validation plan, optionally with separate predefined final-holdout and prediction subsets.
 
 **Training integration:** Supplies memberships to downstream training and tuning, which fit independent pipelines within training subsets.
+
+## Modelling context and initial survival support
+
+The card records a versioned `ModellingContext` on `proxy_data`, independently
+of evaluation membership. “Use incoming context / infer from Target” preserves
+upstream declarations. Automatic outcome inference distinguishes numeric regression,
+nominal/Boolean classification and ordered categorical classification; explicit
+choices handle numeric class codes. No single Target leaves automatic task inference
+unresolved. A changed context invalidates existing evaluation membership.
+
+The initial survival implementation supports one baseline row per subject, one
+terminal event, and right censoring. Settings declare exact duration/event column
+names, observed-event and censored codes, duration units and origin. Duration is
+finite, numeric and nonnegative; outcome values must be present outside Prediction
+partitions. Censoring is an observed status, not a missing outcome. `model_predictors`
+excludes declared outcome components as well as Target columns. Downstream model
+consumers must use this accessor rather than treating all source columns as inputs.
+
+Survival evaluation checks event counts and follow-up ranges in every training and
+validation fold. Event stratification is available by assigning the event column a
+Stratifier role and selecting it. Folds without events are reported as invalid.
+Comparable-pair and censoring-support checks remain the responsibility of the future
+metric evaluator; readiness here establishes structural validity, not metric validity.
+Prediction rows may have unknown outcomes. Final holdout remains outside tuning.
+
+Repeated subject records and temporal survival objectives produce an explanatory
+invalid-plan status. Temporal support requires fold-specific administrative censoring
+and calendar-based label-availability rules, which are not implemented in this stage.
+Other censoring types, delayed entry, competing risks, recurrent events, time-varying
+covariates and survival metric horizons are deferred. Spatial evaluation retains its
+existing dependence warning. These limitations must not be advertised as supported
+capabilities by the later model catalogue card.
+
+Context configuration also applies when Predicting is Nothing: no new evaluation
+plan is generated, and an incoming plan is invalidated if its outcome context changed.
+Settings are persisted through the card's ordinary configuration mechanism.
