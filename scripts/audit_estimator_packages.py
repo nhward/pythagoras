@@ -6,13 +6,13 @@ packages or automatically approves them for estimator inspection.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
-from datetime import UTC, datetime
 import hashlib
 import json
-from pathlib import Path
 import re
 import urllib.request
+from collections import Counter
+from datetime import UTC, datetime
+from pathlib import Path
 
 DIRECTORY = Path(__file__).resolve().parents[1] / 'app/data/estimator_capabilities'
 SOURCES = {
@@ -28,10 +28,10 @@ def extract_projects(kind, content):
         # explicitly out-of-scope documentation translations section.
         content = content.split('Translations of scikit-learn documentation')[0]
         return [{'name': ' '.join(name.split()), 'url': url}
-                for name, url in re.findall(r'^- `([^`<>]+?)\s*<(https?://[^>]+)>`_', content, re.M)]
+                for name, url in re.findall(r'^- `([^`<>]+?)\s*<(https?://[^>]+)>`_', content, re.MULTILINE)]
     if kind == 'contrib_readme':
         return [{'name': name, 'url': url}
-                for name, url in re.findall(r'^## \[([^]]+)\]\((https?://[^)]+)\)', content, re.M)]
+                for name, url in re.findall(r'^## \[([^]]+)\]\((https?://[^)]+)\)', content, re.MULTILINE)]
     return [{'name': repo['name'], 'url': repo['html_url'], 'archived': repo['archived']}
             for repo in json.loads(content)]
 

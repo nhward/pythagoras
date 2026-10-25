@@ -131,6 +131,7 @@ def test_transformer_batch_has_scoped_validation_evidence(catalogue):
 @pytest.mark.parametrize('failure', ['nonfinite', 'changed_columns', 'dropped_row'])
 def test_transform_probe_rejects_invalid_features(catalogue, monkeypatch, failure):
     import runpy
+
     import numpy as np
     from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -164,7 +165,7 @@ def test_probe_batch_preserves_unselected_results(catalogue, tmp_path):
     path.write_text(json.dumps(catalogue))
     script = Path(__file__).resolve().parents[1] / 'scripts/probe_estimator_catalogue.py'
     result = subprocess.run([sys.executable, str(script), '--catalogue', str(path),
-                             '--batch', 'test_single_recipe'], capture_output=True, text=True)
+                             '--batch', 'test_single_recipe'], check=False, capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
     after = json.loads(path.read_text())
     assert {p['id']: p for p in after['profiles'] if p['id'] != selected['id']} == before

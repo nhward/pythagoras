@@ -19,7 +19,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
-from faicons import icon_svg as icon
 from code_recording import recordable
 from evaluation_plan import (
     GOALS,
@@ -35,6 +34,7 @@ from evaluation_plan import (
     role_columns,
     stratifier_choices,
 )
+from faicons import icon_svg as icon
 from modelling_context import ModellingContext
 from module import Module
 from proxy_data import proxy_data
@@ -46,9 +46,6 @@ from shinywidgets import render_widget
 
 COLORS = ("#e6e9ed", "#427ba6", "#e8a13d", "#8755a1", "#309b8b")
 
-
-#TODO: Maybe make flip-side show the allocations tabulated (as per the current download). The current table seems rather pointless.
-#TODO: Drop the download button.
 
 def _mapping_id(column, key):
     return "Partition_" + hashlib.sha256(f"{column}\0{key}".encode()).hexdigest()[:16]
