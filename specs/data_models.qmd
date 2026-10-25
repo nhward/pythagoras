@@ -26,3 +26,16 @@ Acceptance checks cover mixed/missing predictors, roles, survival requirements,
 unsupported input, unresolved targets, structural uncertainty, installation filtering,
 unchanged data, visible diagnostics and browser table/flip interactions. Catalogue
 schema/version/probe checks remain in `tests/test_estimator_catalogue.py`.
+
+
+The flip-side recipe is a single intrinsic-height, scrolling panel with separate
+readiness/evidence badges and responsive section columns. It contains no Notes
+output. Data-specific warnings remain on the front; general catalogue and
+evaluation caveats are in the card documentation. Compact, narrow and full-screen
+layouts must preserve readable headings and access to the final references.
+
+
+Candidate rows group by estimator ID after per-recipe display filtering. Counts
+and summary-recipe labels identify the represented configurations. Summary fields
+come from one deterministically ranked recipe; capabilities and evidence are never
+merged. Multi-recipe methods expose separate expandable detail panels.

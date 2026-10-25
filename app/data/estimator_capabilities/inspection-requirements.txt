@@ -1,0 +1,32 @@
+# Snapshot inspection packages, not Pythagoras application dependencies.
+# Use --no-deps with the matching base environment in inspection_environment.json.
+Boruta==0.4.3
+catboost==1.2.10
+category-encoders==2.11.1
+cubist==1.2.2
+deslib==0.3.7
+fastcan==0.6.0
+feature-engine==1.9.4
+gplearn==0.4.3
+graphviz==0.21
+hdbscan==0.8.44
+hiclass==5.0.8
+hmmlearn==0.3.3
+imbalanced-learn==0.14.2
+kmodes==0.12.2
+lightgbm==4.7.0
+linear-tree==0.3.5
+llvmlite==0.50.0
+mapie==1.6.0
+metric-learn==0.7.0
+mlxtend==0.25.0
+networkx==3.6.1
+numba==0.68.0
+scikit-dimension==0.5.0
+scikit-learn==1.9.1
+scikit-lego==0.9.10
+skglm==0.5
+sklearn-compat==0.1.6
+skope-rules==1.0.1
+skrub==0.11.0
+xgboost==3.2.0

@@ -1,0 +1,500 @@
+{
+  "scope": "All top-level project entries in Related Projects before translations, all contrib README project headings, and all public contrib repositories (including archived/infrastructure repositories). Broader directories and method-family searches remain future audit phases.",
+  "sources": [
+    {
+      "id": "related_projects",
+      "url": "https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/doc/related_projects.rst",
+      "retrieved_at": "2026-10-24T08:50:45.908405+00:00",
+      "pages": [
+        {
+          "url": "https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/doc/related_projects.rst",
+          "sha256": "74a1cd35683a9ccc49b3f47f18cb7915b7ac481ed05167ed7bbb177a92250c75"
+        }
+      ],
+      "projects": [
+        {
+          "name": "auto-sklearn",
+          "url": "https://github.com/automl/auto-sklearn/"
+        },
+        {
+          "name": "autoviml",
+          "url": "https://github.com/AutoViML/Auto_ViML/"
+        },
+        {
+          "name": "TPOT",
+          "url": "https://github.com/rhiever/tpot"
+        },
+        {
+          "name": "Featuretools",
+          "url": "https://github.com/alteryx/featuretools"
+        },
+        {
+          "name": "EvalML",
+          "url": "https://github.com/alteryx/evalml"
+        },
+        {
+          "name": "MLJAR AutoML",
+          "url": "https://github.com/mljar/mljar-supervised"
+        },
+        {
+          "name": "MLFlow",
+          "url": "https://mlflow.org/"
+        },
+        {
+          "name": "Neptune",
+          "url": "https://neptune.ai/"
+        },
+        {
+          "name": "Sacred",
+          "url": "https://github.com/IDSIA/Sacred"
+        },
+        {
+          "name": "Scikit-Learn Laboratory",
+          "url": "https://skll.readthedocs.io/en/latest/index.html"
+        },
+        {
+          "name": "dtreeviz",
+          "url": "https://github.com/parrt/dtreeviz/"
+        },
+        {
+          "name": "model-diagnostics",
+          "url": "https://lorentzenchr.github.io/model-diagnostics/"
+        },
+        {
+          "name": "yellowbrick",
+          "url": "https://github.com/DistrictDataLabs/yellowbrick"
+        },
+        {
+          "name": "sklearn-onnx",
+          "url": "https://github.com/onnx/sklearn-onnx"
+        },
+        {
+          "name": "skops.io",
+          "url": "https://skops.readthedocs.io/en/stable/persistence.html"
+        },
+        {
+          "name": "sklearn2pmml",
+          "url": "https://github.com/jpmml/sklearn2pmml"
+        },
+        {
+          "name": "treelite",
+          "url": "https://treelite.readthedocs.io"
+        },
+        {
+          "name": "emlearn",
+          "url": "https://emlearn.org"
+        },
+        {
+          "name": "Intel(R) Extension for scikit-learn",
+          "url": "https://github.com/intel/scikit-learn-intelex"
+        },
+        {
+          "name": "BiocSklearn",
+          "url": "https://bioconductor.org/packages/BiocSklearn"
+        },
+        {
+          "name": "aeon",
+          "url": "https://github.com/aeon-toolkit/aeon"
+        },
+        {
+          "name": "Darts",
+          "url": "https://unit8co.github.io/darts/"
+        },
+        {
+          "name": "sktime",
+          "url": "https://github.com/sktime/sktime"
+        },
+        {
+          "name": "skforecast",
+          "url": "https://github.com/JoaquinAmatRodrigo/skforecast"
+        },
+        {
+          "name": "tslearn",
+          "url": "https://github.com/tslearn-team/tslearn"
+        },
+        {
+          "name": "XGBoost",
+          "url": "https://github.com/dmlc/xgboost"
+        },
+        {
+          "name": "LightGBM",
+          "url": "https://lightgbm.readthedocs.io"
+        },
+        {
+          "name": "HMMLearn",
+          "url": "https://github.com/hmmlearn/hmmlearn"
+        },
+        {
+          "name": "pomegranate",
+          "url": "https://github.com/jmschrei/pomegranate"
+        },
+        {
+          "name": "skorch",
+          "url": "https://github.com/dnouri/skorch"
+        },
+        {
+          "name": "scikeras",
+          "url": "https://github.com/adriangb/scikeras"
+        },
+        {
+          "name": "Flower",
+          "url": "https://flower.dev/"
+        },
+        {
+          "name": "Concrete ML",
+          "url": "https://github.com/zama-ai/concrete-ml/"
+        },
+        {
+          "name": "mlxtend",
+          "url": "https://github.com/rasbt/mlxtend"
+        },
+        {
+          "name": "scikit-lego",
+          "url": "https://github.com/koaning/scikit-lego"
+        },
+        {
+          "name": "gplearn",
+          "url": "https://github.com/trevorstephens/gplearn"
+        },
+        {
+          "name": "scikit-multilearn",
+          "url": "https://github.com/scikit-multilearn/scikit-multilearn"
+        },
+        {
+          "name": "lda",
+          "url": "https://github.com/lda-project/lda/"
+        },
+        {
+          "name": "kmodes",
+          "url": "https://github.com/nicodv/kmodes"
+        },
+        {
+          "name": "hdbscan",
+          "url": "https://github.com/scikit-learn-contrib/hdbscan"
+        },
+        {
+          "name": "categorical-encoding",
+          "url": "https://github.com/scikit-learn-contrib/categorical-encoding"
+        },
+        {
+          "name": "skrub",
+          "url": "https://skrub-data.org"
+        },
+        {
+          "name": "imbalanced-learn",
+          "url": "https://github.com/scikit-learn-contrib/imbalanced-learn"
+        },
+        {
+          "name": "Feature-engine",
+          "url": "https://github.com/solegalli/feature_engine"
+        },
+        {
+          "name": "giotto-tda",
+          "url": "https://github.com/giotto-ai/giotto-tda"
+        },
+        {
+          "name": "Pandas",
+          "url": "https://pandas.pydata.org/"
+        },
+        {
+          "name": "statsmodels",
+          "url": "https://www.statsmodels.org"
+        },
+        {
+          "name": "PyMC",
+          "url": "https://www.pymc.io/"
+        },
+        {
+          "name": "Seaborn",
+          "url": "https://stanford.edu/~mwaskom/software/seaborn/"
+        },
+        {
+          "name": "scikit-survival",
+          "url": "https://scikit-survival.readthedocs.io/"
+        },
+        {
+          "name": "implicit",
+          "url": "https://github.com/benfred/implicit"
+        },
+        {
+          "name": "lightfm",
+          "url": "https://github.com/lyst/lightfm"
+        },
+        {
+          "name": "Surprise Lib",
+          "url": "https://surpriselib.com/"
+        },
+        {
+          "name": "scikit-network",
+          "url": "https://scikit-network.readthedocs.io/"
+        },
+        {
+          "name": "scikit-image",
+          "url": "https://scikit-image.org/"
+        },
+        {
+          "name": "Natural language toolkit (nltk)",
+          "url": "https://www.nltk.org/"
+        },
+        {
+          "name": "gensim",
+          "url": "https://radimrehurek.com/gensim/"
+        },
+        {
+          "name": "NiLearn",
+          "url": "https://nilearn.github.io/"
+        },
+        {
+          "name": "AstroML",
+          "url": "https://www.astroml.org/"
+        }
+      ]
+    },
+    {
+      "id": "contrib_readme",
+      "url": "https://raw.githubusercontent.com/scikit-learn-contrib/scikit-learn-contrib/master/README.md",
+      "retrieved_at": "2026-10-24T08:50:45.908723+00:00",
+      "pages": [
+        {
+          "url": "https://raw.githubusercontent.com/scikit-learn-contrib/scikit-learn-contrib/master/README.md",
+          "sha256": "f97c3ca7d6489f024f829c8a28acb2cc1cf8e6fa2b4fbfc02a7d552fb6b51afd"
+        }
+      ],
+      "projects": [
+        {
+          "name": "boruta_py",
+          "url": "https://github.com/scikit-learn-contrib/boruta_py"
+        },
+        {
+          "name": "categorical-encoding",
+          "url": "http://github.com/scikit-learn-contrib/categorical-encoding"
+        },
+        {
+          "name": "DenMune: Density-peak clustering using mutual nearest neighbors",
+          "url": "https://github.com/scikit-learn-contrib/denmune-clustering-algorithm"
+        },
+        {
+          "name": "forest-confidence-interval",
+          "url": "https://github.com/scikit-learn-contrib/forest-confidence-interval"
+        },
+        {
+          "name": "hdbscan",
+          "url": "http://hdbscan.readthedocs.io/en/latest/"
+        },
+        {
+          "name": "imbalanced-learn",
+          "url": "https://github.com/scikit-learn-contrib/imbalanced-learn"
+        },
+        {
+          "name": "lightning",
+          "url": "http://contrib.scikit-learn.org/lightning/"
+        },
+        {
+          "name": "MAPIE - Model Agnostic Prediction Interval Estimator",
+          "url": "https://github.com/scikit-learn-contrib/MAPIE"
+        },
+        {
+          "name": "metric-learn",
+          "url": "https://github.com/scikit-learn-contrib/metric-learn"
+        },
+        {
+          "name": "polylearn",
+          "url": "https://github.com/scikit-learn-contrib/polylearn"
+        },
+        {
+          "name": "py-earth",
+          "url": "https://github.com/scikit-learn-contrib/py-earth"
+        },
+        {
+          "name": "skglm",
+          "url": "https://contrib.scikit-learn.org/skglm"
+        },
+        {
+          "name": "sklearn-pandas",
+          "url": "https://github.com/scikit-learn-contrib/sklearn-pandas"
+        },
+        {
+          "name": "skope-rules",
+          "url": "https://github.com/scikit-learn-contrib/skope-rules"
+        },
+        {
+          "name": "stability-selection",
+          "url": "https://github.com/scikit-learn-contrib/stability-selection"
+        }
+      ]
+    },
+    {
+      "id": "contrib_repositories",
+      "url": "https://api.github.com/orgs/scikit-learn-contrib/repos?per_page=100&type=public",
+      "retrieved_at": "2026-10-24T08:50:45.909497+00:00",
+      "pages": [
+        {
+          "url": "https://api.github.com/orgs/scikit-learn-contrib/repos?per_page=100&type=public",
+          "sha256": "2e522fc5225efa067e1f7691b6c4e9464e96883f1a595007de83c925fa22b110"
+        }
+      ],
+      "projects": [
+        {
+          "name": "lightning",
+          "url": "https://github.com/scikit-learn-contrib/lightning",
+          "archived": true
+        },
+        {
+          "name": "py-earth",
+          "url": "https://github.com/scikit-learn-contrib/py-earth",
+          "archived": true
+        },
+        {
+          "name": "sklearn-pandas",
+          "url": "https://github.com/scikit-learn-contrib/sklearn-pandas",
+          "archived": false
+        },
+        {
+          "name": "metric-learn",
+          "url": "https://github.com/scikit-learn-contrib/metric-learn",
+          "archived": false
+        },
+        {
+          "name": "imbalanced-learn",
+          "url": "https://github.com/scikit-learn-contrib/imbalanced-learn",
+          "archived": false
+        },
+        {
+          "name": "hdbscan",
+          "url": "https://github.com/scikit-learn-contrib/hdbscan",
+          "archived": false
+        },
+        {
+          "name": "category_encoders",
+          "url": "https://github.com/scikit-learn-contrib/category_encoders",
+          "archived": false
+        },
+        {
+          "name": "project-template",
+          "url": "https://github.com/scikit-learn-contrib/project-template",
+          "archived": false
+        },
+        {
+          "name": "boruta_py",
+          "url": "https://github.com/scikit-learn-contrib/boruta_py",
+          "archived": false
+        },
+        {
+          "name": "scikit-learn-contrib.github.io",
+          "url": "https://github.com/scikit-learn-contrib/scikit-learn-contrib.github.io",
+          "archived": false
+        },
+        {
+          "name": "scikit-learn-contrib",
+          "url": "https://github.com/scikit-learn-contrib/scikit-learn-contrib",
+          "archived": false
+        },
+        {
+          "name": "forest-confidence-interval",
+          "url": "https://github.com/scikit-learn-contrib/forest-confidence-interval",
+          "archived": false
+        },
+        {
+          "name": "polylearn",
+          "url": "https://github.com/scikit-learn-contrib/polylearn",
+          "archived": true
+        },
+        {
+          "name": "DESlib",
+          "url": "https://github.com/scikit-learn-contrib/DESlib",
+          "archived": false
+        },
+        {
+          "name": "stability-selection",
+          "url": "https://github.com/scikit-learn-contrib/stability-selection",
+          "archived": true
+        },
+        {
+          "name": "skope-rules",
+          "url": "https://github.com/scikit-learn-contrib/skope-rules",
+          "archived": false
+        },
+        {
+          "name": "mimic",
+          "url": "https://github.com/scikit-learn-contrib/mimic",
+          "archived": true
+        },
+        {
+          "name": "scikit-learn-extra",
+          "url": "https://github.com/scikit-learn-contrib/scikit-learn-extra",
+          "archived": false
+        },
+        {
+          "name": "scikit-dimension",
+          "url": "https://github.com/scikit-learn-contrib/scikit-dimension",
+          "archived": false
+        },
+        {
+          "name": "mloptimizer",
+          "url": "https://github.com/scikit-learn-contrib/mloptimizer",
+          "archived": false
+        },
+        {
+          "name": "scikit-matter",
+          "url": "https://github.com/scikit-learn-contrib/scikit-matter",
+          "archived": false
+        },
+        {
+          "name": "sklearn-ann",
+          "url": "https://github.com/scikit-learn-contrib/sklearn-ann",
+          "archived": false
+        },
+        {
+          "name": "MAPIE",
+          "url": "https://github.com/scikit-learn-contrib/MAPIE",
+          "archived": false
+        },
+        {
+          "name": "denmune-clustering-algorithm",
+          "url": "https://github.com/scikit-learn-contrib/denmune-clustering-algorithm",
+          "archived": false
+        },
+        {
+          "name": "hiclass",
+          "url": "https://github.com/scikit-learn-contrib/hiclass",
+          "archived": false
+        },
+        {
+          "name": "skglm",
+          "url": "https://github.com/scikit-learn-contrib/skglm",
+          "archived": false
+        },
+        {
+          "name": "skdag",
+          "url": "https://github.com/scikit-learn-contrib/skdag",
+          "archived": false
+        },
+        {
+          "name": "qolmat",
+          "url": "https://github.com/scikit-learn-contrib/qolmat",
+          "archived": false
+        },
+        {
+          "name": "fastcan",
+          "url": "https://github.com/scikit-learn-contrib/fastcan",
+          "archived": false
+        },
+        {
+          "name": "radius_clustering",
+          "url": "https://github.com/scikit-learn-contrib/radius_clustering",
+          "archived": false
+        },
+        {
+          "name": "bde",
+          "url": "https://github.com/scikit-learn-contrib/bde",
+          "archived": false
+        },
+        {
+          "name": "denmune-skl",
+          "url": "https://github.com/scikit-learn-contrib/denmune-skl",
+          "archived": false
+        }
+      ]
+    }
+  ]
+}

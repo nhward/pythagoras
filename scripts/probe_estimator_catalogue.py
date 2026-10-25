@@ -91,6 +91,16 @@ def probe(profile):
     X = pd.DataFrame({'value': rng.normal(size=n), 'other': rng.uniform(size=n)})
     task = profile['task']
     y = (X.value.to_numpy() > 0).astype(int) if task == 'classifier' else X.value.to_numpy() * 2 + rng.normal(scale=.1, size=n)
+    fixture = profile.get('probe', {}).get('fixture')
+    if fixture == 'nonnegative_counts':
+        X = pd.DataFrame({'value': rng.poisson(3, n), 'other': rng.poisson(2, n)})
+        y = (X.value.to_numpy() > 3).astype(int)
+    elif fixture == 'poisson_target':
+        y = rng.poisson(np.exp(.3 * X.value.to_numpy()))
+    elif fixture == 'positive_target':
+        y = np.exp(.3 * X.value.to_numpy() + rng.normal(scale=.1, size=n))
+    elif fixture is not None:
+        raise ValueError(f'Unknown probe fixture: {fixture}')
     if profile['capabilities']['categorical_predictors']:
         X['group'] = pd.Categorical(np.resize(['north', 'south', 'west'], n))
     if profile['capabilities']['missing_numeric_predictors']:
@@ -105,10 +115,57 @@ def probe(profile):
     start = time.monotonic()
     with warnings.catch_warnings(record=True) as emitted:
         warnings.simplefilter('always')
+        if profile.get('probe', {}).get('pipeline_cross_validation'):
+            from sklearn.linear_model import Ridge
+            from sklearn.model_selection import cross_val_predict
+            from sklearn.pipeline import Pipeline
+
+            candidate = clone(model)
+            candidate.set_params(**candidate.get_params(deep=False))
+            operations.append('clone_get_set_params')
+            steps = [('candidate', candidate)]
+            if task == 'transformer':
+                steps.append(('prediction', Ridge()))
+            pipeline = Pipeline(steps)
+            routed = {'candidate__' + name: value for name, value in fit_params.items()}
+            held_out = cross_val_predict(pipeline, prepared, y, cv=3, params=routed)
+            assert len(held_out) == n and np.isfinite(held_out).all()
+            operations.append('pipeline_three_fold_held_out_prediction')
+            if fixture in {'poisson_target', 'positive_target'}:
+                assert (held_out > 0).all()
+                operations.append('held_out_predictions_positive')
+            if profile.get('probe', {}).get('probabilities'):
+                probabilities = cross_val_predict(pipeline, prepared, y, cv=3,
+                                                  params=routed, method='predict_proba')
+                assert probabilities.shape == (n, len(np.unique(y)))
+                assert np.isfinite(probabilities).all() and (probabilities >= 0).all()
+                assert (probabilities <= 1).all() and np.allclose(probabilities.sum(axis=1), 1)
+                operations.append('held_out_class_probabilities_normalized')
         if task == 'transformer':
-            transformed = model.fit_transform(prepared, y)
+            transformed = model.fit_transform(prepared, y, **fit_params)
             assert transformed.shape[0] == n
             operations.append('fit_transform_row_count')
+            if profile.get('probe', {}).get('transform_contract'):
+                def check_transform(values, rows, columns=None):
+                    assert len(values.shape) == 2 and values.shape[0] == rows
+                    assert values.shape[1] > 0
+                    if columns is not None:
+                        assert values.shape[1] == columns
+                    assert np.isfinite(values.data if sparse.issparse(values) else np.asarray(values)).all()
+
+                check_transform(transformed, n)
+                operations.append('fit_transform_finite_features')
+                # Explicit held-out transform check complements downstream Ridge CV.
+                train_params = {key: value[:60] if key == weight_arg else value
+                                for key, value in fit_params.items()}
+                held_out_model = clone(model).fit(prepared.iloc[:60], y[:60], **train_params)
+                train_features = held_out_model.transform(prepared.iloc[:60])
+                test_features = held_out_model.transform(prepared.iloc[60:])
+                check_transform(train_features, 60)
+                check_transform(test_features, 30, train_features.shape[1])
+                operations.append('held_out_transform_finite_consistent_features')
+                if weight_arg:
+                    operations.append('fit_accepts_nonuniform_sample_weights')
         else:
             model.fit(prepared, y, **fit_params)
             prediction = np.asarray(model.predict(prepared))
@@ -141,6 +198,12 @@ def probe(profile):
                     incremental.partial_fit(prepared.iloc[start_row:start_row+30], y[start_row:start_row+30], **kw)
                 assert np.isfinite(incremental.predict(prepared)).all()
                 operations.append('partial_fit_three_batches')
+    if profile.get('probe', {}).get('require_convergence'):
+        from sklearn.exceptions import ConvergenceWarning
+        convergence = [str(w.message) for w in emitted if issubclass(w.category, ConvergenceWarning)]
+        if convergence:
+            raise ValueError('Convergence check failed: ' + '; '.join(sorted(set(convergence))))
+        operations.append('no_convergence_warnings')
     return {
         'checked_at': datetime.now(UTC).isoformat(),
         'operations': operations, 'resource_parameter_overrides': overrides,
@@ -154,14 +217,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--extra-path', action='append', default=[])
     parser.add_argument('--catalogue', type=Path, default=DIRECTORY / 'catalogue.json')
+    parser.add_argument('--batch', help='Validate only recipes with this probe.batch; preserve other results')
     args = parser.parse_args()
     for path in reversed(args.extra_path):
         sys.path.insert(0, str(Path(path).resolve()))
     catalogue = json.loads(args.catalogue.read_text())
+    profiles = [p for p in catalogue['profiles']
+                if args.batch is None or p.get('probe', {}).get('batch') == args.batch]
+    if not profiles:
+        parser.error('No profiles match the requested batch')
     failures = []
     from threadpoolctl import threadpool_limits
     entries = {entry['id']: entry for entry in catalogue['estimators']}
-    for profile in catalogue['profiles']:
+    for profile in profiles:
         entry = entries.get(profile['estimator'])
         actual = {}
         expected = dict(profile['reviewed_dependencies'])

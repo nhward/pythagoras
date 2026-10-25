@@ -15,6 +15,25 @@ def source():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize('task', ['regressor', 'classifier'])
+def test_benchmark_models_never_appear_in_candidates(task):
+    from estimator_catalogue import assess_profiles
+    catalogue = load_catalogue()
+    profile = next(p for p in catalogue['profiles']
+                   if p['estimator'].startswith('sklearn.dummy.') and p['task'] == task)
+    rows = assess_profiles(catalogue, task=task,
+                           package_versions=profile['inspected_dependencies'])
+    baseline = next(row for row in rows if row['id'] == profile['id'])
+    assert baseline['purpose'] == 'benchmark_only'
+    assert baseline['evidence'] == 'probe_passed'
+    assert not baseline['selectable']
+    for show_all in (False, True):
+        for installed_only in (False, True):
+            assert baseline['estimator'] not in set(_table({'rows': rows}, show_all=show_all,
+                                                    installed_only=installed_only).ID)
+
+
+@pytest.mark.unit
 def test_mixed_missing_matching_and_passthrough():
     data = source()
     before = data.clone()
@@ -82,6 +101,8 @@ def test_models_table_filters_details_and_pass_through(page, app):
     by_id('FlipButton').click()
     expect(by_id('RecipeDetails')).to_contain_text('sklearn.linear_model.Ridge')
     expect(by_id('RecipeDetails')).to_contain_text('impute_onehot')
+    expect(by_id('RecipeDetails')).to_contain_text('Broader method: sklearn.linear_model.ElasticNet')
+    expect(by_id('RecipeDetails')).to_contain_text('dedicated Ridge solver')
     by_id('FlipButton').click()
     card.hover()
     card.locator('button.collapse-toggle').click()
@@ -89,8 +110,8 @@ def test_models_table_filters_details_and_pass_through(page, app):
     expect(by_id('Table')).to_contain_text('Preprocessing:', timeout=15000)
     card.hover()
     by_id('FlipButton').click()
-    expect(by_id('Notes')).to_contain_text('Evaluation not ready')
-    expect(by_id('Notes')).to_contain_text('Catalogue')
+    expect(by_id('Notes')).to_have_count(0)
+    expect(by_id('RecipeDetails')).to_contain_text('Catalogue')
 
 
 @pytest.mark.unit
@@ -123,6 +144,22 @@ def test_readiness_combines_preparation_and_broad_requirements():
     assert 'Does not support weighting' in value
     assert 'Untested: temporal structure' in value
     assert 'Preprocessing: Resolve missing predictor values' in value
+
+
+@pytest.mark.unit
+def test_superseded_ready_recipe_hidden_and_restored_without_changing_evidence():
+    data = proxy_data(pd.DataFrame({'x': [1., 2., 3.], 'y': [2., 4., 6.]}),
+                      _roles=RoleMap.from_primitive({'predictor': ['x'], 'target': ['y']}))
+    result = _analyze(data, load_catalogue(), {})
+    ridge = next(r for r in result['rows'] if r['estimator'] == 'sklearn.linear_model.Ridge')
+    assert ridge['compatibility'] == 'compatible'
+    assert ridge['evidence'] == 'probe_passed'
+    assert ridge['input_assessment']['actions'] == []
+    assert ridge['estimator'] not in set(_table(result).ID)
+    restored = _table(result, show_all=True).set_index('ID').loc[ridge['estimator']]
+    assert 'Superseded in catalogue by sklearn.linear' in restored.Readiness
+    assert restored.Evidence == 'probe passed'
+    assert _table(result, show_all=True, installed_only=True).empty
 
 
 @pytest.mark.ui
@@ -162,3 +199,100 @@ def test_model_display_labels(identifier, expected):
     from cards.data_models import _model_labels
     labels = _model_labels(identifier)
     assert (labels['Model'], labels['Type'], labels['Package']) == expected
+
+
+@pytest.mark.ui
+def test_recipe_panel_compact_and_fullscreen_layout(page, app):
+    page.set_viewport_size({'width': 1100, 'height': 850})
+    page.goto(app.url)
+    by_id = lambda name: page.locator(f'[id$="-{name}"]')
+    expect(by_id('Table')).to_contain_text('Meets requirements', timeout=30000)
+    by_id('Table').locator('tbody tr').first.click()
+    card = page.locator('.card').first
+    card.hover()
+    by_id('FlipButton').click()
+    panel = page.locator('.model-recipe')
+    expect(panel).to_be_visible()
+    expect(panel.locator('.model-recipe-title')).not_to_be_empty()
+    expect(by_id('Notes')).to_have_count(0)
+    def assert_layout():
+        assert panel.evaluate("el => el.scrollWidth <= el.clientWidth + 1")
+        title = panel.locator('.model-recipe-title').bounding_box()
+        path = panel.locator('.model-recipe-path').bounding_box()
+        grid = panel.locator('.model-recipe-grid').bounding_box()
+        header = panel.locator('.model-recipe-header').bounding_box()
+        assert title['y'] + title['height'] <= path['y'] + 1
+        assert header['y'] + header['height'] <= grid['y'] + 1
+        footer = panel.locator('.model-recipe-footer')
+        footer.scroll_into_view_if_needed()
+        expect(footer).to_be_in_viewport()
+    page.wait_for_timeout(1500)  # shared card flip animation
+    by_id('Back').evaluate('(el) => { el.scrollTop = 0; }')
+    panel.locator('.model-recipe-title').hover()
+    page.mouse.wheel(0, 350)
+    page.wait_for_function("document.querySelector('[id$=\"-Back\"]').scrollTop > 0")
+    assert_layout()
+    by_id('Back').evaluate('(el) => { el.scrollTop = 0; }')
+    page.screenshot(path='/tmp/model-recipe-compact.png')
+    card.hover()
+    by_id('ExpandButton').click(force=True)
+    expect(card).to_have_class(__import__('re').compile('fullscreen-active'))
+    page.wait_for_timeout(600)
+    bounds = panel.bounding_box()
+    face = by_id('Back').bounding_box()
+    assert bounds['width'] >= face['width'] * .95
+    assert_layout()
+    by_id('Back').evaluate('(el) => { el.scrollTop = 0; }')
+    page.screenshot(path='/tmp/model-recipe-fullscreen.png')
+    page.set_viewport_size({'width': 430, 'height': 850})
+    assert_layout()
+
+
+@pytest.mark.unit
+def test_method_table_groups_recipes_without_merging_evidence():
+    from copy import deepcopy
+    data = proxy_data(pd.DataFrame({'x': [1., 2., 3.], 'y': [2., 4., 6.]}),
+                      _roles=RoleMap.from_primitive({'predictor': ['x'], 'target': ['y']}))
+    result = _analyze(data, load_catalogue(), {})
+    before = deepcopy(result['rows'])
+    table = _table(result, show_all=True)
+    method = 'sklearn.ensemble.RandomForestRegressor'
+    assert table.ID.is_unique
+    row = table.set_index('ID').loc[method]
+    assert row.Recipes == 2
+    from cards.data_models import _method_groups
+    recipes = _method_groups(result, show_all=True)[method]
+    assert row['Summary recipe'] == recipes[0]['profile']['label'].replace('_', ' ')
+    assert row.Evidence == recipes[0]['evidence'].replace('_', ' ')
+    assert row['Input requirements'] == recipes[0]['input_assessment']['requirements'].replace('_', ' ')
+    assert result['rows'] == before
+    # Filtering happens per recipe before grouping; a hidden recipe cannot
+    # contribute evidence or capabilities to the visible method summary.
+    recipes[0]['availability'] = 'not_installed'
+    recipes[1]['availability'] = 'version_matches'
+    filtered = _method_groups(result, show_all=True, installed_only=True)[method]
+    assert len(filtered) == 1 and filtered[0] is recipes[1]
+
+
+@pytest.mark.ui
+def test_multiple_recipes_for_one_method(page, app):
+    page.goto(app.url)
+    by_id = lambda name: page.locator(f'[id$="-{name}"]')
+    expect(by_id('Table')).to_contain_text('Meets requirements', timeout=30000)
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    by_id('ShowAll').check()
+    card.locator('button.collapse-toggle').click()
+    model = by_id('Table').get_by_text('Random Forest Regressor', exact=True)
+    expect(model).to_have_count(1)
+    model.click()
+    card.hover()
+    by_id('FlipButton').click()
+    recipes = by_id('RecipeDetails').locator('.model-method-recipe')
+    expect(recipes).to_have_count(2)
+    expect(recipes.first).to_have_attribute('open', '')
+    recipes.nth(1).locator('summary').click()
+    expect(recipes.nth(1).locator('.model-recipe')).to_be_visible()
+    expect(by_id('RecipeDetails')).to_contain_text('numeric missing')
+    expect(by_id('RecipeDetails')).to_contain_text('mixed missing via preprocessing')

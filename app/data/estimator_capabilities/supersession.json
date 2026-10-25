@@ -1,0 +1,316 @@
+{
+  "version": "1.0.0",
+  "reviewed_on": "2026-10-24",
+  "scope": "Screened the 538 estimator IDs and 21 documented recipes in catalogue 1.2.0 for fixed-parameter specializations, objective-family nesting and documented replacements. Listed relationships are reviewed examples, not a proof that no other mathematical inclusion exists.",
+  "policy": "Display grouping only. Hide linked methods by default; restore through Show excluded and unreviewed recipes. Do not transfer validation, installation, weighting or output guarantees to the representative. A representative may have no matching executable recipe.",
+  "relationships": {
+    "sklearn.linear_model.LinearRegression": {
+      "method": "sklearn.linear_model.ElasticNet",
+      "relationship": "objective_family",
+      "configuration": {
+        "alpha": 0
+      },
+      "reason": "Unpenalized least squares is the zero-penalty member of the elastic-net objective.",
+      "caveats": "Family grouping only: sklearn recommends LinearRegression for alpha=0. Rank-deficient solutions, diagnostics, sparse/multioutput support and solver behavior need not match.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.Ridge": {
+      "method": "sklearn.linear_model.ElasticNet",
+      "relationship": "objective_family",
+      "configuration": {
+        "l1_ratio": 0,
+        "alpha": "Ridge.alpha / n_samples for unweighted least squares"
+      },
+      "reason": "Ridge is the pure L2 member of the elastic-net objective.",
+      "caveats": "Family grouping only: use a dedicated Ridge solver in practice. Loss normalization, sample weights, solver convergence and multioutput penalties require separate mapping.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.Lasso": {
+      "method": "sklearn.linear_model.ElasticNet",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "l1_ratio": 1.0
+      },
+      "reason": "The pure L1 penalty is the l1_ratio=1 specialization.",
+      "caveats": "For CV variants, use identical alpha grids, folds and scoring behavior; the broader method must not search other mixing ratios when reproducing Lasso.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.LassoCV": {
+      "method": "sklearn.linear_model.ElasticNetCV",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "l1_ratio": 1.0
+      },
+      "reason": "The pure L1 penalty is the l1_ratio=1 specialization.",
+      "caveats": "For CV variants, use identical alpha grids, folds and scoring behavior; the broader method must not search other mixing ratios when reproducing Lasso.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNetCV.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.MultiTaskLasso": {
+      "method": "sklearn.linear_model.MultiTaskElasticNet",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "l1_ratio": 1.0
+      },
+      "reason": "The pure L1 penalty is the l1_ratio=1 specialization.",
+      "caveats": "For CV variants, use identical alpha grids, folds and scoring behavior; the broader method must not search other mixing ratios when reproducing Lasso.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.MultiTaskElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.MultiTaskLassoCV": {
+      "method": "sklearn.linear_model.MultiTaskElasticNetCV",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "l1_ratio": 1.0
+      },
+      "reason": "The pure L1 penalty is the l1_ratio=1 specialization.",
+      "caveats": "For CV variants, use identical alpha grids, folds and scoring behavior; the broader method must not search other mixing ratios when reproducing Lasso.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.MultiTaskElasticNetCV.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.PoissonRegressor": {
+      "method": "sklearn.linear_model.TweedieRegressor",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "power": 1,
+        "link": "log"
+      },
+      "reason": "This target distribution is a fixed-power Tweedie GLM.",
+      "caveats": "Preserve the target domain, alpha, solver and convergence controls.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.GammaRegressor": {
+      "method": "sklearn.linear_model.TweedieRegressor",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "power": 2,
+        "link": "log"
+      },
+      "reason": "This target distribution is a fixed-power Tweedie GLM.",
+      "caveats": "Preserve the target domain, alpha, solver and convergence controls.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.Perceptron": {
+      "method": "sklearn.linear_model.SGDClassifier",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "loss": "perceptron",
+        "eta0": 1,
+        "learning_rate": "constant",
+        "penalty": null
+      },
+      "reason": "The sklearn documentation explicitly describes this SGD configuration as equivalent.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Perceptron.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.PassiveAggressiveClassifier": {
+      "method": "sklearn.linear_model.SGDClassifier",
+      "relationship": "upstream_replacement",
+      "configuration": {
+        "loss": "hinge",
+        "penalty": null,
+        "learning_rate": "pa1 or pa2",
+        "eta0": "source C"
+      },
+      "reason": "Upstream deprecates this class in favor of SGD with passive-aggressive updates.",
+      "caveats": "Requires sklearn >=1.8; map the original loss to PA-I/PA-II and preserve epsilon, averaging and other controls.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.PassiveAggressiveClassifier.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.linear_model.PassiveAggressiveRegressor": {
+      "method": "sklearn.linear_model.SGDRegressor",
+      "relationship": "upstream_replacement",
+      "configuration": {
+        "loss": "epsilon_insensitive",
+        "penalty": null,
+        "learning_rate": "pa1 or pa2",
+        "eta0": "source C"
+      },
+      "reason": "Upstream deprecates this class in favor of SGD with passive-aggressive updates.",
+      "caveats": "Requires sklearn >=1.8; map the original loss to PA-I/PA-II and preserve epsilon, averaging and other controls.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.PassiveAggressiveRegressor.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "skglm.Lasso": {
+      "method": "skglm.ElasticNet",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "l1_ratio": 1.0
+      },
+      "reason": "Lasso uses the pure L1 elastic-net objective.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/stable/generated/skglm.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklego.linear_model.LADRegression": {
+      "method": "sklego.linear_model.QuantileRegression",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "quantile": 0.5
+      },
+      "reason": "Least absolute deviation regression is median quantile regression.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear_model/#sklego.linear_model.LADRegression"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "mlxtend.regressor.LinearRegression": {
+      "method": "sklearn.linear_model.ElasticNet",
+      "relationship": "objective_family",
+      "configuration": {
+        "alpha": 0
+      },
+      "reason": "The linear least-squares objective belongs to the unpenalized elastic-net family.",
+      "caveats": "Cross-package family grouping only: mlxtend uses its own fitting implementation and API. Prefer sklearn LinearRegression for an unpenalized fit; do not execute this boundary configuration as a replacement.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.feature_selection.SelectKBest": {
+      "method": "sklearn.feature_selection.GenericUnivariateSelect",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "mode": "k_best",
+        "param": "source k, percentile or alpha",
+        "score_func": "source score_func"
+      },
+      "reason": "The generic selector exposes this selection rule as a mode.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.GenericUnivariateSelect.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.feature_selection.SelectPercentile": {
+      "method": "sklearn.feature_selection.GenericUnivariateSelect",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "mode": "percentile",
+        "param": "source k, percentile or alpha",
+        "score_func": "source score_func"
+      },
+      "reason": "The generic selector exposes this selection rule as a mode.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.GenericUnivariateSelect.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.feature_selection.SelectFpr": {
+      "method": "sklearn.feature_selection.GenericUnivariateSelect",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "mode": "fpr",
+        "param": "source k, percentile or alpha",
+        "score_func": "source score_func"
+      },
+      "reason": "The generic selector exposes this selection rule as a mode.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.GenericUnivariateSelect.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.feature_selection.SelectFdr": {
+      "method": "sklearn.feature_selection.GenericUnivariateSelect",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "mode": "fdr",
+        "param": "source k, percentile or alpha",
+        "score_func": "source score_func"
+      },
+      "reason": "The generic selector exposes this selection rule as a mode.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.GenericUnivariateSelect.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "sklearn.feature_selection.SelectFwe": {
+      "method": "sklearn.feature_selection.GenericUnivariateSelect",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "mode": "fwe",
+        "param": "source k, percentile or alpha",
+        "score_func": "source score_func"
+      },
+      "reason": "The generic selector exposes this selection rule as a mode.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.GenericUnivariateSelect.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "category_encoders.BinaryEncoder": {
+      "method": "category_encoders.BaseNEncoder",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "base": 2
+      },
+      "reason": "Binary encoding is base-N encoding with base two.",
+      "caveats": "Match the remaining parameters, input representation and fitting conditions. This is a catalogue grouping, not an automatic estimator substitution.",
+      "sources": [
+        "https://contrib.scikit-learn.org/category_encoders/binary.html",
+        "https://contrib.scikit-learn.org/category_encoders/basen.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    },
+    "feature_engine.transformation.ReciprocalTransformer": {
+      "method": "feature_engine.transformation.PowerTransformer",
+      "relationship": "configured_special_case",
+      "configuration": {
+        "exp": -1
+      },
+      "reason": "Reciprocal transformation is raising the selected variables to power minus one.",
+      "caveats": "Retain zero/domain validation, variable selection and output types; error messages and integer dtype handling can differ.",
+      "sources": [
+        "https://feature-engine.trainindata.com/en/latest/api_doc/transformation/PowerTransformer.html"
+      ],
+      "reviewed_on": "2026-10-24"
+    }
+  },
+  "retained_distinctions": [
+    "CV versus non-CV estimators retain different hyperparameter-selection behavior; do not mark a fixed estimator superseded merely by a CV wrapper.",
+    "LinearSVC/LinearSVR versus linear-kernel SVC/SVR have distinct loss, intercept, multiclass and optimization semantics.",
+    "RidgeClassifier, BayesianRidge and ARDRegression are not ordinary ElasticNet regression; preserve classification and posterior/inference semantics.",
+    "Random forests, extra trees, single trees, bagging and boosting retain distinct training, sampling and aggregation behavior.",
+    "Histogram boosting versus classical gradient boosting retain different input, approximation and training behavior.",
+    "Bayesian mixtures versus ordinary mixtures, and variational versus classical HMMs retain distinct inference and priors.",
+    "Kernel/linear, incremental/batch, dense/sparse and distributed/local variants retain computational and input contracts even where hypothesis spaces overlap.",
+    "Cross-package encoders, imputers, pipelines and neural networks retain missing-value, leakage, output and dependency distinctions; class names alone do not establish supersession.",
+    "General-purpose meta-estimators, FunctionTransformer and neural networks are not treated as superseding every model they could theoretically represent.",
+    "Survival, ordinal, spatial and forecasting specialists retain target, censoring, structure and output contracts."
+  ]
+}

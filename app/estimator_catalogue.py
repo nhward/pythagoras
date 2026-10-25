@@ -22,6 +22,17 @@ def _read_catalogue(path, modified_ns, size):
     identifiers = {entry['id'] for entry in catalogue['estimators']}
     if any(p['estimator'] not in identifiers for p in catalogue['profiles']):
         raise ValueError('Profile references an absent estimator')
+    links = {entry['id']: entry['superseded_by']['method']
+             for entry in catalogue['estimators'] if entry.get('superseded_by')}
+    for start in links:
+        seen, current = set(), start
+        while current in links:
+            if current in seen:
+                raise ValueError('Cyclic estimator supersession')
+            seen.add(current)
+            current = links[current]
+            if current not in identifiers:
+                raise ValueError('Supersession references an absent estimator')
     return catalogue
 
 
@@ -110,13 +121,16 @@ def assess_profiles(catalogue, *, task, required=(), structure=(), outputs=(),
             if not specialist and package_versions is not None and availability == 'version_matches' and any(package_versions.get(k) != v for k, v in profile['inspected_dependencies'].items()):
                 availability = 'version_unreviewed'
             verified = not specialist and profile['validation'] == 'passed' and profile['version_match']
+            purpose = entries.get(profile['estimator'], {}).get('purpose', 'model_candidate')
             compatibility = 'incompatible' if reasons else 'unknown' if unknown else 'compatible'
             result.append({'id': profile['id'], 'estimator': profile['estimator'], 'task': profile['task'],
+                           'purpose': purpose,
+                           'superseded_by': deepcopy(entries.get(profile['estimator'], {}).get('superseded_by')),
                            'compatibility': compatibility, 'reasons': reasons + unknown,
                            'evidence': 'probe_passed' if verified else 'documentation_only' if specialist else profile['validation'],
                            'integration': profile.get('integration', 'tabular_recipe'),
                            'availability': availability,
-                           'selectable': compatibility == 'compatible' and verified and availability == 'version_matches',
+                           'selectable': purpose != 'benchmark_only' and compatibility == 'compatible' and verified and availability == 'version_matches',
                            'input_assessment': input_assessment(profile, entries.get(profile['estimator'], {}), required),
                            'profile': deepcopy(profile)})
     return result

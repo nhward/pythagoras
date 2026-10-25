@@ -581,5 +581,602 @@
     "sources": [
       "https://pysal.org/spreg/generated/spreg.Panel_FE_Lag.html"
     ]
+  },
+  {
+    "id": "cubist.Cubist:documented_recipe",
+    "estimator": "cubist.Cubist",
+    "package": "cubist",
+    "task": "regression",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction",
+      "rules",
+      "rule_coefficients",
+      "feature_usage"
+    ],
+    "requirements": [],
+    "parameters": {
+      "n_rules": 500,
+      "n_committees": 1,
+      "neighbors": null,
+      "auto": false,
+      "cv": null,
+      "random_state": 1729
+    },
+    "steps": [
+      "Install distribution cubist; import Cubist from cubist. The compiled C extension requires a supported wheel or a working native build environment.",
+      "Supply named numeric and categorical predictors in a pandas DataFrame and a complete one-dimensional numeric target; preserve column names and categorical representation at prediction.",
+      "Fit within each training fold; pass aligned nonnegative finite sample_weight if required. Missing predictors are supported by the documented Cubist interface; verify missing and unseen categorical values in deployment probes.",
+      "Call predict for numeric predictions; inspect the model and rule/coefficient summaries for interpretation. Keep cv=None when a reusable fitted predictor is needed."
+    ],
+    "assumptions": [
+      "Rule conditions partition the predictor space and local linear equations produce predictions; this is regression, not a classifier.",
+      "n_committees controls sequential error-correcting models. neighbors=1..9 optionally corrects predictions using training instances; auto=True chooses corrections and requires neighbors=None.",
+      "Neighbor correction retains training data and weakens a purely rule-based explanation. Tune rule count, committees and neighbors within training data.",
+      "sample_weight is documented as case importance; prediction does not accept observation weights. Evaluation weights remain separate.",
+      "cv produces an evaluation report rather than a reusable model. Internal sample/cv options do not replace externally controlled evaluation splits.",
+      "Dense in-memory fitting only in this recipe; no partial_fit. Committees, rules and retained neighbor data increase cost. Extrapolation is constrained by the extrapolation parameter.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Useful when local linear relationships and inspectable regression rules matter; committees and neighbors trade simplicity for flexibility.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://pjaselin.github.io/Cubist/api/model.html",
+      "https://github.com/pjaselin/Cubist",
+      "https://raw.githubusercontent.com/pjaselin/Cubist/master/cubist/cubist.py",
+      "https://pypi.org/project/cubist/"
+    ]
+  },
+  {
+    "id": "lineartree.LinearTreeRegressor:documented_recipe",
+    "estimator": "lineartree.LinearTreeRegressor",
+    "package": "linear-tree",
+    "task": "regression",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction",
+      "tree_structure",
+      "leaf_models"
+    ],
+    "requirements": [],
+    "parameters": {
+      "base_estimator": "sklearn.linear_model.LinearRegression()",
+      "max_depth": 5,
+      "max_bins": 25,
+      "criterion": "mse",
+      "n_jobs": 1
+    },
+    "steps": [
+      "Install distribution linear-tree; import LinearTreeRegressor from lineartree.",
+      "Fit numeric imputation and categorical imputation/one-hot encoding only on training folds; produce a finite dense numeric matrix with stable columns. Fit any scaling inside the same fold.",
+      "Instantiate the specified sklearn base estimator and pass that object to base_estimator; keep the target complete and one-dimensional.",
+      "Fit with aligned sample_weight when required, then predict using the training-fitted preprocessing. Inspect probability calibration for classifiers."
+    ],
+    "assumptions": [
+      "Parameters.base_estimator is a descriptive constructor expression, not an object or code to evaluate from JSON; an adapter must instantiate it explicitly.",
+      "Categorical and missing-predictor support in this recipe comes from fold-fitted imputation and one-hot encoding, not native acceptance of strings or NaN.",
+      "Use a base estimator supporting sample_weight. Weight routing differs across families and requires a runtime probe; class balancing is a separate modelling choice.",
+      "Upstream uses private sklearn APIs including _validate_data and legacy argument names. A current sklearn installation is not evidence of compatibility; pin and test before integration.",
+      "No partial_fit or out-of-core training. Large dense encodings and repeated base-model fits may be expensive.",
+      "Fits linear models at candidate splits and leaves; max_bins, max_depth and minimum leaf size control search cost and local model stability.",
+      "categorical_features can identify numerically encoded split-only columns excluded from leaf linear models; this recipe instead uses one-hot encoding with categorical_features=None.",
+      "Alternative poisson splitting requires nonnegative targets. This recipe uses mse with one numeric target.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": false,
+      "predict_proba": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Piecewise linear models provide local explanations but repeated split-wise fitting can be costly on large or wide data.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/cerlymarco/linear-tree",
+      "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+      "https://pypi.org/project/linear-tree/"
+    ]
+  },
+  {
+    "id": "lineartree.LinearTreeClassifier:documented_recipe",
+    "estimator": "lineartree.LinearTreeClassifier",
+    "package": "linear-tree",
+    "task": "classification",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_prediction",
+      "class_probability",
+      "tree_structure",
+      "leaf_models"
+    ],
+    "requirements": [],
+    "parameters": {
+      "base_estimator": "sklearn.linear_model.LogisticRegression(max_iter=1000)",
+      "max_depth": 5,
+      "max_bins": 25,
+      "criterion": "crossentropy",
+      "n_jobs": 1
+    },
+    "steps": [
+      "Install distribution linear-tree; import LinearTreeClassifier from lineartree.",
+      "Fit numeric imputation and categorical imputation/one-hot encoding only on training folds; produce a finite dense numeric matrix with stable columns. Fit any scaling inside the same fold.",
+      "Instantiate the specified sklearn base estimator and pass that object to base_estimator; keep the target complete and one-dimensional.",
+      "Fit with aligned sample_weight when required, then predict using the training-fitted preprocessing. Inspect probability calibration for classifiers."
+    ],
+    "assumptions": [
+      "Parameters.base_estimator is a descriptive constructor expression, not an object or code to evaluate from JSON; an adapter must instantiate it explicitly.",
+      "Categorical and missing-predictor support in this recipe comes from fold-fitted imputation and one-hot encoding, not native acceptance of strings or NaN.",
+      "Use a base estimator supporting sample_weight. Weight routing differs across families and requires a runtime probe; class balancing is a separate modelling choice.",
+      "Upstream uses private sklearn APIs including _validate_data and legacy argument names. A current sklearn installation is not evidence of compatibility; pin and test before integration.",
+      "No partial_fit or out-of-core training. Large dense encodings and repeated base-model fits may be expensive.",
+      "Fits linear models at candidate splits and leaves; max_bins, max_depth and minimum leaf size control search cost and local model stability.",
+      "categorical_features can identify numerically encoded split-only columns, excluded from leaf linear models; this recipe instead uses one-hot encoding with categorical_features=None.",
+      "For classification, crossentropy requires predict_proba on the base estimator. Without it, upstream probability output can be one-hot hard decisions; this recipe uses LogisticRegression.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": true,
+      "predict_proba": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Piecewise linear models provide local explanations but repeated split-wise fitting can be costly on large or wide data.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/cerlymarco/linear-tree",
+      "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+      "https://pypi.org/project/linear-tree/"
+    ]
+  },
+  {
+    "id": "lineartree.LinearForestRegressor:documented_recipe",
+    "estimator": "lineartree.LinearForestRegressor",
+    "package": "linear-tree",
+    "task": "regression",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction"
+    ],
+    "requirements": [],
+    "parameters": {
+      "base_estimator": "sklearn.linear_model.LinearRegression()",
+      "n_estimators": 100,
+      "max_features": 1.0,
+      "n_jobs": 1,
+      "random_state": 1729
+    },
+    "steps": [
+      "Install distribution linear-tree; import LinearForestRegressor from lineartree.",
+      "Fit numeric imputation and categorical imputation/one-hot encoding only on training folds; produce a finite dense numeric matrix with stable columns. Fit any scaling inside the same fold.",
+      "Instantiate the specified sklearn base estimator and pass that object to base_estimator; keep the target complete and one-dimensional.",
+      "Fit with aligned sample_weight when required, then predict using the training-fitted preprocessing. Inspect probability calibration for classifiers."
+    ],
+    "assumptions": [
+      "Parameters.base_estimator is a descriptive constructor expression, not an object or code to evaluate from JSON; an adapter must instantiate it explicitly.",
+      "Categorical and missing-predictor support in this recipe comes from fold-fitted imputation and one-hot encoding, not native acceptance of strings or NaN.",
+      "Use a base estimator supporting sample_weight. Weight routing differs across families and requires a runtime probe; class balancing is a separate modelling choice.",
+      "Upstream uses private sklearn APIs including _validate_data and legacy argument names. A current sklearn installation is not evidence of compatibility; pin and test before integration.",
+      "No partial_fit or out-of-core training. Large dense encodings and repeated base-model fits may be expensive.",
+      "Fits a global linear model followed by a random forest on residuals; the base estimator must be a linear regressor even for LinearForestClassifier.",
+      "Forest accepts finite sparse matrices when the base estimator does; this dense preprocessing recipe does not claim sparse input.",
+      "Use max_features=1.0 to avoid the historical auto default. Parallelism and forest size affect memory and fitting time.",
+      "Upstream supports multiple regression targets with a compatible base estimator; this recipe deliberately covers only a single target.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": false,
+      "predict_proba": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Combines a global linear trend with nonlinear residual correction; interpretation of the full forest is less compact than a single model tree.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/cerlymarco/linear-tree",
+      "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+      "https://pypi.org/project/linear-tree/"
+    ]
+  },
+  {
+    "id": "lineartree.LinearForestClassifier:documented_recipe",
+    "estimator": "lineartree.LinearForestClassifier",
+    "package": "linear-tree",
+    "task": "classification",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_prediction",
+      "class_probability"
+    ],
+    "requirements": [],
+    "parameters": {
+      "base_estimator": "sklearn.linear_model.LinearRegression()",
+      "n_estimators": 100,
+      "max_features": 1.0,
+      "n_jobs": 1,
+      "random_state": 1729
+    },
+    "steps": [
+      "Install distribution linear-tree; import LinearForestClassifier from lineartree.",
+      "Fit numeric imputation and categorical imputation/one-hot encoding only on training folds; produce a finite dense numeric matrix with stable columns. Fit any scaling inside the same fold.",
+      "Instantiate the specified sklearn base estimator and pass that object to base_estimator; keep the target complete and one-dimensional.",
+      "Fit with aligned sample_weight when required, then predict using the training-fitted preprocessing. Inspect probability calibration for classifiers."
+    ],
+    "assumptions": [
+      "Parameters.base_estimator is a descriptive constructor expression, not an object or code to evaluate from JSON; an adapter must instantiate it explicitly.",
+      "Categorical and missing-predictor support in this recipe comes from fold-fitted imputation and one-hot encoding, not native acceptance of strings or NaN.",
+      "Use a base estimator supporting sample_weight. Weight routing differs across families and requires a runtime probe; class balancing is a separate modelling choice.",
+      "Upstream uses private sklearn APIs including _validate_data and legacy argument names. A current sklearn installation is not evidence of compatibility; pin and test before integration.",
+      "No partial_fit or out-of-core training. Large dense encodings and repeated base-model fits may be expensive.",
+      "Fits a global linear model followed by a random forest on residuals; the base estimator must be a linear regressor even for LinearForestClassifier.",
+      "Forest accepts finite sparse matrices when the base estimator does; this dense preprocessing recipe does not claim sparse input.",
+      "Use max_features=1.0 to avoid the historical auto default. Parallelism and forest size affect memory and fitting time.",
+      "Direct classifier support is binary only: it models transformed binary targets and obtains probabilities via a sigmoid. OneVsRestClassifier is a separate unreviewed multiclass recipe; probabilities are not guaranteed calibrated.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": false,
+      "predict_proba": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Combines a global linear trend with nonlinear residual correction; interpretation of the full forest is less compact than a single model tree.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/cerlymarco/linear-tree",
+      "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+      "https://pypi.org/project/linear-tree/"
+    ]
+  },
+  {
+    "id": "lineartree.LinearBoostRegressor:documented_recipe",
+    "estimator": "lineartree.LinearBoostRegressor",
+    "package": "linear-tree",
+    "task": "regression",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction",
+      "transformed_features"
+    ],
+    "requirements": [],
+    "parameters": {
+      "base_estimator": "sklearn.linear_model.LinearRegression()",
+      "n_estimators": 10,
+      "max_depth": 3,
+      "loss": "linear",
+      "random_state": 1729
+    },
+    "steps": [
+      "Install distribution linear-tree; import LinearBoostRegressor from lineartree.",
+      "Fit numeric imputation and categorical imputation/one-hot encoding only on training folds; produce a finite dense numeric matrix with stable columns. Fit any scaling inside the same fold.",
+      "Instantiate the specified sklearn base estimator and pass that object to base_estimator; keep the target complete and one-dimensional.",
+      "Fit with aligned sample_weight when required, then predict using the training-fitted preprocessing. Inspect probability calibration for classifiers."
+    ],
+    "assumptions": [
+      "Parameters.base_estimator is a descriptive constructor expression, not an object or code to evaluate from JSON; an adapter must instantiate it explicitly.",
+      "Categorical and missing-predictor support in this recipe comes from fold-fitted imputation and one-hot encoding, not native acceptance of strings or NaN.",
+      "Use a base estimator supporting sample_weight. Weight routing differs across families and requires a runtime probe; class balancing is a separate modelling choice.",
+      "Upstream uses private sklearn APIs including _validate_data and legacy argument names. A current sklearn installation is not evidence of compatibility; pin and test before integration.",
+      "No partial_fit or out-of-core training. Large dense encodings and repeated base-model fits may be expensive.",
+      "Adds binary indicators of high-error tree leaves as features during repeated linear-model fitting; this is feature augmentation, not ordinary additive gradient boosting.",
+      "n_estimators controls added features and repeated fitting; dense augmented matrices increase memory.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": false,
+      "predict_proba": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Useful for enriching a linear model with selected nonlinear indicators; validate whether added complexity improves held-out performance.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/cerlymarco/linear-tree",
+      "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+      "https://pypi.org/project/linear-tree/"
+    ]
+  },
+  {
+    "id": "lineartree.LinearBoostClassifier:documented_recipe",
+    "estimator": "lineartree.LinearBoostClassifier",
+    "package": "linear-tree",
+    "task": "classification",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_prediction",
+      "class_probability",
+      "transformed_features"
+    ],
+    "requirements": [],
+    "parameters": {
+      "base_estimator": "sklearn.linear_model.LogisticRegression(max_iter=1000)",
+      "n_estimators": 10,
+      "max_depth": 3,
+      "loss": "entropy",
+      "random_state": 1729
+    },
+    "steps": [
+      "Install distribution linear-tree; import LinearBoostClassifier from lineartree.",
+      "Fit numeric imputation and categorical imputation/one-hot encoding only on training folds; produce a finite dense numeric matrix with stable columns. Fit any scaling inside the same fold.",
+      "Instantiate the specified sklearn base estimator and pass that object to base_estimator; keep the target complete and one-dimensional.",
+      "Fit with aligned sample_weight when required, then predict using the training-fitted preprocessing. Inspect probability calibration for classifiers."
+    ],
+    "assumptions": [
+      "Parameters.base_estimator is a descriptive constructor expression, not an object or code to evaluate from JSON; an adapter must instantiate it explicitly.",
+      "Categorical and missing-predictor support in this recipe comes from fold-fitted imputation and one-hot encoding, not native acceptance of strings or NaN.",
+      "Use a base estimator supporting sample_weight. Weight routing differs across families and requires a runtime probe; class balancing is a separate modelling choice.",
+      "Upstream uses private sklearn APIs including _validate_data and legacy argument names. A current sklearn installation is not evidence of compatibility; pin and test before integration.",
+      "No partial_fit or out-of-core training. Large dense encodings and repeated base-model fits may be expensive.",
+      "Adds binary indicators of high-error tree leaves as features during repeated linear-model fitting; this is feature augmentation, not ordinary additive gradient boosting.",
+      "n_estimators controls added features and repeated fitting; dense augmented matrices increase memory.",
+      "entropy loss requires base predict_proba. LogisticRegression provides it here; probability calibration must be assessed separately.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": true,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": true,
+      "predict_proba": true
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Useful for enriching a linear model with selected nonlinear indicators; validate whether added complexity improves held-out performance.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/cerlymarco/linear-tree",
+      "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+      "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+      "https://pypi.org/project/linear-tree/"
+    ]
+  },
+  {
+    "id": "skrules.SkopeRules:documented_recipe",
+    "estimator": "skrules.SkopeRules",
+    "package": "skope-rules",
+    "task": "classification",
+    "documentation_version": null,
+    "reviewed_on": "2026-10-24",
+    "evidence": "official_documentation",
+    "validation": "not_run",
+    "integration": "adapter_required",
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_prediction",
+      "decision_score",
+      "rules",
+      "rule_precision_recall",
+      "rule_ranking"
+    ],
+    "requirements": [],
+    "parameters": {
+      "precision_min": 0.5,
+      "recall_min": 0.01,
+      "n_estimators": 10,
+      "max_samples": 0.8,
+      "max_depth": 3,
+      "max_features": 1.0,
+      "n_jobs": 1,
+      "random_state": 1729
+    },
+    "steps": [
+      "Install distribution skope-rules; import SkopeRules from skrules. Validate imports and sklearn compatibility in an isolated pinned environment first.",
+      "Fit imputation and numeric categorical encoding within each training fold; provide finite dense predictors. Supply feature_names matching the transformed columns.",
+      "Explicitly map the class of interest to 1 and the background to 0, with both classes present in training. Multiclass labels must not be passed directly.",
+      "Fit without sample_weight in this recipe; tune precision_min, recall_min, max_depth and rule deduplication on training data.",
+      "Use predict for rule-union binary predictions, decision_function for precision-weighted rule votes, or score_top_rules/predict_top_rules for ranked-rule decisions; choose thresholds using validation data."
+    ],
+    "assumptions": [
+      "Learns short logical rules from bagged trees and screens them using out-of-bag precision/recall; rule scores are not calibrated probabilities.",
+      "max_samples<1 leaves observations for out-of-bag screening. Internal OOB scores do not replace independent evaluation; assess minority recall, precision and PR-AUC for class scoping.",
+      "The fit signature accepts sample_weight, but upstream transforms it into regression targets for additional candidate-rule trees; it does not apply conventional observation weighting to all fitting and rule evaluation. sample_weight_fit=false deliberately excludes general importance/rebalance weighting from this recipe.",
+      "Labels other than zero can be collapsed into the positive class upstream; this recipe requires explicit binary mapping and does not claim native multiclass classification.",
+      "There is no predict_proba or partial_fit. Dense encoding, number/depth of trees and candidate-rule evaluation govern memory and time; n_jobs controls bagging parallelism.",
+      "The published package and current repository can differ. Legacy sklearn utility imports and bagging APIs require compatibility review; no installed-release import or fit has been certified.",
+      "Reviewed upstream documentation and repository source, not an installed release; documentation_version is null because these URLs are unversioned.",
+      "Install and pin a compatible dependency environment, implement recipe construction and run fold-fitting, prediction and weighting probes before automatic selection.",
+      "No native temporal, spatial, longitudinal or censoring model is established by this tabular recipe."
+    ],
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": false,
+      "incremental_training": false,
+      "multioutput": false,
+      "multiclass": false,
+      "predict_proba": false
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Useful for interpretable high-precision class scoping. Coverage can be limited; tune operating thresholds and compare against tree and logistic baselines.",
+      "assumptions": [
+        "No predictive-quality, scalability or calibration benchmark was run.",
+        "Compare against simpler baselines on representative held-out data."
+      ]
+    },
+    "sources": [
+      "https://github.com/scikit-learn-contrib/skope-rules",
+      "https://raw.githubusercontent.com/scikit-learn-contrib/skope-rules/master/skrules/skope_rules.py",
+      "https://pypi.org/project/skope-rules/"
+    ]
   }
 ]

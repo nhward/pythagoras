@@ -19,16 +19,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORY = ROOT / 'app/data/estimator_capabilities'
-PACKAGES = {
-    'sklearn': ('scikit-learn', None),
-    'imblearn': ('imbalanced-learn', ['ensemble', 'over_sampling', 'under_sampling', 'combine', 'pipeline', 'FunctionSampler']),
-    'feature_engine': ('feature-engine', ['imputation', 'encoding', 'discretisation', 'selection', 'creation', 'transformation', 'outliers', 'wrappers', 'datetime', 'timeseries.forecasting', 'preprocessing', 'pipeline']),
-    'mlxtend': ('mlxtend', ['classifier', 'regressor', 'feature_selection', 'preprocessing']),
-    'skrub': ('skrub', ['']),
-    'xgboost': ('xgboost', ['']),
-    'lightgbm': ('lightgbm', ['']),
-    'catboost': ('catboost', ['']),
-}
+
+
+def load_registry(path=None):
+    registry = json.loads((path or DIRECTORY / 'packages.json').read_text())
+    identifiers, roots = set(), set()
+    for row in registry['packages']:
+        if row['id'] in identifiers:
+            raise ValueError(f"Duplicate package registry ID: {row['id']}")
+        identifiers.add(row['id'])
+        if row['status'] not in {'included', 'deferred', 'excluded'} or not row['reason']:
+            raise ValueError(f"Missing package decision: {row['id']}")
+        if row['status'] == 'included':
+            root = row['import_name']
+            if not root or not row['distribution'] or root in roots:
+                raise ValueError(f"Invalid or duplicate included import: {row['id']}")
+            if row['modules'] is None and root != 'sklearn':
+                raise ValueError(f"Explicit module scope required: {row['id']}")
+            if row['modules'] == []:
+                raise ValueError(f"Empty included module scope: {row['id']}")
+            roots.add(root)
+    return registry
 
 
 def safe_signature(obj):
@@ -36,6 +47,18 @@ def safe_signature(obj):
         return str(inspect.signature(obj))
     except (TypeError, ValueError):
         return None
+
+
+def environment_snapshot():
+    versions = {}
+    for distribution in importlib.metadata.distributions():
+        name = distribution.metadata['Name']
+        if name:
+            # sys.path order matters when --extra-path overlays optional wheels.
+            versions.setdefault(name.lower().replace('_', '-'), distribution.version)
+    return {'recorded_at': datetime.now(UTC).isoformat(),
+            'python_version': platform.python_version(), 'platform': platform.platform(),
+            'distributions': dict(sorted(versions.items()))}
 
 
 def discover(root, modules, issues):
@@ -55,7 +78,8 @@ def discover(root, modules, issues):
             issues.append({'module': module_name, 'error': f'{type(error).__name__}: {error}'})
             continue
         for name, cls in inspect.getmembers(module, inspect.isclass):
-            if (not name.startswith('_') and cls.__module__.startswith(root + '.')
+            if (not name.startswith('_') and not inspect.isabstract(cls)
+                    and cls.__module__.startswith(root + '.')
                     and callable(getattr(cls, 'fit', None))
                     and callable(getattr(cls, 'get_params', None))):
                 found[f'{module_name}.{name}'] = cls
@@ -87,7 +111,7 @@ def describe(identifier, cls, distribution, version):
         error = 'Constructor requires arguments; tags depend on supplied configuration.'
     kinds = []
     kind = (tags or {}).get('estimator_type') or getattr(cls, '_estimator_type', None)
-    if kind:
+    if isinstance(kind, str) and kind:
         kinds.append(kind)
     for method, role in [('transform', 'transformer'), ('fit_resample', 'sampler')]:
         if method in methods and role not in kinds:
@@ -123,14 +147,24 @@ def build(extra_paths=()):
     for path in reversed(extra_paths):
         sys.path.insert(0, str(Path(path).resolve()))
     profiles = json.loads((DIRECTORY / 'profiles.json').read_text())
+    registry = load_registry()
+    supersession = json.loads((DIRECTORY / 'supersession.json').read_text())
+    selected = {row['import_name']: row for row in registry['packages'] if row['status'] == 'included'}
     entries, packages, issues = {}, {}, []
-    for root, (distribution, modules) in PACKAGES.items():
+    for root, row in selected.items():
+        distribution, modules = row['distribution'], row['modules']
+        packages[distribution] = {
+            'version': None, 'status': 'not_installed', 'module_scope': modules or ['all_estimators'],
+            'registry_id': row['id'], 'project_url': row['project_url'],
+            'documentation_url': row['documentation_url'], 'reviewed_on': row['reviewed_on'],
+            'source_entries': row['source_entries'],
+        }
         try:
             version = importlib.metadata.version(distribution)
         except importlib.metadata.PackageNotFoundError:
-            packages[distribution] = {'version': None, 'status': 'not_installed'}
             continue
-        packages[distribution] = {'version': version, 'status': 'inspected', 'module_scope': modules or ['all_estimators']}
+        packages[distribution].update(version=version, status='inspected')
+        issue_start = len(issues)
         try:
             with warnings.catch_warnings(record=True):
                 classes = discover(root, modules, issues)
@@ -138,6 +172,9 @@ def build(extra_paths=()):
             issues.append({'module': root, 'error': str(exc)})
             packages[distribution]['status'] = 'import_failed'
             continue
+        if modules and len(issues) - issue_start == len(modules):
+            packages[distribution]['status'] = 'import_failed'
+        packages[distribution]['discovered_classes'] = len(classes)
         for identifier, cls in classes.items():
             try:
                 with warnings.catch_warnings(record=True):
@@ -149,7 +186,7 @@ def build(extra_paths=()):
         identifier = profile['estimator']
         if identifier not in entries:
             root = identifier.split('.')[0]
-            distribution = PACKAGES[root][0]
+            distribution = selected[root]['distribution']
             version = packages[distribution]['version']
             if version is not None:
                 try:
@@ -172,8 +209,17 @@ def build(extra_paths=()):
         profile['validation'] = 'not_run'
         if entry:
             entry['achievable_profile_ids'].append(profile['id'])
+    for identifier, reason in json.loads((DIRECTORY / 'benchmark_methods.json').read_text()).items():
+        if identifier in entries:
+            entries[identifier].update(purpose='benchmark_only', purpose_reason=reason)
+    for identifier, relation in supersession['relationships'].items():
+        if identifier in entries:
+            if relation['method'] not in entries:
+                issues.append({'module': identifier, 'error': 'Supersession target unavailable: ' + relation['method']})
+                continue
+            entries[identifier]['superseded_by'] = relation
     return {
-        '$schema': './schema.json', 'schema_version': '1.1.0', 'catalogue_version': '1.1.0',
+        '$schema': './schema.json', 'schema_version': '1.1.0', 'catalogue_version': registry['catalogue_version'],
         'generated_at': datetime.now(UTC).isoformat(), 'python_version': platform.python_version(),
         'scope': 'Public estimator classes in the explicitly listed modules; not every sklearn-compatible package or every possible configuration.',
         'packages': packages, 'discovery_issues': issues,
@@ -185,6 +231,9 @@ def build(extra_paths=()):
             'big_data': {'many_rows': 'Planning scenario: >=100000 rows', 'many_features': 'Planning scenario: >=1000 dense features or >=100000 sparse features', 'out_of_core': 'Training data exceeds available RAM', 'qualification': 'Heuristics, not hardware-independent limits or measured performance. See per-profile assumptions.'},
             'imbalance': 'Mechanisms, not a claim of better-than-most performance. Validate on stratified/group/time-appropriate held-out data and a task-specific metric.',
             'weights': 'Importance weights represent observation relevance; rebalance weights change class contribution. Both may enter sample_weight, but avoid inadvertently multiplying equivalent balancing schemes. Evaluation weights are a separate choice.',
+            'specialists': 'Documentation-reviewed recipes; not runtime-probed or automatically selectable. Adapter work remains.',
+            'package_audit': 'packages.json records source-backed inclusion/defer/exclude decisions; audit_sources.json records discovery coverage; AUDIT.md reports this build. Inspected classes are not certified compatible estimators.',
+            'supersession': supersession['policy'],
         },
         'estimators': sorted(entries.values(), key=lambda item: item['id']),
         'profiles': profiles,
@@ -196,11 +245,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--extra-path', action='append', default=[])
     parser.add_argument('--output', type=Path, default=DIRECTORY / 'catalogue.json')
+    parser.add_argument('--environment-output', type=Path,
+                        help='Record the inspection environment distribution versions')
     args = parser.parse_args()
     catalogue = build(args.extra_path)
     import jsonschema
     jsonschema.validate(catalogue, json.loads((DIRECTORY / 'schema.json').read_text()))
     args.output.write_text(json.dumps(catalogue, indent=2, allow_nan=False) + '\n')
+    if args.environment_output:
+        args.environment_output.write_text(json.dumps(environment_snapshot(), indent=2) + '\n')
     print(f"Wrote {len(catalogue['estimators'])} estimators and {len(catalogue['profiles'])} profiles to {args.output}")
     if catalogue['discovery_issues']:
         print(json.dumps(catalogue['discovery_issues'], indent=2))

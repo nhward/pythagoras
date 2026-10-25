@@ -1,15 +1,182 @@
-# Estimator capabilities catalogue, version 1.0.0
+# Estimator capabilities catalogue, version 1.2.8
 
-This is a searchable JSON snapshot, not a runtime import registry. It covers
-scikit-learn plus the explicitly listed public modules of imbalanced-learn,
-Feature-engine, mlxtend, skrub, XGBoost, LightGBM and CatBoost. The optional
-boosting packages were inspected in a temporary environment; they have **not**
-been added to Pythagoras dependencies.
+`benchmark_methods.json` identifies null/reference models used only to benchmark
+evaluation metrics. Their estimator records carry `purpose: benchmark_only` and
+a reason. They remain in the catalogue with their validation evidence, but cannot
+be selected and never appear in the model-candidate table, including when
+**Show excluded and unreviewed recipes** is enabled. Rebuilds preserve this policy.
+
+The sixth priority batch adds twenty passing preprocessing configurations:
+PCA, IncrementalPCA, TruncatedSVD, FactorAnalysis, FastICA, KernelPCA,
+SparsePCA, GaussianRandomProjection, SparseRandomProjection, Nystroem,
+RBFSampler, PolynomialCountSketch, SplineTransformer, PolynomialFeatures,
+PowerTransformer, QuantileTransformer, RobustScaler, StandardScaler,
+MinMaxScaler and MaxAbsScaler. These are transformers, not standalone prediction
+models; their output and structure lists remain empty, consistent with existing
+transformer recipes. All use complete dense numeric inputs and fit independently
+inside each training fold before an unweighted Ridge compatibility predictor.
+
+All twenty pass cloning, parameter round trips, three-fold held-out prediction,
+finite transformed-feature checks, explicit training/held-out feature-count
+consistency, row-count checks and convergence checks. StandardScaler and
+SplineTransformer additionally accept nonuniform fitting weights, routed to the
+transformer only. No warnings occurred in the final run. IncrementalPCA is tested
+through fit with internal batches, not direct partial_fit or streaming. Sparse
+input, missing values, inverse transforms, reconstruction accuracy, component
+stability and predictive benefit are not certified. Specific kernels, dimensions,
+seeds, transformation methods and other limits are recorded per recipe.
+
+RobustScaler and MinMaxScaler use their default range tuples: JSON arrays for
+these parameters were rejected by the tested sklearn version. The probe's new
+transform_contract checks are opt-in so older mixed-type or missingness-preserving
+transformers are not retrospectively treated as finite numeric feature producers.
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch priority_6_2026_10_25
+```
+
+The fifth priority batch adds ten passing configurations: PoissonRegressor,
+GammaRegressor, MultinomialNB, ComplementNB, LarsCV, LassoLarsCV,
+OrthogonalMatchingPursuitCV, CalibratedClassifierCV, DummyClassifier and
+DummyRegressor. All use complete numeric inputs and pass cloning, parameter
+round trips, three-fold held-out prediction and convergence checks. Seven accept
+nonuniform fitting weights and all four classifiers pass probability checks.
+The probe now supports explicit fixtures: nonnegative count predictors for the
+Naive Bayes pair, a Poisson count target, and a strictly positive continuous target
+for Gamma. The latter two also assert positive held-out predictions. These domain
+restrictions are recipe conditions, not guarantees for arbitrary numeric data.
+Internal selection and calibration use no learned preprocessing before internal
+folds. Calibration tests the default LinearSVC with sigmoid calibration and a
+three-fold ensemble; no calibration-quality claim is made. Dummy models are
+reference baselines that ignore predictors. Poisson recorded a sandbox joblib
+physical-core detection warning; no convergence warning occurred.
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch priority_5_2026_10_24
+```
+
+The fourth priority batch adds ten passing configurations: RidgeCV,
+LogisticRegressionCV, RidgeClassifier, RidgeClassifierCV, NearestCentroid,
+BernoulliNB, Lars, LassoLars, LassoLarsIC and OrthogonalMatchingPursuit.
+All pass cloning, parameter round trips, three-fold held-out prediction and
+convergence checks. Five accept nonuniform fitting weights; three classifiers
+also pass held-out probability checks. Ridge classifiers claim class labels only.
+The three internally cross-validated estimators use complete numeric inputs with
+no learned preprocessing before their internal folds. Lars, LassoLars,
+LassoLarsIC and OrthogonalMatchingPursuit also use complete numeric inputs;
+the remaining three use fold-fitted imputation, scaling and encoding.
+BernoulliNB thresholds prepared features at zero. LassoLarsIC uses BIC and
+estimated noise variance on a low-dimensional fixture. No predictive-quality,
+calibration, feature-selection stability or scalability guarantee is implied.
+NearestCentroid recorded a joblib CPU-detection warning in the sandbox; its
+predictions and probabilities passed, with no convergence warnings.
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch priority_4_2026_10_24
+```
+
+The third priority batch adds ten passing configurations: BaggingRegressor,
+BaggingClassifier, ExtraTreeRegressor, ExtraTreeClassifier, NuSVR, NuSVC,
+KernelRidge, GaussianProcessClassifier, RadiusNeighborsRegressor and
+RadiusNeighborsClassifier. All use fold-fitted imputation, scaling and one-hot
+encoding, and pass cloning, parameter round trips, three-fold held-out predictions,
+unseen-category prediction and convergence checks. Seven accept nonuniform
+sample weights; all five classifiers pass held-out probability checks.
+Gaussian-process classification uses a fixed kernel without optimization.
+NuSVC records a deprecation warning: its probability option is scheduled for
+removal in sklearn 1.11; a replacement calibration wrapper has not been validated.
+Radius-neighbor probes use radius 10; the regression probe does not certify
+behavior when a query has no neighbors, and the classifier's configured
+outlier fallback is not specifically exercised. Binary classification only;
+no accuracy, calibration or scalability guarantee is implied.
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch priority_3_2026_10_24
+```
+
+The second priority batch adds ten passing configurations: GradientBoostingRegressor,
+GradientBoostingClassifier, AdaBoostRegressor, AdaBoostClassifier,
+LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis, GaussianNB,
+ARDRegression, TheilSenRegressor and RANSACRegressor. All pass the same cloning,
+parameter, held-out Pipeline prediction and convergence checks. The five classifiers
+also pass held-out probability checks. QDA is restricted to complete numeric
+inputs with covariance regularization; the other nine use fold-fitted imputation,
+scaling and one-hot encoding. No warnings were recorded for this batch.
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch priority_2_2026_10_24
+```
+
+The priority validation batch adds ten passing configurations: MLPRegressor,
+MLPClassifier, ElasticNet, ElasticNetCV, TweedieRegressor, QuantileRegressor,
+BayesianRidge, HuberRegressor, KNeighborsRegressor and KNeighborsClassifier.
+All exercise cloning, parameter round trips and three-fold held-out Pipeline
+prediction, with convergence warnings treated as failures. The two classifiers
+also check held-out probability shape, finiteness, bounds and normalization.
+Supported nonuniform fitting weights and unseen categories are exercised.
+ElasticNetCV uses complete numeric inputs with no learned preprocessing before
+its internal folds. Tweedie is tested only at power=0 with an identity link;
+QuantileRegressor only at the median. KNN distance weights do not establish
+observation-weight support. These checks do not measure accuracy or calibration.
+
+There are now 113 passing recipes covering 111 distinct estimators; 79 recipes
+include the additional Pipeline cross-validation checks. Rerun just this batch
+without invalidating unrelated recorded results using:
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch priority_2026_10_24
+```
+
+`supersession.json` records 21 reviewed method-grouping relationships, copied into
+the corresponding estimator's `superseded_by` field on rebuild. The model card
+hides these recipes by default and restores them with **Show excluded and
+unreviewed recipes**. Details name the broader method, parameter mapping, official
+sources and limitations. Mathematical objective-family nesting (notably ordinary
+least squares and Ridge within Elastic Net) is distinguished from configured
+special cases and upstream replacements. Dedicated solvers can remain preferable.
+This changes display grouping only: compatibility, validation, installation and
+execution are not transferred or changed. The broader method need not have a
+validated/installed recipe. The source records screening scope and important
+retained distinctions; it does not assert exhaustive mathematical subsumption.
+
+This is a searchable JSON snapshot, not a runtime import registry. Package
+discovery is now driven by the source-backed `packages.json` registry. The first
+systematic audit accounts for all 59 project entries in sklearn's Related Projects
+source (before documentation translations), all 15 contrib README projects, and
+all 32 public contrib repositories, including archived and infrastructure projects.
+After merging aliases and retaining previously curated projects, 94 projects have
+explicit decisions: 26 included, 49 deferred and 19 excluded. This is coverage of
+those source snapshots, not an exhaustive inventory of the sklearn ecosystem.
+
+The fresh snapshot contains 538 estimator aliases, 113 passing executable profiles
+and 21 documentation-only recipes. Nine new executable profiles cover Cubist,
+gplearn, skglm, scikit-lego and category-encoders; they additionally exercise
+cloning, parameter round trips and three-fold held-out predictions through a
+Pipeline. Other discovered estimators are not thereby certified compatible.
+Optional wheels were inspected in a temporary directory and have **not** been
+added to Pythagoras dependencies. See `AUDIT.md` for decisions and actual failures.
+
+The catalogue also includes documentation-reviewed recipes for `cubist.Cubist`,
+all six `lineartree` Tree/Forest/Boost regressors and classifiers, and
+`skrules.SkopeRules`. Their editable source is `specialists.json`; the builder
+copies it into `catalogue.json` and now includes these three packages in discovery.
+These broader documentation recipes remain `not_run` / `adapter_required`.
+Cubist now also has a separate version-pinned, probed preprocessing recipe.
+Linear-tree classes were inspected but not fitted. SkopeRules 1.0.1 failed to
+import on Python 3.11 (`collections.Iterable`); scikit-learn-extra 0.3.0 had no
+matching binary wheel. No compatibility patches were applied to third-party code.
 
 ## Files
 
 - `catalogue.json`: generated inventory, reviewed configurations and validation outcomes.
 - `profiles.json`: editable, reviewed configuration recipes and subjective assessments.
+- `packages.json`: package decisions, import/module scope, source references and review dates.
+- `audit_sources.json`: normalized primary-source entries, retrieval dates and payload hashes.
+- `AUDIT.md`: generated coverage, package decisions, inventory counts and discovery failures.
+- `inspection_environment.json`: interpreter/platform and installed distribution versions.
+- `inspection-requirements.txt`: pinned inspection packages and extra dependencies.
+- `installation_attempts.json`: initial optional-wheel installation outcomes.
+- `../../../scripts/audit_estimator_packages.py`: optional source refresh and offline report generation.
 - `schema.json`: JSON Schema (draft 2020-12).
 - `../../estimator_catalogue.py`: lightweight JSON loader and capability filtering.
 - `../../../scripts/build_estimator_catalogue.py`: rebuilds the inventory.
@@ -117,8 +284,9 @@ executing arbitrary Python strings from the JSON.
   'ignore', sparse_output=False)`; final estimator named `model` in a Pipeline.
   Normalize categorical missing markers to `np.nan` before sklearn imputation.
   This dense recipe can be inappropriate for high cardinalities.
-- `categorical_complete`: mixed numeric and categorical inputs with no missing
-  values; intended for a categorical encoder profile.
+- `categorical_complete`: mixed numeric and categorical inputs passed directly
+  to the estimator, with no missing values unless the profile explicitly permits
+  them; intended for categorical encoder profiles with reviewed missing handling.
 
 The small-data probes reduce ensemble iterations/trees and report these overrides.
 They are smoke checks, not exhaustive parameter validation. Do not treat a passed
@@ -160,6 +328,37 @@ version checks. Conditions still require application checks: cardinality, loss,
 input shape, sparse/dense format, missingness and data size.
 
 ## Rebuild and validate
+
+To refresh the discovery lists, run
+`scripts/audit_estimator_packages.py --refresh`. This updates source snapshots
+and reports newly uncovered entries; it never automatically approves or installs
+packages. Review those entries in `packages.json`, including deferral/exclusion
+reasons and explicit public-module scope for included packages. A refresh failure
+does not overwrite the prior complete snapshot. Broader directories and targeted
+method-family searches are subsequent audit phases.
+
+The recorded inspection used the existing application environment plus optional
+wheels under `/tmp/estimator-audit/packages`. To reproduce it, use a matching base
+environment from `inspection_environment.json`, install `inspection-requirements.txt`
+into a separate directory with `pip install --no-deps --only-binary=:all: --target`,
+and pass that directory to **both** the builder and probe script. Optional packages
+must not silently change the base dependency versions. For example, after installing:
+
+```sh
+.venv/bin/python scripts/build_estimator_catalogue.py \
+  --extra-path /tmp/estimator-audit/packages \
+  --environment-output app/data/estimator_capabilities/inspection_environment.json
+.venv/bin/python scripts/probe_estimator_catalogue.py \
+  --extra-path /tmp/estimator-audit/packages
+.venv/bin/python scripts/audit_estimator_packages.py
+.venv/bin/python -m pytest -m unit tests/test_estimator_catalogue.py tests/test_estimator_package_audit.py
+```
+
+XGBoost remains pinned to the previously reviewed 3.2.0 configuration even though
+the package metadata reported a newer release. Refreshing inventory is not an
+implicit review of changed versions. Full `check_estimator` conformance testing,
+structured-task adapters and exhaustive module enumeration remain outstanding;
+the recorded probes establish only their explicit operation/configuration scope.
 
 From the repository root:
 

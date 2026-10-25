@@ -192,7 +192,10 @@ def instance():
             text="One row per selected variable. Omitted counts missing or infinite values in the sampled rows. Gap from/to bound the largest adjacent gap, and Gap / range expresses its size relative to that variable's observed range. Equal largest gaps report the first. Sampling can exaggerate gaps.",
         ),
     )
-    this.footer = lambda: ui.TagList(ui.output_ui("Busy"), ui.output_ui("Status"))
+    this.footer = lambda: ui.TagList(
+        ui.output_ui("Busy"), 
+        ui.output_ui("Status")
+    )
     this.settings = lambda: ui.TagList(
         ui.input_checkbox(
             id="UseTarget", label="Include any target", value=False,

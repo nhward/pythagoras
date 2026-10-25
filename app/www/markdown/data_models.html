@@ -257,6 +257,13 @@ border-bottom: 1px solid var(--bs-table-border-color) !important;
 table.table,
 table.dataframe,
 shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
 ) > tbody > tr:nth-of-type(even) > * {
 background-color: var(--bs-body-bg, #fff) !important;
 }
@@ -376,6 +383,12 @@ z-index: 10;
 overflow: visible;
 background-color: var(--py-table-cell-hover) !important;
 white-space: normal;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
 }
 
 shiny-data-frame
@@ -847,7 +860,8 @@ content: "●";
 
 .js-plotly-plot .gtitle {
 fill: var(--bs-primary) !important;
-}</style>
+}
+</style>
 </head>
 
 <body>
@@ -871,7 +885,7 @@ fill: var(--bs-primary) !important;
 <li><strong>Tertiary:</strong> Distinguish runtime evidence from documentation and expert judgment.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>The outcome task comes from the upstream modelling context. Automatic inference uses a numeric Target for regression, a nominal or Boolean Target for classification, and an ordered categorical Target for ordinal classification. Numeric class codes need an explicit classification choice upstream. Without a resolved outcome, the card asks for a Target or an explicit task.</p>
+<p>The outcome task comes from the upstream modeling context. Automatic inference uses a numeric Target for regression, a nominal or Boolean Target for classification, and an ordered categorical Target for ordinal classification. Numeric class codes need an explicit classification choice upstream. Without a resolved outcome, the card asks for a Target or an explicit task.</p>
 <p>Only Predictor-role columns are inspected. Target and declared survival outcome components are excluded. Treatment, Identifier, Sequence, Geometry and Weighting columns are not silently added to the design matrix. Assign predictor roles intentionally when defining the analysis.</p>
 <p>The card distinguishes missing numeric and missing categorical values. Boolean and ordered categorical predictors request categorical support; preserving ordinal order is a recipe-specific consideration. Infinite numeric values and unsupported types, such as raw datetime predictors, prevent a compatible match until prepared upstream.</p>
 <p>Each row describes one joint configuration. A model that handles categories only after encoding is shown with its input requirements; capabilities from separate recipes are never combined. Readiness combines input and broader requirements: Meets requirements, specific preprocessing actions, unsupported requirements, or Untested. With excluded models hidden, every displayed row meets requirements. Evidence remains separate. Requirements describe the needed result, such as numeric representations or no missing values, without prescribing imputation or one-hot encoding. The flip-side separately records the specific tested preparation. Alternative techniques may satisfy the requirements, but are not validated by that recorded probe. Compatibility and evidence continue to refer to the complete tested recipe, not the bare estimator. Identifier repetition, Sequence and Geometry roles introduce longitudinal, temporal and spatial requirements. Content that merely looks like a date or coordinate does not establish those roles.</p>
@@ -916,12 +930,14 @@ fill: var(--bs-primary) !important;
 <p>Installation/version status is independent of these judgments. A missing optional package does not mean its model is analytically unsuitable. A matching package version does not validate an untested adapter.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>The summary names the task, structural requirements and predictor count. The table shows model, input requirements, readiness, evidence, installation and scale guidance. Column filters help narrow the displayed rows. Fullscreen gives the table more vertical space.</p>
+<p>Each table row represents one method. Recipes counts the recipes remaining after the display filters; Summary recipe identifies the single recipe supplying that row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.</p>
 <p>Select a row, then flip the card to inspect it. An empty table is explained in the footer. It may mean insufficient catalogue coverage rather than absence of suitable models in the wider ecosystem.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
-<p>The flip side shows evaluation-readiness warnings and catalogue limitations. For the selected row it presents configuration parameters, preparation/fitting instructions, conditions, subjective assessment and official source links. Judgments are guidance, not measured accuracy or timing results.</p>
+<p>The flip side presents the selected recipe in a shaded panel with a readable model name, a separate technical identifier, and distinct readiness and evidence badges. Input requirements, tested preparation, configuration, fitting instructions, conditions, assessment and references are grouped into sections. The panel scrolls in the compact card and uses additional columns when space permits in full-screen. Judgments are guidance, not measured accuracy or timing results.</p>
+<p>Readiness combines current input and broader requirements; evidence describes the complete tested recipe. This card never trains models or executes preparation. Catalogue coverage is incomplete, and documentation-only recipes need adapters and runtime validation. A valid upstream resampling plan is needed before evaluation, but the catalogue remains browsable without one. Data-specific warnings, including weighting fallbacks, appear beside the front summary rather than in a separate flip-side Notes block.</p>
 <h4 id="controls-and-actions">🛠️ Controls and actions</h4>
 <ul>
-<li><strong>Show excluded and unreviewed recipes:</strong> Include incompatible and unknown recipes for the current task, with reasons. This does not list every unreviewed estimator in the raw inventory; entries need a recipe.</li>
+<li><strong>Show excluded and unreviewed recipes:</strong> Include superseded, incompatible and unknown recipes for the current task, with reasons. Superseded entries name the broader method; the flip side explains parameter mappings and limitations. This is display grouping, not automatic model substitution. This does not list every unreviewed estimator in the raw inventory; entries need a recipe.</li>
 <li><strong>Show installed packages only:</strong> Hide packages absent from the current environment. Installed versions may still differ from the reviewed snapshot.</li>
 <li><strong>Use observation weightings:</strong> Require fitting-weight support when the assigned effective weights are valid and nonuniform. Invalid weights produce a visible unweighted fallback; this card does not apply weights or rebalance data.</li>
 <li><strong>Explore forecasting recipes:</strong> Browse forecasting contracts explicitly. Sequence supplies time-index metadata, but forecast horizons and lag windows still require a future adapter. A resampling window is not automatically a forecasting horizon.</li>
@@ -942,7 +958,7 @@ fill: var(--bs-primary) !important;
 </ol>
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
-<li><strong>Input:</strong> Current predictors, stable outcome data, roles, modelling context and evaluation metadata, plus the JSON catalogue and installed-package metadata.</li>
+<li><strong>Input:</strong> Current predictors, stable outcome data, roles, modeling context and evaluation metadata, plus the JSON catalogue and installed-package metadata.</li>
 <li><strong>Output:</strong> The incoming proxy passes through unchanged.</li>
 <li><strong>Data journey:</strong> No cleaning operation, learned transformation or evaluation plan is added. Display changes do not train models or start extended tasks.</li>
 </ul>

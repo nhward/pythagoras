@@ -15,6 +15,14 @@ def catalogue():
 
 
 @pytest.mark.unit
+def test_benchmark_purpose_matches_source(catalogue):
+    source = json.loads(DEFAULT_PATH.with_name('benchmark_methods.json').read_text())
+    actual = {e['id']: e['purpose_reason'] for e in catalogue['estimators']
+              if e.get('purpose') == 'benchmark_only'}
+    assert actual == source
+
+
+@pytest.mark.unit
 def test_schema_and_profile_references(catalogue):
     schema = json.loads(DEFAULT_PATH.with_name('schema.json').read_text())
     jsonschema.validate(catalogue, schema)
@@ -30,6 +38,147 @@ def test_schema_and_profile_references(catalogue):
             assert profile['version_match']
             assert profile['id'] in entries[profile['estimator']]['achievable_profile_ids']
             assert profile['validation_details']['operations']
+
+
+@pytest.mark.unit
+def test_supersession_source_references_and_family_limits(catalogue):
+    source = json.loads(DEFAULT_PATH.with_name('supersession.json').read_text())
+    actual = {e['id']: e['superseded_by'] for e in catalogue['estimators'] if 'superseded_by' in e}
+    assert actual == source['relationships']
+    entries = {e['id'] for e in catalogue['estimators']}
+    assert all(r['method'] in entries for r in actual.values())
+    ridge = actual['sklearn.linear_model.Ridge']
+    assert ridge['relationship'] == 'objective_family'
+    assert 'dedicated Ridge solver' in ridge['caveats']
+    assert 'sklearn.linear_model.BayesianRidge' not in actual
+    assert 'sklearn.svm.LinearSVC' not in actual
+    assert 'sklearn.ensemble.RandomForestRegressor' not in actual
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('batch', ['priority_2026_10_24', 'priority_2_2026_10_24',
+                                  'priority_3_2026_10_24', 'priority_4_2026_10_24',
+                                  'priority_5_2026_10_24'])
+def test_priority_batch_has_scoped_validation_evidence(catalogue, batch):
+    profiles = [p for p in catalogue['profiles'] if p.get('probe', {}).get('batch') == batch]
+    assert len(profiles) == 10
+    for profile in profiles:
+        assert profile['validation'] == 'passed' and profile['version_match']
+        operations = profile['validation_details']['operations']
+        assert {'clone_get_set_params', 'pipeline_three_fold_held_out_prediction',
+                'fit_predict_finite', 'no_convergence_warnings'} <= set(operations)
+        if 'class_probability' in profile['outputs']:
+            assert 'held_out_class_probabilities_normalized' in operations
+        if profile['capabilities']['sample_weight_fit']:
+            assert 'fit_accepts_nonuniform_sample_weights' in operations
+        if profile['capabilities']['categorical_predictors']:
+            assert 'predict_unseen_category' in operations
+    if batch == 'priority_5_2026_10_24':
+        assert all(p['construction']['preparation'] == 'numeric' for p in profiles)
+        assert sum(p['capabilities']['sample_weight_fit'] for p in profiles) == 7
+        assert sum(p['probe']['probabilities'] for p in profiles) == 4
+        for profile in profiles:
+            if profile['estimator'].endswith(('PoissonRegressor', 'GammaRegressor')):
+                assert 'held_out_predictions_positive' in profile['validation_details']['operations']
+            if profile['estimator'].endswith(('MultinomialNB', 'ComplementNB')):
+                assert profile['probe']['fixture'] == 'nonnegative_counts'
+        return
+    if batch == 'priority_4_2026_10_24':
+        assert sum(p['capabilities']['sample_weight_fit'] for p in profiles) == 5
+        assert sum(p['probe']['probabilities'] for p in profiles) == 3
+        for profile in profiles:
+            if profile['estimator'].endswith(('RidgeCV', 'LogisticRegressionCV', 'RidgeClassifierCV', 'LassoLarsIC')):
+                assert profile['construction']['preparation'] == 'numeric'
+                assert not profile['capabilities']['missing_numeric_predictors']
+            if profile['estimator'].endswith(('RidgeClassifier', 'RidgeClassifierCV')):
+                assert profile['outputs'] == ['class_prediction']
+        return
+    if batch == 'priority_3_2026_10_24':
+        assert all(p['construction']['preparation'] == 'impute_onehot' for p in profiles)
+        assert sum(p['capabilities']['sample_weight_fit'] for p in profiles) == 7
+        assert sum(p['probe']['probabilities'] for p in profiles) == 5
+        return
+    numeric_method = 'ElasticNetCV' if batch == 'priority_2026_10_24' else 'QuadraticDiscriminantAnalysis'
+    numeric = next(p for p in profiles if p['estimator'].endswith(numeric_method))
+    assert numeric['construction']['preparation'] == 'numeric'
+    assert not numeric['capabilities']['missing_numeric_predictors']
+
+
+@pytest.mark.unit
+def test_transformer_batch_has_scoped_validation_evidence(catalogue):
+    profiles = [p for p in catalogue['profiles']
+                if p.get('probe', {}).get('batch') == 'priority_6_2026_10_25']
+    assert len(profiles) == 20
+    assert len({p['estimator'] for p in profiles}) == 20
+    for profile in profiles:
+        assert profile['validation'] == 'passed' and profile['version_match']
+        assert profile['task'] == 'transformer' and profile['outputs'] == []
+        assert profile['construction']['preparation'] == 'numeric'
+        assert not profile['capabilities']['incremental_training']
+        assert not profile['capabilities']['missing_numeric_predictors']
+        operations = set(profile['validation_details']['operations'])
+        assert {'clone_get_set_params', 'pipeline_three_fold_held_out_prediction',
+                'fit_transform_row_count', 'fit_transform_finite_features',
+                'held_out_transform_finite_consistent_features',
+                'no_convergence_warnings'} <= operations
+        if profile['capabilities']['sample_weight_fit']:
+            assert 'fit_accepts_nonuniform_sample_weights' in operations
+    weighted = {p['estimator'] for p in profiles if p['capabilities']['sample_weight_fit']}
+    assert weighted == {'sklearn.preprocessing.StandardScaler', 'sklearn.preprocessing.SplineTransformer'}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('failure', ['nonfinite', 'changed_columns', 'dropped_row'])
+def test_transform_probe_rejects_invalid_features(catalogue, monkeypatch, failure):
+    import runpy
+    import numpy as np
+    from sklearn.base import BaseEstimator, TransformerMixin
+
+    class BrokenTransformer(TransformerMixin, BaseEstimator):
+        def fit(self, X, y=None):
+            return self
+
+        def transform(self, X):
+            rows = len(X) - (failure == 'dropped_row')
+            cols = 3 if failure == 'changed_columns' and len(X) == 30 else 2
+            return np.full((rows, cols), np.nan if failure == 'nonfinite' else 1.0)
+
+    script = DEFAULT_PATH.parents[3] / 'scripts/probe_estimator_catalogue.py'
+    probe = runpy.run_path(str(script))['probe']
+    profile = deepcopy(next(p for p in catalogue['profiles']
+                            if p['estimator'] == 'sklearn.decomposition.PCA'))
+    profile['probe']['pipeline_cross_validation'] = False
+    monkeypatch.setitem(probe.__globals__, 'construct',
+                        lambda profile, X: (BrokenTransformer(), X, {}, {}))
+    with pytest.raises(AssertionError):
+        probe(profile)
+
+
+@pytest.mark.unit
+def test_probe_batch_preserves_unselected_results(catalogue, tmp_path):
+    from pathlib import Path
+    selected = next(p for p in catalogue['profiles'] if p['estimator'] == 'sklearn.linear_model.HuberRegressor')
+    selected['probe']['batch'] = 'test_single_recipe'
+    before = {p['id']: deepcopy(p) for p in catalogue['profiles'] if p['id'] != selected['id']}
+    path = tmp_path / 'catalogue.json'
+    path.write_text(json.dumps(catalogue))
+    script = Path(__file__).resolve().parents[1] / 'scripts/probe_estimator_catalogue.py'
+    result = subprocess.run([sys.executable, str(script), '--catalogue', str(path),
+                             '--batch', 'test_single_recipe'], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    after = json.loads(path.read_text())
+    assert {p['id']: p for p in after['profiles'] if p['id'] != selected['id']} == before
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('target', ['absent.Estimator', 'sklearn.linear_model.Ridge'])
+def test_invalid_supersession_rejected(catalogue, tmp_path, target):
+    ridge = next(e for e in catalogue['estimators'] if e['id'] == 'sklearn.linear_model.Ridge')
+    ridge['superseded_by']['method'] = target
+    path = tmp_path / 'invalid.json'
+    path.write_text(json.dumps(catalogue))
+    with pytest.raises(ValueError, match='[Ss]upersession|supersession'):
+        load_catalogue(path)
 
 
 @pytest.mark.unit
@@ -111,6 +260,29 @@ def test_specialist_source_and_evidence(catalogue):
     assert any(r['compatibility'] == 'compatible' for r in rows)
     assert all(r['availability'] == 'not_installed' for r in rows)
     assert coverage(catalogue)['survival']['probed_recipes'] == 0
+
+
+@pytest.mark.unit
+def test_documented_rule_models_remain_conservative(catalogue):
+    from estimator_catalogue import assess_profiles
+
+    recipes = {p['estimator']: p for p in catalogue['specialists']}
+    expected = {'cubist.Cubist', 'skrules.SkopeRules'} | {
+        f'lineartree.Linear{family}{kind}'
+        for family in ('Tree', 'Forest', 'Boost')
+        for kind in ('Regressor', 'Classifier')
+    }
+    assert expected <= recipes.keys()
+    assert not recipes['lineartree.LinearForestClassifier']['capabilities']['multiclass']
+    rows = assess_profiles(catalogue, task='classification', required=['sample_weight_fit'])
+    skope = next(row for row in rows if row['estimator'] == 'skrules.SkopeRules')
+    assert skope['compatibility'] == 'incompatible'
+    for task in ('regression', 'classification'):
+        rows = assess_profiles(catalogue, task=task)
+        additions = [row for row in rows if row['id'] in {recipes[name]['id'] for name in expected}]
+        assert additions
+        assert all(row['evidence'] == 'documentation_only' and not row['selectable']
+                   for row in additions)
 
 
 @pytest.mark.unit

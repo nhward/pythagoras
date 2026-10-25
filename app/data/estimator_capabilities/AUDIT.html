@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>audit</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+</style>
+
+
+
+
+<style type="text/css">
+:root {
+--py-table-row-hover: #f0f1cc;
+--py-table-cell-hover: #d4d4b8;
+}
+
+body.bslib-gap-spacing {
+gap: 0.25rem;
+}
+
+.hidden {
+display: none !important;
+}
+
+.flip-container {
+perspective: 1000px;
+}
+.flippable {
+position: relative;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 1.3s ease-in-out;
+}
+.flip-container.flipped .flippable {
+transform: rotateY(180deg);
+}
+.front,
+.back {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+-webkit-backface-visibility: hidden;
+}
+.front {
+z-index: 2;
+transform: rotateY(0);
+}
+.back {
+z-index: 1;
+transform: rotateY(180deg);
+}
+
+.bslib-card,
+.card {
+position: relative;
+overflow: visible;
+}
+.card {
+outline: 1px solid grey;
+}
+.card.shadow {
+box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
+}
+.card.fullscreen-active {
+position: fixed;
+inset: 0;
+z-index: 1050;
+width: 100vw;
+height: 100vh !important;
+max-height: none !important;
+min-height: 0 !important;
+margin: 0 !important;
+border-radius: 0;
+transition: all 0.5s ease;
+}
+.card.fullscreen-active .card-body {
+flex: 1 1 auto;
+overflow-y: auto;
+padding: 2rem;
+}
+.card.fullscreen-active .card-footer {
+flex-shrink: 0;
+margin-top: 0;
+padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.card.fullscreen-active .drag-handle {
+display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
+
+#shiny-modal-wrapper {
+position: absolute;
+z-index: 1060 !important;
+}
+
+.hover-card {
+position: relative;
+}
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+visibility: visible !important;
+}
+.hover-card:not(.tour-running) .hover-btn {
+visibility: hidden;
+}
+
+.cards-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+margin: 0 auto;
+gap: 0.5rem;
+}
+.drag-ghost {
+opacity: 0.5;
+}
+.drag-handle {
+display: inline-flex;
+align-items: center;
+padding: 0 0.4rem;
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+.drag-handle * {
+cursor: inherit;
+}
+.drag-tab {
+position: absolute !important;
+top: 50%;
+left: 0;
+z-index: 2;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 28px;
+height: 48px;
+transform: translate(-50%, -50%);
+border: 1px solid rgba(0, 0, 0, 0.06);
+border-radius: 999px;
+outline: 1px solid grey;
+background: #f3f4f6;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-tab::before {
+width: 10px;
+height: 20px;
+background:
+radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+opacity: 0.55;
+content: "";
+}
+.dragging .drag-tab,
+.drag-tab:active {
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+@media (max-width: 600px) {
+.drag-tab {
+display: none;
+}
+}
+
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
+max-width: 180px;
+padding: 0.2rem 0.4rem;
+overflow: hidden;
+line-height: 1.2;
+text-align: left;
+text-overflow: ellipsis;
+vertical-align: middle;
+white-space: nowrap;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+overflow: visible !important;
+white-space: normal !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
+line-height: 1.2;
+white-space: pre-line !important;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) {
+border-top: 1px solid var(--bs-table-border-color) !important;
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+border-collapse: collapse;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+background-color: var(--bs-body-bg, #fff) !important;
+}
+
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-informative-row {
+background-color: rgba(233, 36, 66, 0.22) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-strong-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-weak-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-strong-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-moderate-row {
+background-color: #fff3cd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-weak-row {
+background-color: #cff4fc !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-stable-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-excluded-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-random-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-uncertain-row {
+background-color: #ddcfa7 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-patterned-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
+background-color: #d95f02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
+background-color: #e6ab02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
+background-color: #3978a8 !important;
+color: #fff !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
+background-color: #9aa7b2 !important;
+color: #000 !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+background-color: var(--py-table-row-hover) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
+> :is(
+.var-cardinality-strong-review-row,
+.var-cardinality-review-row,
+.var-cardinality-expected-row,
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
+) {
+color: var(--bs-body-color, #212529) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+position: relative;
+z-index: 10;
+overflow: visible;
+background-color: var(--py-table-cell-hover) !important;
+white-space: normal;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-top: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+border-bottom: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-bottom: 1px solid #000 !important;
+}
+
+.across-row{
+display:flex;
+align-items:end;
+gap:.5rem
+}
+.across-row .shiny-input-container{
+flex:1
+}
+.across-row .btn{
+flex:none;
+margin-bottom:0
+}
+
+.roles-layout {
+display: grid;
+grid-template-columns: auto 1fr;
+gap: 1rem;
+align-items: start;
+width: 100%;
+min-width: 0;
+overflow-x: auto;
+}
+.roles-grid {
+display: grid;
+grid-template-columns: repeat(11, minmax(200px, 1fr));
+gap: 1rem;
+width: 100%;
+overflow-x: auto;
+min-width: 0;
+}
+.roles-grid > * {
+min-width: 0;
+}
+.role-box {
+border: 1px solid #d0d7de;
+border-radius: 10px;
+padding: 0.75rem;
+min-height: 315px;
+background: #d5e6f8;
+width: 100%;
+min-width: 0;
+}
+.role-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+width: 100%;
+min-width: 0;
+}
+.role-list {
+min-height: 220px;
+padding: 0.25rem;
+border: 1px dashed #c7ced6;
+border-radius: 8px;
+background: white;
+width: 100%;
+min-width: 0;
+overflow-y: auto;
+}
+.var-chip {
+border: 1px solid #c7ced6;
+border-radius: 999px;
+padding: 0.35rem 0.7rem;
+margin: 0.35rem 0;
+background: #d0ddf6;
+cursor: grab;
+user-select: none;
+width: 100%;
+min-width: 0;
+}
+.ghost {
+opacity: 0.4;
+}
+.chosen {
+background: #dce9ff;
+}
+
+.selectize-control.multi .selectize-input > .item {
+background-color: #dce6f2;
+color: #1f3b5c;
+border-radius: 999px;
+padding: 2px 10px;
+margin: 2px;
+border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+border-radius: 6px;
+padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+background-color: #dce6f2;
+color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+background-color: var(--bs-primary);
+color: white;
+}
+ span.btn.btn-default.btn-file:has(.shiny-input-file) {
+background-color: var(--bs-primary);
+border-color: var(--bs-primary);
+color: white;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group {
+display: inline-flex;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox, label.checkbox-inline) {
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
+background-color: #0b5494;
+border-color: var(--bs-primary, #0d6efd);
+color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span::before {
+content: "☐";
+display: inline-block;
+flex: 0 0 1em;
+width: 1em;
+font-size: 1em;
+line-height: 1;
+text-align: center;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+content: "☑";
+color: currentColor;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) {
+margin-bottom: 0;
+}
+
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+padding: 0px 0px 0px 0px !important;
+}
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+padding-top: 20px;
+padding-left: 12px;
+}
+.bslib-card .card-header {
+padding-right: 40px !important;
+}
+body.fullscreen-mode { overflow: hidden; } 
+
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
+.dragging, .dragging * {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+}
+
+@keyframes pulse-outline {
+0% { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+70% { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+animation: pulse-outline 700ms ease-out;
+}
+
+@keyframes jello {
+0% { transform: scale3d(1, 1, 1); }
+30% { transform: scale3d(1.07, 0.93, 1); }
+45% { transform: scale3d(0.95, 1.05, 1); }
+60% { transform: scale3d(1.03, 0.97, 1); }
+75% { transform: scale3d(0.99, 1.01, 1); }
+100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+will-change: transform; 
+}
+
+@media (prefers-reduced-motion: reduce) {
+.card.animate-jello { animation: none; }
+.card.animate-highlight { animation-duration: 300ms; }
+}
+
+.progress-bar {
+height: 1rem !important;
+}
+.vertically-scrollable-footer {
+max-height: 70px;
+overflow-y: auto;
+}
+
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
+
+.card .card-body.flip-container {
+overflow: hidden;
+}
+.flip-container > .flippable > :is(.front, .back) {
+overflow: auto;
+min-height: 0;
+}
+
+.flip-container shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 1 1 auto;
+min-height: 0;
+}
+
+.card-scroll-content {
+flex: 0 0 auto;
+min-width: 0;
+}
+.card-scroll-content shiny-data-frame,
+.card-scroll-content shiny-data-frame > .html-fill-container,
+.card-scroll-content shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 0 0 auto;
+height: auto;
+}
+
+.card-footer .shiny-input-radiogroup {
+margin-inline: auto;
+margin-bottom: 0;
+max-width: 100%;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup .shiny-options-group {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.card-footer .shiny-input-radiogroup :is(.radio, label.radio-inline) {
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup :is(.radio label, label.radio-inline) {
+position: relative;
+padding-left: 0;
+margin-bottom: 0;
+}
+
+.card-footer .shiny-input-radiogroup input[type="radio"] {
+position: absolute;
+opacity: 0;
+width: 1px;
+height: 1px;
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.card-footer .shiny-input-radiogroup label:hover > input[type="radio"] + span,
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span {
+background-color: #0b5494;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span::before {
+content: "○";
+flex: 0 0 1em;
+width: 1em;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
+content: "●";
+}
+
+.js-plotly-plot .gtitle {
+fill: var(--bs-primary) !important;
+}
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h1 id="estimator-package-audit">Estimator package audit</h1>
+<p>Generated: 2026-10-24T08:55:43.935257+00:00</p>
+<p>All top-level project entries in Related Projects before translations, all contrib README project headings, and all public contrib repositories (including archived/infrastructure repositories). Broader directories and method-family searches remain future audit phases.</p>
+<p>Registry: 94 projects; decisions: {‘deferred’: 49, ‘excluded’: 19, ‘included’: 26}. Unreviewed source entries: 0. Catalogue: 538 estimator aliases, 43 reviewed profiles, 21 documentation-only recipes. Profile validation: {‘passed’: 43}.</p>
+<p>Inspection means public-class/signature/tag discovery, not verified pipeline compatibility. Aliases can identify the same implementation. Missing optional packages remain visible in package metadata; their profiles are unavailable.</p>
+<h2 id="source-coverage">Source coverage</h2>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Source</th>
+<th style="text-align: right;">Entries</th>
+<th>Retrieved</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/doc/related_projects.rst">related_projects</a></td>
+<td style="text-align: right;">59</td>
+<td>2026-10-24T08:50:45.908405+00:00</td>
+</tr>
+<tr class="even">
+<td><a href="https://raw.githubusercontent.com/scikit-learn-contrib/scikit-learn-contrib/master/README.md">contrib_readme</a></td>
+<td style="text-align: right;">15</td>
+<td>2026-10-24T08:50:45.908723+00:00</td>
+</tr>
+<tr class="odd">
+<td><a href="https://api.github.com/orgs/scikit-learn-contrib/repos?per_page=100&amp;type=public">contrib_repositories</a></td>
+<td style="text-align: right;">32</td>
+<td>2026-10-24T08:50:45.909497+00:00</td>
+</tr>
+</tbody>
+</table>
+<h2 id="package-decisions-and-inspection">Package decisions and inspection</h2>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Project</th>
+<th>Decision</th>
+<th>Distribution</th>
+<th>Inspection</th>
+<th style="text-align: right;">Estimators</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/aeon-toolkit/aeon">aeon</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.</td>
+</tr>
+<tr class="even">
+<td><a href="https://www.astroml.org/">astroml</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/automl/auto-sklearn/">auto-sklearn</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/AutoViML/Auto_ViML/">autoviml</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/bde">bde</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Neural backend and model-construction requirements need a separate dependency environment and probe plan.</td>
+</tr>
+<tr class="even">
+<td><a href="https://bioconductor.org/packages/BiocSklearn">biocsklearn</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>R/Bioconductor interoperability; not a Python estimator distribution for this scope.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/boruta_py">boruta</a></td>
+<td>included</td>
+<td>Boruta</td>
+<td>inspected</td>
+<td style="text-align: right;">1</td>
+<td>Wrapper feature selection; constructor requires a base estimator.</td>
+</tr>
+<tr class="even">
+<td><a href="https://pypi.org/project/catboost/">catboost</a></td>
+<td>included</td>
+<td>catboost</td>
+<td>inspected</td>
+<td style="text-align: right;">4</td>
+<td>Previously curated package; retained for the fresh inventory.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/categorical-encoding">category-encoders</a></td>
+<td>included</td>
+<td>category-encoders</td>
+<td>inspected</td>
+<td style="text-align: right;">22</td>
+<td>Categorical encoders; inspect public transformer classes.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/zama-ai/concrete-ml/">concrete-ml</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Hardware/runtime-specific wrapper compatibility requires a dedicated environment; deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://pypi.org/project/cubist/">cubist</a></td>
+<td>included</td>
+<td>cubist</td>
+<td>inspected</td>
+<td style="text-align: right;">1</td>
+<td>Previously curated package; retained for the fresh inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/denmune-clustering-algorithm">denmune</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/denmune-skl">denmune-skl</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/DESlib">deslib</a></td>
+<td>included</td>
+<td>deslib</td>
+<td>inspected</td>
+<td style="text-align: right;">27</td>
+<td>Dynamic classifier/ensemble selection; prediction and dependency compatibility require probes.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/parrt/dtreeviz/">dtreeviz</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Model visualization; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://emlearn.org">emlearn</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Embedded model conversion/runtime; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/alteryx/evalml">evalml</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/fastcan">fastcan</a></td>
+<td>included</td>
+<td>fastcan</td>
+<td>inspected</td>
+<td style="text-align: right;">3</td>
+<td>Feature selection and nonlinear autoregression; estimator interface varies by class.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/solegalli/feature_engine">feature-engine</a></td>
+<td>included</td>
+<td>feature-engine</td>
+<td>inspected</td>
+<td style="text-align: right;">60</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/alteryx/featuretools">featuretools</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relational feature synthesis needs an entity-set/input adapter; deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://flower.dev/">flwr</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Federated orchestration framework; no general tabular estimator discovery in this phase.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/forest-confidence-interval">forest-confidence-interval</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Post-fit uncertainty functions; no estimator class inventory selected for this phase.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://radimrehurek.com/gensim/">gensim</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/giotto-ai/giotto-tda">giotto-tda</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/trevorstephens/gplearn">gplearn</a></td>
+<td>included</td>
+<td>gplearn</td>
+<td>inspected</td>
+<td style="text-align: right;">3</td>
+<td>Symbolic regression/classification and supervised feature construction.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/hdbscan">hdbscan</a></td>
+<td>included</td>
+<td>hdbscan</td>
+<td>inspected</td>
+<td style="text-align: right;">3</td>
+<td>Density clustering and prediction utilities; include despite overlapping sklearn HDBSCAN.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/hiclass">hiclass</a></td>
+<td>included</td>
+<td>hiclass</td>
+<td>inspected</td>
+<td style="text-align: right;">5</td>
+<td>Hierarchical classifiers; multi-level targets need specialist recipes.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/hmmlearn/hmmlearn">hmmlearn</a></td>
+<td>included</td>
+<td>hmmlearn</td>
+<td>inspected</td>
+<td style="text-align: right;">11</td>
+<td>Hidden Markov estimators; sequence lengths and structured evaluation need separate recipes.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/imbalanced-learn">imbalanced-learn</a></td>
+<td>included</td>
+<td>imbalanced-learn</td>
+<td>inspected</td>
+<td style="text-align: right;">27</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/benfred/implicit">implicit</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>User-item representations and recommendation evaluation need adapters; similar fit/predict names do not establish sklearn compatibility.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/nicodv/kmodes">kmodes</a></td>
+<td>included</td>
+<td>kmodes</td>
+<td>inspected</td>
+<td style="text-align: right;">2</td>
+<td>Categorical and mixed-data clustering.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/lda-project/lda/">lda</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html">lifelines</a></td>
+<td>deferred</td>
+<td>lifelines</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Previously documented specialist recipes retained; runtime adapter and comprehensive discovery deferred.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/lyst/lightfm">lightfm</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>User-item representations and recommendation evaluation need adapters; similar fit/predict names do not establish sklearn compatibility.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://lightgbm.readthedocs.io">lightgbm</a></td>
+<td>included</td>
+<td>lightgbm</td>
+<td>inspected</td>
+<td style="text-align: right;">7</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="even">
+<td><a href="http://contrib.scikit-learn.org/lightning/">lightning</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://pypi.org/project/linear-tree/">linear-tree</a></td>
+<td>included</td>
+<td>linear-tree</td>
+<td>inspected</td>
+<td style="text-align: right;">6</td>
+<td>Previously curated package; retained for the fresh inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/MAPIE">mapie</a></td>
+<td>included</td>
+<td>mapie</td>
+<td>inspected</td>
+<td style="text-align: right;">3</td>
+<td>Conformal wrappers; newer fit/conformalize APIs may not expose the ordinary sklearn parameter interface.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/metric-learn">metric-learn</a></td>
+<td>included</td>
+<td>metric-learn</td>
+<td>inspected</td>
+<td style="text-align: right;">17</td>
+<td>Metric-learning transformers; pair/constraint inputs need recipe review.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/mimic">mimic</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://mlflow.org/">mlflow</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Experiment tracking and registry tooling; not an estimator provider in this audit.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/mljar/mljar-supervised">mljar-supervised</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/mloptimizer">mloptimizer</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/rasbt/mlxtend">mlxtend</a></td>
+<td>included</td>
+<td>mlxtend</td>
+<td>inspected</td>
+<td style="text-align: right;">18</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://lorentzenchr.github.io/model-diagnostics/">model-diagnostics</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Model assessment utilities; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://neptune.ai/">neptune</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Experiment tracking service; outside estimator discovery.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://nilearn.github.io/">nilearn</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="even">
+<td><a href="https://www.nltk.org/">nltk</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://pandas.pydata.org/">pandas</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Data container/manipulation library; not an estimator provider.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/polylearn">polylearn</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/jmschrei/pomegranate">pomegranate</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Probabilistic modelling uses distinct construction/inference APIs; sklearn compatibility must be established per wrapper.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/project-template">project-template</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Development template; not an estimator library.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/py-earth">py-earth</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.</td>
+</tr>
+<tr class="even">
+<td><a href="https://www.pymc.io/">pymc</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Probabilistic modelling uses distinct construction/inference APIs; sklearn compatibility must be established per wrapper.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/qolmat">qolmat</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/radius_clustering">radius_clustering</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/IDSIA/Sacred">sacred</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Experiment configuration and tracking; outside estimator discovery.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/adriangb/scikeras">scikeras</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Neural backend and model-construction requirements need a separate dependency environment and probe plan.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/scikit-dimension">scikit-dimension</a></td>
+<td>included</td>
+<td>scikit-dimension</td>
+<td>inspected</td>
+<td style="text-align: right;">14</td>
+<td>Intrinsic-dimension estimators; outputs differ from ordinary feature transformations.</td>
+</tr>
+<tr class="even">
+<td><a href="https://scikit-image.org/">scikit-image</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://pypi.org/project/scikit-learn/">scikit-learn</a></td>
+<td>included</td>
+<td>scikit-learn</td>
+<td>inspected</td>
+<td style="text-align: right;">210</td>
+<td>Previously curated package; retained for the fresh inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/scikit-learn-contrib">scikit-learn-contrib</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Project directory infrastructure; not an estimator library.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/scikit-learn-contrib.github.io">scikit-learn-contrib.github.io</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Project website infrastructure; not an estimator library.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/scikit-learn-extra">scikit-learn-extra</a></td>
+<td>included</td>
+<td>scikit-learn-extra</td>
+<td>not_installed</td>
+<td style="text-align: right;">0</td>
+<td>Additional clustering/robust estimators; wheel unavailable on this inspection platform, retained as not installed.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/intel/scikit-learn-intelex">scikit-learn-intelex</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Hardware/runtime-specific wrapper compatibility requires a dedicated environment; deferred.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/koaning/scikit-lego">scikit-lego</a></td>
+<td>included</td>
+<td>scikit-lego</td>
+<td>inspected</td>
+<td style="text-align: right;">48</td>
+<td>Additional regressors, classifiers, meta-estimators and preprocessing.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/scikit-matter">scikit-matter</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-multilearn/scikit-multilearn">scikit-multilearn</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Multilabel task/target semantics and legacy dependencies require a dedicated review.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://scikit-network.readthedocs.io/">scikit-network</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.</td>
+</tr>
+<tr class="even">
+<td><a href="https://surpriselib.com/">scikit-surprise</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>User-item representations and recommendation evaluation need adapters; similar fit/predict names do not establish sklearn compatibility.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://scikit-survival.readthedocs.io/">scikit-survival</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Existing documentation-only specialist recipes retained; comprehensive package inspection and adapters deferred.</td>
+</tr>
+<tr class="even">
+<td><a href="https://stanford.edu/~mwaskom/software/seaborn/">seaborn</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Visualization library; not an estimator provider.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/skdag">skdag</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Pipeline/dataframe integration utilities; defer detailed composition semantics to a subsequent inspection batch.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/JoaquinAmatRodrigo/skforecast">skforecast</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://contrib.scikit-learn.org/skglm">skglm</a></td>
+<td>included</td>
+<td>skglm</td>
+<td>inspected</td>
+<td style="text-align: right;">13</td>
+<td>Penalized generalized linear models; constructor and task-specific recipes require review.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/sklearn-ann">sklearn-ann</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/onnx/sklearn-onnx">sklearn-onnx</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Model serialization/export; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/scikit-learn-contrib/sklearn-pandas">sklearn-pandas</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Pipeline/dataframe integration utilities; defer detailed composition semantics to a subsequent inspection batch.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/jpmml/sklearn2pmml">sklearn2pmml</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Model serialization/export; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="even">
+<td><a href="https://skll.readthedocs.io/en/latest/index.html">skll</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Experiment runner wrapping other libraries; underlying estimators are audited separately; wrapper review deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/skope-rules">skope-rules</a></td>
+<td>included</td>
+<td>skope-rules</td>
+<td>import_failed</td>
+<td style="text-align: right;">0</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="even">
+<td><a href="https://skops.readthedocs.io/en/stable/persistence.html">skops</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Persistence tooling; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/dnouri/skorch">skorch</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Neural backend and model-construction requirements need a separate dependency environment and probe plan.</td>
+</tr>
+<tr class="even">
+<td><a href="https://skrub-data.org">skrub</a></td>
+<td>included</td>
+<td>skrub</td>
+<td>inspected</td>
+<td style="text-align: right;">27</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/sktime/sktime">sktime</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.</td>
+</tr>
+<tr class="even">
+<td><a href="https://pysal.org/spreg/generated/spreg.ML_Lag.html">spreg</a></td>
+<td>deferred</td>
+<td>spreg</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Previously documented specialist recipes retained; runtime adapter and comprehensive discovery deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/scikit-learn-contrib/stability-selection">stability-selection</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.</td>
+</tr>
+<tr class="even">
+<td><a href="https://www.statsmodels.org">statsmodels</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Existing documentation-only specialist recipes retained; comprehensive package inspection and adapters deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/rhiever/tpot">tpot</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.</td>
+</tr>
+<tr class="even">
+<td><a href="https://treelite.readthedocs.io">treelite</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Tree compilation/runtime; outside fitting-estimator inventory.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/tslearn-team/tslearn">tslearn</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.</td>
+</tr>
+<tr class="even">
+<td><a href="https://unit8co.github.io/darts/">u8darts</a></td>
+<td>deferred</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/dmlc/xgboost">xgboost</a></td>
+<td>included</td>
+<td>xgboost</td>
+<td>inspected</td>
+<td style="text-align: right;">6</td>
+<td>Existing reviewed package; retained and reinspected.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/DistrictDataLabs/yellowbrick">yellowbrick</a></td>
+<td>excluded</td>
+<td>—</td>
+<td>not_requested</td>
+<td style="text-align: right;">0</td>
+<td>Estimator visualizers; excluded from predictive/preprocessing methods in this phase.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="discovery-failures">Discovery failures</h2>
+<ul>
+<li><code>skrules</code>: ImportError: cannot import name ‘Iterable’ from ‘collections’ (/Users/nickward/.pyenv/versions/3.11.8/lib/python3.11/collections/<strong>init</strong>.py)</li>
+</ul>
+<h2 id="new-source-entries-awaiting-a-decision">New source entries awaiting a decision</h2>
+<p>None in this source snapshot.</p>
+
+
+
+
+
+</body></html>

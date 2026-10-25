@@ -1,0 +1,1854 @@
+{
+  "registry_version": "1.0.0",
+  "catalogue_version": "1.2.8",
+  "reviewed_on": "2026-10-24",
+  "scope": "Initial systematic source audit with a bounded tabular-first runtime inspection batch; not an exhaustive sklearn ecosystem inventory.",
+  "status_semantics": {
+    "included": "Approved public modules for discovery; not a claim of installation or runtime compatibility.",
+    "deferred": "Potentially relevant; explicit review or environment work remains.",
+    "excluded": "Outside this audit scope; reason retained."
+  },
+  "packages": [
+    {
+      "id": "aeon",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/aeon-toolkit/aeon",
+      "documentation_url": "https://github.com/aeon-toolkit/aeon",
+      "source_entries": [
+        [
+          "related_projects",
+          "aeon"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "astroml",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://www.astroml.org/",
+      "documentation_url": "https://www.astroml.org/",
+      "source_entries": [
+        [
+          "related_projects",
+          "AstroML"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "auto-sklearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/automl/auto-sklearn/",
+      "documentation_url": "https://github.com/automl/auto-sklearn/",
+      "source_entries": [
+        [
+          "related_projects",
+          "auto-sklearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "autoviml",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/AutoViML/Auto_ViML/",
+      "documentation_url": "https://github.com/AutoViML/Auto_ViML/",
+      "source_entries": [
+        [
+          "related_projects",
+          "autoviml"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "bde",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/bde",
+      "documentation_url": "https://github.com/scikit-learn-contrib/bde",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "bde"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Neural backend and model-construction requirements need a separate dependency environment and probe plan.",
+      "archived": false
+    },
+    {
+      "id": "biocsklearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://bioconductor.org/packages/BiocSklearn",
+      "documentation_url": "https://bioconductor.org/packages/BiocSklearn",
+      "source_entries": [
+        [
+          "related_projects",
+          "BiocSklearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "R/Bioconductor interoperability; not a Python estimator distribution for this scope.",
+      "archived": false
+    },
+    {
+      "id": "boruta",
+      "distribution": "Boruta",
+      "import_name": "boruta",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/boruta_py",
+      "documentation_url": "https://github.com/scikit-learn-contrib/boruta_py",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "boruta_py"
+        ],
+        [
+          "contrib_repositories",
+          "boruta_py"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Wrapper feature selection; constructor requires a base estimator.",
+      "archived": false,
+      "latest_release_seen": "0.4.3"
+    },
+    {
+      "id": "catboost",
+      "distribution": "catboost",
+      "import_name": "catboost",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://pypi.org/project/catboost/",
+      "documentation_url": "https://catboost.ai/docs/",
+      "source_entries": [],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Previously curated package; retained for the fresh inventory.",
+      "archived": false,
+      "latest_release_seen": "1.2.10"
+    },
+    {
+      "id": "category-encoders",
+      "distribution": "category-encoders",
+      "import_name": "category_encoders",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/categorical-encoding",
+      "documentation_url": "https://github.com/scikit-learn-contrib/categorical-encoding",
+      "source_entries": [
+        [
+          "related_projects",
+          "categorical-encoding"
+        ],
+        [
+          "contrib_readme",
+          "categorical-encoding"
+        ],
+        [
+          "contrib_repositories",
+          "category_encoders"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Categorical encoders; inspect public transformer classes.",
+      "archived": false,
+      "latest_release_seen": "2.11.1"
+    },
+    {
+      "id": "concrete-ml",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/zama-ai/concrete-ml/",
+      "documentation_url": "https://github.com/zama-ai/concrete-ml/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Concrete ML"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Hardware/runtime-specific wrapper compatibility requires a dedicated environment; deferred.",
+      "archived": false
+    },
+    {
+      "id": "cubist",
+      "distribution": "cubist",
+      "import_name": "cubist",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://pypi.org/project/cubist/",
+      "documentation_url": "https://pypi.org/project/cubist/",
+      "source_entries": [],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Previously curated package; retained for the fresh inventory.",
+      "archived": false,
+      "latest_release_seen": "1.2.2"
+    },
+    {
+      "id": "denmune",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/denmune-clustering-algorithm",
+      "documentation_url": "https://github.com/scikit-learn-contrib/denmune-clustering-algorithm",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "DenMune: Density-peak clustering using mutual nearest neighbors"
+        ],
+        [
+          "contrib_repositories",
+          "denmune-clustering-algorithm"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.",
+      "archived": false
+    },
+    {
+      "id": "denmune-skl",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/denmune-skl",
+      "documentation_url": "https://github.com/scikit-learn-contrib/denmune-skl",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "denmune-skl"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.",
+      "archived": false
+    },
+    {
+      "id": "deslib",
+      "distribution": "deslib",
+      "import_name": "deslib",
+      "modules": [
+        "dcs",
+        "des",
+        "static"
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/DESlib",
+      "documentation_url": "https://github.com/scikit-learn-contrib/DESlib",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "DESlib"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Dynamic classifier/ensemble selection; prediction and dependency compatibility require probes.",
+      "archived": false,
+      "latest_release_seen": "0.3.7"
+    },
+    {
+      "id": "dtreeviz",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/parrt/dtreeviz/",
+      "documentation_url": "https://github.com/parrt/dtreeviz/",
+      "source_entries": [
+        [
+          "related_projects",
+          "dtreeviz"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Model visualization; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "emlearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://emlearn.org",
+      "documentation_url": "https://emlearn.org",
+      "source_entries": [
+        [
+          "related_projects",
+          "emlearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Embedded model conversion/runtime; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "evalml",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/alteryx/evalml",
+      "documentation_url": "https://github.com/alteryx/evalml",
+      "source_entries": [
+        [
+          "related_projects",
+          "EvalML"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "fastcan",
+      "distribution": "fastcan",
+      "import_name": "fastcan",
+      "modules": [
+        "",
+        "narx"
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/fastcan",
+      "documentation_url": "https://github.com/scikit-learn-contrib/fastcan",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "fastcan"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Feature selection and nonlinear autoregression; estimator interface varies by class.",
+      "archived": false,
+      "latest_release_seen": "0.6.0"
+    },
+    {
+      "id": "feature-engine",
+      "distribution": "feature-engine",
+      "import_name": "feature_engine",
+      "modules": [
+        "imputation",
+        "encoding",
+        "discretisation",
+        "selection",
+        "creation",
+        "transformation",
+        "outliers",
+        "wrappers",
+        "datetime",
+        "timeseries.forecasting",
+        "preprocessing",
+        "pipeline"
+      ],
+      "project_url": "https://github.com/solegalli/feature_engine",
+      "documentation_url": "https://github.com/solegalli/feature_engine",
+      "source_entries": [
+        [
+          "related_projects",
+          "Feature-engine"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false
+    },
+    {
+      "id": "featuretools",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/alteryx/featuretools",
+      "documentation_url": "https://github.com/alteryx/featuretools",
+      "source_entries": [
+        [
+          "related_projects",
+          "Featuretools"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relational feature synthesis needs an entity-set/input adapter; deferred.",
+      "archived": false
+    },
+    {
+      "id": "flwr",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://flower.dev/",
+      "documentation_url": "https://flower.dev/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Flower"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Federated orchestration framework; no general tabular estimator discovery in this phase.",
+      "archived": false
+    },
+    {
+      "id": "forest-confidence-interval",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/forest-confidence-interval",
+      "documentation_url": "https://github.com/scikit-learn-contrib/forest-confidence-interval",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "forest-confidence-interval"
+        ],
+        [
+          "contrib_repositories",
+          "forest-confidence-interval"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Post-fit uncertainty functions; no estimator class inventory selected for this phase.",
+      "archived": false
+    },
+    {
+      "id": "gensim",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://radimrehurek.com/gensim/",
+      "documentation_url": "https://radimrehurek.com/gensim/",
+      "source_entries": [
+        [
+          "related_projects",
+          "gensim"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "giotto-tda",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/giotto-ai/giotto-tda",
+      "documentation_url": "https://github.com/giotto-ai/giotto-tda",
+      "source_entries": [
+        [
+          "related_projects",
+          "giotto-tda"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "gplearn",
+      "distribution": "gplearn",
+      "import_name": "gplearn",
+      "modules": [
+        "genetic"
+      ],
+      "project_url": "https://github.com/trevorstephens/gplearn",
+      "documentation_url": "https://github.com/trevorstephens/gplearn",
+      "source_entries": [
+        [
+          "related_projects",
+          "gplearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Symbolic regression/classification and supervised feature construction.",
+      "archived": false,
+      "latest_release_seen": "0.4.3"
+    },
+    {
+      "id": "hdbscan",
+      "distribution": "hdbscan",
+      "import_name": "hdbscan",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/hdbscan",
+      "documentation_url": "https://github.com/scikit-learn-contrib/hdbscan",
+      "source_entries": [
+        [
+          "related_projects",
+          "hdbscan"
+        ],
+        [
+          "contrib_readme",
+          "hdbscan"
+        ],
+        [
+          "contrib_repositories",
+          "hdbscan"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Density clustering and prediction utilities; include despite overlapping sklearn HDBSCAN.",
+      "archived": false,
+      "latest_release_seen": "0.8.44"
+    },
+    {
+      "id": "hiclass",
+      "distribution": "hiclass",
+      "import_name": "hiclass",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/hiclass",
+      "documentation_url": "https://github.com/scikit-learn-contrib/hiclass",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "hiclass"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Hierarchical classifiers; multi-level targets need specialist recipes.",
+      "archived": false,
+      "latest_release_seen": "5.0.8"
+    },
+    {
+      "id": "hmmlearn",
+      "distribution": "hmmlearn",
+      "import_name": "hmmlearn",
+      "modules": [
+        "hmm",
+        "vhmm"
+      ],
+      "project_url": "https://github.com/hmmlearn/hmmlearn",
+      "documentation_url": "https://github.com/hmmlearn/hmmlearn",
+      "source_entries": [
+        [
+          "related_projects",
+          "HMMLearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Hidden Markov estimators; sequence lengths and structured evaluation need separate recipes.",
+      "archived": false,
+      "latest_release_seen": "0.3.3"
+    },
+    {
+      "id": "imbalanced-learn",
+      "distribution": "imbalanced-learn",
+      "import_name": "imblearn",
+      "modules": [
+        "ensemble",
+        "over_sampling",
+        "under_sampling",
+        "combine",
+        "pipeline",
+        "FunctionSampler"
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/imbalanced-learn",
+      "documentation_url": "https://github.com/scikit-learn-contrib/imbalanced-learn",
+      "source_entries": [
+        [
+          "related_projects",
+          "imbalanced-learn"
+        ],
+        [
+          "contrib_readme",
+          "imbalanced-learn"
+        ],
+        [
+          "contrib_repositories",
+          "imbalanced-learn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false
+    },
+    {
+      "id": "implicit",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/benfred/implicit",
+      "documentation_url": "https://github.com/benfred/implicit",
+      "source_entries": [
+        [
+          "related_projects",
+          "implicit"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "User-item representations and recommendation evaluation need adapters; similar fit/predict names do not establish sklearn compatibility.",
+      "archived": false
+    },
+    {
+      "id": "kmodes",
+      "distribution": "kmodes",
+      "import_name": "kmodes",
+      "modules": [
+        "kmodes",
+        "kprototypes"
+      ],
+      "project_url": "https://github.com/nicodv/kmodes",
+      "documentation_url": "https://github.com/nicodv/kmodes",
+      "source_entries": [
+        [
+          "related_projects",
+          "kmodes"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Categorical and mixed-data clustering.",
+      "archived": false,
+      "latest_release_seen": "0.12.2"
+    },
+    {
+      "id": "lda",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/lda-project/lda/",
+      "documentation_url": "https://github.com/lda-project/lda/",
+      "source_entries": [
+        [
+          "related_projects",
+          "lda"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "lifelines",
+      "distribution": "lifelines",
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html",
+      "documentation_url": "https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html",
+      "source_entries": [],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Previously documented specialist recipes retained; runtime adapter and comprehensive discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "lightfm",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/lyst/lightfm",
+      "documentation_url": "https://github.com/lyst/lightfm",
+      "source_entries": [
+        [
+          "related_projects",
+          "lightfm"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "User-item representations and recommendation evaluation need adapters; similar fit/predict names do not establish sklearn compatibility.",
+      "archived": false
+    },
+    {
+      "id": "lightgbm",
+      "distribution": "lightgbm",
+      "import_name": "lightgbm",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://lightgbm.readthedocs.io",
+      "documentation_url": "https://lightgbm.readthedocs.io/en/latest/",
+      "source_entries": [
+        [
+          "related_projects",
+          "LightGBM"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false,
+      "latest_release_seen": "4.7.0"
+    },
+    {
+      "id": "lightning",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "http://contrib.scikit-learn.org/lightning/",
+      "documentation_url": "http://contrib.scikit-learn.org/lightning/",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "lightning"
+        ],
+        [
+          "contrib_repositories",
+          "lightning"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.",
+      "archived": true
+    },
+    {
+      "id": "linear-tree",
+      "distribution": "linear-tree",
+      "import_name": "lineartree",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://pypi.org/project/linear-tree/",
+      "documentation_url": "https://pypi.org/project/linear-tree/",
+      "source_entries": [],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Previously curated package; retained for the fresh inventory.",
+      "archived": false,
+      "latest_release_seen": "0.3.5"
+    },
+    {
+      "id": "mapie",
+      "distribution": "mapie",
+      "import_name": "mapie",
+      "modules": [
+        "regression",
+        "classification",
+        "calibration",
+        "risk_control"
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/MAPIE",
+      "documentation_url": "https://mapie.readthedocs.io/en/latest/",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "MAPIE - Model Agnostic Prediction Interval Estimator"
+        ],
+        [
+          "contrib_repositories",
+          "MAPIE"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Conformal wrappers; newer fit/conformalize APIs may not expose the ordinary sklearn parameter interface.",
+      "archived": false,
+      "latest_release_seen": "1.6.0"
+    },
+    {
+      "id": "metric-learn",
+      "distribution": "metric-learn",
+      "import_name": "metric_learn",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/metric-learn",
+      "documentation_url": "https://github.com/scikit-learn-contrib/metric-learn",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "metric-learn"
+        ],
+        [
+          "contrib_repositories",
+          "metric-learn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Metric-learning transformers; pair/constraint inputs need recipe review.",
+      "archived": false,
+      "latest_release_seen": "0.7.0"
+    },
+    {
+      "id": "mimic",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/mimic",
+      "documentation_url": "https://github.com/scikit-learn-contrib/mimic",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "mimic"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.",
+      "archived": true
+    },
+    {
+      "id": "mlflow",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://mlflow.org/",
+      "documentation_url": "https://mlflow.org/",
+      "source_entries": [
+        [
+          "related_projects",
+          "MLFlow"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Experiment tracking and registry tooling; not an estimator provider in this audit.",
+      "archived": false
+    },
+    {
+      "id": "mljar-supervised",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/mljar/mljar-supervised",
+      "documentation_url": "https://github.com/mljar/mljar-supervised",
+      "source_entries": [
+        [
+          "related_projects",
+          "MLJAR AutoML"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "mloptimizer",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/mloptimizer",
+      "documentation_url": "https://github.com/scikit-learn-contrib/mloptimizer",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "mloptimizer"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "mlxtend",
+      "distribution": "mlxtend",
+      "import_name": "mlxtend",
+      "modules": [
+        "classifier",
+        "regressor",
+        "feature_selection",
+        "preprocessing"
+      ],
+      "project_url": "https://github.com/rasbt/mlxtend",
+      "documentation_url": "https://github.com/rasbt/mlxtend",
+      "source_entries": [
+        [
+          "related_projects",
+          "mlxtend"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false
+    },
+    {
+      "id": "model-diagnostics",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://lorentzenchr.github.io/model-diagnostics/",
+      "documentation_url": "https://lorentzenchr.github.io/model-diagnostics/",
+      "source_entries": [
+        [
+          "related_projects",
+          "model-diagnostics"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Model assessment utilities; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "neptune",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://neptune.ai/",
+      "documentation_url": "https://neptune.ai/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Neptune"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Experiment tracking service; outside estimator discovery.",
+      "archived": false
+    },
+    {
+      "id": "nilearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://nilearn.github.io/",
+      "documentation_url": "https://nilearn.github.io/",
+      "source_entries": [
+        [
+          "related_projects",
+          "NiLearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "nltk",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://www.nltk.org/",
+      "documentation_url": "https://www.nltk.org/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Natural language toolkit (nltk)"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "pandas",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://pandas.pydata.org/",
+      "documentation_url": "https://pandas.pydata.org/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Pandas"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Data container/manipulation library; not an estimator provider.",
+      "archived": false
+    },
+    {
+      "id": "polylearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/polylearn",
+      "documentation_url": "https://github.com/scikit-learn-contrib/polylearn",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "polylearn"
+        ],
+        [
+          "contrib_repositories",
+          "polylearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.",
+      "archived": true
+    },
+    {
+      "id": "pomegranate",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/jmschrei/pomegranate",
+      "documentation_url": "https://github.com/jmschrei/pomegranate",
+      "source_entries": [
+        [
+          "related_projects",
+          "pomegranate"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Probabilistic modelling uses distinct construction/inference APIs; sklearn compatibility must be established per wrapper.",
+      "archived": false
+    },
+    {
+      "id": "project-template",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/project-template",
+      "documentation_url": "https://github.com/scikit-learn-contrib/project-template",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "project-template"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Development template; not an estimator library.",
+      "archived": false
+    },
+    {
+      "id": "py-earth",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/py-earth",
+      "documentation_url": "https://github.com/scikit-learn-contrib/py-earth",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "py-earth"
+        ],
+        [
+          "contrib_repositories",
+          "py-earth"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.",
+      "archived": true
+    },
+    {
+      "id": "pymc",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://www.pymc.io/",
+      "documentation_url": "https://www.pymc.io/",
+      "source_entries": [
+        [
+          "related_projects",
+          "PyMC"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Probabilistic modelling uses distinct construction/inference APIs; sklearn compatibility must be established per wrapper.",
+      "archived": false
+    },
+    {
+      "id": "qolmat",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/qolmat",
+      "documentation_url": "https://github.com/scikit-learn-contrib/qolmat",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "qolmat"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.",
+      "archived": false
+    },
+    {
+      "id": "radius_clustering",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/radius_clustering",
+      "documentation_url": "https://github.com/scikit-learn-contrib/radius_clustering",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "radius_clustering"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.",
+      "archived": false
+    },
+    {
+      "id": "sacred",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/IDSIA/Sacred",
+      "documentation_url": "https://github.com/IDSIA/Sacred",
+      "source_entries": [
+        [
+          "related_projects",
+          "Sacred"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Experiment configuration and tracking; outside estimator discovery.",
+      "archived": false
+    },
+    {
+      "id": "scikeras",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/adriangb/scikeras",
+      "documentation_url": "https://github.com/adriangb/scikeras",
+      "source_entries": [
+        [
+          "related_projects",
+          "scikeras"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Neural backend and model-construction requirements need a separate dependency environment and probe plan.",
+      "archived": false
+    },
+    {
+      "id": "scikit-dimension",
+      "distribution": "scikit-dimension",
+      "import_name": "skdim",
+      "modules": [
+        "id"
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/scikit-dimension",
+      "documentation_url": "https://scikit-dimension.readthedocs.io",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "scikit-dimension"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Intrinsic-dimension estimators; outputs differ from ordinary feature transformations.",
+      "archived": false,
+      "latest_release_seen": "0.5.0"
+    },
+    {
+      "id": "scikit-image",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://scikit-image.org/",
+      "documentation_url": "https://scikit-image.org/",
+      "source_entries": [
+        [
+          "related_projects",
+          "scikit-image"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "scikit-learn",
+      "distribution": "scikit-learn",
+      "import_name": "sklearn",
+      "modules": null,
+      "project_url": "https://pypi.org/project/scikit-learn/",
+      "documentation_url": "https://pypi.org/project/scikit-learn/",
+      "source_entries": [],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Previously curated package; retained for the fresh inventory.",
+      "archived": false
+    },
+    {
+      "id": "scikit-learn-contrib",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/scikit-learn-contrib",
+      "documentation_url": "https://github.com/scikit-learn-contrib/scikit-learn-contrib",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "scikit-learn-contrib"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Project directory infrastructure; not an estimator library.",
+      "archived": false
+    },
+    {
+      "id": "scikit-learn-contrib.github.io",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/scikit-learn-contrib.github.io",
+      "documentation_url": "https://github.com/scikit-learn-contrib/scikit-learn-contrib.github.io",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "scikit-learn-contrib.github.io"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Project website infrastructure; not an estimator library.",
+      "archived": false
+    },
+    {
+      "id": "scikit-learn-extra",
+      "distribution": "scikit-learn-extra",
+      "import_name": "sklearn_extra",
+      "modules": [
+        "cluster",
+        "kernel_approximation",
+        "robust"
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/scikit-learn-extra",
+      "documentation_url": "https://github.com/scikit-learn-contrib/scikit-learn-extra",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "scikit-learn-extra"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Additional clustering/robust estimators; wheel unavailable on this inspection platform, retained as not installed.",
+      "archived": false,
+      "latest_release_seen": "0.3.0"
+    },
+    {
+      "id": "scikit-learn-intelex",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/intel/scikit-learn-intelex",
+      "documentation_url": "https://github.com/intel/scikit-learn-intelex",
+      "source_entries": [
+        [
+          "related_projects",
+          "Intel(R) Extension for scikit-learn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Hardware/runtime-specific wrapper compatibility requires a dedicated environment; deferred.",
+      "archived": false
+    },
+    {
+      "id": "scikit-lego",
+      "distribution": "scikit-lego",
+      "import_name": "sklego",
+      "modules": [
+        "linear_model",
+        "meta",
+        "preprocessing",
+        "mixture",
+        "decomposition",
+        "naive_bayes",
+        "dummy",
+        "neighbors"
+      ],
+      "project_url": "https://github.com/koaning/scikit-lego",
+      "documentation_url": "https://koaning.github.io/scikit-lego/",
+      "source_entries": [
+        [
+          "related_projects",
+          "scikit-lego"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Additional regressors, classifiers, meta-estimators and preprocessing.",
+      "archived": false,
+      "latest_release_seen": "0.9.10"
+    },
+    {
+      "id": "scikit-matter",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/scikit-matter",
+      "documentation_url": "https://github.com/scikit-learn-contrib/scikit-matter",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "scikit-matter"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.",
+      "archived": false
+    },
+    {
+      "id": "scikit-multilearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-multilearn/scikit-multilearn",
+      "documentation_url": "https://github.com/scikit-multilearn/scikit-multilearn",
+      "source_entries": [
+        [
+          "related_projects",
+          "scikit-multilearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Multilabel task/target semantics and legacy dependencies require a dedicated review.",
+      "archived": false
+    },
+    {
+      "id": "scikit-network",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://scikit-network.readthedocs.io/",
+      "documentation_url": "https://scikit-network.readthedocs.io/",
+      "source_entries": [
+        [
+          "related_projects",
+          "scikit-network"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Domain-specific input representations and optional dependencies require per-estimator review; deferred from tabular-first inspection.",
+      "archived": false
+    },
+    {
+      "id": "scikit-surprise",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://surpriselib.com/",
+      "documentation_url": "https://surpriselib.com/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Surprise Lib"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "User-item representations and recommendation evaluation need adapters; similar fit/predict names do not establish sklearn compatibility.",
+      "archived": false
+    },
+    {
+      "id": "scikit-survival",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://scikit-survival.readthedocs.io/",
+      "documentation_url": "https://scikit-survival.readthedocs.io/",
+      "source_entries": [
+        [
+          "related_projects",
+          "scikit-survival"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Existing documentation-only specialist recipes retained; comprehensive package inspection and adapters deferred.",
+      "archived": false
+    },
+    {
+      "id": "seaborn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://stanford.edu/~mwaskom/software/seaborn/",
+      "documentation_url": "https://stanford.edu/~mwaskom/software/seaborn/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Seaborn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Visualization library; not an estimator provider.",
+      "archived": false
+    },
+    {
+      "id": "skdag",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/skdag",
+      "documentation_url": "https://github.com/scikit-learn-contrib/skdag",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "skdag"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Pipeline/dataframe integration utilities; defer detailed composition semantics to a subsequent inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "skforecast",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/JoaquinAmatRodrigo/skforecast",
+      "documentation_url": "https://github.com/JoaquinAmatRodrigo/skforecast",
+      "source_entries": [
+        [
+          "related_projects",
+          "skforecast"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "skglm",
+      "distribution": "skglm",
+      "import_name": "skglm",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://contrib.scikit-learn.org/skglm",
+      "documentation_url": "https://contrib.scikit-learn.org/skglm",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "skglm"
+        ],
+        [
+          "contrib_repositories",
+          "skglm"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Penalized generalized linear models; constructor and task-specific recipes require review.",
+      "archived": false,
+      "latest_release_seen": "0.5"
+    },
+    {
+      "id": "sklearn-ann",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/sklearn-ann",
+      "documentation_url": "https://github.com/scikit-learn-contrib/sklearn-ann",
+      "source_entries": [
+        [
+          "contrib_repositories",
+          "sklearn-ann"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Relevant specialized algorithms; package/import mapping and dependency-compatible module scope remain to be reviewed.",
+      "archived": false
+    },
+    {
+      "id": "sklearn-onnx",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/onnx/sklearn-onnx",
+      "documentation_url": "https://github.com/onnx/sklearn-onnx",
+      "source_entries": [
+        [
+          "related_projects",
+          "sklearn-onnx"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Model serialization/export; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "sklearn-pandas",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/sklearn-pandas",
+      "documentation_url": "https://github.com/scikit-learn-contrib/sklearn-pandas",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "sklearn-pandas"
+        ],
+        [
+          "contrib_repositories",
+          "sklearn-pandas"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Pipeline/dataframe integration utilities; defer detailed composition semantics to a subsequent inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "sklearn2pmml",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/jpmml/sklearn2pmml",
+      "documentation_url": "https://github.com/jpmml/sklearn2pmml",
+      "source_entries": [
+        [
+          "related_projects",
+          "sklearn2pmml"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Model serialization/export; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "skll",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://skll.readthedocs.io/en/latest/index.html",
+      "documentation_url": "https://skll.readthedocs.io/en/latest/index.html",
+      "source_entries": [
+        [
+          "related_projects",
+          "Scikit-Learn Laboratory"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Experiment runner wrapping other libraries; underlying estimators are audited separately; wrapper review deferred.",
+      "archived": false
+    },
+    {
+      "id": "skope-rules",
+      "distribution": "skope-rules",
+      "import_name": "skrules",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/scikit-learn-contrib/skope-rules",
+      "documentation_url": "https://github.com/scikit-learn-contrib/skope-rules",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "skope-rules"
+        ],
+        [
+          "contrib_repositories",
+          "skope-rules"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false,
+      "latest_release_seen": "1.0.1"
+    },
+    {
+      "id": "skops",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://skops.readthedocs.io/en/stable/persistence.html",
+      "documentation_url": "https://skops.readthedocs.io/en/stable/persistence.html",
+      "source_entries": [
+        [
+          "related_projects",
+          "skops.io"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Persistence tooling; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "skorch",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/dnouri/skorch",
+      "documentation_url": "https://github.com/dnouri/skorch",
+      "source_entries": [
+        [
+          "related_projects",
+          "skorch"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Neural backend and model-construction requirements need a separate dependency environment and probe plan.",
+      "archived": false
+    },
+    {
+      "id": "skrub",
+      "distribution": "skrub",
+      "import_name": "skrub",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://skrub-data.org",
+      "documentation_url": "https://skrub-data.org",
+      "source_entries": [
+        [
+          "related_projects",
+          "skrub"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false
+    },
+    {
+      "id": "sktime",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/sktime/sktime",
+      "documentation_url": "https://github.com/sktime/sktime",
+      "source_entries": [
+        [
+          "related_projects",
+          "sktime"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "spreg",
+      "distribution": "spreg",
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://pysal.org/spreg/generated/spreg.ML_Lag.html",
+      "documentation_url": "https://pysal.org/spreg/generated/spreg.ML_Lag.html",
+      "source_entries": [],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Previously documented specialist recipes retained; runtime adapter and comprehensive discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "stability-selection",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/scikit-learn-contrib/stability-selection",
+      "documentation_url": "https://github.com/scikit-learn-contrib/stability-selection",
+      "source_entries": [
+        [
+          "contrib_readme",
+          "stability-selection"
+        ],
+        [
+          "contrib_repositories",
+          "stability-selection"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Repository is archived; retain discovery evidence, defer legacy-build/API compatibility review rather than treating it as unsupported.",
+      "archived": true
+    },
+    {
+      "id": "statsmodels",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://www.statsmodels.org",
+      "documentation_url": "https://www.statsmodels.org",
+      "source_entries": [
+        [
+          "related_projects",
+          "statsmodels"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Existing documentation-only specialist recipes retained; comprehensive package inspection and adapters deferred.",
+      "archived": false
+    },
+    {
+      "id": "tpot",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/rhiever/tpot",
+      "documentation_url": "https://github.com/rhiever/tpot",
+      "source_entries": [
+        [
+          "related_projects",
+          "TPOT"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "AutoML/search orchestration needs bounded search budgets and explicit wrapper construction; deferred from first inspection batch.",
+      "archived": false
+    },
+    {
+      "id": "treelite",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://treelite.readthedocs.io",
+      "documentation_url": "https://treelite.readthedocs.io",
+      "source_entries": [
+        [
+          "related_projects",
+          "treelite"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Tree compilation/runtime; outside fitting-estimator inventory.",
+      "archived": false
+    },
+    {
+      "id": "tslearn",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/tslearn-team/tslearn",
+      "documentation_url": "https://github.com/tslearn-team/tslearn",
+      "source_entries": [
+        [
+          "related_projects",
+          "tslearn"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "u8darts",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://unit8co.github.io/darts/",
+      "documentation_url": "https://unit8co.github.io/darts/",
+      "source_entries": [
+        [
+          "related_projects",
+          "Darts"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "deferred",
+      "reason": "Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred.",
+      "archived": false
+    },
+    {
+      "id": "xgboost",
+      "distribution": "xgboost",
+      "import_name": "xgboost",
+      "modules": [
+        ""
+      ],
+      "project_url": "https://github.com/dmlc/xgboost",
+      "documentation_url": "https://xgboost.readthedocs.io/en/stable/",
+      "source_entries": [
+        [
+          "related_projects",
+          "XGBoost"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "included",
+      "reason": "Existing reviewed package; retained and reinspected.",
+      "archived": false,
+      "latest_release_seen": "3.4.1"
+    },
+    {
+      "id": "yellowbrick",
+      "distribution": null,
+      "import_name": null,
+      "modules": [],
+      "project_url": "https://github.com/DistrictDataLabs/yellowbrick",
+      "documentation_url": "https://github.com/DistrictDataLabs/yellowbrick",
+      "source_entries": [
+        [
+          "related_projects",
+          "yellowbrick"
+        ]
+      ],
+      "reviewed_on": "2026-10-24",
+      "status": "excluded",
+      "reason": "Estimator visualizers; excluded from predictive/preprocessing methods in this phase.",
+      "archived": false
+    }
+  ]
+}

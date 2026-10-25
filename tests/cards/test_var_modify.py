@@ -619,3 +619,19 @@ class TestWebKit:
         get_card(page).hover()
         by_id(page, "FlipButton").click(force=True)
         expect(by_id(page, "DFDiff")).to_contain_text("Float64")
+
+
+@pytest.mark.ui
+def test_variable_headers_remain_when_scrolling(page, app):
+    page.set_viewport_size({'width': 1000, 'height': 700})
+    page.goto(app.url)
+    grid = page.locator('.var-modify-table .shiny-data-grid')
+    expect(grid).to_contain_text('date_text', timeout=30000)
+    header = grid.locator('thead')
+    before = header.bounding_box()['y']
+    assert grid.evaluate('el => el.scrollHeight > el.clientHeight')
+    grid.hover()
+    page.mouse.wheel(0, 250)
+    page.wait_for_function("document.querySelector('.var-modify-table .shiny-data-grid').scrollTop > 0")
+    assert abs(header.bounding_box()['y'] - before) < 2
+    expect(header).to_be_in_viewport()

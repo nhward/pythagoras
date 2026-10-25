@@ -22,6 +22,7 @@ from estimator_catalogue import (
     load_catalogue,
     requirements_from_proxy,
 )
+from faicons import icon_svg as icon
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -47,8 +48,8 @@ def _analyze(source, catalogue, versions, *, use_weights=False, forecasting=Fals
             weighted = effective_weights(source) is not None
         except WeightingError as error:
             notes.append(f'Using unweighted requirements: {error}')
-        if not weighted and not notes:
-            notes.append('No nonuniform observation weights; using unweighted requirements.')
+        # if not weighted and not notes:
+        #     notes.append('No nonuniform observation weights; using unweighted requirements.')
     summary = requirements_from_proxy(source, use_weights=weighted)
     task = 'forecasting' if forecasting else summary['task']
     roles = source.role_map
@@ -129,6 +130,8 @@ def _display_label(value):
 
 def _readiness(row):
     messages = []
+    if row.get('superseded_by'):
+        messages.append('Superseded in catalogue by ' + row['superseded_by']['method'])
     preprocessing = list(row['input_assessment']['actions'])
     for reason in row['reasons']:
         key, _, status = reason.partition(': ')
@@ -160,24 +163,102 @@ def _model_labels(identifier):
     return {'Model': model, 'Type': kind.replace('_', ' ').capitalize(), 'Package': parts[0]}
 
 
-def _table(result, *, show_all=False, installed_only=False):
-    records = []
+def _recipe_rank(row):
+    """Choose one intact recipe for the method summary; never pool capabilities."""
+    return (_readiness(row) != 'Meets requirements',
+            row['compatibility'] != 'compatible',
+            row['evidence'] != 'probe_passed',
+            row['availability'] != 'version_matches', row['id'])
+
+
+def _method_groups(result, *, show_all=False, installed_only=False):
+    groups = {}
     for row in result['rows']:
-        readiness = _readiness(row)
-        if not show_all and readiness != 'Meets requirements':
+        if row.get('purpose') == 'benchmark_only':
+            continue
+        if not show_all and _readiness(row) != 'Meets requirements':
             continue
         if installed_only and row['availability'] == 'not_installed':
             continue
+        groups.setdefault(row['estimator'], []).append(row)
+    return {method: sorted(rows, key=_recipe_rank) for method, rows in groups.items()}
+
+
+def _table(result, *, show_all=False, installed_only=False):
+    records = []
+    for method, rows in _method_groups(result, show_all=show_all, installed_only=installed_only).items():
+        row = rows[0]
         profile = row['profile']
-        records.append({**_model_labels(row['estimator']), 'Input requirements': row['input_assessment']['requirements'],
-            'Readiness': readiness, 'Evidence': row['evidence'],
+        records.append({**_model_labels(method), 'Recipes': len(rows),
+            'Summary recipe': _display_label(profile.get('label', profile['id'].split(':')[-1])),
+            'Input requirements': row['input_assessment']['requirements'],
+            'Readiness': _readiness(row), 'Evidence': row['evidence'],
             'Installation': row['availability'],
             'Scale': profile.get('scalability', {}).get('many_rows', 'See assessment'),
-            'ID': row['id']})
-    table = pd.DataFrame(records, columns=['Model', 'Type', 'Package', 'Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale', 'ID'])
+            'ID': method})
+    table = pd.DataFrame(records, columns=['Model', 'Type', 'Package', 'Recipes', 'Summary recipe',
+        'Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale', 'ID'])
     for column in ('Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale'):
         table[column] = table[column].map(_display_label)
     return table
+
+
+def _recipe_details(row, catalogue_version):
+    """One flowing document: no competing fill-height prose outputs."""
+    profile = row['profile']
+    labels = _model_labels(row['estimator'])
+    readiness = _readiness(row)
+    ready = readiness == 'Meets requirements'
+
+    def section(title, glyph, *content):
+        return ui.tags.section(ui.h6(icon(glyph), title), *content, class_='model-recipe-section')
+
+    def links(urls):
+        return ui.tags.ul(*(ui.tags.li(ui.a(f'Source {i + 1}', href=url, target='_blank',
+                                          rel='noopener', title=url)) for i, url in enumerate(urls)),
+                          class_='model-recipe-sources')
+
+    relation = row.get('superseded_by')
+    supersession = None
+    if relation:
+        supersession = section('Related broader method', 'code-branch',
+            ui.p('Broader method: ' + relation['method']), ui.p(relation['reason']),
+            ui.p(relation['caveats']),
+            ui.tags.details(ui.tags.summary('Parameter mapping'),
+                            ui.tags.pre(json.dumps(relation['configuration'], indent=2))),
+            ui.p('Display grouping only; validation and availability do not transfer between methods.',
+                 class_='model-recipe-muted'), links(relation['sources']))
+    steps = profile.get('steps', profile.get('recipe', {}).get('steps', []))
+    conditions = profile.get('conditions', profile.get('assumptions', []))
+    return ui.div(
+        ui.div(ui.span(f"{labels['Package']} · {labels['Type']}", class_='model-recipe-eyebrow'),
+               ui.h4(labels['Model'], class_='model-recipe-title'),
+               ui.code(row['estimator'], class_='model-recipe-path'),
+               ui.div(ui.span(icon('circle-check' if ready else 'circle-info'), readiness,
+                              class_='model-recipe-badge ' + ('is-ready' if ready else 'is-review')),
+                      ui.span(icon('clipboard-check'), 'Evidence: ' + _display_label(row['evidence']),
+                              class_='model-recipe-badge'), class_='model-recipe-badges'),
+               class_='model-recipe-header'),
+        ui.div(
+            section('Input requirements', 'filter', ui.p(row['input_assessment']['requirements'])),
+            section('Tested preparation', 'sliders',
+                    ui.p(_display_label(profile.get('construction', {}).get('preparation', 'See documented recipe'))),
+                    ui.p('Other preparation may meet the requirements; the recorded evidence applies to this recipe.',
+                         class_='model-recipe-muted')),
+            section('Configuration', 'code',
+                    ui.tags.pre(json.dumps(profile.get('construction', profile.get('parameters', {})), indent=2))),
+            section('Preparation and fitting', 'list-ol', ui.tags.ol(*(ui.tags.li(s) for s in steps))),
+            section('Conditions', 'circle-info', ui.tags.ul(*(ui.tags.li(s) for s in conditions))),
+            section('Assessment', 'magnifying-glass',
+                    ui.p(profile.get('subjective_assessment', {}).get('rationale', 'Not reviewed')),
+                    ui.p('Expert guidance, not a performance benchmark.', class_='model-recipe-muted')),
+            supersession,
+            section('References', 'book-open', links(profile['sources']),
+                    ui.p('Integration: ' + _display_label(row['integration']), class_='model-recipe-muted')),
+            class_='model-recipe-grid'),
+        ui.div(f'Catalogue {catalogue_version} · Inspection only; no model is trained here.',
+               class_='model-recipe-footer'),
+        class_='model-recipe')
 
 
 def instance():
@@ -189,19 +270,18 @@ def instance():
         ui.output_data_frame(id='Table', guide=this, title="Candidate methods", text="A table of methods that might be applicable to the data in its current form when executed as a pipeline.").add_style("margin-top: 0.75rem;")
     )
     this.back = lambda: ui.TagList(
-        ui.output_ui(id='Notes', guide=this, title="Notes", text="Notes on the current data scenario"), 
-        ui.output_ui(id='RecipeDetails', guide=this, title="Recipe", text="Details of the currently selected method recipe")
+        ui.output_ui(id='RecipeDetails', guide=this, title="Recipe", text="Details of the currently selected method recipe", class_="model-recipe-output")
     )
     this.settings = lambda: ui.TagList(
         ui.input_checkbox(id='ShowAll', label='Show excluded and unreviewed recipes', value=False,
             guide=this, position='left',
-            text='Include methods needing preprocessing or having unsupported or untested requirements. Readiness explains each case. Unchecked shows only methods marked Meets requirements.'),
+            text='Include superseded methods, methods needing preprocessing, and unsupported or untested recipes. Readiness names the broader method; details explain the configuration and limitations. Unchecked hides these entries. Supersession groups methods for display and does not substitute fitted models.'),
         ui.input_checkbox(id='InstalledOnly', label='Show installed packages only', value=False,
             guide=this, position='left',
             text='Hide methods whose required package is not installed in this runtime. Installation alone does not establish a matching version or validated support; check Installation and Evidence.'),
-        ui.input_checkbox(id='UseWeights', label='Use observation weightings', value=False,
+        ui.input_checkbox(id='UseWeights', label='Use available observation weightings', value=False,
             guide=this, position='left',
-            text='Require support for fitting with the effective observation weights assigned upstream. Absent, uniform or invalid weights use unweighted requirements; Notes explains any fallback. This card does not fit models or apply weights.'),
+            text='Require support for fitting with the effective observation weights assigned upstream. Absent, uniform or invalid weights use unweighted requirements; The front summary explains any fallback. This card does not fit models or apply weights.'),
         ui.input_checkbox(id='Forecasting', label='Explore forecasting recipes', value=False,
             guide=this, position='left',
             text='Explore forecasting methods instead of the incoming outcome task. Assigned Sequence and Identifier roles determine time and panel requirements. These documented recipes still require forecasting adapters and validation.'),
@@ -246,7 +326,12 @@ def instance():
             predcnt=result['summary']['predictors']
             kind = result['summary']['predictor_kind']
             predictors = ' '.join(part for part in (str(predcnt), kind, pluralize('predictor', predcnt)) if part)
-            return ui.span(f"{result['task'].title()} · {', '.join(result['structure'])} · {predictors}", class_="text-primary text-center d-block")
+            alerts = [note for note in result['notes'][:-2]
+                      if not note.startswith('Evaluation not ready:')]
+            return ui.TagList(
+                ui.span(f"{result['task'].title()} · {', '.join(result['structure'])} · {predictors}",
+                        class_="text-primary text-center d-block"),
+                *(ui.div(icon('circle-info'), ' ', note, class_='model-data-notice') for note in alerts))
 
         @output
         @render.data_frame
@@ -257,39 +342,32 @@ def instance():
         @render.text
         def Status():
             count = len(Display())
-            return f'{count} recipes shown · Select a row and flip for details.' if count else 'No matching recipes. Show excluded and unreviewed recipes for explanations.'
-
-        @output
-        @render.ui
-        def Notes():
-            return ui.TagList(*(ui.p(note) for note in Results()['notes']),
-                              ui.p(f"Catalogue {catalogue['catalogue_version']}. No models are trained or selected for execution."))
+            return f'{count} methods shown · Select a row and flip to compare recipes.' if count else 'No matching methods. Show excluded and unreviewed recipes for explanations.'
 
         @output
         @render.ui
         def RecipeDetails():
             selected = Table.data_view(selected=True)
             if selected.empty:
-                return ui.p('No method selected. Select a method on the front to inspect its recipe.')
+                return ui.div(icon('hand-pointer'), ui.h5('Choose a method to inspect'), ui.p('Select a row on the front, then flip back for its recipe.'), class_='model-recipe model-recipe-empty')
             # The stable ID is the hidden index, retained through sorting/filtering.
             selected_id = selected.index[0]
-            row = next((r for r in Results()['rows'] if r['id'] == selected_id), None)
-            req(row is not None)
-            profile = row['profile']
-            steps = profile.get('steps', profile.get('recipe', {}).get('steps', []))
-            conditions = profile.get('conditions', profile.get('assumptions', []))
-            judgment = profile.get('subjective_assessment', {})
-            return ui.TagList(ui.h5(row['estimator']), ui.p(f"Evidence: {_display_label(row['evidence'])} · Integration: {_display_label(row['integration'])}"),
-                ui.h6('Input requirements'), ui.p(row['input_assessment']['requirements']),
-                ui.p(_readiness(row)),
-                ui.h6('Tested preparation'),
-                ui.p(_display_label(profile.get('construction', {}).get('preparation', 'See documented recipe'))),
-                ui.p('This is the preparation used for the recorded evidence, not a required technique. Other suitable preparation may satisfy the input requirements but is not validated by this probe.'),
-                ui.h6('Tested configuration'), ui.tags.pre(json.dumps(profile.get('construction', profile.get('parameters', {})), indent=2)),
-                ui.h6('Tested preparation and fitting'), ui.tags.ol(*(ui.tags.li(s) for s in steps)),
-                ui.h6('Conditions'), *(ui.p(s) for s in conditions),
-                ui.h6('Subjective assessment'), ui.p(str(judgment.get('rationale', 'Not reviewed'))),
-                ui.h6('Official sources'), *(ui.p(ui.a(url, href=url, target='_blank', rel='noopener')) for url in profile['sources']))
+            groups = _method_groups(Results(), show_all=bool(input.ShowAll()),
+                                    installed_only=bool(input.InstalledOnly()))
+            rows = groups.get(selected_id, [])
+            req(rows)
+            if len(rows) == 1:
+                return _recipe_details(rows[0], catalogue['catalogue_version'])
+            return ui.div(
+                ui.p(f'{len(rows)} recipes match the current display filters. '
+                     'The table summarizes the first recipe; evidence and conditions apply separately to each.',
+                     class_='model-recipe-muted'),
+                *(ui.tags.details(
+                    ui.tags.summary(_display_label(row['profile'].get('label', row['id'].split(':')[-1])),
+                                    ' · ', _readiness(row)),
+                    _recipe_details(row, catalogue['catalogue_version']),
+                    open=(index == 0), class_='model-method-recipe')
+                  for index, row in enumerate(rows)), class_='model-method-recipes')
 
         return Incoming
 

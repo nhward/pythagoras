@@ -248,7 +248,8 @@ def instance():
             guide=this,
             position="bottom",
         ),
-        id = "TableDiv"
+        id = "TableDiv",
+        class_="var-modify-table html-fill-container html-fill-item",
     )
 
     this.back = lambda: ui.TagList(

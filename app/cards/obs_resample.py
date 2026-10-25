@@ -19,6 +19,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from faicons import icon_svg as icon
 from code_recording import recordable
 from evaluation_plan import (
     GOALS,
@@ -208,26 +209,29 @@ def instance():
     this.register_configuration_state_field("evaluation_plan")
     this.register_configuration_state_field("partition_mapping")
     this.front = lambda: ui.TagList(
-        ui.tags.style(
-            f"#{this.ns('CardBody')}:not(.flipped) > .flippable > .back {{ visibility: hidden; }}"
-            f"#{this.ns('CardBody')}.flipped > .flippable > .front {{ visibility: hidden; }}"
-        ),
         ui.output_ui("Summary"),
         shinywidgets.output_widget("Chart", fill=True, guide=this, title="Evaluation membership", position="left",
             text="Splits show training, validation and unused rows. The separate Stratifier strip identifies strata. Fullscreen adds category legends and source-position hover; aggregated bins show the most frequent state, with ties resolved in legend order."),
     )
-    this.back = lambda: ui.TagList(
-        ui.output_ui("Roles"),
-        ui.output_ui("PartitionMapping"),
-        ui.output_ui("Details"),
-        ui.output_data_frame("Table", guide=this, title="Split checks", position="left",
-            text="Exact counts, group overlap, time ranges and target-class checks for every split."),
-        # ui.tags.small("Survival fields use exact column names. Censored observations retain their observed follow-up. "
-        #               "Repeated records, other censoring types and temporal survival evaluation are not yet supported. "
-        #               "To stratify by event, assign the event column a Stratifier role and select it below."),
-        # ui.download_button("Membership", label="Download membership", class_="btn-sm",
-        #     guide=this, position="top", text="One row per source observation per split. Zero-based source positions remain unchanged by chart sorting."),
-    )
+    def detail_section(title, glyph, *content, wide=False):
+        return ui.tags.section(ui.h6(icon(glyph), title), *content,
+                               class_='model-recipe-section' + (' resample-wide' if wide else ''))
+
+    this.back = lambda: ui.div(
+        ui.div(ui.span('Evaluation plan', class_='model-recipe-eyebrow'),
+               ui.h4('Resampling details', class_='model-recipe-title'),
+               ui.p('Review assignments and checks before using the plan.', class_='model-recipe-muted'),
+               class_='model-recipe-header'),
+        ui.div(
+            detail_section('Assigned roles', 'tags', ui.output_ui('Roles')),
+            detail_section('Partition assignments', 'layer-group', ui.output_ui('PartitionMapping')),
+            detail_section('Split diagnostics', 'clipboard-check', ui.output_ui('Details'), wide=True),
+            detail_section('Split checks', 'table',
+                ui.div(ui.output_data_frame('Table', guide=this, title='Split checks', position='left',
+                    text='Exact counts, group overlap, time ranges and target-class checks for every split.'),
+                    class_='resample-table-scroll'), wide=True),
+            class_='model-recipe-grid'),
+        class_='model-recipe resample-details card-scroll-content')
     this.footer = lambda: ui.TagList(
         ui.output_ui(id="GoalControl"), 
         ui.output_ui(id="Status")
@@ -535,8 +539,21 @@ def instance():
         @render.ui
         def Details():
             plan = Results()[0]
-            return ui.TagList(ui.tags.strong("Split diagnostics"), *(ui.div(note, class_="small") for note in (*plan.errors, *plan.warnings)),
-                ui.div(f"Fixed validation: {len(plan.validation):,} · Final holdout: {len(plan.holdout):,} · Prediction: {len(plan.prediction):,}", class_="small"))
+            badges = ui.div(*(ui.span(f'{label}: {len(getattr(plan, key)):,}',
+                                     class_='model-recipe-badge')
+                              for key, label in (('development', 'Development'),
+                                                 ('validation', 'Fixed validation'),
+                                                 ('holdout', 'Final holdout'),
+                                                 ('prediction', 'Prediction'))),
+                            class_='model-recipe-badges')
+            messages = [ui.div(icon('circle-exclamation'), ' ', note,
+                               class_='resample-message is-error', role='alert') for note in plan.errors]
+            messages.extend(ui.div(icon('triangle-exclamation'), ' ', note,
+                                   class_='resample-message is-warning') for note in plan.warnings)
+            if not messages:
+                messages.append(ui.div(icon('circle-check'), ' No diagnostic warnings.',
+                                       class_='resample-message is-ready'))
+            return ui.TagList(badges, *messages)
 
         @output
         @render.data_frame

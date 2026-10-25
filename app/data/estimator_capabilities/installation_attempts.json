@@ -1,0 +1,135 @@
+{
+  "scope": "Optional wheels installed with --no-deps and --only-binary=:all: into a temporary directory; existing application environment unchanged.",
+  "attempts": [
+    {
+      "requirement": "xgboost==3.2.0",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "lightgbm==4.7.0",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "catboost==1.2.10",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "cubist==1.2.2",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "linear-tree==0.3.5",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "skope-rules==1.0.1",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "category-encoders==2.11.1",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "Boruta==0.4.3",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "metric-learn==0.7.0",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "hdbscan==0.8.44",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "scikit-learn-extra==0.3.0",
+      "status": "unavailable_wheel",
+      "error": "No matching binary distribution for scikit-learn-extra==0.3.0 on this platform."
+    },
+    {
+      "requirement": "scikit-lego==0.9.10",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "gplearn==0.4.3",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "kmodes==0.12.2",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "hmmlearn==0.3.3",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "skglm==0.5",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "mapie==1.6.0",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "deslib==0.3.7",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "hiclass==5.0.8",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "fastcan==0.6.0",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "scikit-dimension==0.5.0",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "sklearn-compat",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "graphviz",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "numba",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "llvmlite",
+      "status": "installed",
+      "error": null
+    },
+    {
+      "requirement": "networkx==3.6.1",
+      "status": "installed",
+      "error": null
+    }
+  ]
+}

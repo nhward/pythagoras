@@ -82,6 +82,8 @@ The card supplies raw source subsets and fresh pipelines to downstream training;
 1. Clean the source and assign Stratifier, Identifier, Sequence and Partition roles where appropriate.
 1. Select the prediction goal in the footer.
 1. Map every Partition level, then set K or temporal windows if validation is generated.
+The flip side groups assigned roles, partition controls, diagnostic notices and exact split checks in a shaded panel. It scrolls vertically in the compact card and uses the available width in full-screen; wide diagnostic tables scroll horizontally within their section. Errors and warnings retain their text and use distinct icons and colors.
+
 1. Inspect membership and the Strata strip; use the flip side to check boundaries and exclusions.
 1. Use the plan for model selection, leaving final holdout evaluation until afterward.
 

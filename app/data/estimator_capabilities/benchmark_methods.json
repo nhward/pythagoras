@@ -1,0 +1,5 @@
+{
+  "sklearn.dummy.DummyRegressor": "Null regression baseline for benchmarking evaluation metrics; ignores predictor relationships. Retained for reference, excluded from model-candidate tables.",
+  "sklearn.dummy.DummyClassifier": "Null classification baseline for benchmarking evaluation metrics; ignores predictor relationships. Retained for reference, excluded from model-candidate tables.",
+  "sklego.dummy.RandomRegressor": "Random regression baseline for benchmarking evaluation metrics, not a model of predictor relationships. Retained for reference, excluded from model-candidate tables."
+}
