@@ -169,6 +169,7 @@ def _fit_forest_importance(
     cv_folds: int = 5,
     minimum_balanced_accuracy: float = 0.55,
     random_state: int = 2025,
+    task: str | None = None,
 ) -> ForestAnalysis:
     """Estimate held-out permutation importance across cross-validation folds."""
     if target is None:
@@ -204,8 +205,17 @@ def _fit_forest_importance(
         target_kind = type_of_target(y)
     except (TypeError, ValueError) as error:
         return _empty_analysis(target, f"Unsupported target type: {error}")
-    if target_kind in {"binary", "multiclass"}:
-        task = "classification"
+    if target_kind not in {"binary", "multiclass", "continuous"}:
+        return _empty_analysis(target, f"Unsupported target type: {target_kind}")
+    if task is None:
+        source = proxy_data(_df=frame)
+        source.role_map.set_roles(target, [Role.TARGET])
+        task = source.modelling_context.resolved_task(source)
+    # TODO: Revisit applicability once the study design is known. This diagnostic
+    # assumes independent cross-sectional observations and ordinary random folds;
+    # survival, spatial, longitudinal and time-series outcomes/designs need
+    # appropriate models and validation splits, even when using random forests.
+    if task == "classification":
         counts = y.value_counts(dropna=False)
         if len(counts) < 2 or int(counts.min()) < 2:
             return _empty_analysis(
@@ -221,8 +231,7 @@ def _fit_forest_importance(
         splits = splitter.split(working, y)
         scoring = "balanced_accuracy"
         score_name = "CV Balanced Accuracy"
-    elif target_kind == "continuous":
-        task = "regression"
+    elif task == "regression":
         folds = min(max(2, int(cv_folds)), len(working) // 2)
         if folds < 2:
             return _empty_analysis(target, "Too few observations for regression")
@@ -235,7 +244,7 @@ def _fit_forest_importance(
         scoring = "r2"
         score_name = "CV R-squared"
     else:
-        return _empty_analysis(target, f"Unsupported target type: {target_kind}")
+        return _empty_analysis(target, f"Unsupported outcome task: {task}. This card supports classification and regression.")
     features, numeric, categorical = _feature_frame(working, predictors)
     if features.shape[1] == 0:
         return _empty_analysis(target, "No predictors can be represented for modeling")
@@ -466,7 +475,7 @@ def instance():
     this.description = "This card uses a Random Forest model to assess the informative missingness of each predictor's missing values."
 
     this.front = lambda: ui.TagList(
-        ui.span("Cross-validated variable importance", class_="text-primary text-center d-block"),
+        ui.output_ui("ImportanceTitle"),
         shinywidgets.output_widget(
             id="Importance", fill=True, guide=this, position="left",
             title="Variable importance chart", text="Variable importance of variables of a Random Forest model predicting the target."
@@ -512,7 +521,7 @@ def instance():
         ui.input_checkbox("UseWeights", label="Use observation weightings", value=True,
             guide=this, position="left", text="Use the product of assigned Weighting variables. If effective weights are invalid, use unweighted calculations."),
         ui.input_slider(
-            id="MaxVariables", label="Maximum variables to display", value=12, min=3, step=1, max=30,
+            id="MaxVariables", label="Maximum variables to display", value=12, min=3, step=1, max=50,
             guide=this, position="left",
             text="Show the top variables by importance: up to this many predictors and shadows in the chart, and this many shadows in the table.",
         ),
@@ -608,6 +617,23 @@ def instance():
                 None,
             )
 
+        @this.reactable(calc=True)
+        @this.record_context
+        def OutcomeTask():
+            source = PreparedData()
+            return source.modelling_context.resolved_task(source)
+
+        @output
+        @render.ui
+        @this.record_context
+        def ImportanceTitle():
+            target = Target()
+            suffix = f" - Target: {target} · {OutcomeTask().title()}" if target else ""
+            return ui.span(
+                "Cross-validated variable importance" + suffix,
+                class_="text-primary text-center d-block",
+            )
+
         @this.record_code
         def _selected_missing_variables(minimum, data):
             minimum_missing_proportion = float(minimum)
@@ -664,6 +690,7 @@ def instance():
             sample_weight,
             cv_folds,
             minimum_balanced_accuracy,
+            task,
         ):
             return await asyncio.to_thread(
                 _fit_forest_importance,
@@ -674,6 +701,7 @@ def instance():
                 sample_weight=sample_weight,
                 cv_folds=cv_folds,
                 minimum_balanced_accuracy=minimum_balanced_accuracy,
+                task=task,
             )
 
         @output
@@ -697,6 +725,7 @@ def instance():
                 sample_weight,
                 int(CVFolds()),
                 float(MinBalancedAccuracy()),
+                OutcomeTask(),
             )
 
         @this.reactable(calc=True)
@@ -826,7 +855,7 @@ def instance():
             CalculateAnalysis.require_current(
                 proxy.frame, Target(), PredictorVariables(), MissingVariables(),
                 Card.observation_weights(proxy, enabled=bool(input.UseWeights())),
-                int(CVFolds()), float(MinBalancedAccuracy()),
+                int(CVFolds()), float(MinBalancedAccuracy()), OutcomeTask(),
             )
 
         return TransformedData

@@ -143,3 +143,60 @@ horizon or lag configuration. Evaluation readiness remains separate from browsin
 - **Output:** The incoming proxy passes through unchanged.
 - **Data journey:** No cleaning operation, learned transformation or evaluation plan
   is added. Display changes do not train models or start extended tasks.
+
+#### 🧭 Model characteristics
+
+Six descriptive columns help compare methods: **Core mechanism**, **Composition**,
+**Fitting criterion**, **Learning strategy**, **Prediction outputs**, and **Transparency**.
+Use the column headings to sort the table. Scroll horizontally to reach
+additional columns; select a row and flip the card for explanations and sources.
+Sorting changes the view, not the data or model configuration.
+
+- **Core mechanism** permits combinations, such as Tree and Gen. linear.
+  **Gen. linear** means linear / generalized linear, including linear predictors
+  over transformed features. Distribution, rule, symbolic, prototype and specialist
+  mechanisms are retained where the initial families do not describe a method.
+- **Composition** describes how components combine: a forest aggregates trees;
+  a model tree routes to linear leaf models. Multiple labels can describe nested
+  composition. A component's transparency does not automatically transfer to its
+  ensemble.
+- **Fitting criterion** distinguishes loss, regularization and split criteria in
+  the details. It can be configuration dependent; some neighborhood methods do
+  not optimize a fitting loss. Model-selection criteria are not fitting losses.
+- **Learning strategy** describes when the predictor is constructed. **Eager**
+  methods fit a reusable model before prediction; **Lazy** methods defer local
+  estimation or neighbor aggregation until each query; **Hybrid** methods combine
+  both predictive mechanisms. Nearest-neighbor predictors are Lazy even when they
+  build a search index or use ordinary preprocessing. Nearest-centroid, GP and SVM
+  predictors are Eager: retaining training data or doing substantial prediction-time
+  computation does not make a method lazy. Configurable wrappers say **Depends on
+  configuration** until a recipe resolves their components. This is not a speed
+  ranking, memory guarantee or incremental-learning flag. Sort this column and
+  inspect the recipe details for its qualification.
+- **Prediction outputs** combines the former Formulation and Prediction outputs
+  descriptions. Regression recipes show **Point prediction** or **Point prediction
+  & spread**. Spread means a documented uncertainty output for individual predictions,
+  such as predictive standard deviation, covariance, intervals or distribution samples;
+  it does not certify calibration. Gaussian-process regression, Bayesian ridge and ARD
+  regression provide point predictions and spread. Their details identify the output
+  options and the meaning of that uncertainty.
+  Ordinary linear-regression recipes remain **Point prediction** because these recipes
+  return point predictions only. This is a recipe capability distinction: some other
+  OLS implementations can calculate input-dependent prediction intervals.
+  A single fitted quantile, coefficient standard errors, global residual variance or
+  variation among ensemble members alone do not establish prediction-spread support.
+  The flip side retains the precise output list, including quantiles and specialist
+  outputs. Classification still distinguishes labels, scores and class probabilities.
+  Use **Required prediction output: Prediction spread** to require spread support.
+- **Transparency** is expert guidance about the whole model: Usually transparent,
+  Conditional, or Usually opaque. Complexity, transformed features and composition
+  can change how understandable a fitted model is. It is not a measured score or
+  a claim about post-hoc explanation tools.
+
+**Unreviewed**, **Not applicable**, and **Depends on configuration** have distinct
+meanings. A method summary says **Varies by recipe** when its displayed recipes
+have different descriptions; inspect each recipe rather than pooling their
+capabilities. Readiness and evidence still describe the named summary recipe.
+The characteristics do not establish compatibility, installation, integration,
+or successful validation. **Capacity growth** is reserved for stage 2 and is not
+currently assessed or displayed as a filter.

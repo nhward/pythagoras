@@ -635,3 +635,26 @@ def test_variable_headers_remain_when_scrolling(page, app):
     page.wait_for_function("document.querySelector('.var-modify-table .shiny-data-grid').scrollTop > 0")
     assert abs(header.bounding_box()['y'] - before) < 2
     expect(header).to_be_in_viewport()
+
+
+@pytest.mark.ui
+def test_footer_edit_preserves_sorted_grid_and_scroll(page, app):
+    page.set_viewport_size({'width': 1000, 'height': 700})
+    page.goto(app.url)
+    table = controller.OutputDataFrame(page, namespaced_id(page, 'Table'))
+    table.expect_selected_rows([0])
+    table.set_sort({'col': 0, 'desc': False})
+    table.select_rows([10])
+    source = table.cell_locator(10, 0).inner_text()
+    expect(by_id(page, 'NewName')).to_have_value(source)
+    grid = page.locator('.var-modify-table .shiny-data-grid')
+    assert grid.evaluate('el => el.scrollTop') > 0
+    grid.evaluate('el => { window.savedModifyGrid = el; window.savedModifyScroll = el.scrollTop; }')
+    original_order = grid.locator('tbody tr td:first-child').all_text_contents()
+    controller.InputText(page, namespaced_id(page, 'NewName')).set('renamed_variable')
+    expect(table.cell_locator(10, 1)).to_have_text('renamed_variable')
+    expect(by_id(page, 'Commit')).to_be_enabled()
+    assert grid.evaluate('el => el === window.savedModifyGrid')
+    assert grid.evaluate('el => Math.abs(el.scrollTop - window.savedModifyScroll) < 2')
+    assert grid.locator('tbody tr td:first-child').all_text_contents() == original_order
+    table.expect_selected_rows([10])

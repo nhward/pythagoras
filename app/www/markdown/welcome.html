@@ -257,6 +257,13 @@ border-bottom: 1px solid var(--bs-table-border-color) !important;
 table.table,
 table.dataframe,
 shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
 ) > tbody > tr:nth-of-type(even) > * {
 background-color: var(--bs-body-bg, #fff) !important;
 }
@@ -376,6 +383,12 @@ z-index: 10;
 overflow: visible;
 background-color: var(--py-table-cell-hover) !important;
 white-space: normal;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
 }
 
 shiny-data-frame
@@ -847,7 +860,87 @@ content: "●";
 
 .js-plotly-plot .gtitle {
 fill: var(--bs-primary) !important;
-}</style>
+}
+
+.model-recipe-output { flex: 0 0 auto !important; min-width: 0; width: 100%; }
+.model-recipe {
+--recipe-accent: #176078;
+color: var(--bs-body-color, #24343e);
+background: var(--bs-tertiary-bg, #f3f7f9);
+border: 1px solid var(--bs-border-color, #d9e3e8);
+border-radius: .85rem;
+margin: .25rem; padding: 1.2rem;
+overflow-wrap: anywhere;
+}
+.model-recipe-header { padding-bottom: 1rem; border-bottom: 1px solid var(--bs-border-color, #d9e3e8); }
+.model-recipe-eyebrow { color: var(--recipe-accent); font-size: .78rem; font-weight: 600; letter-spacing: .04em; }
+.model-recipe .model-recipe-title { margin: .35rem 0; font-size: 1.4rem; line-height: 1.25; }
+.model-recipe-path { display: block; font-size: .78rem; color: var(--bs-secondary-color, #52636c); white-space: normal; }
+.model-recipe-badges { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }
+.model-recipe-badge { display: inline-flex; align-items: baseline; gap: .4rem; border-radius: .45rem; padding: .35rem .6rem; background: #e5edf5; color: #264860; font-size: .8rem; }
+.model-recipe-badge.is-ready { background: #dfefe7; color: #24583d; }
+.model-recipe-badge.is-review { background: #fff0d4; color: #704b13; }
+.model-recipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: .85rem; margin-top: 1rem; align-items: start; }
+.model-recipe-section { min-width: 0; padding: 1rem; background: var(--bs-body-bg, white); border: 1px solid var(--bs-border-color, #d9e3e8); border-radius: .6rem; }
+.model-recipe-section h6 { display: flex; align-items: center; gap: .5rem; color: var(--recipe-accent); margin: 0 0 .65rem; font-size: .9rem; font-weight: 650; }
+.model-recipe-section p, .model-recipe-section li { font-size: .88rem; line-height: 1.5; }
+.model-recipe-section p:last-child, .model-recipe-section ul, .model-recipe-section ol { margin-bottom: 0; }
+.model-recipe-section ul, .model-recipe-section ol { padding-left: 1.2rem; }
+.model-recipe-section li + li { margin-top: .4rem; }
+.model-recipe-section pre { margin: 0; padding: .7rem; background: var(--bs-tertiary-bg, #f3f7f9); border-radius: .4rem; font-size: .78rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.model-recipe-muted, .model-recipe-footer { color: var(--bs-secondary-color, #52636c); }
+.model-recipe-footer { margin-top: 1rem; font-size: .75rem; }
+.model-recipe-sources { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0 !important; }
+.model-recipe-sources li + li { margin-top: 0; }
+.model-recipe-empty { padding: 2rem; text-align: center; }
+.model-recipe-empty h5 { margin-top: .75rem; }
+.model-data-notice { font-size: .8rem; color: #704b13; padding: .35rem .5rem; }
+.card.fullscreen-active .model-recipe { padding: 1.5rem; width: 100%; max-width: none; margin: .25rem 0; box-sizing: border-box; }
+.model-recipe svg { margin: 0 !important; flex: 0 0 auto; }
+
+.flip-container:has(.model-recipe-output).flipped > .flippable > .front {
+pointer-events: none;
+
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output) > .flippable > .back {
+overflow-y: auto;
+overflow-x: hidden;
+touch-action: pan-y;
+}
+.card.fullscreen-active .model-recipe-output { align-self: stretch; max-width: none; }
+
+.resample-details { flex: 0 0 auto !important; min-width: 0; }
+.resample-wide { grid-column: 1 / -1; }
+.resample-details .shiny-html-output { flex: 0 0 auto; }
+.resample-table-scroll { overflow-x: auto; max-width: 100%; }
+.resample-details .table { margin-top: .65rem; }
+.resample-details .shiny-input-container { min-width: 9rem; margin-bottom: .3rem; }
+.resample-message { margin-top: .65rem; padding: .65rem .8rem; border-radius: .4rem; font-size: .88rem; }
+.resample-message.is-warning { background: #fff0d4; color: #704b13; }
+.resample-message.is-error { background: #fbe4e6; color: #842029; }
+.resample-message.is-ready { background: #dfefe7; color: #24583d; }
+.flip-container:has(.resample-details).flipped > .flippable > .front { pointer-events: none; }
+.flip-container:has(.resample-details):not(.flipped) > .flippable > .back { pointer-events: none; }
+.flip-container:has(.resample-details) > .flippable > .back { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+.model-method-recipes { padding: .25rem; }
+.model-method-recipe { margin-bottom: .75rem; }
+.model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
+
+.var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.var-modify-table .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+</style>
 </head>
 
 <body>
@@ -886,7 +979,49 @@ margin: 0 auto 1.5rem;
 <h1 id="welcome-to-pythagoras">Welcome to Pythagoras</h1>
 <p><br></p>
 <button class="btn btn-default action-button rounded-pill hover-btn btn-sm guide-btn shiny-bound-input" id="GuideButton" type="button" style="border: 0px; box-shadow: none;" aria-label="Take a guided tour of the application"><span class="action-icon"><svg viewbox="0 0 576 512" preserveaspectratio="none" aria-label="Take a guided tour of the application" role="img" class="fa" style="fill:currentColor;height:1em;width:1.12em;margin-left:auto;margin-right:0.2em;position:relative;vertical-align:-0.125em;overflow:visible;">  <title>Take a guided tour of the application</title>  <path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z" /></svg></span><span class="action-label">Guide me</span></button>
-<p><br> Pythagoras is a sequence of “cards” each of which deals with some aspect of data analysis and modeling.</p>
+<p><br></p>
+<div class="model-recipe">
+  <div class="model-recipe-header">Pythagoras Templates</div>
+  <div class="model-recipe-grid">
+    <section class="model-recipe-section">
+      <h6>
+        <svg viewbox="0 0 512 512" preserveaspectratio="none" aria-hidden="true" role="img" class="fa" style="fill:currentColor;height:1em;width:1.0em;margin-left:auto;margin-right:0.2em;position:relative;vertical-align:-0.125em ovrflow:visible;">
+            <path d="M40 48C26.7 48 16 58.7 16 72v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V72c0-13.3-10.7-24-24-24H40zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zM16 232v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V232c0-13.3-10.7-24-24-24H40c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V392c0-13.3-10.7-24-24-24H40z" />
+        </svg>Cross sectional data
+      </h6>
+      <dl>
+        <dt>Data name</dt>
+        <dd>
+          Tree
+          <p class="model-recipe-muted"></p>
+        </dd>
+        <dt>Composition</dt>
+        <dd>
+          Randomized averaging
+          <p class="model-recipe-muted"></p>
+        </dd>
+        <dt>Fitting criterion</dt>
+        <dd>
+          Split squared error
+          <p class="model-recipe-muted">Split criterion; leaf prediction and ensemble aggregation are separate.</p>
+        </dd>
+        <dt>Transparency</dt>
+        <dd>
+          Usually opaque
+          <p class="model-recipe-muted">Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations.</p>
+        </dd>
+        <dt>Prediction outputs</dt>
+        <dd>
+          Point prediction
+          <p class="model-recipe-muted">Available outputs: Point prediction</p>
+          <p class="model-recipe-muted">Recorded recipe outputs; not an exhaustive API inventory. Probability estimates do not establish calibration. Runtime evidence remains separate.</p>
+        </dd>
+      </dl>
+      <p class="model-recipe-muted">Descriptions apply to this recipe. Transparency is expert guidance; these labels do not establish compatibility or runtime validation. Capacity growth is reserved for stage 2.</p>
+    </section>
+   </div>
+</div>
+<p>Pythagoras is a sequence of “cards” each of which deals with some aspect of data analysis and modeling.</p>
 <h4 id="each-card-has-a-set-of-standard-features">Each card has a set of standard features:</h4>
 <ul>
 <li>Can be made full screen</li>

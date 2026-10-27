@@ -743,7 +743,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability",
       "tree_structure",
       "leaf_models"
@@ -893,7 +893,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ],
     "requirements": [],
@@ -1041,7 +1041,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability",
       "transformed_features"
     ],
@@ -1116,7 +1116,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "decision_score",
       "rules",
       "rule_precision_recall",

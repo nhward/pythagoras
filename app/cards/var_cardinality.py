@@ -244,21 +244,15 @@ def _assessment(
     if kind == "integer":
         if cardinality <= low_threshold:
             return (
-                "Strong review",
-                f"It is only normal for a count-based integer variable to contain only {cardinality} distinct observed values.",
-                "If the variable is not a count check whether it is an ordered data type.",
-            )
-        elif cardinality <= high_threshold:
-            return (
                 "Review",
                 f"It is only normal for a count-based integer variable to contain only {cardinality} distinct observed values.",
                 "Verify that the variable is a count.",
             )
         elif exact_unique:
             return(
-                "Review",
-                "It is curious that every observed decimal value is unique.",
-                "Verify that the variable is not an observation identifier.",
+                "Expected",
+                "It is expected that every observed value is unique.",
+                "",
             )
         else:
             return(

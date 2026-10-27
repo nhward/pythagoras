@@ -295,7 +295,7 @@ def instance():
         ui.output_ui(id="Message"),
         ui.input_checkbox_group(
             id = "Replace",
-            label = "Replace",
+            label = None,
             choices=[],
             inline=True,
             guide = this, title = "Replace buttons", position = "top",
@@ -431,7 +431,11 @@ def instance():
                 # would stop this update without retrying when it is published.
                 previous = input.Replace() or []
             selected = [c for c in previous if c in choices]
-            ui.update_checkbox_group(id="Replace", choices=choices, selected=selected)
+            if len(choices) == 0:
+                label = None
+            else:
+                label = "Replace"
+            ui.update_checkbox_group(id="Replace", label = label, choices=choices, selected=selected)
 
 
         @this.record_code

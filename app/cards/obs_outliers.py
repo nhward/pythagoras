@@ -147,10 +147,10 @@ def _code_functions(record_code=lambda function: function):
                     values = -model.negative_outlier_factor_
                 elif method == "One-class SVM":
                     model = OneClassSVM(nu=float(nu), gamma="scale", cache_size=128).fit(x)
-                    values = -model.score_samples(x)
+                    values = np.maximum(-model.score_samples(x), 0.0)
                 elif method == "Isolation Forest":
                     model = IsolationForest(n_estimators=int(trees), max_samples=min(256, len(x)), random_state=2025, n_jobs=1).fit(x)
-                    values = -model.score_samples(x)
+                    values = np.maximum(-model.score_samples(x), 0.0)
                 else:
                     targets = [c for c in data.columns if Role.TARGET in data.role_map.roles_for(c)]
                     if len(targets) != 1 or not _numeric(data.frame[targets[0]]):

@@ -501,3 +501,49 @@ def test_restored_membership_waits_for_current_analysis_without_closing_session(
     expect(toggle(page, 'Partition')).to_be_checked()
     toggle(page, 'Partition').uncheck()
     expect(by_id(page, 'ExportProbe')).to_contain_text('added=none')
+
+
+large_app = create_app_fixture(app="../scenarios/obs_clusters_large.py", scope="function")
+
+
+@pytest.mark.ui
+@pytest.mark.parametrize("fixture_name", ["app", "large_app"])
+def test_idle_membership_table_and_charts_settle(page, request, fixture_name):
+    """A rendered card must not continually rebuild its table or Plotly DOM."""
+    app = request.getfixturevalue(fixture_name)
+    page.goto(app.url)
+    expect(by_id(page, 'Status')).to_contain_text('rows analyzed', timeout=60000)
+    expect(by_id(page, 'Membership').locator('.shiny-data-grid')).to_have_count(0)
+    page.wait_for_timeout(2000)
+    page.evaluate("""() => {
+        window.clusterIdleMutations = {};
+        window.clusterIdleObserver = new MutationObserver(records => {
+            for (const record of records) {
+                const id = record.target.closest?.('[id]')?.id || 'unknown';
+                window.clusterIdleMutations[id] = (window.clusterIdleMutations[id] || 0) + 1;
+            }
+        });
+        document.querySelectorAll('[id$="-Membership"], [id*="-Chart_"]').forEach(el => {
+            window.clusterIdleObserver.observe(el, {subtree: true, childList: true, attributes: true});
+        });
+    }""")
+    page.wait_for_timeout(5000)
+    counts = page.evaluate("""() => {
+        window.clusterIdleObserver.disconnect();
+        return window.clusterIdleMutations;
+    }""")
+    assert counts == {}, counts
+    if fixture_name == "large_app":
+        page.locator('.card').first.hover()
+        by_id(page, 'FlipButton').click(force=True)
+        grid = by_id(page, 'Membership').locator('.shiny-data-grid')
+        expect(grid).to_be_visible()
+        # The table must retain all records without mounting all 2,000 rows.
+        assert grid.evaluate('(el) => el.scrollHeight > el.clientHeight && el.clientHeight > 0')
+        assert 0 < grid.locator('tbody tr').count() < 2000
+        grid.evaluate('(el) => { el.scrollTop = el.scrollHeight; }')
+        expect(grid.get_by_text('2000', exact=True)).to_be_visible()
+        page.wait_for_timeout(1500)
+        grid.evaluate("""el => { window.clusterIdleMutations = {}; window.clusterIdleObserver.observe(el, {subtree: true, childList: true, attributes: true}); }""")
+        page.wait_for_timeout(3000)
+        assert page.evaluate('() => { window.clusterIdleObserver.disconnect(); return window.clusterIdleMutations; }') == {}

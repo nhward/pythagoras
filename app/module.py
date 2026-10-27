@@ -243,6 +243,7 @@ class Module(ABC):
     Instances: ClassVar[dict] = {}  # class level dictionary of all instances keyed by their namespaces (possibly including deleted ones with empty values)
     script_list: ClassVar[list] = [
         ROOT / "www" / "console.js",
+        ROOT / "www" / "diagnostics.js",
         ROOT / "www" / "jquery-ui-1.14.2.min.js",
         ROOT / "www" / "sortable-1.15.7.min.js",
         ROOT / "www" / "pythagoras.js"

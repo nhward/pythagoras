@@ -1272,7 +1272,7 @@
     ],
     "outputs": [
       "class_label",
-      "class_probability"
+      "decision_score"
     ]
   },
   {
@@ -1362,7 +1362,7 @@
     ],
     "outputs": [
       "class_label",
-      "class_probability"
+      "decision_score"
     ]
   },
   {
@@ -1715,7 +1715,9 @@
       "cross_sectional"
     ],
     "outputs": [
-      "point_prediction"
+      "point_prediction",
+      "predictive_standard_deviation",
+      "predictive_covariance"
     ]
   },
   {
@@ -3358,7 +3360,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction"
+      "class_label"
     ]
   },
   {
@@ -3536,7 +3538,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction"
+      "class_label"
     ]
   },
   {
@@ -4074,7 +4076,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -4535,7 +4537,8 @@
       "cross_sectional"
     ],
     "outputs": [
-      "point_prediction"
+      "point_prediction",
+      "predictive_standard_deviation"
     ]
   },
   {
@@ -4805,7 +4808,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -4986,7 +4989,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -5165,7 +5168,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -5255,7 +5258,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -5344,7 +5347,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -5433,7 +5436,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -5522,7 +5525,8 @@
       "cross_sectional"
     ],
     "outputs": [
-      "point_prediction"
+      "point_prediction",
+      "predictive_standard_deviation"
     ]
   },
   {
@@ -5882,7 +5886,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -6061,7 +6065,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -6246,7 +6250,8 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
+      "decision_score",
       "class_probability"
     ]
   },
@@ -6428,7 +6433,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -6610,7 +6615,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -6807,7 +6812,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -6897,7 +6902,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction"
+      "class_label"
     ]
   },
   {
@@ -6991,7 +6996,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction"
+      "class_label"
     ]
   },
   {
@@ -7080,7 +7085,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -7170,7 +7175,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -7794,7 +7799,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -7885,7 +7890,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -8249,7 +8254,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },
@@ -8340,7 +8345,7 @@
       "cross_sectional"
     ],
     "outputs": [
-      "class_prediction",
+      "class_label",
       "class_probability"
     ]
   },

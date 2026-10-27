@@ -1011,8 +1011,15 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .card.fullscreen-active .model-recipe { padding: 1.5rem; width: 100%; max-width: none; margin: .25rem 0; box-sizing: border-box; }
 .model-recipe svg { margin: 0 !important; flex: 0 0 auto; }
 /* Route wheel/touch gestures to the visible recipe without interrupting rotation. */
-.flip-container:has(.model-recipe-output).flipped > .flippable > .front { pointer-events: none; }
-.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back { pointer-events: none; }
+.flip-container:has(.model-recipe-output).flipped > .flippable > .front {
+    pointer-events: none;
+    /* WebKit can paint composited grid/filter descendants through the back face. */
+    visibility: hidden;
+}
+.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back {
+    pointer-events: none;
+    visibility: hidden;
+}
 .flip-container:has(.model-recipe-output) > .flippable > .back {
     overflow-y: auto;
     overflow-x: hidden;

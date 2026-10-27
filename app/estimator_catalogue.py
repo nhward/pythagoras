@@ -6,6 +6,7 @@ from copy import deepcopy
 from functools import lru_cache
 from importlib.metadata import distributions
 from pathlib import Path
+from model_taxonomy import normalized_outputs, has_prediction_spread
 
 DEFAULT_PATH = Path(__file__).parent / 'data/estimator_capabilities/catalogue.json'
 
@@ -13,7 +14,7 @@ DEFAULT_PATH = Path(__file__).parent / 'data/estimator_capabilities/catalogue.js
 @lru_cache(maxsize=4)
 def _read_catalogue(path, modified_ns, size):
     catalogue = json.loads(Path(path).read_text())
-    if catalogue.get('schema_version') not in {'1.0.0', '1.1.0'}:
+    if catalogue.get('schema_version') not in {'1.0.0', '1.1.0', '1.2.0', '1.3.0', '1.4.0'}:
         raise ValueError('Unsupported estimator catalogue schema')
     for section in ('estimators', 'profiles', 'specialists'):
         entries = catalogue.get(section, [])
@@ -107,8 +108,9 @@ def assess_profiles(catalogue, *, task, required=(), structure=(), outputs=(),
             for value in structure:
                 if value not in profile.get('structure', []):
                     unknown.append(f'{value} structure: unreviewed')
-            for value in outputs:
-                if value not in profile.get('outputs', []):
+            for value in normalized_outputs(outputs):
+                supported = has_prediction_spread(profile) if value == 'prediction_spread' else value in normalized_outputs(profile.get('outputs', []))
+                if not supported:
                     unknown.append(f'{value} output: unreviewed')
             missing = sorted(set(profile.get('requirements', [])) - set(available_requirements))
             reasons.extend(f'Requires {name}' for name in missing)

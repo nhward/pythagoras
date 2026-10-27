@@ -39,3 +39,47 @@ Candidate rows group by estimator ID after per-recipe display filtering. Counts
 and summary-recipe labels identify the represented configurations. Summary fields
 come from one deterministically ranked recipe; capabilities and evidence are never
 merged. Multi-recipe methods expose separate expandable detail panels.
+
+Model taxonomy is stored in catalogue schema 1.4.0, with explicit source mappings
+in `taxonomy.json` and static expansion in `model_taxonomy.py`. Five structured
+attributes accompany the existing recipe `outputs` list and its `output_review`:
+core mechanism, composition, fitting criterion, learning strategy and transparency.
+Each classification has values, a review status and a qualification; shared sources
+and review date are attached. Capacity growth must remain deferred for stage 2.
+New unlisted methods are not classified from name substrings. Preparation-only
+entries have a not-applicable predictive taxonomy. Recipe refinements are guarded
+by exact configuration and reviewed package version; changed recipes revert to
+method-level descriptions and unreviewed output support pending review.
+
+The table exposes six descriptive columns with DataGrid sorting; column filters remain disabled. Its stable
+hidden estimator index must survive filtering and sorting. Descriptions are compared
+across the displayed recipes: differing labels produce `Varies by recipe`, never a
+union of guarantees. The flip side shows the actual recipe descriptions, qualifications
+and source links. These descriptions never change compatibility or selectability.
+`class_prediction` is normalized to `class_label`; legacy output queries accept both.
+Default hinge SGDClassifier and probability-disabled SVC recipes cannot satisfy a
+class-probability requirement. Probabilities are not a calibration-quality guarantee.
+
+`build_estimator_catalogue.py --refresh-descriptions` updates the saved snapshot
+without importing or fitting estimators and without replacing prior probe evidence.
+Normal rebuilds apply the same taxonomy registry. Focused checks cover schema,
+refresh reproducibility, source output consistency, changed configuration guards,
+component/hybrid distinctions, output support, grouped descriptions and UI selection.
+
+Formulation is removed from the taxonomy and from both card faces. Prediction outputs
+summarizes regression recipes as `Point prediction` or `Point prediction & spread`.
+Spread requires explicit prediction-specific uncertainty outputs; no inference from
+core mechanism, fitting criterion, coefficient errors or ensemble composition is allowed.
+A lone quantile remains a point output, with its exact meaning shown in the details.
+GaussianProcessRegressor, BayesianRidge and ARDRegression record return_std support;
+GPR also records return_cov. The output requirement `prediction_spread` matches any
+reviewed spread-output kind. Classification and specialist output distinctions remain.
+
+Learning strategy uses reviewed `eager`, `lazy` or `hybrid` values and separate
+configuration-dependent/unreviewed/not-applicable statuses. It describes the predictor,
+not routine preprocessing, runtime, data retention or incremental updates. Explicit
+method mappings and guarded recipe overrides populate the static JSON; the table
+and details use the shared taxonomy labels. Neighbor retrieval is lazy; nearest
+centroids, fitted kernels/GPs and trees are eager. Generic wrappers and Cubist with
+optional neighbor correction require configuration-specific descriptions. Differing
+recipe strategies show `Varies by recipe` without pooling capabilities.

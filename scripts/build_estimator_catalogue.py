@@ -19,6 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORY = ROOT / 'app/data/estimator_capabilities'
+sys.path.insert(0, str(ROOT / 'app'))
+from model_taxonomy import annotate_catalogue
 
 
 def load_registry(path=None):
@@ -218,8 +220,8 @@ def build(extra_paths=()):
                 issues.append({'module': identifier, 'error': 'Supersession target unavailable: ' + relation['method']})
                 continue
             entries[identifier]['superseded_by'] = relation
-    return {
-        '$schema': './schema.json', 'schema_version': '1.1.0', 'catalogue_version': registry['catalogue_version'],
+    return annotate_catalogue({
+        '$schema': './schema.json', 'schema_version': '1.4.0', 'catalogue_version': registry['catalogue_version'],
         'generated_at': datetime.now(UTC).isoformat(), 'python_version': platform.python_version(),
         'scope': 'Public estimator classes in the explicitly listed modules; not every sklearn-compatible package or every possible configuration.',
         'packages': packages, 'discovery_issues': issues,
@@ -238,7 +240,7 @@ def build(extra_paths=()):
         'estimators': sorted(entries.values(), key=lambda item: item['id']),
         'profiles': profiles,
         'specialists': json.loads((DIRECTORY / 'specialists.json').read_text()),
-    }
+    })
 
 
 def main():
@@ -247,8 +249,15 @@ def main():
     parser.add_argument('--output', type=Path, default=DIRECTORY / 'catalogue.json')
     parser.add_argument('--environment-output', type=Path,
                         help='Record the inspection environment distribution versions')
+    parser.add_argument('--refresh-descriptions', action='store_true',
+                        help='Refresh static descriptions in --output without importing estimators or changing probe evidence')
     args = parser.parse_args()
-    catalogue = build(args.extra_path)
+    if args.refresh_descriptions:
+        catalogue = annotate_catalogue(json.loads(args.output.read_text()))
+        catalogue['schema_version'] = '1.4.0'
+        catalogue['catalogue_version'] = load_registry()['catalogue_version']
+    else:
+        catalogue = build(args.extra_path)
     import jsonschema
     jsonschema.validate(catalogue, json.loads((DIRECTORY / 'schema.json').read_text()))
     args.output.write_text(json.dumps(catalogue, indent=2, allow_nan=False) + '\n')

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import os
 import shutil
 import sys
+from collections.abc import Mapping
+from contextlib import redirect_stdout
 from pathlib import Path
+from urllib.parse import urlparse
 
 if __name__ == "__main__":
     ROOT=Path(__file__).resolve().parent.parent
@@ -14,11 +18,7 @@ if __name__ == "__main__":
     if root_string not in sys.path:
         sys.path.insert(0, root_string)
 
-import io
-from collections.abc import Mapping
-from contextlib import redirect_stdout
-from urllib.parse import urlparse
-
+import arff
 import geopandas as gpd
 import pandas as pd
 import requests
@@ -768,7 +768,20 @@ def instance():
         def read_file(path, sep=",", sheet=None , **kwargs):
             """Dispatch a file source to its format-specific reader."""
             ext=os.path.splitext(path)[1].lower()
-            if ext in [".csv", ".tsv"]:
+            if ext in [".arff"]:
+                with open(path, encoding="utf-8") as file:
+                    df = arff.load(file)
+                df = pd.DataFrame(df["data"], columns=[name for name, _ in df["attributes"]])
+                object_cols = df.select_dtypes(include=["object", "string"]).columns
+                df[object_cols] = df[object_cols].astype("string")
+                if "geometry" in df.columns:
+                    try:
+                        return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
+                    except Exception as e:
+                        this.log.warning(e, exc_info=1)
+                return df
+
+            if ext in [".csv", ".tsv", ".txt"]:
                 df=pd.read_csv(
                     path,
                     sep=sep or ("\t" if ext == ".tsv" else ","),
@@ -778,10 +791,7 @@ def instance():
                 df[object_cols] = df[object_cols].astype("string")
                 if "geometry" in df.columns:
                     try:
-                        return gpd.GeoDataFrame(
-                            df,
-                            geometry=gpd.GeoSeries.from_wkt(df["geometry"]),
-                        )
+                        return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
                     except Exception as e:
                         this.log.warning(e, exc_info=1)
                 return df
@@ -789,10 +799,7 @@ def instance():
                 df=pd.read_excel(path, sheet_name=sheet, **kwargs)
                 if "geometry" in df.columns:
                     try:
-                        return gpd.GeoDataFrame(
-                            df,
-                            geometry=gpd.GeoSeries.from_wkt(df["geometry"]),
-                        )
+                        return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
                     except Exception as e:
                         this.log.warning(e, exc_info=1)
                 return df
@@ -800,10 +807,7 @@ def instance():
                 df=pd.read_parquet(path, **kwargs)
                 if "geometry" in df.columns:
                     try:
-                        return gpd.GeoDataFrame(
-                            df,
-                            geometry=gpd.GeoSeries.from_wkt(df["geometry"]),
-                        )
+                        return gpd.GeoDataFrame(df, geometry=gpd.GeoSeries.from_wkt(df["geometry"]))
                     except Exception as e:
                         this.log.warning(e, exc_info=1)
                 return df

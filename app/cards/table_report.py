@@ -72,6 +72,14 @@ def instance():
         ui.input_slider(
             id = "CardinalityThreshold", label = "The cardinality warning threshold", min = 15, max = 70, value = 30, 
             guide = this, text = "Controls the maximum threshold value used to warn if there are any high cardinality columns in the dataset.", position = "left"
+        ),
+        ui.input_slider(
+            id = "PlotsThreshold", label = "The plots threshold", min = 20, max = 100, value = 50, 
+            guide = this, text = "Controls how many distribution plots can be drawn.", position = "left"
+        ),
+        ui.input_slider(
+            id = "ReportThreshold", label = "The reports threshold", min = 20, max = 100, value = 50, 
+            guide = this, text = "Controls how many association tables can be reported.", position = "left"
         )
     )
 
@@ -96,6 +104,8 @@ def instance():
             return {
                 "decimals": input.Decimals(),
                 "CardinalityThreshold": input.CardinalityThreshold(),
+                "PlotsThreshold": input.PlotsThreshold(),
+                "ReportThreshold": input.ReportThreshold()
             }
         
         @this.reactable(calc = False)
@@ -106,7 +116,9 @@ def instance():
                 subsampling_seed = 2025,
                 enable_subsampling = "default",
                 float_precision = conf["decimals"],
-                cardinality_threshold = conf["CardinalityThreshold"]
+                cardinality_threshold = conf["CardinalityThreshold"],
+                table_report_plots_threshold = conf["PlotsThreshold"],
+                table_report_associations_threshold = conf["ReportThreshold"]
             )
 
 

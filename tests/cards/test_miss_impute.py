@@ -53,6 +53,33 @@ def test_card_is_mutable_with_apply_control_and_performance_side(card_module):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("method", ["simple", "knn", "iterative"])
+@pytest.mark.parametrize("dtype", ["Int64", "UInt8"])
+def test_integer_imputation_preserves_fractional_predictions(card_module, method, dtype):
+    train = pd.DataFrame({"month": pd.Series([1, 2], dtype=dtype)})
+    frame = pd.DataFrame({"month": pd.Series([1, None, 12], dtype=dtype)})
+    frame.index = [10, 20, 30]
+    original = frame.copy(deep=True)
+    step = card_module.ImputationStep(
+        ("month",), ("month",), method,
+    ).fit(train)
+
+    result = step.transform(frame)
+
+    assert result.loc[20, "month"] == pytest.approx(1.5)
+    assert result.loc[[10, 30], "month"].tolist() == [1, 12]
+    assert result.index.equals(frame.index)
+    pd.testing.assert_frame_equal(frame, original)
+
+
+@pytest.mark.unit
+def test_integer_imputation_keeps_dtype_when_prediction_fits(card_module):
+    series = pd.Series([1, None, 3], dtype="Int64")
+    result, _ = card_module._simple_fill(series)
+    pd.testing.assert_series_equal(result, pd.Series([1, 2, 3], dtype="Int64"))
+
+
+@pytest.mark.unit
 def test_simple_imputation_uses_dtype_appropriate_statistics(card_module):
     frame = mixed_frame()
     result, methods = card_module._simple_impute(frame, list(frame.columns))

@@ -522,7 +522,12 @@ def instance():
         @render.data_frame
         @this.record_context
         def Table():
-            schema = CurrentSchema()
+            # Rebuild for incoming schema changes only. Footer edits already use
+            # update_data(), which preserves the client's sorting and scroll state.
+            # Tracking ProposedPlan here would also trigger a full grid render.
+            Schema()
+            with reactive.isolate():
+                schema = CurrentSchema()
             req(schema is not None)
             return render.DataGrid(
                 schema,
@@ -736,7 +741,7 @@ def instance():
                 order = var.cat.categories.tolist()
                 ui.update_selectize(id = "NewOrder", choices = order, selected = order)
             else:
-                ui.update_selectize(id = "NewOrder", choices = None, selected = None)
+                ui.update_selectize(id = "NewOrder", choices = [], selected = [])
 
         @this.reactable()
         @this.record_context

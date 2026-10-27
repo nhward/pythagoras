@@ -91,7 +91,7 @@ def test_priority_batch_has_scoped_validation_evidence(catalogue, batch):
                 assert profile['construction']['preparation'] == 'numeric'
                 assert not profile['capabilities']['missing_numeric_predictors']
             if profile['estimator'].endswith(('RidgeClassifier', 'RidgeClassifierCV')):
-                assert profile['outputs'] == ['class_prediction']
+                assert profile['outputs'] == ['class_label']
         return
     if batch == 'priority_3_2026_10_24':
         assert all(p['construction']['preparation'] == 'impute_onehot' for p in profiles)
@@ -254,7 +254,10 @@ def test_generated_profiles_match_reviewed_source(catalogue):
 @pytest.mark.unit
 def test_specialist_source_and_evidence(catalogue):
     from estimator_catalogue import assess_profiles, coverage
-    assert catalogue['specialists'] == json.loads(DEFAULT_PATH.with_name('specialists.json').read_text())
+    # Descriptions are generated from taxonomy.json; source recipe evidence stays intact.
+    source_rows = [{k: v for k, v in row.items() if k not in {'taxonomy', 'output_review'}}
+                   for row in catalogue['specialists']]
+    assert source_rows == json.loads(DEFAULT_PATH.with_name('specialists.json').read_text())
     rows = assess_profiles(catalogue, task='survival', required=['right_censoring'],
                            available_requirements=['event_time_target'], package_versions={})
     assert rows and all(not r['selectable'] for r in rows)
@@ -368,3 +371,161 @@ def test_configured_categorical_support_overrides_default_tags():
     assert assessment['readiness'] == 'Meets reviewed input requirements'
     assert 'No missing' not in assessment['requirements']
     assert input_assessment({}, {}, [])['readiness'] == 'Unreviewed'
+
+
+@pytest.mark.unit
+def test_taxonomy_refresh_preserves_evidence_and_is_reproducible(catalogue):
+    from model_taxonomy import annotate_catalogue, FIELDS
+    refreshed = annotate_catalogue(deepcopy(catalogue))
+    assert refreshed == catalogue
+    for section in ('estimators', 'profiles', 'specialists'):
+        for row in refreshed[section]:
+            assert set(FIELDS) <= row['taxonomy'].keys()
+            assert row['taxonomy']['capacity_growth']['status'] == 'deferred'
+            assert 'class_prediction' not in row['outputs']
+    # Source recipe outputs and generated descriptions must stay in agreement.
+    for name in ('profiles', 'specialists'):
+        source = json.loads(DEFAULT_PATH.with_name(name + '.json').read_text())
+        assert {p['id']: p['outputs'] for p in source} == {p['id']: p['outputs'] for p in catalogue[name]}
+
+
+@pytest.mark.unit
+def test_taxonomy_distinguishes_components_hybrids_and_non_models(catalogue):
+    entries = {e['id']: e for e in catalogue['estimators']}
+    tree = entries['sklearn.tree.DecisionTreeRegressor']['taxonomy']
+    forest = entries['sklearn.ensemble.RandomForestRegressor']['taxonomy']
+    assert tree['core_mechanism']['values'] == forest['core_mechanism']['values'] == ['tree']
+    assert tree['transparency']['values'] == ['conditional']
+    assert forest['transparency']['values'] == ['usually_opaque']
+    assert 'bagging' in forest['composition']['values']
+    assert entries['sklearn.preprocessing.SplineTransformer']['taxonomy']['core_mechanism']['status'] == 'not_applicable'
+    assert entries['sklearn.neighbors.NearestCentroid']['taxonomy']['core_mechanism']['values'] == ['prototype']
+    symbolic = entries['gplearn.genetic.SymbolicRegressor']['taxonomy']
+    assert symbolic['core_mechanism']['values'] == ['symbolic']
+    assert entries['sklearn.ensemble.BaggingRegressor']['taxonomy']['core_mechanism']['status'] == 'depends_on_configuration'
+    recipes = {p['id']: p for p in catalogue['profiles'] + catalogue['specialists']}
+    bag = recipes['sklearn.ensemble.BaggingRegressor:priority_tabular_3']['taxonomy']
+    assert bag['core_mechanism']['values'] == ['tree']
+    hybrid = recipes['lineartree.LinearTreeRegressor:documented_recipe']['taxonomy']
+    assert hybrid['core_mechanism']['values'] == ['tree', 'generalized_linear']
+    assert hybrid['composition']['values'] == ['tree_routing']
+
+
+@pytest.mark.unit
+def test_taxonomy_unreviewed_and_changed_recipe_do_not_inherit_claims(catalogue):
+    from model_taxonomy import annotate_catalogue, describe, load_registry
+    _, methods = load_registry()
+    assert describe('unknown.FancyTreeClassifier', ['classifier'], methods)['core_mechanism']['status'] == 'unreviewed'
+    profile = next(p for p in catalogue['profiles'] if p['estimator'] == 'sklearn.svm.SVC')
+    profile['construction']['parameters']['kernel'] = 'linear'
+    annotate_catalogue(catalogue)
+    assert profile['taxonomy']['core_mechanism']['status'] == 'depends_on_configuration'
+    assert profile['outputs'] == []
+    assert profile['output_review']['status'] == 'unreviewed'
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('identifier', ['sklearn.svm.SVC', 'sklearn.linear_model.SGDClassifier'])
+def test_default_margin_recipes_do_not_claim_probabilities(catalogue, identifier):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("taxonomy_probe", DEFAULT_PATH.parents[3] / "scripts/probe_estimator_catalogue.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    construct = module.construct
+    from estimator_catalogue import assess_profiles
+    import numpy as np
+    import pandas as pd
+    profile = next(p for p in catalogue['profiles'] if p['estimator'] == identifier)
+    assert profile['outputs'] == ['class_label', 'decision_score']
+    X = pd.DataFrame({'x': np.arange(20, dtype=float), 'z': np.tile([0., 1.], 10)})
+    model, prepared, fit_params, _ = construct(profile, X)
+    if identifier.endswith('SGDClassifier'):
+        model.set_params(max_iter=2000)
+    model.fit(prepared, np.tile([0, 1], 10), **fit_params)
+    assert hasattr(model, 'decision_function') and not hasattr(model, 'predict_proba')
+    row = next(r for r in assess_profiles(catalogue, task='classifier', outputs=['class_probability'])
+               if r['id'] == profile['id'])
+    assert row['compatibility'] == 'unknown'
+    assert not row['selectable']
+
+
+@pytest.mark.unit
+def test_taxonomy_schema_rejects_unsupported_claims(catalogue):
+    schema = json.loads(DEFAULT_PATH.with_name('schema.json').read_text())
+    catalogue['estimators'][0]['taxonomy']['core_mechanism'] = {
+        'status': 'unreviewed', 'values': ['tree'], 'note': ''}
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(catalogue, schema)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('identifier', [
+    'sklearn.gaussian_process.GaussianProcessRegressor',
+    'sklearn.linear_model.BayesianRidge', 'sklearn.linear_model.ARDRegression',
+])
+def test_predictive_spread_recipe_contract(catalogue, identifier):
+    import importlib.util
+    import numpy as np
+    import pandas as pd
+    from model_taxonomy import description_label
+    from estimator_catalogue import assess_profiles
+    spec = importlib.util.spec_from_file_location('spread_probe', DEFAULT_PATH.parents[3] / 'scripts/probe_estimator_catalogue.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    profile = next(p for p in catalogue['profiles'] if p['estimator'] == identifier)
+    X = pd.DataFrame({'x': np.linspace(-2, 2, 20)})
+    y = .7 * X.x.to_numpy() + .1 * np.sin(4 * X.x.to_numpy())
+    model, prepared, fit_params, _ = module.construct(profile, X)
+    model.fit(prepared, y, **fit_params)
+    mean, std = model.predict(prepared, return_std=True)
+    assert mean.shape == std.shape == (20,)
+    assert np.isfinite(std).all() and (std >= 0).all()
+    assert np.ptp(std) > 0
+    assert np.allclose(mean, model.predict(prepared))
+    assert description_label(profile, 'outputs') == 'Point prediction & spread'
+    if identifier.endswith('GaussianProcessRegressor'):
+        _, cov = model.predict(prepared, return_cov=True)
+        assert np.allclose(np.diag(cov), std ** 2)
+    row = next(r for r in assess_profiles(catalogue, task='regressor', outputs=['prediction_spread'])
+               if r['id'] == profile['id'])
+    assert row['compatibility'] == 'compatible'
+
+
+@pytest.mark.unit
+def test_spread_is_explicit_not_inferred_and_formulation_removed(catalogue):
+    from model_taxonomy import LABELS, description_label, has_prediction_spread
+    assert 'formulation' not in LABELS
+    for section in ['estimators', 'profiles', 'specialists']:
+        assert all('formulation' not in p['taxonomy'] for p in catalogue[section])
+    for identifier in ['mlxtend.regressor.LinearRegression', 'sklearn.ensemble.RandomForestRegressor']:
+        profile = next(p for p in catalogue['profiles'] if p['estimator'] == identifier)
+        assert description_label(profile, 'outputs') == 'Point prediction'
+        assert not has_prediction_spread(profile)
+    assert not has_prediction_spread({'outputs': ['conditional_quantile']})
+    assert not has_prediction_spread({'outputs': ['coefficient_standard_error', 'residual_variance']})
+    assert has_prediction_spread({'outputs': ['point_prediction', 'prediction_interval']})
+    assert description_label({'task': 'classifier', 'outputs': ['class_label', 'class_probability']}, 'outputs') == 'Class label, Class probability'
+
+
+@pytest.mark.unit
+def test_learning_strategy_is_predictor_specific_and_recipe_guarded(catalogue):
+    from model_taxonomy import annotate_catalogue, describe, load_registry
+    entries = {e['id']: e for e in catalogue['estimators']}
+    for name in ['KNeighborsClassifier', 'KNeighborsRegressor', 'RadiusNeighborsClassifier', 'RadiusNeighborsRegressor']:
+        assert entries['sklearn.neighbors.' + name]['taxonomy']['learning_strategy']['values'] == ['lazy']
+    for name in ['sklearn.neighbors.NearestCentroid', 'sklearn.gaussian_process.GaussianProcessRegressor',
+                 'sklearn.svm.SVC', 'sklearn.ensemble.RandomForestRegressor']:
+        assert entries[name]['taxonomy']['learning_strategy']['values'] == ['eager']
+    assert entries['sklearn.preprocessing.StandardScaler']['taxonomy']['learning_strategy']['status'] == 'not_applicable'
+    _, methods = load_registry()
+    assert describe('unknown.LazyTree', ['regressor'], methods)['learning_strategy']['status'] == 'unreviewed'
+    for name in ['sklearn.ensemble.BaggingRegressor', 'cubist.Cubist']:
+        assert entries[name]['taxonomy']['learning_strategy']['status'] == 'depends_on_configuration'
+        profile = next(p for p in catalogue['profiles'] if p['estimator'] == name)
+        assert profile['taxonomy']['learning_strategy']['values'] == ['eager']
+        profile['construction']['parameters']['new_unreviewed_setting'] = True
+    annotate_catalogue(catalogue)
+    for profile in catalogue['profiles']:
+        if profile.get('construction', {}).get('parameters', {}).get('new_unreviewed_setting'):
+            assert profile['taxonomy']['learning_strategy']['status'] == 'depends_on_configuration'
+            assert profile['taxonomy']['learning_strategy']['values'] == []

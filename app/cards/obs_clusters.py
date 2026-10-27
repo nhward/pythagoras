@@ -340,10 +340,13 @@ def instance():
         ) for method in METHODS), id="ClusterType", selected="Partition", title=None, padding=0, fillable=True
     )
     
+    # Keep the grid viewport bounded: auto height renders large memberships
+    # in full, including while the reverse face is out of sight.
     this.back = lambda: ui.div(
         ui.output_text("TableTitle"), 
         ui.output_data_frame("Membership"), 
-        class_="card-scroll-content"
+        class_="html-fill-container html-fill-item",
+        style="min-height: 0;",
     )
 
     this.footer = lambda: ui.TagList(
@@ -593,16 +596,19 @@ def instance():
         @render.data_frame
         @this.record_context
         def Membership():
+            # The rotated back face is still laid out by the browser. Avoid
+            # mounting a potentially large grid until the user opens it.
+            req(not this.isFront())
             result = Analysis()
             labels = result.labels.get(input.ClusterType())
             if labels is None or result.error:
-                return render.DataTable(pd.DataFrame({"Status": [result.error or result.notes.get(input.ClusterType(), "Unavailable")]}), height="auto")
+                return render.DataTable(pd.DataFrame({"Status": [result.error or result.notes.get(input.ClusterType(), "Unavailable")]}))
             frame = result.source.frame.iloc[result.positions].copy().reset_index(drop=True)
             # Prefix metadata to avoid colliding with any incoming column name.
             frame.columns = [f"Data: {col}" for col in frame.columns]
             frame.insert(0, "Membership", labels)
             frame.insert(0, "Row", result.positions + 1)
-            return render.DataTable(frame, width="100%", height="auto")
+            return render.DataTable(frame, width="100%")
 
         session.on_ended(Calculate.cancel)
         

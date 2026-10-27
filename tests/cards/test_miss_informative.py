@@ -145,7 +145,7 @@ def informative_classification_frame(rows: int = 80) -> pd.DataFrame:
         # Median imputation makes x constant; only its shadow retains the signal.
         "x": np.where(target == 1, np.nan, 0.0),
         "noise": rng.normal(size=rows),
-        "target": target,
+        "target": pd.Categorical(target),
     })
 
 
@@ -379,7 +379,7 @@ class TestValidationPaths:
     @pytest.mark.unit
     def test_classification_requires_two_cases_per_class(self, miss_informative):
         frame = informative_classification_frame(8)
-        frame["target"] = [0, 0, 0, 0, 0, 0, 0, 1]
+        frame["target"] = pd.Categorical([0, 0, 0, 0, 0, 0, 0, 1])
         result = miss_informative._fit_forest_importance(
             frame, target="target", predictors=["x"], missing_variables=["x"]
         )
@@ -401,6 +401,29 @@ class TestValidationPaths:
 
 
 class TestForestAnalysis:
+    @pytest.mark.unit
+    @pytest.mark.parametrize("task", [None, "classification"])
+    def test_integer_target_uses_regression_unless_explicitly_overridden(
+        self, miss_informative, serial_permutation_importance, task
+    ):
+        frame = informative_classification_frame(20)
+        frame["target"] = frame["target"].astype(int)
+        result = miss_informative._fit_forest_importance(
+            frame, target="target", predictors=["x"], missing_variables=["x"],
+            cv_folds=2, task=task,
+        )
+        assert result.message is None
+        assert result.task == (task or "regression")
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("task", ["ordinal", "survival"])
+    def test_unsupported_outcome_task_is_reported(self, miss_informative, task):
+        result = miss_informative._fit_forest_importance(
+            informative_classification_frame(8), target="target",
+            predictors=["x"], missing_variables=["x"], task=task,
+        )
+        assert result.message.startswith(f"Unsupported outcome task: {task}.")
+
     @pytest.mark.unit
     def test_classification_identifies_informative_shadow(
         self, miss_informative, serial_permutation_importance
@@ -449,7 +472,7 @@ class TestForestAnalysis:
         self, miss_informative, serial_permutation_importance
     ):
         frame = informative_classification_frame(12)
-        frame["target"] = [0] * 9 + [1] * 3
+        frame["target"] = pd.Categorical([0] * 9 + [1] * 3)
         frame["x"] = np.where(frame["target"].eq(1), np.nan, 0.0)
         result = miss_informative._fit_forest_importance(
             frame,
@@ -582,6 +605,9 @@ class TestWebKitUI:
         page.goto(app.url)
         expect(get_card(page)).to_be_visible()
         expect(page.get_by_text("Informative Missingness", exact=True)).to_be_visible()
+        expect(by_id(page, "ImportanceTitle")).to_have_text(
+            "Cross-validated variable importance - Target: target · Regression"
+        )
         expect(by_id(page, "Importance")).to_be_visible()
         expect(by_id(page, "Importance").locator(".plotly")).to_be_attached(
             timeout=30_000

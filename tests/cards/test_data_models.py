@@ -296,3 +296,126 @@ def test_multiple_recipes_for_one_method(page, app):
     expect(recipes.nth(1).locator('.model-recipe')).to_be_visible()
     expect(by_id('RecipeDetails')).to_contain_text('numeric missing')
     expect(by_id('RecipeDetails')).to_contain_text('mixed missing via preprocessing')
+
+
+@pytest.mark.unit
+def test_characteristics_compare_recipes_without_pooling_capabilities():
+    from copy import deepcopy
+    from cards.data_models import _recipe_details
+    from model_taxonomy import LABELS
+    result = _analyze(source(), load_catalogue(), {})
+    table = _table(result, show_all=True)
+    assert set(LABELS.values()) <= set(table.columns)
+    assert 'Capacity growth' not in table.columns
+    method = 'sklearn.ensemble.RandomForestRegressor'
+    recipes = [deepcopy(r) for r in result['rows'] if r['estimator'] == method]
+    assert len(recipes) >= 2
+    assert _table({'rows': recipes}, show_all=True).iloc[0]['Core mechanism'] == 'Tree'
+    recipes[1]['profile']['taxonomy']['core_mechanism']['values'] = ['generalized_linear']
+    recipes[1]['profile']['outputs'] = ['point_prediction', 'predictive_standard_deviation']
+    summary = _table({'rows': recipes}, show_all=True).iloc[0]
+    assert summary['Core mechanism'] == 'Varies by recipe'
+    assert summary['Prediction outputs'] == 'Varies by recipe'
+    assert summary['Transparency'] == 'Usually opaque'
+    details = str(_recipe_details(recipes[0], 'test'))
+    assert 'Model characteristics' in details
+    assert 'expert guidance' in details
+    assert 'stage 2' in details
+    assert 'Usually opaque' in details
+
+
+@pytest.mark.ui
+def test_characteristic_filter_preserves_selected_recipe_and_hides_front(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Meets requirements', timeout=30000)
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    page.locator('[id$="-ShowAll"]').check()
+    card.locator('button.collapse-toggle').click()
+    headers = table.locator('thead tr').first.locator('th').all_text_contents()
+    core_index = next(i for i, label in enumerate(headers) if label.strip() == 'Core mechanism')
+    core_filter = table.locator('thead tr.filters th').nth(core_index).locator('input')
+    core_filter.fill('Gen. linear')
+    expect(table.get_by_text('Ridge', exact=True)).to_be_visible()
+    expect(table.get_by_text('Random Forest Regressor', exact=True)).to_have_count(0)
+    # The grid virtualizes rows; DOM row counts are not the filtered method count.
+    candidates = _table(_analyze(source(), load_catalogue(), {}), show_all=True)
+    count = candidates['Core mechanism'].str.contains('Gen. linear', regex=False).sum()
+    expect(page.locator('[id$="-Status"]')).to_have_text(
+        f'{count} methods shown · Select a row and flip to compare recipes.')
+    table.get_by_text('Ridge', exact=True).click()
+    card.hover()
+    page.locator('[id$="-FlipButton"]').click()
+    details = page.locator('[id$="-RecipeDetails"]')
+    expect(details).to_contain_text('sklearn.linear_model.Ridge')
+    expect(details).to_contain_text('Model characteristics')
+    expect(details).to_contain_text('Gen. linear')
+    expect(card.locator('.flippable > .front')).to_have_css('visibility', 'hidden')
+    page.locator('[id$="-FlipButton"]').click()
+    expect(card.locator('.flippable > .front')).to_have_css('visibility', 'visible')
+    expect(core_filter).to_have_value('Gen. linear')
+    expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=True;pipeline=False')
+
+
+@pytest.mark.ui
+def test_gp_prediction_spread_replaces_formulation(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Meets requirements', timeout=30000)
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    page.locator('[id$="-ShowAll"]').check()
+    card.locator('button.collapse-toggle').click()
+    expect(table.locator('thead')).not_to_contain_text('Formulation')
+    row = table.locator('tbody tr').filter(has_text='Gaussian Process Regressor')
+    expect(row).to_contain_text('Point prediction & spread')
+    row.get_by_text('Gaussian Process Regressor', exact=True).click()
+    card.hover()
+    page.locator('[id$="-FlipButton"]').click()
+    details = page.locator('[id$="-RecipeDetails"]')
+    expect(details).to_contain_text('Point prediction & spread')
+    expect(details).to_contain_text('Predictive standard deviation')
+    expect(details).to_contain_text('return_std=True')
+    expect(details).not_to_contain_text('Discriminative')
+    expect(details).not_to_contain_text('Formulation')
+
+
+@pytest.mark.unit
+def test_learning_strategy_column_and_recipe_disagreement():
+    from copy import deepcopy
+    from cards.data_models import _recipe_details
+    result = _analyze(source(), load_catalogue(), {})
+    table = _table(result, show_all=True).set_index('ID')
+    assert table.loc['sklearn.neighbors.KNeighborsRegressor', 'Learning strategy'] == 'Lazy'
+    assert table.loc['sklearn.gaussian_process.GaussianProcessRegressor', 'Learning strategy'] == 'Eager'
+    rows = [deepcopy(r) for r in result['rows'] if r['estimator'] == 'sklearn.ensemble.RandomForestRegressor']
+    rows[1]['profile']['taxonomy']['learning_strategy']['values'] = ['hybrid']
+    assert _table({'rows': rows}, show_all=True).iloc[0]['Learning strategy'] == 'Varies by recipe'
+    assert 'Hybrid' in str(_recipe_details(rows[1], 'test'))
+
+
+@pytest.mark.ui
+def test_learning_strategy_column_and_details(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Meets requirements', timeout=30000)
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    page.locator('[id$="-ShowAll"]').check()
+    card.locator('button.collapse-toggle').click()
+    heading = table.locator('thead').get_by_text('Learning strategy', exact=True)
+    heading.click()
+    heading.click()  # Descending order places Lazy before Eager.
+    row = table.locator('tbody tr').filter(has_text='K Neighbors Regressor')
+    expect(row).to_contain_text('Lazy')
+    table.get_by_text('K Neighbors Regressor', exact=True).click()
+    card.hover()
+    page.locator('[id$="-FlipButton"]').click()
+    details = page.locator('[id$="-RecipeDetails"]')
+    expect(details).to_contain_text('Learning strategy')
+    expect(details).to_contain_text('Lazy')
+    expect(details).to_contain_text('query-specific neighbor retrieval')

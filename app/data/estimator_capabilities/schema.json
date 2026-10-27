@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pythagoras.local/schemas/estimator-capabilities-1.1.0.json",
+  "$id": "https://pythagoras.local/schemas/estimator-capabilities-1.4.0.json",
   "title": "Versioned estimator capability catalogue",
   "type": "object",
   "required": [
@@ -22,7 +22,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "1.1.0"
+      "const": "1.4.0"
     },
     "catalogue_version": {
       "type": "string",
@@ -117,7 +117,10 @@
         "weighting",
         "incremental_api_present",
         "achievable_profile_ids",
-        "unreviewed_capabilities"
+        "unreviewed_capabilities",
+        "taxonomy",
+        "outputs",
+        "output_review"
       ],
       "additionalProperties": false,
       "properties": {
@@ -202,6 +205,22 @@
         },
         "purpose_reason": {
           "type": "string"
+        },
+        "taxonomy": {
+          "$ref": "#/$defs/taxonomy"
+        },
+        "output_review": {
+          "$ref": "#/$defs/output_review"
+        },
+        "outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "not": {
+              "const": "class_prediction"
+            }
+          }
         }
       }
     },
@@ -226,7 +245,10 @@
         "version_match",
         "validation",
         "reviewed_dependencies",
-        "inspected_dependencies"
+        "inspected_dependencies",
+        "taxonomy",
+        "outputs",
+        "output_review"
       ],
       "additionalProperties": false,
       "properties": {
@@ -381,9 +403,19 @@
         },
         "outputs": {
           "type": "array",
+          "uniqueItems": true,
           "items": {
-            "type": "string"
+            "type": "string",
+            "not": {
+              "const": "class_prediction"
+            }
           }
+        },
+        "taxonomy": {
+          "$ref": "#/$defs/taxonomy"
+        },
+        "output_review": {
+          "$ref": "#/$defs/output_review"
         }
       }
     },
@@ -408,7 +440,9 @@
         "assumptions",
         "capabilities",
         "subjective_assessment",
-        "sources"
+        "sources",
+        "taxonomy",
+        "output_review"
       ],
       "properties": {
         "id": {
@@ -455,8 +489,12 @@
         },
         "outputs": {
           "type": "array",
+          "uniqueItems": true,
           "items": {
-            "type": "string"
+            "type": "string",
+            "not": {
+              "const": "class_prediction"
+            }
           }
         },
         "requirements": {
@@ -497,6 +535,12 @@
           "items": {
             "type": "string"
           }
+        },
+        "taxonomy": {
+          "$ref": "#/$defs/taxonomy"
+        },
+        "output_review": {
+          "$ref": "#/$defs/output_review"
         }
       }
     },
@@ -542,6 +586,262 @@
         },
         "reviewed_on": {
           "type": "string"
+        }
+      }
+    },
+    "taxonomy_attribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "values",
+        "status",
+        "note"
+      ],
+      "properties": {
+        "values": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "status": {
+          "enum": [
+            "reviewed",
+            "depends_on_configuration",
+            "unreviewed",
+            "not_applicable",
+            "deferred"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "unreviewed",
+                  "not_applicable",
+                  "deferred"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "values": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "reviewed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "values": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "core_mechanism",
+        "composition",
+        "fitting_criterion",
+        "transparency",
+        "capacity_growth",
+        "sources",
+        "reviewed_on",
+        "learning_strategy"
+      ],
+      "properties": {
+        "core_mechanism": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/taxonomy_attribute"
+            },
+            {
+              "properties": {
+                "values": {
+                  "items": {
+                    "enum": [
+                      "baseline",
+                      "distribution",
+                      "empirical_distribution",
+                      "generalized_linear",
+                      "kernel",
+                      "neighborhood",
+                      "neural_network",
+                      "prototype",
+                      "rule",
+                      "spatial",
+                      "state_space",
+                      "symbolic",
+                      "tree"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "composition": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/taxonomy_attribute"
+            },
+            {
+              "properties": {
+                "values": {
+                  "items": {
+                    "enum": [
+                      "bagging",
+                      "boosted_feature_construction",
+                      "boosting",
+                      "calibration",
+                      "consensus_fitting",
+                      "fold_averaging",
+                      "forecast_reduction",
+                      "local_aggregation",
+                      "mixed_effects",
+                      "mixture",
+                      "random_feature_selection",
+                      "randomized_averaging",
+                      "resampled_averaging",
+                      "resampling",
+                      "residual_forest",
+                      "rule_aggregation",
+                      "rule_routing",
+                      "single",
+                      "stacking",
+                      "state_space",
+                      "target_transformation",
+                      "tree_routing",
+                      "voting_averaging"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "fitting_criterion": {
+          "$ref": "#/$defs/taxonomy_attribute"
+        },
+        "transparency": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/taxonomy_attribute"
+            },
+            {
+              "properties": {
+                "values": {
+                  "items": {
+                    "enum": [
+                      "conditional",
+                      "usually_opaque",
+                      "usually_transparent"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "capacity_growth": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/taxonomy_attribute"
+            },
+            {
+              "properties": {
+                "status": {
+                  "const": "deferred"
+                }
+              }
+            }
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^https://"
+          }
+        },
+        "reviewed_on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "learning_strategy": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/taxonomy_attribute"
+            },
+            {
+              "properties": {
+                "values": {
+                  "maxItems": 1,
+                  "items": {
+                    "enum": [
+                      "eager",
+                      "lazy",
+                      "hybrid"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "output_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "note",
+        "sources"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "reviewed",
+            "depends_on_configuration",
+            "unreviewed",
+            "not_applicable"
+          ]
+        },
+        "note": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^https://"
+          }
         }
       }
     }

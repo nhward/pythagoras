@@ -161,7 +161,15 @@ def _restore_continuous(original: pd.Series, values: np.ndarray) -> pd.Series:
         ).astype(original.dtype)
         result.loc[original.isna()] = restored.to_numpy()
     else:
-        result.loc[original.isna()] = values[missing]
+        try:
+            result.loc[original.isna()] = values[missing]
+        except TypeError:
+            if kind != "numeric" or not pd.api.types.is_integer_dtype(original.dtype):
+                raise
+            # Nullable integers cannot hold fractional imputer predictions.
+            # Preserve the prediction instead of silently rounding it.
+            result = original.astype("Float64")
+            result.loc[original.isna()] = values[missing]
     return result
 
 

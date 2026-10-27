@@ -23,6 +23,7 @@ from estimator_catalogue import (
     requirements_from_proxy,
 )
 from faicons import icon_svg as icon
+from model_taxonomy import LABELS, description_label, display_value, group_description
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
@@ -32,6 +33,7 @@ from weighting import WeightingError, effective_weights
 
 CHOICES = {
     '': 'No additional requirement',
+    'prediction_spread': 'Prediction spread',
     'class_probability': 'Class probabilities', 
     'survival_probability': 'Survival probabilities',
     'risk_score': 'Survival risk score', 
@@ -190,6 +192,7 @@ def _table(result, *, show_all=False, installed_only=False):
         row = rows[0]
         profile = row['profile']
         records.append({**_model_labels(method), 'Recipes': len(rows),
+            **{label: group_description(rows, field) for field, label in LABELS.items()},
             'Summary recipe': _display_label(profile.get('label', profile['id'].split(':')[-1])),
             'Input requirements': row['input_assessment']['requirements'],
             'Readiness': _readiness(row), 'Evidence': row['evidence'],
@@ -197,7 +200,7 @@ def _table(result, *, show_all=False, installed_only=False):
             'Scale': profile.get('scalability', {}).get('many_rows', 'See assessment'),
             'ID': method})
     table = pd.DataFrame(records, columns=['Model', 'Type', 'Package', 'Recipes', 'Summary recipe',
-        'Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale', 'ID'])
+        *LABELS.values(), 'Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale', 'ID'])
     for column in ('Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale'):
         table[column] = table[column].map(_display_label)
     return table
@@ -230,6 +233,17 @@ def _recipe_details(row, catalogue_version):
                  class_='model-recipe-muted'), links(relation['sources']))
     steps = profile.get('steps', profile.get('recipe', {}).get('steps', []))
     conditions = profile.get('conditions', profile.get('assumptions', []))
+    taxonomy = profile.get('taxonomy', {})
+    descriptions = []
+    for field, label in LABELS.items():
+        detail = profile.get('output_review', {}) if field == 'outputs' else taxonomy.get(field, {})
+        descriptions.extend([
+            ui.tags.dt(label),
+            ui.tags.dd(description_label(profile, field),
+                ui.p('Available outputs: ' + ', '.join(display_value(value) for value in profile.get('outputs', [])),
+                     class_='model-recipe-muted') if field == 'outputs' and profile.get('outputs') else None,
+                ui.p(detail.get('note', ''), class_='model-recipe-muted')),
+        ])
     return ui.div(
         ui.div(ui.span(f"{labels['Package']} · {labels['Type']}", class_='model-recipe-eyebrow'),
                ui.h4(labels['Model'], class_='model-recipe-title'),
@@ -240,6 +254,11 @@ def _recipe_details(row, catalogue_version):
                               class_='model-recipe-badge'), class_='model-recipe-badges'),
                class_='model-recipe-header'),
         ui.div(
+            section('Model characteristics', 'list', ui.tags.dl(*descriptions),
+                    ui.p('Descriptions apply to this recipe. Transparency is expert guidance; '
+                         'these labels do not establish compatibility or runtime validation. '
+                         'Capacity growth is reserved for stage 2.', class_='model-recipe-muted'),
+                    links(taxonomy.get('sources', []))),
             section('Input requirements', 'filter', ui.p(row['input_assessment']['requirements'])),
             section('Tested preparation', 'sliders',
                     ui.p(_display_label(profile.get('construction', {}).get('preparation', 'See documented recipe'))),
@@ -341,7 +360,7 @@ def instance():
         @output
         @render.text
         def Status():
-            count = len(Display())
+            count = len(Table.data_view())
             return f'{count} methods shown · Select a row and flip to compare recipes.' if count else 'No matching methods. Show excluded and unreviewed recipes for explanations.'
 
         @output
@@ -360,7 +379,8 @@ def instance():
                 return _recipe_details(rows[0], catalogue['catalogue_version'])
             return ui.div(
                 ui.p(f'{len(rows)} recipes match the current display filters. '
-                     'The table summarizes the first recipe; evidence and conditions apply separately to each.',
+                     'Readiness and evidence summarize the first recipe. Characteristics say '
+                     'Varies by recipe when these configurations differ; conditions apply separately to each.',
                      class_='model-recipe-muted'),
                 *(ui.tags.details(
                     ui.tags.summary(_display_label(row['profile'].get('label', row['id'].split(':')[-1])),

@@ -1,0 +1,4812 @@
+{
+  "version": "1.2.0",
+  "reviewed_on": "2026-10-26",
+  "policy": {
+    "scope": "Predictive model descriptions, with explicit method allowlists and recipe overrides. Other entries remain unreviewed or not applicable.",
+    "evidence": "Documentation-informed classifications; transparency is expert judgement. These labels do not change capability, installation, integration or runtime-validation evidence.",
+    "capacity_growth": "Stage 2: reserved, not assessed or used for filtering.",
+    "outputs": "Prediction outputs replaces Formulation. Regression summaries distinguish Point prediction from Point prediction & spread using documented prediction-specific uncertainty outputs, without a calibration claim. A single quantile, coefficient uncertainty, residual variance or dispersion among ensemble members alone does not establish prediction-spread support.",
+    "composition": "Multiple labels describe nested composition; no guarantee transfers automatically from components to their aggregate.",
+    "learning_strategy": "Timing of predictive model construction: eager fits a reusable predictor before queries; lazy defers local estimation or neighbor aggregation to each query; hybrid combines eager and lazy predictive components. Ordinary preparation and neighbor-index construction do not alone change this classification. Strategy is not a runtime benchmark, data-retention policy or incremental-learning flag. Wrapper recipes require explicit review; unlisted methods remain unreviewed."
+  },
+  "groups": [
+    {
+      "methods": [
+        "sklearn.linear_model.LinearRegression"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.Ridge",
+        "sklearn.linear_model.RidgeCV",
+        "sklearn.linear_model.RidgeClassifier",
+        "sklearn.linear_model.RidgeClassifierCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.Lasso",
+        "sklearn.linear_model.LassoCV",
+        "sklearn.linear_model.LassoLars",
+        "sklearn.linear_model.LassoLarsCV",
+        "sklearn.linear_model.LassoLarsIC",
+        "sklearn.linear_model.MultiTaskLasso",
+        "sklearn.linear_model.MultiTaskLassoCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l1_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.ElasticNet",
+        "sklearn.linear_model.ElasticNetCV",
+        "sklearn.linear_model.MultiTaskElasticNet",
+        "sklearn.linear_model.MultiTaskElasticNetCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "elastic_net_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.LogisticRegression",
+        "sklearn.linear_model.LogisticRegressionCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "log_loss",
+            "configurable_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.HuberRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "huber_loss",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.QuantileRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "pinball_loss",
+            "l1_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.PoissonRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "poisson_deviance",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.GammaRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "gamma_deviance",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.TweedieRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "tweedie_deviance",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.BayesianRidge",
+        "sklearn.linear_model.ARDRegression"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "gaussian_likelihood",
+            "prior_regularization"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.Lars",
+        "sklearn.linear_model.LarsCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "least_angle_path"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.OrthogonalMatchingPursuit",
+        "sklearn.linear_model.OrthogonalMatchingPursuitCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "sparsity_constraint"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.TheilSenRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "subset_least_squares",
+            "spatial_median"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.Perceptron"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "perceptron_loss",
+            "configurable_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.SGDClassifier",
+        "sklearn.linear_model.SGDRegressor",
+        "sklearn.linear_model.PassiveAggressiveClassifier",
+        "sklearn.linear_model.PassiveAggressiveRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.RANSACRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "consensus_fitting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied base estimator and consensus selection; the default base estimator is linear regression."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/linear_model.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.tree.DecisionTreeClassifier",
+        "sklearn.tree.DecisionTreeRegressor",
+        "sklearn.tree.ExtraTreeClassifier",
+        "sklearn.tree.ExtraTreeRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: a small tree can be inspected; deep trees and transformed predictors reduce transparency."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/tree.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.RandomForestClassifier",
+        "sklearn.ensemble.RandomForestRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "bagging",
+            "random_feature_selection"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.ExtraTreesClassifier",
+        "sklearn.ensemble.ExtraTreesRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "randomized_averaging"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.GradientBoostingClassifier",
+        "sklearn.ensemble.GradientBoostingRegressor",
+        "sklearn.ensemble.HistGradientBoostingClassifier",
+        "sklearn.ensemble.HistGradientBoostingRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.BaggingClassifier",
+        "sklearn.ensemble.BaggingRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "bagging"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Default base models are trees. Bootstrap and feature-sampling settings can change the aggregation strategy; aggregate transparency depends on components."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.AdaBoostClassifier",
+        "sklearn.ensemble.AdaBoostRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.VotingClassifier",
+        "sklearn.ensemble.VotingRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "voting_averaging"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "depends_on_configuration",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.StackingClassifier",
+        "sklearn.ensemble.StackingRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "stacking"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "depends_on_configuration",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.svm.SVC",
+        "sklearn.svm.NuSVC",
+        "sklearn.svm.SVR",
+        "sklearn.svm.NuSVR"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "margin_objective",
+            "regularization"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Kernel is configurable, including linear and user-defined kernels. Transparency describes general nonlinear kernels."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a predictive model before prediction. Retaining training observations/support vectors and computing kernels at prediction time does not mean query-specific model fitting."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/svm.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.svm.LinearSVC"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "hinge_family",
+            "configurable_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a predictive model before prediction. Retaining training observations/support vectors and computing kernels at prediction time does not mean query-specific model fitting."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/svm.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.svm.LinearSVR"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "epsilon_insensitive_family",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a predictive model before prediction. Retaining training observations/support vectors and computing kernels at prediction time does not mean query-specific model fitting."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/svm.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.kernel_ridge.KernelRidge"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "The default linear kernel also has a linear representation; nonlinear kernels need not be transparent."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/kernel_ridge.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.neighbors.KNeighborsClassifier",
+        "sklearn.neighbors.KNeighborsRegressor",
+        "sklearn.neighbors.RadiusNeighborsClassifier",
+        "sklearn.neighbors.RadiusNeighborsRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "neighborhood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "local_aggregation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "no_optimized_fitting_loss"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Neighbors can explain an individual prediction; there is generally no compact global equation. Metric, weights and aggregation matter."
+        },
+        "learning_strategy": {
+          "values": [
+            "lazy"
+          ],
+          "status": "reviewed",
+          "note": "Retains training observations and forms each prediction by query-specific neighbor retrieval and aggregation. Building a search index and ordinary fold-fitted preprocessing do not make the predictor eager."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/neighbors.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.neighbors.NearestCentroid"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "prototype"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "class_centroid_estimation"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Predicts from class prototypes, not query-specific nearest training observations. Shrinkage and distance metric affect interpretation."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Learns class centroids during fitting; prediction compares against those fitted prototypes, not query-specific neighborhoods of training observations."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/neighbors.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.neural_network.MLPClassifier",
+        "sklearn.neural_network.MLPRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "neural_network"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/neural_networks_supervised.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.gaussian_process.GaussianProcessClassifier",
+        "sklearn.gaussian_process.GaussianProcessRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "marginal_likelihood"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Models a conditional response distribution given predictors; this does not assert a joint density for predictors and response."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a predictive model before prediction. Retaining training observations/support vectors and computing kernels at prediction time does not mean query-specific model fitting."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/gaussian_process.html",
+        "https://gaussianprocess.org/gpml/chapters/RW3.pdf",
+        "https://mc-stan.org/docs/stan-users-guide/gaussian-processes.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.naive_bayes.GaussianNB",
+        "sklearn.naive_bayes.BernoulliNB",
+        "sklearn.naive_bayes.MultinomialNB",
+        "sklearn.naive_bayes.CategoricalNB"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "class_conditional_likelihood",
+            "smoothing"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Class-conditional distributions and independence assumptions are inspectable; dimensionality affects readability."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/naive_bayes.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.naive_bayes.ComplementNB"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "complement_class_statistics"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Complement class statistics modify naive Bayes; not labelled as a conventional joint generative model."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/naive_bayes.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.discriminant_analysis.LinearDiscriminantAnalysis"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "distribution",
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "gaussian_class_conditional_estimation"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Shared class covariance yields a linear decision boundary; shrinkage can modify covariance estimation."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/lda_qda.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "gaussian_class_conditional_estimation"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Class-specific covariance yields quadratic boundaries; transparency depends on dimensionality."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/lda_qda.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.calibration.CalibratedClassifierCV"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "calibration"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "depends_on_configuration",
+          "note": "Calibration and optional fold averaging wrap a configurable classifier; probability calibration is not guaranteed on new data."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/calibration.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.dummy.DummyClassifier",
+        "sklearn.dummy.DummyRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "baseline"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "baseline_statistic"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Predictor-independent baseline; exact statistic depends on strategy."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/model_evaluation.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.compose.TransformedTargetRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "target_transformation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "depends_on_configuration",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/compose.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklearn.mixture.GaussianMixture",
+        "sklearn.mixture.BayesianGaussianMixture"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "mixture"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "likelihood_or_variational_objective"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Density models; not automatically supervised classification recipes."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/mixture.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "cubist.Cubist"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree",
+            "rule",
+            "generalized_linear"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "rule_routing"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Rules have linear consequents. Committees and neighbor corrections are configuration-dependent; many rules reduce transparency."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Eager rule/linear models without neighbor correction; hybrid when fitted rules are combined with query-specific neighbor correction. Automatic selection must be resolved from the fitted configuration."
+        }
+      },
+      "sources": [
+        "https://pjaselin.github.io/Cubist/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "gplearn.genetic.SymbolicRegressor",
+        "gplearn.genetic.SymbolicClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "symbolic"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Expression size and operators determine readability. Expression trees are not decision trees."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://gplearn.readthedocs.io/en/stable/intro.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "imblearn.ensemble.BalancedRandomForestClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "resampled_averaging",
+            "random_feature_selection"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "imblearn.ensemble.BalancedBaggingClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "bagging",
+            "resampling"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "imblearn.ensemble.EasyEnsembleClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "resampled_averaging",
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "imblearn.ensemble.RUSBoostClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting",
+            "resampling"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "xgboost.XGBClassifier",
+        "xgboost.XGBRegressor",
+        "xgboost.XGBRanker"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://xgboost.readthedocs.io/en/stable/parameter.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "lightgbm.LGBMClassifier",
+        "lightgbm.LGBMRegressor",
+        "lightgbm.DaskLGBMClassifier",
+        "lightgbm.DaskLGBMRegressor"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://lightgbm.readthedocs.io/en/stable/Parameters.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "catboost.CatBoostClassifier",
+        "catboost.CatBoostRegressor",
+        "catboost.CatBoostRanker"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://catboost.ai/docs/en/concepts/algorithm-main-stages"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "mlxtend.regressor.LinearRegression"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/regressor/LinearRegression/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "skglm.ElasticNet"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "elastic_net_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "skglm.SparseLogisticRegression"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "log_loss",
+            "elastic_net_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.SparseLogisticRegression.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklego.linear_model.LADRegression"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "absolute_error"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear_model/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sklego.linear_model.QuantileRegression"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "pinball_loss"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear_model/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sksurv.linear_model.CoxPHSurvivalAnalysis",
+        "lifelines.CoxPHFitter"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "cox_partial_likelihood",
+            "regularization"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.linear_model.CoxPHSurvivalAnalysis.html",
+        "https://lifelines.readthedocs.io/en/latest/fitters/regression/CoxPHFitter.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "lifelines.WeibullAFTFitter"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear",
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "censored_likelihood"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sksurv.ensemble.RandomSurvivalForest"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "bagging",
+            "random_feature_selection"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "log_rank_splitting"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.RandomSurvivalForest.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sksurv.ensemble.GradientBoostingSurvivalAnalysis"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.GradientBoostingSurvivalAnalysis.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sksurv.nonparametric.SurvivalFunctionEstimator"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "empirical_distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "product_limit_estimation"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.nonparametric.SurvivalFunctionEstimator.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sktime.forecasting.naive.NaiveForecaster"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "baseline"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "baseline_statistic"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://www.sktime.org/en/stable/examples/01_forecasting.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "sktime.forecasting.compose.make_reduction"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "forecast_reduction"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "depends_on_configuration",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.forecasting.compose.make_reduction.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "statsmodels.miscmodels.ordinal_model.OrderedModel"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "ordinal_likelihood"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://www.statsmodels.org/stable/generated/statsmodels.miscmodels.ordinal_model.OrderedModel.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "statsmodels.regression.mixed_linear_model.MixedLM"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "mixed_effects"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "likelihood_or_reml"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLM.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "statsmodels.tsa.statespace.sarimax.SARIMAX"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear",
+            "state_space"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "state_space"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "likelihood"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAX.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "spreg.ML_Lag",
+        "spreg.Panel_FE_Lag"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear",
+            "spatial"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "likelihood"
+          ],
+          "status": "reviewed",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://pysal.org/spreg/generated/spreg.ML_Lag.html",
+        "https://pysal.org/spreg/generated/spreg.Panel_FE_Lag.html"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "lineartree.LinearTreeRegressor",
+        "lineartree.LinearTreeClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree",
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "tree_routing"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "lineartree.LinearForestRegressor",
+        "lineartree.LinearForestClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree",
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "residual_forest"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "lineartree.LinearBoostRegressor",
+        "lineartree.LinearBoostClassifier"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree",
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosted_feature_construction"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied predictors and their composition. Eager and lazy predictive components together can form a hybrid."
+        }
+      },
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ],
+      "reviewed_on": "2026-10-26"
+    },
+    {
+      "methods": [
+        "skrules.SkopeRules"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "rule",
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "rule_aggregation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Loss, penalty and split criterion are distinct; see the configured recipe."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "Fits a reusable predictive model or summary before prediction. Prediction-time computation or retaining training observations does not by itself imply lazy learning."
+        }
+      },
+      "sources": [
+        "https://github.com/scikit-learn-contrib/skope-rules",
+        "https://raw.githubusercontent.com/scikit-learn-contrib/skope-rules/master/skrules/skope_rules.py",
+        "https://pypi.org/project/skope-rules/"
+      ],
+      "reviewed_on": "2026-10-26"
+    }
+  ],
+  "recipes": {
+    "sklearn.ensemble.HistGradientBoostingRegressor:native_mixed_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Overall boosting loss; not the internal tree split criterion."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "categorical_features": "from_dtype",
+          "random_state": 1729
+        },
+        "preparation": "pandas_categories",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestRegressor:numeric_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.ExtraTreesRegressor:numeric_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.DecisionTreeRegressor:numeric_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.tree.DecisionTreeRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestRegressor:mixed_missing_via_preprocessing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "impute_onehot",
+        "wrapper": "sklearn.pipeline.Pipeline"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.SGDRegressor:incremental_numeric": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/computing/scaling_strategies.html",
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.linear_model.SGDRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.HistGradientBoostingClassifier:native_mixed_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "log_loss"
+          ],
+          "status": "reviewed",
+          "note": "Overall boosting loss; not the internal tree split criterion."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.HistGradientBoostingClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "categorical_features": "from_dtype",
+          "random_state": 1729,
+          "class_weight": "balanced"
+        },
+        "preparation": "pandas_categories",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestClassifier:numeric_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_gini"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1,
+          "class_weight": "balanced"
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.ExtraTreesClassifier:numeric_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_gini"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.ExtraTreesClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1,
+          "class_weight": "balanced"
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.DecisionTreeClassifier:numeric_missing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_gini"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.tree.DecisionTreeClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestClassifier:mixed_missing_via_preprocessing": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_gini"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.ensemble.RandomForestClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "impute_onehot",
+        "wrapper": "sklearn.pipeline.Pipeline"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.SGDClassifier:incremental_numeric": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "hinge",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/computing/scaling_strategies.html",
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.linear_model.SGDClassifier.html"
+      ],
+      "outputs": [
+        "class_label",
+        "decision_score"
+      ],
+      "output_note": "Probability support depends on loss: log_loss or modified_huber. The recorded hinge-loss recipe provides labels and scores only.",
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.SVC:rbf_kernel": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "hinge_loss",
+            "regularization"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.svm.SVC.html"
+      ],
+      "outputs": [
+        "class_label",
+        "decision_score"
+      ],
+      "output_note": "Probability estimates require probability=True before fitting and use internal calibration; scores are not probabilities. This recipe is not certified calibrated.",
+      "configuration": {
+        "parameters": {
+          "kernel": "rbf"
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.SVR:rbf_kernel": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "epsilon_insensitive_loss",
+            "regularization"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.svm.SVR.html"
+      ],
+      "outputs": [
+        "point_prediction"
+      ],
+      "output_note": "Probability estimates require probability=True before fitting and use internal calibration; scores are not probabilities. This recipe is not certified calibrated.",
+      "configuration": {
+        "parameters": {
+          "kernel": "rbf"
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "imblearn.ensemble.BalancedBaggingClassifier:internal_class_balancing": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "Default component estimators in this recorded recipe."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.BalancedBaggingClassifier.html",
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "0.14.2"
+    },
+    "imblearn.ensemble.EasyEnsembleClassifier:internal_class_balancing": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "Default component estimators in this recorded recipe."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.EasyEnsembleClassifier.html",
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "0.14.2"
+    },
+    "imblearn.ensemble.RUSBoostClassifier:internal_class_balancing": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "Default component estimators in this recorded recipe."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://imbalanced-learn.org/stable/references/generated/imblearn.ensemble.RUSBoostClassifier.html",
+        "https://imbalanced-learn.org/stable/ensemble.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "0.14.2"
+    },
+    "xgboost.XGBRegressor:mixed_missing_histogram": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": "Default tree boosting in this recorded recipe."
+        },
+        "fitting_criterion": {
+          "values": [
+            "task_dependent_default_loss"
+          ],
+          "status": "reviewed",
+          "note": "Default objective depends on the target, including binary versus multiclass classification. Review the fitted task before assigning a specific loss."
+        }
+      },
+      "sources": [
+        "https://xgboost.readthedocs.io/en/release_3.2.0/tutorials/categorical.html",
+        "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html",
+        "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "tree_method": "hist",
+          "enable_categorical": true,
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "pandas_categories",
+        "wrapper": null
+      },
+      "package_version": "3.2.0"
+    },
+    "xgboost.XGBClassifier:mixed_missing_histogram": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": "Default tree boosting in this recorded recipe."
+        },
+        "fitting_criterion": {
+          "values": [
+            "task_dependent_default_loss"
+          ],
+          "status": "reviewed",
+          "note": "Default objective depends on the target, including binary versus multiclass classification. Review the fitted task before assigning a specific loss."
+        }
+      },
+      "sources": [
+        "https://xgboost.readthedocs.io/en/release_3.2.0/tutorials/categorical.html",
+        "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html",
+        "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "tree_method": "hist",
+          "enable_categorical": true,
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "pandas_categories",
+        "wrapper": null
+      },
+      "package_version": "3.2.0"
+    },
+    "lightgbm.LGBMRegressor:mixed_missing_histogram": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": "Default tree boosting in this recorded recipe."
+        },
+        "fitting_criterion": {
+          "values": [
+            "task_dependent_default_loss"
+          ],
+          "status": "reviewed",
+          "note": "Default objective depends on the target, including binary versus multiclass classification. Review the fitted task before assigning a specific loss."
+        }
+      },
+      "sources": [
+        "https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.LGBMRegressor.html",
+        "https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1,
+          "verbosity": -1
+        },
+        "preparation": "pandas_categories",
+        "wrapper": null
+      },
+      "package_version": "4.7.0"
+    },
+    "lightgbm.LGBMClassifier:mixed_missing_histogram": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": "Default tree boosting in this recorded recipe."
+        },
+        "fitting_criterion": {
+          "values": [
+            "task_dependent_default_loss"
+          ],
+          "status": "reviewed",
+          "note": "Default objective depends on the target, including binary versus multiclass classification. Review the fitted task before assigning a specific loss."
+        }
+      },
+      "sources": [
+        "https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.LGBMClassifier.html",
+        "https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_state": 1729,
+          "n_jobs": 1,
+          "verbosity": -1,
+          "class_weight": "balanced"
+        },
+        "preparation": "pandas_categories",
+        "wrapper": null
+      },
+      "package_version": "4.7.0"
+    },
+    "catboost.CatBoostRegressor:mixed_missing_with_category_token": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "task_dependent_default_loss"
+          ],
+          "status": "reviewed",
+          "note": "Default objective depends on the target, including binary versus multiclass classification. Review the fitted task before assigning a specific loss."
+        }
+      },
+      "sources": [
+        "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
+        "https://catboost.ai/docs/en/concepts/faq",
+        "https://catboost.ai/docs/en/references/training-parameters/common"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_seed": 1729,
+          "verbose": false,
+          "allow_writing_files": false,
+          "thread_count": 1
+        },
+        "preparation": "catboost_strings",
+        "wrapper": null
+      },
+      "package_version": "1.2.10"
+    },
+    "catboost.CatBoostClassifier:mixed_missing_with_category_token": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "task_dependent_default_loss"
+          ],
+          "status": "reviewed",
+          "note": "Default objective depends on the target, including binary versus multiclass classification. Review the fitted task before assigning a specific loss."
+        }
+      },
+      "sources": [
+        "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
+        "https://catboost.ai/docs/en/concepts/faq",
+        "https://catboost.ai/docs/en/references/training-parameters/common"
+      ],
+      "configuration": {
+        "parameters": {
+          "random_seed": 1729,
+          "verbose": false,
+          "allow_writing_files": false,
+          "thread_count": 1,
+          "auto_class_weights": "Balanced"
+        },
+        "preparation": "catboost_strings",
+        "wrapper": null
+      },
+      "package_version": "1.2.10"
+    },
+    "cubist.Cubist:audited_tabular_recipe": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree",
+            "rule",
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": "One committee, no neighbor correction in this recipe."
+        },
+        "composition": {
+          "values": [
+            "rule_routing"
+          ],
+          "status": "reviewed",
+          "note": "One committee, no neighbor correction in this recipe."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses fitted rules with linear consequents and disables neighbor correction; prediction evaluates the fitted model."
+        }
+      },
+      "sources": [
+        "https://pjaselin.github.io/Cubist/api/model.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_rules": 50,
+          "n_committees": 1,
+          "neighbors": null,
+          "cv": null,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.2.2"
+    },
+    "sklearn.neural_network.MLPRegressor:priority_tabular": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "hidden_layer_sizes": [
+            8
+          ],
+          "activation": "tanh",
+          "solver": "lbfgs",
+          "alpha": 0.1,
+          "max_iter": 3000,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neural_network.MLPClassifier:priority_tabular": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "log_loss",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "hidden_layer_sizes": [
+            8
+          ],
+          "activation": "tanh",
+          "solver": "lbfgs",
+          "alpha": 0.1,
+          "max_iter": 3000,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.TweedieRegressor:priority_tabular": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": "Tweedie power=0, identity link."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "power": 0,
+          "link": "identity",
+          "alpha": 0.1,
+          "max_iter": 1000
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.GradientBoostingRegressor:priority_tabular_2": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Overall boosting loss; not the internal tree split criterion."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_estimators": 30,
+          "max_depth": 2,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.GradientBoostingClassifier:priority_tabular_2": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "log_loss"
+          ],
+          "status": "reviewed",
+          "note": "Overall boosting loss; not the internal tree split criterion."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_estimators": 30,
+          "max_depth": 2,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.AdaBoostRegressor:priority_tabular_2": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses the default decision-tree base estimator."
+        },
+        "fitting_criterion": {
+          "values": [
+            "adaboost_r2_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_estimators": 30,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.AdaBoostClassifier:priority_tabular_2": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses the default decision-tree base estimator."
+        },
+        "fitting_criterion": {
+          "values": [
+            "adaboost_exponential"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_estimators": 30,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.RANSACRegressor:priority_tabular_2": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": "Default LinearRegression base estimator."
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "consensus_absolute_residual"
+          ],
+          "status": "reviewed",
+          "note": "Least-squares base fit with absolute-residual consensus selection."
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects. Consensus selection also affects interpretation."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.RANSACRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "max_trials": 100,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.BaggingRegressor:priority_tabular_3": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses the default decision-tree base estimator."
+        },
+        "composition": {
+          "values": [
+            "bagging"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses bootstrap sampling and the default tree base estimator."
+        },
+        "fitting_criterion": {
+          "values": [
+            "split_squared_error"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_estimators": 20,
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.BaggingClassifier:priority_tabular_3": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses the default decision-tree base estimator."
+        },
+        "composition": {
+          "values": [
+            "bagging"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses bootstrap sampling and the default tree base estimator."
+        },
+        "fitting_criterion": {
+          "values": [
+            "split_gini"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "n_estimators": 20,
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.ExtraTreeRegressor:priority_tabular_3": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_squared_error"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.tree.ExtraTreeRegressor.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "max_depth": 6,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.ExtraTreeClassifier:priority_tabular_3": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "split_gini"
+          ],
+          "status": "reviewed",
+          "note": "Split criterion; leaf prediction and ensemble aggregation are separate."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.tree.ExtraTreeClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "max_depth": 6,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.NuSVR:priority_tabular_3": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "nu_margin",
+            "regularization"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.svm.NuSVR.html"
+      ],
+      "outputs": [
+        "point_prediction"
+      ],
+      "output_note": "Probability estimates require probability=True before fitting and use internal calibration; scores are not probabilities. This recipe is not certified calibrated.",
+      "configuration": {
+        "parameters": {
+          "nu": 0.5,
+          "C": 1.0,
+          "kernel": "rbf",
+          "max_iter": 10000
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.NuSVC:priority_tabular_3": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "nu_margin",
+            "regularization"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.svm.NuSVC.html"
+      ],
+      "outputs": [
+        "class_label",
+        "decision_score",
+        "class_probability"
+      ],
+      "output_note": "Probability estimates require probability=True before fitting and use internal calibration; scores are not probabilities. This recipe is not certified calibrated.",
+      "configuration": {
+        "parameters": {
+          "nu": 0.3,
+          "kernel": "rbf",
+          "probability": true,
+          "max_iter": 10000,
+          "random_state": 1729
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.kernel_ridge.KernelRidge:priority_tabular_3": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.kernel_ridge.KernelRidge.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "alpha": 1.0,
+          "kernel": "rbf",
+          "gamma": 0.2
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.gaussian_process.GaussianProcessClassifier:priority_tabular_3": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "bernoulli_likelihood",
+            "laplace_approximation"
+          ],
+          "status": "reviewed",
+          "note": "Kernel hyperparameters are fixed; this recipe does not optimize marginal likelihood."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "optimizer": null,
+          "max_iter_predict": 100,
+          "random_state": 1729,
+          "n_jobs": 1
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LassoLarsIC:priority_tabular_4": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l1_penalty",
+            "bic_selection"
+          ],
+          "status": "reviewed",
+          "note": "Information criterion selects along the Lasso path; it is not the fitting loss."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LassoLarsIC.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "criterion": "bic",
+          "max_iter": 1000
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.calibration.CalibratedClassifierCV:priority_tabular_5": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": "Default LinearSVC base classifier."
+        },
+        "composition": {
+          "values": [
+            "calibration",
+            "fold_averaging"
+          ],
+          "status": "reviewed",
+          "note": "Three-fold calibrated ensemble in this recipe."
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_hinge",
+            "l2_penalty",
+            "sigmoid_calibration"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "Calibrated fold-specific linear models are averaged; not a single coefficient equation."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.calibration.CalibratedClassifierCV.html"
+      ],
+      "output_note": "Probabilities are supplied by sigmoid calibration of the default LinearSVC, averaged over folds. Calibration quality has not been established.",
+      "configuration": {
+        "parameters": {
+          "method": "sigmoid",
+          "cv": 3,
+          "ensemble": true,
+          "n_jobs": 1
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sksurv.ensemble.GradientBoostingSurvivalAnalysis:documented_recipe": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "cox_partial_likelihood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.GradientBoostingSurvivalAnalysis.html"
+      ],
+      "configuration": {
+        "loss": "coxph",
+        "random_state": 1729
+      },
+      "package_version": "0.28.0"
+    },
+    "cubist.Cubist:documented_recipe": {
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "tree",
+            "rule",
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": "One committee, no neighbor correction in this recipe."
+        },
+        "composition": {
+          "values": [
+            "rule_routing"
+          ],
+          "status": "reviewed",
+          "note": "One committee, no neighbor correction in this recipe."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This recipe uses fitted rules with linear consequents and disables neighbor correction; prediction evaluates the fitted model."
+        }
+      },
+      "sources": [
+        "https://pjaselin.github.io/Cubist/api/model.html",
+        "https://github.com/pjaselin/Cubist",
+        "https://raw.githubusercontent.com/pjaselin/Cubist/master/cubist/cubist.py",
+        "https://pypi.org/project/cubist/"
+      ],
+      "configuration": {
+        "n_rules": 500,
+        "n_committees": 1,
+        "neighbors": null,
+        "auto": false,
+        "cv": null,
+        "random_state": 1729
+      },
+      "package_version": null
+    },
+    "sklearn.gaussian_process.GaussianProcessRegressor:exact_gp": {
+      "attributes": {},
+      "configuration": {
+        "parameters": {},
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html"
+      ],
+      "outputs": [
+        "point_prediction",
+        "predictive_standard_deviation",
+        "predictive_covariance"
+      ],
+      "output_note": "predict(X, return_std=True) returns a mean and standard deviation for each prediction; return_cov=True returns their covariance. This describes the fitted GP posterior: training alpha noise is not automatically added as fresh observation noise; a WhiteKernel changes the uncertainty interpretation. Calibration is not established."
+    },
+    "sklearn.linear_model.BayesianRidge:priority_tabular": {
+      "attributes": {},
+      "configuration": {
+        "parameters": {
+          "max_iter": 1000
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.BayesianRidge.html"
+      ],
+      "outputs": [
+        "point_prediction",
+        "predictive_standard_deviation"
+      ],
+      "output_note": "predict(X, return_std=True) returns a mean and standard deviation of the predictive response distribution at each supplied input, combining coefficient uncertainty and estimated observation noise. Calibration is not established."
+    },
+    "sklearn.linear_model.ARDRegression:priority_tabular_2": {
+      "attributes": {},
+      "configuration": {
+        "parameters": {
+          "max_iter": 1000
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ARDRegression.html"
+      ],
+      "outputs": [
+        "point_prediction",
+        "predictive_standard_deviation"
+      ],
+      "output_note": "predict(X, return_std=True) returns a mean and standard deviation of the predictive response distribution at each supplied input, combining coefficient uncertainty and estimated observation noise. Calibration is not established."
+    },
+    "lineartree.LinearTreeRegressor:documented_recipe": {
+      "attributes": {
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "configuration": {
+        "base_estimator": "sklearn.linear_model.LinearRegression()",
+        "max_depth": 5,
+        "max_bins": 25,
+        "criterion": "mse",
+        "n_jobs": 1
+      },
+      "package_version": null,
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ]
+    },
+    "lineartree.LinearTreeClassifier:documented_recipe": {
+      "attributes": {
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "configuration": {
+        "base_estimator": "sklearn.linear_model.LogisticRegression(max_iter=1000)",
+        "max_depth": 5,
+        "max_bins": 25,
+        "criterion": "crossentropy",
+        "n_jobs": 1
+      },
+      "package_version": null,
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ]
+    },
+    "lineartree.LinearForestRegressor:documented_recipe": {
+      "attributes": {
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "configuration": {
+        "base_estimator": "sklearn.linear_model.LinearRegression()",
+        "n_estimators": 100,
+        "max_features": 1.0,
+        "n_jobs": 1,
+        "random_state": 1729
+      },
+      "package_version": null,
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ]
+    },
+    "lineartree.LinearForestClassifier:documented_recipe": {
+      "attributes": {
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "configuration": {
+        "base_estimator": "sklearn.linear_model.LinearRegression()",
+        "n_estimators": 100,
+        "max_features": 1.0,
+        "n_jobs": 1,
+        "random_state": 1729
+      },
+      "package_version": null,
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ]
+    },
+    "lineartree.LinearBoostRegressor:documented_recipe": {
+      "attributes": {
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "configuration": {
+        "base_estimator": "sklearn.linear_model.LinearRegression()",
+        "n_estimators": 10,
+        "max_depth": 3,
+        "loss": "linear",
+        "random_state": 1729
+      },
+      "package_version": null,
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ]
+    },
+    "lineartree.LinearBoostClassifier:documented_recipe": {
+      "attributes": {
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": "This exact recipe uses fitted tree/linear components before prediction; no query-specific local predictor is configured."
+        }
+      },
+      "configuration": {
+        "base_estimator": "sklearn.linear_model.LogisticRegression(max_iter=1000)",
+        "n_estimators": 10,
+        "max_depth": 3,
+        "loss": "entropy",
+        "random_state": 1729
+      },
+      "package_version": null,
+      "sources": [
+        "https://github.com/cerlymarco/linear-tree",
+        "https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/lineartree.py",
+        "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
+        "https://pypi.org/project/linear-tree/"
+      ]
+    }
+  }
+}

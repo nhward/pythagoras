@@ -1,5 +1,7 @@
 """Extended tasks that stop publishing results when their session closes."""
 import asyncio
+import logging
+import os
 from contextvars import ContextVar
 from export_readiness import equivalent
 
@@ -73,6 +75,14 @@ class SessionExtendedTask(reactive.ExtendedTask):
 
     def cancel(self):
         """Cancel queued/running work and invalidate deferred publication."""
+        if os.environ.get("PYTHAGORAS_DIAGNOSTICS") == "1":
+            logging.getLogger("pythagoras.tasks").info(
+                "cancel task=%s instance=%s reason=%s generation=%s running=%s queued=%s",
+                self._func.__qualname__, hex(id(self)),
+                "session_closed" if self._closed else (
+                    "module_suspended" if self._pending_restart is not None else "cancel_called"
+                ), self._generation, self._task is not None, len(self._invocation_queue),
+            )
         self._generation += 1
         super().cancel()
         self._task = None

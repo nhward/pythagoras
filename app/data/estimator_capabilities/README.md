@@ -1,4 +1,34 @@
-# Estimator capabilities catalogue, version 1.2.8
+# Estimator capabilities catalogue, version 1.5.0
+
+
+Model descriptions use schema **1.4.0**. `taxonomy.json` is the curated source:
+explicit method groups provide core mechanism, composition, fitting criterion,
+learning strategy and transparency; exact recipe overrides resolve configuration-dependent
+facts. The existing `outputs` list is retained and normalized to `class_label`, with
+`output_review` explaining its scope. Probability estimates are not certified calibrated.
+Capacity growth is reserved with status `deferred` for stage 2.
+
+The registry records documentation sources and review dates. Transparency is expert
+guidance, not a measurement. An unlisted method remains `unreviewed`; standalone
+preparation steps receive `not_applicable` for this predictive-model taxonomy.
+Method-level output support is configuration-dependent; recipe outputs are not
+inferred from the presence of a class method. Recipe refinements include an exact
+configuration and reviewed-version guard. If either changes, refinements and output
+claims require review. Do not copy classifications across wrappers or related classes
+without reviewing their component structure.
+
+Refresh descriptions while preserving the inspection snapshot and probe results:
+
+```sh
+.venv/bin/python scripts/build_estimator_catalogue.py --refresh-descriptions
+```
+
+Normal builds use the same expansion. Edit source profiles/specialists for output
+claims and update any corresponding taxonomy recipe override together. Review statuses
+are separate from runtime evidence, readiness, installation and adapter support.
+The default SVC and hinge-loss SGDClassifier recipes provide labels and decision
+scores, not class probabilities. This correction does not alter their configurations
+or invalidate their previously recorded fit/predict checks.
 
 `benchmark_methods.json` identifies null/reference models used only to benchmark
 evaluation metrics. Their estimator records carry `purpose: benchmark_only` and
@@ -447,3 +477,24 @@ content and reset the existing executable recipe probes as before. To promote a
 specialist recipe, implement its adapter and versioned dependency checks, extend
 probes with its task-specific output/metric contracts, and update its schema/evidence
 record. Do not replace `not_run` with `passed` by hand.
+
+Prediction outputs replaces the former Formulation attribute in version 1.4.0.
+Regression summaries are `Point prediction` or `Point prediction & spread`, backed
+by explicit outputs in the individual recipe. GPR records predictive standard deviation
+and covariance; BayesianRidge and ARDRegression record predictive standard deviation.
+These outputs are optional prediction calls, not a claim of calibration. GPR uncertainty
+must be interpreted in light of its noise model (training alpha versus WhiteKernel).
+The precise output list and interpretation remain in the recipe details. Existing
+OLS recipes remain point-only; this does not deny other implementations' support
+for input-dependent prediction intervals. A lone quantile, global residual variance,
+coefficient uncertainty or component disagreement does not establish spread support.
+
+Learning strategy (1.5.0) describes eager, lazy or hybrid predictive model construction.
+Nearest-neighbor predictors are lazy; nearest-centroid, GP and SVM predictors are
+not lazy merely because they perform distance/kernel calculations at prediction time.
+Ordinary preprocessing and building a neighbor index do not alone imply hybrid learning.
+Generic wrappers are configuration dependent; exact reviewed recipes resolve their
+components. Cubist without neighbor correction is eager; its method-level description
+explains the optional hybrid configuration. Strategy remains unreviewed for unmapped
+methods and not applicable to standalone preparation steps. Sources and qualifications
+stay separate from runtime validation and scalability guidance.

@@ -861,6 +861,85 @@ content: "●";
 .js-plotly-plot .gtitle {
 fill: var(--bs-primary) !important;
 }
+
+.model-recipe-output { flex: 0 0 auto !important; min-width: 0; width: 100%; }
+.model-recipe {
+--recipe-accent: #176078;
+color: var(--bs-body-color, #24343e);
+background: var(--bs-tertiary-bg, #f3f7f9);
+border: 1px solid var(--bs-border-color, #d9e3e8);
+border-radius: .85rem;
+margin: .25rem; padding: 1.2rem;
+overflow-wrap: anywhere;
+}
+.model-recipe-header { padding-bottom: 1rem; border-bottom: 1px solid var(--bs-border-color, #d9e3e8); }
+.model-recipe-eyebrow { color: var(--recipe-accent); font-size: .78rem; font-weight: 600; letter-spacing: .04em; }
+.model-recipe .model-recipe-title { margin: .35rem 0; font-size: 1.4rem; line-height: 1.25; }
+.model-recipe-path { display: block; font-size: .78rem; color: var(--bs-secondary-color, #52636c); white-space: normal; }
+.model-recipe-badges { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }
+.model-recipe-badge { display: inline-flex; align-items: baseline; gap: .4rem; border-radius: .45rem; padding: .35rem .6rem; background: #e5edf5; color: #264860; font-size: .8rem; }
+.model-recipe-badge.is-ready { background: #dfefe7; color: #24583d; }
+.model-recipe-badge.is-review { background: #fff0d4; color: #704b13; }
+.model-recipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: .85rem; margin-top: 1rem; align-items: start; }
+.model-recipe-section { min-width: 0; padding: 1rem; background: var(--bs-body-bg, white); border: 1px solid var(--bs-border-color, #d9e3e8); border-radius: .6rem; }
+.model-recipe-section h6 { display: flex; align-items: center; gap: .5rem; color: var(--recipe-accent); margin: 0 0 .65rem; font-size: .9rem; font-weight: 650; }
+.model-recipe-section p, .model-recipe-section li { font-size: .88rem; line-height: 1.5; }
+.model-recipe-section p:last-child, .model-recipe-section ul, .model-recipe-section ol { margin-bottom: 0; }
+.model-recipe-section ul, .model-recipe-section ol { padding-left: 1.2rem; }
+.model-recipe-section li + li { margin-top: .4rem; }
+.model-recipe-section pre { margin: 0; padding: .7rem; background: var(--bs-tertiary-bg, #f3f7f9); border-radius: .4rem; font-size: .78rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.model-recipe-muted, .model-recipe-footer { color: var(--bs-secondary-color, #52636c); }
+.model-recipe-footer { margin-top: 1rem; font-size: .75rem; }
+.model-recipe-sources { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0 !important; }
+.model-recipe-sources li + li { margin-top: 0; }
+.model-recipe-empty { padding: 2rem; text-align: center; }
+.model-recipe-empty h5 { margin-top: .75rem; }
+.model-data-notice { font-size: .8rem; color: #704b13; padding: .35rem .5rem; }
+.card.fullscreen-active .model-recipe { padding: 1.5rem; width: 100%; max-width: none; margin: .25rem 0; box-sizing: border-box; }
+.model-recipe svg { margin: 0 !important; flex: 0 0 auto; }
+
+.flip-container:has(.model-recipe-output).flipped > .flippable > .front {
+pointer-events: none;
+
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output) > .flippable > .back {
+overflow-y: auto;
+overflow-x: hidden;
+touch-action: pan-y;
+}
+.card.fullscreen-active .model-recipe-output { align-self: stretch; max-width: none; }
+
+.resample-details { flex: 0 0 auto !important; min-width: 0; }
+.resample-wide { grid-column: 1 / -1; }
+.resample-details .shiny-html-output { flex: 0 0 auto; }
+.resample-table-scroll { overflow-x: auto; max-width: 100%; }
+.resample-details .table { margin-top: .65rem; }
+.resample-details .shiny-input-container { min-width: 9rem; margin-bottom: .3rem; }
+.resample-message { margin-top: .65rem; padding: .65rem .8rem; border-radius: .4rem; font-size: .88rem; }
+.resample-message.is-warning { background: #fff0d4; color: #704b13; }
+.resample-message.is-error { background: #fbe4e6; color: #842029; }
+.resample-message.is-ready { background: #dfefe7; color: #24583d; }
+.flip-container:has(.resample-details).flipped > .flippable > .front { pointer-events: none; }
+.flip-container:has(.resample-details):not(.flipped) > .flippable > .back { pointer-events: none; }
+.flip-container:has(.resample-details) > .flippable > .back { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+.model-method-recipes { padding: .25rem; }
+.model-method-recipe { margin-bottom: .75rem; }
+.model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
+
+.var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.var-modify-table .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
 </style>
 </head>
 
@@ -962,6 +1041,17 @@ fill: var(--bs-primary) !important;
 <li><strong>Output:</strong> The incoming proxy passes through unchanged.</li>
 <li><strong>Data journey:</strong> No cleaning operation, learned transformation or evaluation plan is added. Display changes do not train models or start extended tasks.</li>
 </ul>
+<h4 id="model-characteristics">🧭 Model characteristics</h4>
+<p>Six descriptive columns help compare methods: <strong>Core mechanism</strong>, <strong>Composition</strong>, <strong>Fitting criterion</strong>, <strong>Learning strategy</strong>, <strong>Prediction outputs</strong>, and <strong>Transparency</strong>. Use the column headings to sort the table. Scroll horizontally to reach additional columns; select a row and flip the card for explanations and sources. Sorting changes the view, not the data or model configuration.</p>
+<ul>
+<li><strong>Core mechanism</strong> permits combinations, such as Tree and Gen. linear. <strong>Gen. linear</strong> means linear / generalized linear, including linear predictors over transformed features. Distribution, rule, symbolic, prototype and specialist mechanisms are retained where the initial families do not describe a method.</li>
+<li><strong>Composition</strong> describes how components combine: a forest aggregates trees; a model tree routes to linear leaf models. Multiple labels can describe nested composition. A component’s transparency does not automatically transfer to its ensemble.</li>
+<li><strong>Fitting criterion</strong> distinguishes loss, regularization and split criteria in the details. It can be configuration dependent; some neighborhood methods do not optimize a fitting loss. Model-selection criteria are not fitting losses.</li>
+<li><strong>Learning strategy</strong> describes when the predictor is constructed. <strong>Eager</strong> methods fit a reusable model before prediction; <strong>Lazy</strong> methods defer local estimation or neighbor aggregation until each query; <strong>Hybrid</strong> methods combine both predictive mechanisms. Nearest-neighbor predictors are Lazy even when they build a search index or use ordinary preprocessing. Nearest-centroid, GP and SVM predictors are Eager: retaining training data or doing substantial prediction-time computation does not make a method lazy. Configurable wrappers say <strong>Depends on configuration</strong> until a recipe resolves their components. This is not a speed ranking, memory guarantee or incremental-learning flag. Sort this column and inspect the recipe details for its qualification.</li>
+<li><strong>Prediction outputs</strong> combines the former Formulation and Prediction outputs descriptions. Regression recipes show <strong>Point prediction</strong> or <strong>Point prediction &amp; spread</strong>. Spread means a documented uncertainty output for individual predictions, such as predictive standard deviation, covariance, intervals or distribution samples; it does not certify calibration. Gaussian-process regression, Bayesian ridge and ARD regression provide point predictions and spread. Their details identify the output options and the meaning of that uncertainty. Ordinary linear-regression recipes remain <strong>Point prediction</strong> because these recipes return point predictions only. This is a recipe capability distinction: some other OLS implementations can calculate input-dependent prediction intervals. A single fitted quantile, coefficient standard errors, global residual variance or variation among ensemble members alone do not establish prediction-spread support. The flip side retains the precise output list, including quantiles and specialist outputs. Classification still distinguishes labels, scores and class probabilities. Use <strong>Required prediction output: Prediction spread</strong> to require spread support.</li>
+<li><strong>Transparency</strong> is expert guidance about the whole model: Usually transparent, Conditional, or Usually opaque. Complexity, transformed features and composition can change how understandable a fitted model is. It is not a measured score or a claim about post-hoc explanation tools.</li>
+</ul>
+<p><strong>Unreviewed</strong>, <strong>Not applicable</strong>, and <strong>Depends on configuration</strong> have distinct meanings. A method summary says <strong>Varies by recipe</strong> when its displayed recipes have different descriptions; inspect each recipe rather than pooling their capabilities. Readiness and evidence still describe the named summary recipe. The characteristics do not establish compatibility, installation, integration, or successful validation. <strong>Capacity growth</strong> is reserved for stage 2 and is not currently assessed or displayed as a filter.</p>
 
 
 

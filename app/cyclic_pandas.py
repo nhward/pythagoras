@@ -311,7 +311,7 @@ def as_cyclic(data, *, period: Real | None = None) -> pd.Series:
         if not pd.api.types.is_numeric_dtype(source.dtype):
             raise TypeError("input must be numeric or an ordered categorical")
         if period is None:
-            raise TypeError("numeric cyclic data require an explicit period")
+            period = max(source.array)
         dtype = CyclicDtype(period=period)
     array = CyclicArray._from_sequence(source.array, dtype=dtype)
     return pd.Series(array, index=source.index, name=source.name)

@@ -41,6 +41,51 @@ backgroundcolor: rgba(212, 241, 244, 0.76)
 ```
 
 <br>
+
+```{=html}
+<div class="model-recipe">
+  <div class="model-recipe-header">Pythagoras Templates</div>
+  <div class="model-recipe-grid">
+    <section class="model-recipe-section">
+      <h6>
+        <svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-hidden="true" role="img" class="fa" style="fill:currentColor;height:1em;width:1.0em;margin-left:auto;margin-right:0.2em;position:relative;vertical-align:-0.125em ovrflow:visible;">
+            <path d="M40 48C26.7 48 16 58.7 16 72v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V72c0-13.3-10.7-24-24-24H40zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H480c17.7 0 32-14.3 32-32s-14.3-32-32-32H192zM16 232v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V232c0-13.3-10.7-24-24-24H40c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24v48c0 13.3 10.7 24 24 24H88c13.3 0 24-10.7 24-24V392c0-13.3-10.7-24-24-24H40z"></path>
+        </svg>Cross sectional data
+      </h6>
+      <dl>
+        <dt>Data name</dt>
+        <dd>
+          Tree
+          <p class="model-recipe-muted"></p>
+        </dd>
+        <dt>Composition</dt>
+        <dd>
+          Randomized averaging
+          <p class="model-recipe-muted"></p>
+        </dd>
+        <dt>Fitting criterion</dt>
+        <dd>
+          Split squared error
+          <p class="model-recipe-muted">Split criterion; leaf prediction and ensemble aggregation are separate.</p>
+        </dd>
+        <dt>Transparency</dt>
+        <dd>
+          Usually opaque
+          <p class="model-recipe-muted">Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations.</p>
+        </dd>
+        <dt>Prediction outputs</dt>
+        <dd>
+          Point prediction
+          <p class="model-recipe-muted">Available outputs: Point prediction</p>
+          <p class="model-recipe-muted">Recorded recipe outputs; not an exhaustive API inventory. Probability estimates do not establish calibration. Runtime evidence remains separate.</p>
+        </dd>
+      </dl>
+      <p class="model-recipe-muted">Descriptions apply to this recipe. Transparency is expert guidance; these labels do not establish compatibility or runtime validation. Capacity growth is reserved for stage 2.</p>
+    </section>
+   </div>
+</div>
+```
+
 Pythagoras is a sequence of "cards" each of which deals with some aspect of data analysis and modeling.
 
 #### Each card has a set of standard features: 
