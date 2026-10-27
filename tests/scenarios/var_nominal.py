@@ -15,13 +15,21 @@ this._imports.set(proxy_data(pd.DataFrame({
 })))
 
 original_server, original_footer = this.server, this._footer
-this.footer = lambda: ui.TagList(original_footer(), ui.output_text('Preview'))
+this.footer = lambda: ui.TagList(original_footer(), ui.output_text('Preview'), ui.output_text('PipelineProbe'))
 def server(input, output, session):
     result = original_server(input, output, session)
     @output
     @render.text
     def Preview():
         return 'Monday count: ' + str(int((result().frame['Day'] == 'Monday').sum()))
+    @output
+    @render.text
+    def PipelineProbe():
+        data = result()
+        if not data.has_pipeline:
+            return 'steps=none'
+        replay = data.pipeline_for_training().fit_transform(data.clean_frame)
+        return 'steps=' + ','.join(data.pipeline_steps) + '; replay=' + str(replay.equals(data.frame))
     return result
 this.server = server
 app = this.application()

@@ -301,6 +301,7 @@ def test_multiple_recipes_for_one_method(page, app):
 @pytest.mark.unit
 def test_characteristics_compare_recipes_without_pooling_capabilities():
     from copy import deepcopy
+
     from cards.data_models import _recipe_details
     from model_taxonomy import LABELS
     result = _analyze(source(), load_catalogue(), {})
@@ -325,7 +326,7 @@ def test_characteristics_compare_recipes_without_pooling_capabilities():
 
 
 @pytest.mark.ui
-def test_characteristic_filter_preserves_selected_recipe_and_hides_front(page, app):
+def test_characteristic_sort_preserves_selected_recipe_and_hides_front(page, app):
     page.goto(app.url)
     table = page.locator('[id$="-Table"]')
     expect(table).to_contain_text('Meets requirements', timeout=30000)
@@ -334,28 +335,35 @@ def test_characteristic_filter_preserves_selected_recipe_and_hides_front(page, a
     card.locator('button.collapse-toggle').click()
     page.locator('[id$="-ShowAll"]').check()
     card.locator('button.collapse-toggle').click()
-    headers = table.locator('thead tr').first.locator('th').all_text_contents()
-    core_index = next(i for i, label in enumerate(headers) if label.strip() == 'Core mechanism')
-    core_filter = table.locator('thead tr.filters th').nth(core_index).locator('input')
-    core_filter.fill('Gen. linear')
-    expect(table.get_by_text('Ridge', exact=True)).to_be_visible()
-    expect(table.get_by_text('Random Forest Regressor', exact=True)).to_have_count(0)
-    # The grid virtualizes rows; DOM row counts are not the filtered method count.
-    candidates = _table(_analyze(source(), load_catalogue(), {}), show_all=True)
-    count = candidates['Core mechanism'].str.contains('Gen. linear', regex=False).sum()
+    # Column filters are disabled; exercise the supported sorting control.
+    expect(table.locator('thead tr.filters input')).to_have_count(0)
+    heading = table.locator('thead').get_by_text('Learning strategy', exact=True)
+    heading.click()
+    heading.click()  # Descending places Lazy before Eager.
+    selected = table.get_by_text('K Neighbors Regressor', exact=True)
+    expect(selected).to_be_visible()
+    leading_rows = [table.locator('tbody tr').nth(i).text_content() for i in range(2)]
+    # The virtualized DOM contains only a subset of the methods.
+    count = len(_table(_analyze(source(), load_catalogue(), {}), show_all=True))
     expect(page.locator('[id$="-Status"]')).to_have_text(
         f'{count} methods shown · Select a row and flip to compare recipes.')
-    table.get_by_text('Ridge', exact=True).click()
+    selected.click()
     card.hover()
     page.locator('[id$="-FlipButton"]').click()
     details = page.locator('[id$="-RecipeDetails"]')
-    expect(details).to_contain_text('sklearn.linear_model.Ridge')
+    expect(details).to_contain_text('sklearn.neighbors.KNeighborsRegressor')
     expect(details).to_contain_text('Model characteristics')
-    expect(details).to_contain_text('Gen. linear')
+    expect(details).to_contain_text('Lazy')
     expect(card.locator('.flippable > .front')).to_have_css('visibility', 'hidden')
     page.locator('[id$="-FlipButton"]').click()
     expect(card.locator('.flippable > .front')).to_have_css('visibility', 'visible')
-    expect(core_filter).to_have_value('Gen. linear')
+    # Flipping can change the number of virtualized rows; compare the leading
+    # sorted records rather than the entire mounted viewport.
+    for i, text in enumerate(leading_rows):
+        expect(table.locator('tbody tr').nth(i)).to_have_text(text)
+    # Reopening the details also verifies selection survived the round trip.
+    page.locator('[id$="-FlipButton"]').click()
+    expect(details).to_contain_text('sklearn.neighbors.KNeighborsRegressor')
     expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=True;pipeline=False')
 
 
@@ -386,6 +394,7 @@ def test_gp_prediction_spread_replaces_formulation(page, app):
 @pytest.mark.unit
 def test_learning_strategy_column_and_recipe_disagreement():
     from copy import deepcopy
+
     from cards.data_models import _recipe_details
     result = _analyze(source(), load_catalogue(), {})
     table = _table(result, show_all=True).set_index('ID')

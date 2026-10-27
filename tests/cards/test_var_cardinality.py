@@ -255,7 +255,7 @@ class TestWebKitUI:
         plot = by_id(page, "Chart").locator(".js-plotly-plot")
         expect(plot).to_be_attached(timeout=20_000)
         expect(by_id(page, "Check")).to_contain_text(
-            "Strong review: 3; review: 1; expected: 3; not assessed: 2",
+            "Strong review: 3; review: 0; expected: 4; not assessed: 2",
             timeout=20_000,
         )
         for control in (

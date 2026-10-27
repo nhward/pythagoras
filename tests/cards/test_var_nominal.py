@@ -6,6 +6,7 @@ from proxy_data import proxy_data
 from shiny.pytest import create_app_fixture
 
 app = create_app_fixture(app='../scenarios/var_nominal.py', scope='function')
+learned_app = create_app_fixture(app='../scenarios/var_nominal_learned.py', scope='function')
 
 @pytest.mark.unit
 def test_similarity_and_frequency_direction():
@@ -54,7 +55,9 @@ def test_expected_destination_and_role_exclusions():
     assert 'September' in str(m.bar_chart(source.frame.x,['September']))
 
 @pytest.mark.ui
-def test_decisions_commit_reset_and_tabs(page, app):
+@pytest.mark.parametrize("fixture_name", ["app", "learned_app"])
+def test_decisions_commit_reset_and_tabs(page, request, fixture_name):
+    app = request.getfixturevalue(fixture_name)
     page.goto(app.url)
     panels=page.locator('[id$="-Panels"]')
     expect(panels.get_by_role('tab',name='Day',exact=True)).to_be_visible(timeout=20000)
@@ -75,6 +78,8 @@ def test_decisions_commit_reset_and_tabs(page, app):
     expect(preview).to_have_text('Monday count: 30')
     page.locator('[id$="-Commit"]').click()
     expect(preview).to_have_text('Monday count: 33')
+    steps = 'upstream,var_nominal' if fixture_name == 'learned_app' else 'var_nominal'
+    expect(page.locator('[id$="-PipelineProbe"]')).to_have_text(f'steps={steps}; replay=True')
     expect(row).to_have_count(0)
     expect(page.locator('[id$="-Status"]')).to_contain_text('1 recorded decisions')
     panels.get_by_role('tab',name='Colour',exact=True).click()
@@ -85,6 +90,8 @@ def test_decisions_commit_reset_and_tabs(page, app):
     expect(row).to_be_visible()
     expect(preview).to_have_text('Monday count: 30')
     expect(page.locator('[id$="-Status"]')).to_contain_text('0 recorded decisions')
+    expected = 'steps=upstream; replay=True' if fixture_name == 'learned_app' else 'steps=none'
+    expect(page.locator('[id$="-PipelineProbe"]')).to_have_text(expected)
 
 @pytest.mark.ui
 def test_fullscreen_editors_are_scoped_to_variable_tabs(page, app):

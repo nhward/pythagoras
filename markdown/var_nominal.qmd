@@ -50,7 +50,7 @@ A rare label may be valid, and the most frequent spelling may be wrong. Inspect 
 
 #### ⛔️ Limitations
 
-* Cleaning commits must precede learning steps. The card remains inspectable afterward, but Commit reports why changes cannot be applied.
+* Predictor and stratifier mappings can be committed before or after other pipeline steps, provided their nominal columns remain available. Target-label corrections remain cleaning operations and must precede upstream learning steps. A commit containing blocked target edits is rejected as a whole; commit feature mappings separately.
 * Automatic matching is limited to 200 observed levels and at most 100 similarity proposals per variable. Manual proposals remain available.
 * Abbreviations are restricted to prefixes; arbitrary shortened forms require manual proposals.
 * Incoming nominal data or role changes reset decisions rather than silently replaying them on different data.
@@ -68,4 +68,7 @@ A rare label may be valid, and the most frequent spelling may be wrong. Inspect 
 
 * **Input:** The incoming data and assigned roles.
 * **Output:** Incoming data until Commit; afterward, a copy with approved categorical mappings applied. Row order, missing values, and roles are preserved.
-* **Data journey:** Committed mappings produce a Cleaning record. No learned pipeline step is added. Decisions and committed mappings are saved in bookmark state.
+* **Pipeline:** Approved predictor and stratifier mappings are stored in a sklearn-compatible `NominalReconciliationTransformer`. Each training pipeline replays the fixed decisions; it does not learn new corrections or pool additional labels. Decisions within one commit resolve simultaneously; successive commits replay in order. Unmapped labels pass through, including previously unseen labels. The preview shows the mappings applied to incoming data, while the original pipeline input remains available for training.
+* **Targets:** Approved target mappings are applied separately to clean data before feature-pipeline registration. They are not applied to `y` by the feature transformer.
+* **Data journey:** Feature mappings use the existing pipeline infrastructure and appear as a Learning record, although these mappings are fixed human decisions, not estimated parameters. Target mappings produce a Cleaning record. Decisions and committed mappings are saved in bookmark state.
+* **Evaluation:** Reviewing the full dataset to choose mappings is not fold-fitted discovery. Automatic frequency-based pooling is not introduced by pipeline compatibility.

@@ -280,7 +280,7 @@ contribution. Many estimators accept both through the same `sample_weight` argum
 That does not make them identical statistical concepts or imply survey-design
 inference. Class weights may multiply per-row weights. Avoid applying the same
 rebalance twice. Sampling changes row membership and is not equivalent to general
-importance weighting. K-neighbour distance weights and ensemble voting weights
+importance weighting. K-neighbor distance weights and ensemble voting weights
 are not evidence of observation-weight support.
 
 A `fit(sample_weight=...)` signature is recorded as an advertised API, not proof

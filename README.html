@@ -975,7 +975,24 @@ top: 0;
 z-index: 2;
 background: var(--bs-body-bg, white);
 }
-</style>
+
+.nominal-navbar {
+--bs-navbar-padding-y: 0.1rem;
+--bs-navbar-brand-padding-y: 0;
+--bs-navbar-toggler-padding-y: 0.1rem;
+--bs-navbar-toggler-padding-x: 0.3rem;
+--bs-navbar-toggler-font-size: 0.85rem;
+}
+.nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
+.nominal-navbar .navbar-brand:empty { display: none; }
+.nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
+.nominal-navbar.force-collapse {flex-wrap: wrap;}
+.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
+.nominal-navbar.force-collapse .navbar-toggler {display: block;}
+.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
+.nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
+.nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }</style>
 </head>
 
 <body>

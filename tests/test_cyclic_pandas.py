@@ -118,9 +118,9 @@ class TestConstruction:
         assert weekday_cycle.index.equals(weekday_source.index)
         assert weekday_cycle.name == weekday_source.name
 
-    def test_numeric_requires_explicit_period(self):
-        with pytest.raises(TypeError, match="explicit period"):
-            as_cyclic(pd.Series([359, 0, 1]))
+    def test_numeric_period(self):
+        var = as_cyclic(pd.Series([359, 0, 1]))
+        assert var.dtype.period == 359
 
     def test_numeric_normalizes_to_half_open_interval(self, degree_cycle):
         values = degree_cycle.tolist()

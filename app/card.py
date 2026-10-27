@@ -35,9 +35,9 @@ import base64
 from pathlib import Path
 
 import plotly.graph_objects as go
+from card_position import CardPositionError
 from faicons import icon_svg as icon
 from module import Module
-from card_position import CardPositionError
 from roles import BALANCE_PREFIX
 from shiny import module, reactive, render, ui
 from shiny.types import SilentException

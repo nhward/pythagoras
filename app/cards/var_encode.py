@@ -741,7 +741,6 @@ def instance():
         @render.text
         @this.record_context
         def Status():
-            print("\n".join(filter(None, [NominalStatus(), CodeStatus(), OrderedStatus(), CyclicStatus(), LogicalStatus(), BasketStatus()])))
             return "\n".join(filter(None, [NominalStatus(), CodeStatus(), OrderedStatus(), CyclicStatus(), LogicalStatus(), BasketStatus()]))
 
         @output

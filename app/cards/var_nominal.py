@@ -1,4 +1,4 @@
-"""Human-reviewed nominal-label reconciliation; no learned transformations."""
+"""Human-reviewed nominal reconciliation with replayable pipeline mappings."""
 from __future__ import annotations
 
 import hashlib
@@ -18,6 +18,10 @@ import pandas as pd
 from card import Card
 from code_recording import recordable
 from module import Module
+from NominalReconciliationTransformer import (
+    NominalReconciliationTransformer,
+    apply_merges,
+)
 from roles import Role
 from shiny import reactive, render, req, ui
 from shiny.types import SilentException, SilentOperationInProgressException
@@ -114,34 +118,6 @@ def visible_proposals(items, decisions):
             or not (set(p['sources']) | {p['destination']}) & eliminated.get(p['column'], set())]
 
 
-@recordable
-def apply_merges(frame, items):
-    result = frame.copy()
-    for column in dict.fromkeys(p['column'] for p in items):
-        mapping = {}
-        for p in items:
-            if p['column'] != column:
-                continue
-            for label in p['sources']:
-                if label in mapping and mapping[label] != p['destination']:
-                    raise ValueError(f"Conflicting destinations for {label}")
-                mapping[label] = p['destination']
-        def resolve(label, mapping):
-            seen = set()
-            while label in mapping:
-                if label in seen:
-                    raise ValueError("Merge decisions contain a cycle")
-                seen.add(label)
-                label = mapping[label]
-            return label
-        mapping = {key: resolve(key, mapping) for key in mapping}
-        series = result[column]
-        categories = list(dict.fromkeys(mapping.get(c, c) for c in series.cat.categories))
-        values = [v if pd.isna(v) else mapping.get(v, v) for v in series.array]
-        result[column] = pd.Categorical(values, categories=categories, ordered=False)
-    return result
-
-
 def fresh_state(fingerprint=None):
     return {"fingerprint": fingerprint, "batches": [], "ledger": [], "decisions": {}, "manual": [], "expected": {}}
 
@@ -159,6 +135,31 @@ def committed_frame(source, state):
     for batch in state['batches']:
         frame = apply_merges(frame, batch)
     return frame
+
+
+@recordable
+def export_reconciliation(source, state):
+    """Replay feature mappings; target corrections remain pre-pipeline cleaning."""
+    target_batches, feature_batches = [], []
+    for batch in state['batches']:
+        target_batches.append([p for p in batch if Role.TARGET in source.role_map.roles_for(p['column'])])
+        feature_batches.append([p for p in batch if Role.TARGET not in source.role_map.roles_for(p['column'])])
+    target_batches = [b for b in target_batches if b]
+    feature_batches = [b for b in feature_batches if b]
+    if target_batches:
+        if source.has_pipeline:
+            raise ValueError('Target-label corrections must precede learning steps.')
+        target_frame = source.frame
+        for batch in target_batches:
+            target_frame = apply_merges(target_frame, batch)
+        source = source.with_cleaned_data(target_frame, card='var_nominal',
+            operation='Reconcile target labels', parameters={'merges': target_batches})
+    if feature_batches:
+        transformer = NominalReconciliationTransformer(feature_batches)
+        preview = transformer.fit_transform(source.frame)
+        source = source.with_pipeline_step(transformer, name='var_nominal',
+            operation='Apply approved nominal mappings', preview_frame=preview)
+    return source
 
 
 def bar_chart(series, expected=()):
@@ -425,8 +426,21 @@ def instance():
                     selected = input.VariablePanel()
                 except SilentException:
                     selected = None
-            return ui.navset_tab(
-                *panels, id='VariablePanel', selected=selected if selected in columns else columns[0]
+            return ui.navset_bar(
+                *panels,
+                id='VariablePanel',
+                selected=selected if selected in columns else columns[0],
+                title=None,
+                navbar_options=ui.navbar_options(
+                    collapsible=not this.isFullScreen() and len(panels) > 6,
+                    underline = True,
+                    bg="lightgrey",
+                    class_=(
+                        "nominal-navbar force-collapse"
+                        if not this.isFullScreen() and len(panels) > 6
+                        else "nominal-navbar"
+                    ),
+                )
             )
 
         @reactive.effect
@@ -435,8 +449,8 @@ def instance():
             current = deepcopy(State())
             visible = visible_proposals(Items(), current['decisions'])
             accepted = [p for p in visible if current['decisions'].get(p['key']) == 'accept']
-            if accepted and Source().has_pipeline:
-                ui.notification_show('Commit is unavailable after learning steps. Place Nominal variables before the learning pipeline.', type='error')
+            if Source().has_pipeline and any(Role.TARGET in Source().role_map.roles_for(p['column']) for p in accepted):
+                ui.notification_show('Target-label corrections must precede learning steps. Commit predictor or stratifier mappings separately.', type='error')
                 return
             try:
                 apply_merges(Frame(), accepted)
@@ -465,7 +479,7 @@ def instance():
         def Status():
             current = State()
             pending = sum(current['decisions'].get(p['key']) == 'accept' for p in Items())
-            mess = f"{pending} accepted proposals pending · {len(current['ledger'])} recorded decisions" + (' · Cleaning must precede learning steps.' if Source().has_pipeline else '')
+            mess = f"{pending} accepted proposals pending · {len(current['ledger'])} recorded decisions" + (' · Target-label corrections must precede learning steps.' if Source().has_pipeline else '')
             return ui.span(mess, class_ = "text-primary")
 
         @output
@@ -487,7 +501,7 @@ def instance():
             source, current = Source(), State()
             if not current['batches']:
                 return source
-            return source.with_cleaned_data(Frame(), card='var_nominal', operation='Reconcile nominal labels', parameters={'merges': current['batches']})
+            return export_reconciliation(source, current)
 
         return Export
 

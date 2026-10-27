@@ -544,10 +544,10 @@ class TestFileHelpers:
 
     @pytest.mark.unit
     def test_unsupported_extension_raises(self, card_module, tmp_path):
-        path = tmp_path / "values.txt"
+        path = tmp_path / "values.bad"
         path.write_text("value\n1\n")
         _, functions = recorded_helpers(card_module, file_path=path)
-        with pytest.raises(ValueError, match="Unsupported file extension: .txt"):
+        with pytest.raises(ValueError, match="Unsupported file extension: .bad"):
             functions["GetData"]()
 
     @pytest.mark.unit
