@@ -3,8 +3,8 @@ import asyncio
 import logging
 import os
 from contextvars import ContextVar
-from export_readiness import equivalent
 
+from export_readiness import equivalent
 from shiny import reactive, req
 from shiny.reactive._reactives import DestroyedReactiveError
 from shiny.session import get_current_session

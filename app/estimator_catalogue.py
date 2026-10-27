@@ -6,7 +6,8 @@ from copy import deepcopy
 from functools import lru_cache
 from importlib.metadata import distributions
 from pathlib import Path
-from model_taxonomy import normalized_outputs, has_prediction_spread
+
+from model_taxonomy import has_prediction_spread, normalized_outputs
 
 DEFAULT_PATH = Path(__file__).parent / 'data/estimator_capabilities/catalogue.json'
 
