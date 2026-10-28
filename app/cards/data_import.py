@@ -478,7 +478,15 @@ def instance():
             restored_tab = "File based"
         return ui.navset_bar(
             *panels,
-            title=None, id="Navset", selected=restored_tab, padding=0, fillable=False
+            id='Navset',
+            selected=restored_tab,
+            title=None,
+            navbar_options=ui.navbar_options(
+                collapsible=False,
+                underline = True,
+                bg="lightgrey",
+                class_="nominal-navbar",
+            )
         )
     
     this.front=front

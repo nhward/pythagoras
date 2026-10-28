@@ -68,7 +68,9 @@ The summary names the task, structural requirements and predictor count. The tab
 shows model, input requirements, readiness, evidence, installation and scale guidance. Column filters help narrow the displayed rows. Fullscreen gives
 the table more vertical space.
 
-Each table row represents one method. Recipes counts the recipes remaining after the display filters; Summary recipe identifies the single recipe supplying that row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.
+The table columns are ordered: Model, Core mechanism, Composition, Fitting criterion, Transparency, Learning strategy, Prediction outputs, Scale, Input requirements, Readiness, Evidence, Package, Installation, and Recipes.
+
+Each table row represents one method. Recipes counts the recipes remaining after the display filters. A single ranked recipe supplies the row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.
 
 Select a row, then flip the card to inspect it. An empty table is explained in the
 footer. It may mean insufficient catalogue coverage rather than absence of suitable

@@ -337,7 +337,18 @@ def instance():
             shinywidgets.output_widget(f"Chart_{method}", fill=True, guide=this, title=f"{method} membership", position="left",
             text="Clusters are fitted in numeric predictor space and colored on the same 2D coordinates in every tab. Colors identify labels within each method, not equivalent groups across methods. Hover shows Identifier-role values when available, otherwise the original row position. Projection separation does not establish cluster validity."),
             value=method
-        ) for method in METHODS), id="ClusterType", selected="Partition", title=None, padding=0, fillable=True
+        ) for method in METHODS), 
+        id="ClusterType", 
+        selected="Partition", 
+        title=None, 
+        padding=0, 
+        fillable=True,
+        navbar_options=ui.navbar_options(
+            collapsible=False,
+            underline = True,
+            bg="lightgrey",
+            class_="nominal-navbar"
+        )
     )
     
     # Keep the grid viewport bounded: auto height renders large memberships

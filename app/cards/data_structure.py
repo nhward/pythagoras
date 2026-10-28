@@ -28,7 +28,7 @@ from var_types import var_kind
 
 from cards import obs_dependence
 
-PANELS = {"observations": "Observational structure", "temporal": "Temporal", "spatial": "Spatial", "textual": "Textual"}
+PANELS = {"observations": "Observational", "temporal": "Temporal", "spatial": "Spatial", "textual": "Textual"}
 FINDINGS = ["Characteristic", "State", "Finding", "Evidence", "Implication"]
 NONE = "__none__"
 
@@ -348,17 +348,26 @@ def instance():
         shinywidgets.output_widget(id = panel + "Chart", fill=True), value=panel) for panel, label in PANELS.items()], 
         title=None,
         id="Panel", 
-        selected="temporal"
+        selected="temporal",
+        navbar_options=ui.navbar_options(
+            collapsible=False,
+            underline = True,
+            bg="lightgrey",
+            class_="nominal-navbar",
+        )
     )
+
     this.back = lambda: ui.TagList(
         ui.output_ui("DetailTitle"), 
         ui.output_data_frame(id="Findings", guide = this, title = "Findings", text = "Accummulated findings relating to the the current panel"), 
         ui.output_data_frame(id="Dependence")
     )
+
     this.footer = lambda: ui.TagList(
         ui.output_ui("Busy"), 
         ui.output_ui(id="Status", guide=this, title="Data structure", position="top", text="Overall conclusion about the dataset structure")
     )
+
     this.settings = lambda: ui.TagList(
         ui.input_select(id="Stratifier", label="Display stratifier", choices={NONE:"None"}, selected=NONE, guide=this, text="Assigned Stratifier only. Missing strata remain visible; chart grouping does not change findings.", position="left"),
         ui.input_select(id="Geometry", label="Geometry preview", choices={}, guide=this, text="Preview one geometry column's X/Y bounds in its own CRS; no coordinate conversion or online tiles.", position="left"),

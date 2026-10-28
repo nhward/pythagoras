@@ -262,7 +262,10 @@ def test_method_table_groups_recipes_without_merging_evidence():
     assert row.Recipes == 2
     from cards.data_models import _method_groups
     recipes = _method_groups(result, show_all=True)[method]
-    assert row['Summary recipe'] == recipes[0]['profile']['label'].replace('_', ' ')
+    assert list(table.columns) == [
+        'Model', 'Core mechanism', 'Composition', 'Fitting criterion', 'Transparency',
+        'Learning strategy', 'Prediction outputs', 'Scale', 'Input requirements',
+        'Readiness', 'Evidence', 'Package', 'Installation', 'Recipes', 'ID']
     assert row.Evidence == recipes[0]['evidence'].replace('_', ' ')
     assert row['Input requirements'] == recipes[0]['input_assessment']['requirements'].replace('_', ' ')
     assert result['rows'] == before

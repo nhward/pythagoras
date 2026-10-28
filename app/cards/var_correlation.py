@@ -928,6 +928,12 @@ def instance():
         selected="pearson",
         padding=0,
         fillable=True,
+        navbar_options=ui.navbar_options(
+            collapsible=False,
+            underline = True,
+            bg="lightgrey",
+            class_="nominal-navbar"
+        )
     )
 
     this.back = lambda: ui.TagList(

@@ -234,7 +234,20 @@ def instance():
             panels.append(ui.nav_panel(name, ui.span(name + " outlier scores", class_="text-primary text-center d-block"),
                 shinywidgets.output_widget(id=f"Chart{i}", fill=True, guide=this, title=name,
                     text="Bars identify unusual observations, not errors. Aggregate stacks equal-weight percentile contributions; hover shows each raw score and percentile. Each tab shows its own highest-scoring observations in descending order; Aggregate sorts by the combined score.", position="left"), value=name))
-        return ui.navset_bar(*panels, id="View", selected="Aggregate", title=None, padding=0)
+        return ui.navset_bar(
+            *panels, 
+            id="View", 
+            selected="Aggregate", 
+            title=None, 
+            padding=0,
+            navbar_options=ui.navbar_options(
+                collapsible=False,
+                underline = True,
+                bg="lightgrey",
+                class_="nominal-navbar"
+            )
+        )
+        
     this.front = front
 
     this.back = lambda: ui.TagList(

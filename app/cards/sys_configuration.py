@@ -43,7 +43,13 @@ def instance():
             title = None,
             id = "Navset", 
             padding = 0, 
-            fillable = True
+            fillable = True,
+            navbar_options=ui.navbar_options(
+                collapsible=False,
+                underline = True,
+                bg="lightgrey",
+                class_="nominal-navbar"
+            )
         )
     this.front = front
 

@@ -67,6 +67,11 @@
 
         "max_dupl_cards": {
           "type": "integer"
+        },
+
+        "max_collapse": {
+          "type": "integer",
+          "default": 6
         }
       },
 

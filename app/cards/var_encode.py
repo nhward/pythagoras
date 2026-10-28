@@ -331,7 +331,18 @@ def instance():
                 text='Lists Basket Predictors, their distinct observed items, missing and empty basket counts, and generated names. Each item becomes a binary Predictor: present 1, absent 0. Duplicates count once and no reference item is dropped. Training fits learn their own vocabulary; unseen items are ignored without adding columns. Empty and unknown-only baskets give zeros; missing baskets remain missing. Missing items inside a basket are ignored. With no observed items, the original is retained and no features are added. The shared Remove original variables setting applies.'
             )
         ),
-        id='EncodingType', selected='Nominal', title=None, padding=0, fillable=True)
+        id='EncodingType', 
+        selected='Nominal', 
+        title=None, 
+        padding=0, 
+        fillable=True,
+        navbar_options=ui.navbar_options(
+            collapsible=False,
+            underline = True,
+            bg="lightgrey",
+            class_="nominal-navbar"
+        )
+)
     
     this.back = lambda: ui.TagList(
         ui.card_header('Encoding audit', class_='text-primary text-center'),

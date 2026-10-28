@@ -193,14 +193,15 @@ def _table(result, *, show_all=False, installed_only=False):
         profile = row['profile']
         records.append({**_model_labels(method), 'Recipes': len(rows),
             **{label: group_description(rows, field) for field, label in LABELS.items()},
-            'Summary recipe': _display_label(profile.get('label', profile['id'].split(':')[-1])),
             'Input requirements': row['input_assessment']['requirements'],
             'Readiness': _readiness(row), 'Evidence': row['evidence'],
             'Installation': row['availability'],
             'Scale': profile.get('scalability', {}).get('many_rows', 'See assessment'),
             'ID': method})
-    table = pd.DataFrame(records, columns=['Model', 'Type', 'Package', 'Recipes', 'Summary recipe',
-        *LABELS.values(), 'Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale', 'ID'])
+    table = pd.DataFrame(records, columns=[
+        'Model', 'Core mechanism', 'Composition', 'Fitting criterion', 'Transparency',
+        'Learning strategy', 'Prediction outputs', 'Scale', 'Input requirements',
+        'Readiness', 'Evidence', 'Package', 'Installation', 'Recipes', 'ID'])
     for column in ('Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale'):
         table[column] = table[column].map(_display_label)
     return table
@@ -286,7 +287,7 @@ def instance():
     this.description = 'Identify modeling methods compatible with the current outcome, predictors and observation structure.'
     this.front = lambda: ui.TagList(
         ui.output_ui(id='Summary', guide=this, title="Summary", text="A one-line summary of the outcome, observation structure and predictors"), 
-        ui.output_data_frame(id='Table', guide=this, title="Candidate methods", text="A table of methods that might be applicable to the data in its current form when executed as a pipeline.").add_style("margin-top: 0.75rem;")
+        ui.output_ui(id='Table', guide=this, title="Candidate methods", text="A table of candidate methods that might be applicable to model the data in its current form when executed as a pipeline.").add_style("margin-top: 0.75rem;")
     )
     this.back = lambda: ui.TagList(
         ui.output_ui(id='RecipeDetails', guide=this, title="Recipe", text="Details of the currently selected method recipe", class_="model-recipe-output")
@@ -353,20 +354,27 @@ def instance():
                 *(ui.div(icon('circle-info'), ' ', note, class_='model-data-notice') for note in alerts))
 
         @output
-        @render.data_frame
+        @render.ui
         def Table():
+            req(Incoming()) #to avoid multiple tables during DnD
+            return ui.output_data_frame(id = "Table2")
+
+
+        @output
+        @render.data_frame
+        def Table2():
             return render.DataGrid(Display().set_index('ID'), selection_mode='row', filters=False, width='100%')
 
         @output
         @render.text
         def Status():
-            count = len(Table.data_view())
+            count = len(Table2.data_view())
             return f'{count} methods shown · Select a row and flip to compare recipes.' if count else 'No matching methods. Show excluded and unreviewed recipes for explanations.'
 
         @output
         @render.ui
         def RecipeDetails():
-            selected = Table.data_view(selected=True)
+            selected = Table2.data_view(selected=True)
             if selected.empty:
                 return ui.div(icon('hand-pointer'), ui.h5('Choose a method to inspect'), ui.p('Select a row on the front, then flip back for its recipe.'), class_='model-recipe model-recipe-empty')
             # The stable ID is the hidden index, retained through sorting/filtering.

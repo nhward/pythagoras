@@ -431,13 +431,15 @@ def instance():
                 id='VariablePanel',
                 selected=selected if selected in columns else columns[0],
                 title=None,
+                padding=0, 
+                fillable=True,
                 navbar_options=ui.navbar_options(
-                    collapsible=not this.isFullScreen() and len(panels) > 6,
+                    collapsible=not this.isFullScreen() and len(panels) > this.config.get("settings", {}).get("max_collapse", 6),
                     underline = True,
                     bg="lightgrey",
                     class_=(
                         "nominal-navbar force-collapse"
-                        if not this.isFullScreen() and len(panels) > 6
+                        if not this.isFullScreen() and len(panels) > this.config.get("settings", {}).get("max_collapse", 6)
                         else "nominal-navbar"
                     ),
                 )

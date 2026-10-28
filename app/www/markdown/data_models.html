@@ -940,7 +940,24 @@ top: 0;
 z-index: 2;
 background: var(--bs-body-bg, white);
 }
-</style>
+
+.nominal-navbar {
+--bs-navbar-padding-y: 0.1rem;
+--bs-navbar-brand-padding-y: 0;
+--bs-navbar-toggler-padding-y: 0.1rem;
+--bs-navbar-toggler-padding-x: 0.3rem;
+--bs-navbar-toggler-font-size: 0.85rem;
+}
+.nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
+.nominal-navbar .navbar-brand:empty { display: none; }
+.nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
+.nominal-navbar.force-collapse {flex-wrap: wrap;}
+.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
+.nominal-navbar.force-collapse .navbar-toggler {display: block;}
+.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
+.nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
+.nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }</style>
 </head>
 
 <body>
@@ -1009,7 +1026,8 @@ background: var(--bs-body-bg, white);
 <p>Installation/version status is independent of these judgments. A missing optional package does not mean its model is analytically unsuitable. A matching package version does not validate an untested adapter.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>The summary names the task, structural requirements and predictor count. The table shows model, input requirements, readiness, evidence, installation and scale guidance. Column filters help narrow the displayed rows. Fullscreen gives the table more vertical space.</p>
-<p>Each table row represents one method. Recipes counts the recipes remaining after the display filters; Summary recipe identifies the single recipe supplying that row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.</p>
+<p>The table columns are ordered: Model, Core mechanism, Composition, Fitting criterion, Transparency, Learning strategy, Prediction outputs, Scale, Input requirements, Readiness, Evidence, Package, Installation, and Recipes.</p>
+<p>Each table row represents one method. Recipes counts the recipes remaining after the display filters. A single ranked recipe supplies the row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.</p>
 <p>Select a row, then flip the card to inspect it. An empty table is explained in the footer. It may mean insufficient catalogue coverage rather than absence of suitable models in the wider ecosystem.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
 <p>The flip side presents the selected recipe in a shaded panel with a readable model name, a separate technical identifier, and distinct readiness and evidence badges. Input requirements, tested preparation, configuration, fitting instructions, conditions, assessment and references are grouped into sections. The panel scrolls in the compact card and uses additional columns when space permits in full-screen. Judgments are guidance, not measured accuracy or timing results.</p>

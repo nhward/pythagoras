@@ -99,11 +99,24 @@ def instance():
     this.long_name='Text encoding'
     this.description='Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.'
     
-    this.front=lambda: ui.navset_bar(*[
-        ui.nav_panel(label,ui.output_ui(f'Message_{method}'),
+    this.front=lambda: ui.navset_bar(
+        *[ui.nav_panel(
+            label,
+            ui.output_ui(f'Message_{method}'),
             ui.output_data_frame(f'Summary_{method}',guide=this,title=label+' preview',position='left',text=GUIDES[method]),
             ui.output_data_frame(f'Detail_{method}')) for method,label in METHODS.items()],
-        id='EncodingType',selected='Bag of words',title=None,padding=0,fillable=True)
+        id='EncodingType',
+        selected='Bag of words',
+        title=None,
+        padding=0,
+        fillable=True,
+        navbar_options=ui.navbar_options(
+            collapsible=False,
+            underline = True,
+            bg="lightgrey",
+            class_="nominal-navbar"
+        )
+    )
     
     this.back=lambda:ui.TagList(
         ui.card_header(id='Text encoding audit',class_='text-primary text-center'),

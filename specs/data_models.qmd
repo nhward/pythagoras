@@ -36,7 +36,7 @@ layouts must preserve readable headings and access to the final references.
 
 
 Candidate rows group by estimator ID after per-recipe display filtering. Counts
-and summary-recipe labels identify the represented configurations. Summary fields
+identify the represented configurations; Type and Summary recipe are not displayed. Summary fields
 come from one deterministically ranked recipe; capabilities and evidence are never
 merged. Multi-recipe methods expose separate expandable detail panels.
 
