@@ -12,7 +12,7 @@ from sklearn.utils.validation import check_is_fitted
 
 @recordable
 class MissingnessTransformer(TransformerMixin, BaseEstimator):
-    """Learn excessive-missingness columns, then filter rows on retained columns."""
+    """Learn column removal for all data; filter observations only during fitting."""
 
     tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'variable_threshold': {'label': 'Variable missingness proportion',
                             'kind': 'float',
@@ -21,7 +21,7 @@ class MissingnessTransformer(TransformerMixin, BaseEstimator):
                                           'min': 0.3,
                                           'max': 0.6,
                                           'step': 0.1},
-                            'importance': 90},
+                            'importance': 100},
      'observation_threshold': {'label': 'Observation missingness proportion',
                                'kind': 'float',
                                'bounds': [0, 1],
@@ -29,7 +29,7 @@ class MissingnessTransformer(TransformerMixin, BaseEstimator):
                                              'min': 0.3,
                                              'max': 0.6,
                                              'step': 0.1},
-                               'importance': 100}}
+                               'importance': 90}}
 
     def __init__(self, *, remove_variables=False, remove_observations=False,
                  variable_threshold=0.5, observation_threshold=0.5):
@@ -63,13 +63,13 @@ class MissingnessTransformer(TransformerMixin, BaseEstimator):
             ).fit(X.loc[:, self.columns_])
         return self
 
-    def _transform_with_positions(self, X):
+    def _transform_with_positions(self, X, *, training=False):
         check_is_fitted(self, "columns_")
         if not isinstance(X, pd.DataFrame) or list(X.columns) != list(self.feature_names_in_):
             raise ValueError("Missingness removal requires the fitted input columns in order")
         frame = X.loc[:, self.columns_].copy()
         positions = np.arange(len(frame))
-        if self.row_filter_ is not None and len(frame):
+        if training and self.row_filter_ is not None and len(frame):
             # Position-based selection also works with duplicate source labels.
             positions = self.row_filter_.transform(frame.reset_index(drop=True)).index.to_numpy()
         return frame.iloc[positions].copy(), positions
@@ -77,8 +77,19 @@ class MissingnessTransformer(TransformerMixin, BaseEstimator):
     def transform(self, X):
         return self._transform_with_positions(X)[0]
 
+    def fit_transform(self, X, y=None, **fit_params):
+        self.fit(X, y, **fit_params)
+        return self.transform_training_x_y(X, y)[0]
+
     def transform_x_y(self, X, y):
-        frame, positions = self._transform_with_positions(X)
+        """Apply fitted columns without removing validation or test observations."""
+        if y is not None and len(y) != len(X):
+            raise ValueError("X and y must have the same number of rows")
+        return self.transform(X), y
+
+    def transform_training_x_y(self, X, y):
+        """Filter training features and targets together, using positional alignment."""
+        frame, positions = self._transform_with_positions(X, training=True)
         if y is None:
             return frame, None
         if len(y) != len(X):

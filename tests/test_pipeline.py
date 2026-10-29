@@ -105,5 +105,5 @@ def test_skrub_preprocessing_with_row_filter_and_sampler():
     pipe = clone(pipe).fit(X, y)
     sampler = next(step for _, step in pipe.steps if isinstance(step, RandomOverSampler))
     assert len(sampler.sample_indices_) == 8
-    assert pipe.predict(X).shape == (6,)
+    assert pipe.predict(X).shape == (7,)
     assert 0 <= pipe.score(X, y) <= 1

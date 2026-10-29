@@ -324,7 +324,7 @@ def instance():
         ui.input_checkbox_group(
             id="Remove", label="Remove excessive missingness in", choices=["Variables", "Observations"], inline=True, 
             guide=this, title="Remove excessive missingness", position="top",
-            text="Removes variables or observations above their respective thresholds. When both are selected, variables are removed first. Removals are recorded as a learning step; column selection is refitted on each training fold.",
+            text="Removes variables or observations above their respective thresholds. When both are selected, variables are removed first. Removals are recorded as a learning step. Column selection is refitted on each training fold and applied to all data. Observation removal applies only to training rows; validation, test and prediction rows are always retained.",
         ),
         ui.output_ui(id="Check"),
         class_="vertically-scrollable-footer",
@@ -337,7 +337,7 @@ def instance():
         ),
         ui.input_slider(
             id="ObservationThreshold", label="Excessive observation missingness (%)", min=0, max=100, value=50, step=1,
-            guide = this, text = "Flags an observation when its percentage of missing values exceeds this threshold. If observation removal is enabled, the calculation uses the columns remaining after any variable removal.", position="left"
+            guide = this, text = "Flags an observation when its percentage of missing values exceeds this threshold. If observation removal is enabled, the calculation uses the columns remaining after any variable removal. The preview shows training-row removal; validation, test and prediction rows are retained.", position="left"
 
         ),
         ui.input_checkbox(

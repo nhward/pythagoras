@@ -10,7 +10,8 @@ from sklearn.utils.validation import check_memory
 def _fit_transform_xy(transformer, X, y, *, params, **logging):
     with _print_elapsed_time(logging["message_clsname"], logging["message"]):
         transformer.fit(X, y, **params.get("fit", {}))
-        X, y = transformer.transform_x_y(
+        transform = getattr(transformer, "transform_training_x_y", transformer.transform_x_y)
+        X, y = transform(
             X, y, **params.get("transform", {})
         )
     return X, y, transformer
@@ -20,7 +21,8 @@ class Pipeline(ImbalancedPipeline, FeatureEnginePipeline):
     """Combine imbalanced-learn samplers and Feature-engine row transformers.
 
     Intermediate ``transform_x_y`` steps keep targets aligned when rows are
-    removed. Samplers run only during fitting. Constructor options, cloning,
+    removed. Steps with ``transform_training_x_y`` use it only during fitting;
+    their ordinary transformations preserve inference rows. Samplers run only during fitting. Constructor options, cloning,
     caching and prediction follow imbalanced-learn; ``transform_x_y`` and
     target-aware scoring follow Feature-engine.
 

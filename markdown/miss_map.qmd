@@ -30,7 +30,9 @@ The flip side lists threshold violations and missingness in special-role variabl
 
 #### 🛠️ Controls and actions
 
-The footer independently enables removal of excessive **Variables** and **Observations**. The exported data updates reactively, and clearing a choice restores that part of the incoming data. The status reports what was removed.
+The footer independently enables removal of excessive **Variables** and **Observations**. The exported data updates reactively, and clearing a choice restores that part of the incoming data. The status reports what was removed from the training preview.
+
+The learning pipeline removes excessively missing observations **only during training**. Validation, test and prediction observations are always retained, including when tuning the observation threshold, so changing that threshold cannot improve a score by discarding difficult test cases. Variable removal is learned on each training fold and applied consistently to both training and test data. Downstream imputation or an estimator that supports missing values is needed for retained incomplete observations.
 
 #### ⚙️ Settings
 

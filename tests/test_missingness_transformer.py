@@ -52,7 +52,7 @@ def test_duplicate_indices_keep_targets_aligned(target_kind):
     elif target_kind == "none":
         y = None
     transformer = MissingnessTransformer(remove_observations=True).fit(X)
-    Xt, yt = transformer.transform_x_y(X, y)
+    Xt, yt = transformer.transform_training_x_y(X, y)
     pd.testing.assert_frame_equal(Xt, X.iloc[[0, 2, 3]])
     if y is None:
         assert yt is None
@@ -71,7 +71,7 @@ def test_miss_map_after_learning_and_before_an_estimator():
     assert result.pipeline_steps == ("var_transform", "miss_map")
     pd.testing.assert_frame_equal(result.clean_frame, X)
     fitted = result.pipeline_for_training().fit(X)
-    pd.testing.assert_frame_equal(fitted.transform(X), result.frame)
+    pd.testing.assert_frame_equal(fitted.transform(X), upstream.frame)
     pipe = Pipeline([*result.pipeline.steps, ("model", DummyClassifier())])
     pipe.fit(X, pd.Series([0, 1, 0, 1]))
     assert pipe.named_steps.model.class_prior_ == pytest.approx([2 / 3, 1 / 3])
@@ -87,7 +87,7 @@ def test_empty_columns_and_empty_rows():
     assert result.frame.shape == (2, 0)
     assert miss_map._issues_table(result.frame, result.role_map, 0.5, 0.5).empty
     row_filter = MissingnessTransformer(remove_observations=True).fit(X)
-    assert row_filter.transform(X).empty
+    pd.testing.assert_frame_equal(row_filter.transform(X), X)
     assert row_filter.transform(X.iloc[:0]).empty
     assert clone(row_filter).fit_transform(X.iloc[:0]).empty
 
@@ -104,3 +104,30 @@ def test_row_removal_requires_explicit_permission_and_ordered_subset():
         source.with_pipeline_step(transformer, name="test", preview_frame=preview.iloc[::-1], allow_row_removal=True)
     result = source.with_pipeline_step(transformer, name="test", preview_frame=preview, allow_row_removal=True)
     assert len(result.frame) == 2
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('threshold', [0, .5, 1])
+@pytest.mark.parametrize('cached', [False, True])
+def test_training_filter_preserves_every_test_row_and_score_target(threshold, cached, tmp_path):
+    from sklearn.impute import SimpleImputer
+    from sklearn.metrics import accuracy_score
+    X = pd.DataFrame({'x': [1., 2., np.nan, 4.],
+                      'drop': [np.nan, np.nan, np.nan, 1.]})
+    y = pd.Series([0, 0, 1, 1])
+    pipe = Pipeline([
+        ('missing', MissingnessTransformer(remove_variables=True,
+            remove_observations=True, observation_threshold=threshold)),
+        ('impute', SimpleImputer()),
+        ('model', DummyClassifier(strategy='most_frequent')),
+    ], memory=str(tmp_path) if cached else None).fit(X, y)
+    expected_prior = [2/3, 1/3] if threshold < 1 else [.5, .5]
+    assert pipe.named_steps.model.class_prior_ == pytest.approx(expected_prior)
+    test = pd.DataFrame({'x': [np.nan, 6., np.nan], 'drop': [9., 9., 9.]}, index=[7, 7, 2])
+    target = pd.Series([1, 0, 1], index=test.index)
+    filtered, paired = pipe[:1].transform_x_y(test, target)
+    pd.testing.assert_frame_equal(filtered, test[['x']])
+    pd.testing.assert_series_equal(paired, target)
+    predictions = pipe.predict(test)
+    assert len(predictions) == len(test)
+    assert pipe.score(test, target) == accuracy_score(target, predictions)
