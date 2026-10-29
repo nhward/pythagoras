@@ -973,7 +973,7 @@ background: var(--bs-body-bg, white);
 
 <h4 id="purpose">🧭 Purpose</h4>
 <p><em>Compare documented model configurations with the current outcome, predictor types, missing values and observation structure. Use this diagnostic card after data preparation and Observation resampling, before choosing a model to train.</em></p>
-<p>The card displays recipes from the versioned capability catalogue. It does not fit, benchmark, install or automatically select a model, and it leaves incoming data and pipeline metadata unchanged.</p>
+<p>The card displays recipes from the versioned capability catalogue. It does not fit, benchmark, install or automatically select a model, and it leaves incoming data and pipeline metadata unchanged until Commit is pressed.</p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
 <li><strong>Primary:</strong> Find recipes that meet the current data requirements.</li>
@@ -1056,7 +1056,7 @@ background: var(--bs-body-bg, white);
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
 <li><strong>Input:</strong> Current predictors, stable outcome data, roles, modeling context and evaluation metadata, plus the JSON catalogue and installed-package metadata.</li>
-<li><strong>Output:</strong> The incoming proxy passes through unchanged.</li>
+<li><strong>Output:</strong> Until commitment, the incoming proxy passes through unchanged. Commit adds an unfitted terminal estimator recipe to the pipeline and a Learning entry to the data journey; data values remain unchanged.</li>
 <li><strong>Data journey:</strong> No cleaning operation, learned transformation or evaluation plan is added. Display changes do not train models or start extended tasks.</li>
 </ul>
 <h4 id="model-characteristics">🧭 Model characteristics</h4>
@@ -1070,6 +1070,9 @@ background: var(--bs-body-bg, white);
 <li><strong>Transparency</strong> is expert guidance about the whole model: Usually transparent, Conditional, or Usually opaque. Complexity, transformed features and composition can change how understandable a fitted model is. It is not a measured score or a claim about post-hoc explanation tools.</li>
 </ul>
 <p><strong>Unreviewed</strong>, <strong>Not applicable</strong>, and <strong>Depends on configuration</strong> have distinct meanings. A method summary says <strong>Varies by recipe</strong> when its displayed recipes have different descriptions; inspect each recipe rather than pooling their capabilities. Readiness and evidence still describe the named summary recipe. The characteristics do not establish compatibility, installation, integration, or successful validation. <strong>Capacity growth</strong> is reserved for stage 2 and is not currently assessed or displayed as a filter.</p>
+<h3 id="committing-a-model">Committing a model</h3>
+<p>Select a method and press <strong>Commit</strong>. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. Browsing other rows does not change it. Recommit to replace the model; changing upstream data requires a fresh commitment.</p>
+<p>Commit does not fit a model. The pipeline selects predictor-role columns before the estimator, excluding outcomes and other non-predictor roles. Supported preparation is fitted only when the pipeline is trained. Unvalidated, unavailable, or adapter-dependent recipes cannot be committed; the footer explains the reason and retains any previous commitment. Weighting requirements remain catalogue checks; training consumers must supply fit weights explicitly.</p>
 
 
 

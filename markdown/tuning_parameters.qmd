@@ -1,0 +1,47 @@
+---
+title: Tuning parameters
+---
+
+#### Purpose
+
+Define a finite search space for the transformations and model already present in the incoming pipeline. This card does not switch estimator classes, create conditional branches, run a search, or fit models.
+
+#### Front
+
+The table shows each published parameter's readable name, originating pipeline step, current value, constructor default, and proposed search values. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.
+
+Use **Find parameter or source** to narrow the table, then select a row to edit it. The technical parameter path and implementation class appear in the editor. Fixed schema, column selections, approved mappings, random seeds, weighting configuration, and infrastructure settings are hidden by default. Enable **Show everything** in the card settings to include these rows; they still cannot be enabled for tuning.
+
+**Current value** is the actual pipeline setting. **Default** is obtained from the constructor signature where available. `None` is a real value, not a missing definition. A required constructor argument may have no default; its configured current value is still shown. The card does not invent an undocumented default.
+
+#### Defining values
+
+**Select row to supply search values** means the parameter has no published suggested search space. Select that row in the table to open its editor below the grid. Choose a type if needed, then enter explicit choices such as `[1, 2, 5]` or select **Numeric range** and supply minimum, maximum and step. Save the definition, enable Auto-tune, and Commit. The current value and constructor default do not establish a useful tuning range by themselves.
+
+All parameters start with tuning off. Metadata supplies suggestions where available; suggestions are not automatically activated.
+
+* Integer and decimal parameters accept an explicit JSON list or a minimum, maximum and positive step. A range includes the maximum only if the step lands exactly on it. Minimum, maximum and step fields appear only when Numeric range is selected.
+* Boolean parameters show only the Auto-tune checkbox; enabling it searches both False and True.
+* Known categorical parameters offer multiple selection from supported choices.
+* Parameters without known choices accept a JSON list, for example `["option_a", "option_b"]`. Optional numeric values can use `[null, 5, 10]`.
+* Where the current value cannot establish a type, select the type yourself.
+
+For non-Boolean parameters, press **Save search definition**, then tick **Auto-tune this parameter**. The checkbox remains unavailable until the definition is complete. Known bounds and choices are checked; unknown parameters require the user's knowledge of the estimator documentation. Existing values in the pipeline are not changed by editing the search definition.
+
+#### Commit and review
+
+**Commit** attaches the search specification to the outgoing `proxy_data` and records its parameter grid and combination count in Data journey. Before a valid commitment, the journey records tuning as inactive. **Revert changes** restores the last committed draft. Subsequent edits do not change the exported commitment until Commit is pressed again. Drafts and commitments are included in card configuration state.
+
+The footer reports parameter count, the number selected for tuning, and possible combinations. Independent choice counts are multiplied without generating every combination; duplicate choices are removed. With no parameters active there is one fixed configuration. Counts are not cross-validation fit counts. Each parameter is limited to 10,000 candidate values.
+
+The flip side reviews active parameter paths and values, their counts, and the machine-readable specification.
+
+#### Pipeline changes and limitations
+
+Compatible draft definitions are retained when the pipeline changes. Removed parameters or changes in implementation discard the affected drafts with a notice. A changed pipeline invalidates the committed specification until recommitment. No estimator is required: preprocessing parameters can be tuned alone. With no pipeline, the card shows zero parameters.
+
+Metadata lives alongside Pythagoras transformer classes and in a shared registry for standard estimators. Coverage is deliberately partial. Constructor defaults are commonly available, but useful search ranges do not follow from those defaults. Unknown ranges remain for the user to define.
+
+Only independent finite choices are supported. Individually valid settings can still form an invalid combination, depend on fold size, or have no effect under another fixed setting. The card does not claim that every combination will fit successfully. Verify estimator requirements before running a search.
+
+Display-only random sample limits are not transformer parameters. Variable transformations expose independent Deskew, Scale and Center Boolean parameters. Imputation uses a custom transformer supporting simple, KNN and iterative styles, so its method is a categorical parameter within that transformer.

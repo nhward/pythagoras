@@ -23,6 +23,7 @@ from cyclic_pandas import is_cyclic
 from geometry_pandas import is_geometry
 from list_pandas import is_list
 from module import Module
+from pipeline import Pipeline
 from plotly.subplots import make_subplots
 from proxy_data import proxy_data
 from roles import Role
@@ -30,7 +31,6 @@ from shiny import render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
-from pipeline import Pipeline
 from sklearn.preprocessing import PowerTransformer, RobustScaler, StandardScaler
 
 TRANSFORM_LABELS = {
@@ -77,10 +77,13 @@ class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 class VariableTransformStep(TransformerMixin, BaseEstimator):
     """DataFrame-preserving learned transformations for selected variables."""
 
-    def __init__(self, columns: tuple[str, ...], transforms: tuple[str, ...],
-                 weight_column: str | tuple[str, ...] | None = None, robust: bool = False):
+    def __init__(self, columns: tuple[str, ...],
+                 weight_column: str | tuple[str, ...] | None = None, robust: bool = False,
+                 deskew: bool = False, scale: bool = False, center: bool = False):
         self.columns = columns
-        self.transforms = transforms
+        self.deskew = deskew
+        self.scale = scale
+        self.center = center
         self.weight_column = weight_column
         self.robust = robust
 
@@ -94,7 +97,10 @@ class VariableTransformStep(TransformerMixin, BaseEstimator):
             if column not in X.columns:
                 self.failures_[column] = "Variable is absent"
                 continue
-            pipeline = _build_pipeline(self.transforms, robust=self.robust)
+            pipeline = _build_pipeline(
+                [name for name, enabled in (("Deskew", self.deskew),
+                 ("Scale", self.scale), ("Center", self.center)) if enabled],
+                robust=self.robust)
             if pipeline is None:
                 continue
             try:
@@ -337,7 +343,10 @@ def _analyse_distribution(
     weight_column = tuple(sorted(weight_columns)) or None
     weights = _observation_weights(source, weight_column)
     transformer = (
-        VariableTransformStep(tuple(eligible), tuple(selected), weight_column, robust=robust).fit(source)
+        VariableTransformStep(
+            tuple(eligible), weight_column, robust=robust,
+            deskew="Deskew" in selected, scale="Scale" in selected,
+            center="Center" in selected).fit(source)
         if selected else None
     )
     frame = transformer.transform(source) if transformer is not None else source.copy()

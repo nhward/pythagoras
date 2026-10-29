@@ -110,3 +110,12 @@ def test_column_additions_must_be_declared_and_cannot_overwrite():
     roles = RoleMap(); roles.set_roles('x', [Role.PREDICTOR])
     with pytest.raises(ValueError, match='overwrite'):
         source.with_pipeline_step(t, name='cluster', preview_frame=preview, added_roles=roles)
+
+
+def test_training_has_no_preview_limit_and_uses_all_rows():
+    X = pd.DataFrame({'x': np.arange(1100, dtype=float)})
+    model = ClusterMembershipTransformer(('x',))
+    assert 'limit' not in model.get_params()
+    model.fit(X)
+    assert model.scale_[0] == 1099
+    assert model.mean_[0] == pytest.approx(.5)

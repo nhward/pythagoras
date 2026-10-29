@@ -210,9 +210,9 @@ def _analyze(data, *, limit=1000, standardize=True, use_weights=True, metric="eu
                     transformer = ClusterMembershipTransformer(
                         columns=tuple(c for c in data.columns if c in data.role_map.columns_with_role(Role.PREDICTOR)),
                         n_clusters=k, method=method, centre=centre, metric=metric, min_points=min_points, border=border,
-                        standardize=standardize, weighting=tuple(sorted(weighting)) or None, limit=limit,
+                        standardize=standardize, weighting=tuple(sorted(weighting)) or None,
                         output_column=_membership_name(data.columns),
-                    ).fit(data.frame)
+                    ).fit(data.frame.iloc[result.positions])
                     preview = transformer.transform(data.frame)
                     result.labels[method] = preview[transformer.output_column].iloc[result.positions].astype(str).to_numpy()
                     result.transformers[method] = transformer

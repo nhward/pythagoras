@@ -1,6 +1,8 @@
 """Sklearn-compatible boolean to nullable integer encoding."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -11,6 +13,8 @@ from sklearn.utils.validation import check_is_fitted
 @recordable
 class LogicalEncodingTransformer(TransformerMixin, BaseEstimator):
     """Encode False as 0 and True as 1, preserving missing observations."""
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'remove_original': {'fixed': True}}
 
     def __init__(self, columns, *, remove_original=True):
         self.columns = columns

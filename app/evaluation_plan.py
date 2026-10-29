@@ -27,7 +27,7 @@ OBJECTIVES = {"independent": "Independent observations", "unseen": "Unseen entit
               "future": "Future observations", "known": "Future observations of known entities",
               "future_unseen": "Future observations of unseen entities (not yet supported)"}
 GOALS = {"none": "Nothing", "observations": "New observations", "strata": "New strata",
-         "entities": "New entities", "future": "Future observations"}
+         "entities": "New entities", "future": "The future"}
 PURPOSES = {"": "Unassigned", "development": "Development", "validation": "Validation",
             "holdout": "Final holdout", "prediction": "Prediction"}
 STATES = ("Unused", "Training", "Validation", "Final holdout", "Prediction", "Mixed")

@@ -15,9 +15,9 @@ For the broader framework, see [identifying true missingness and placeholders](/
 
 #### 🧠 How it works
 
-Candidate values are configured separately for strings, integers, decimals, and dates. String matching can ignore case. Numeric matching can be restricted to values at the observed minimum or maximum, reducing the risk that an ordinary interior value such as -1 is misclassified.
+Candidate values are configured separately for strings, integers, decimals, and dates. String matching can ignore case. Numeric candidates can be restricted to values at the observed minimum or maximum, reducing the risk that an ordinary interior value such as -1 is misclassified. When replacements are selected, the full upstream data determines which column/value pairs qualify. Each candidate is checked against the unchanged data: replacing one extreme does not make an interior candidate eligible.
 
-Candidates are evidence, not proof. A value is a placeholder only when its meaning in the source domain supports that conclusion. Confirmed replacements become the appropriate missing marker for the variable type.
+Candidates are evidence, not proof. A value is a placeholder only when its meaning in the source domain supports that conclusion. Confirmed replacements become the appropriate missing marker for the variable type. They are stored as fixed rules in a sklearn-compatible pipeline step. Fitting validates the schema but learns no replacement values or thresholds. Training folds and prediction batches replay the same rules, without recalculating extrema. Case handling and numeric tolerance remain fixed. List variables have matching string elements removed; an emptied list becomes missing.
 
 #### 🏞️ Front
 
@@ -57,8 +57,10 @@ Look for a candidate repeated across many variables, concentrated in one source 
 #### 🔗 Data flow
 
 * **Input:** The upstream data and its variable types.
-* **Output:** Data in which selected placeholders are materialized as missing values.
-* **Data journey:** A selected replacement creates a Cleaning step; no selected replacement is recorded as inactive.
+* **Output:** A preview with selected placeholders replaced, plus an unfitted `PlaceholderTransformer` in the pipeline. The original `clean_frame` remains unchanged.
+* **Targets:** The project pipeline uses `transform_x_y` to apply approved target rules to `y` as well as the role-bearing input frame. Rows and their order are preserved. An ordinary sklearn pipeline applies the feature transformation only. Missing targets may require a subsequent missingness-removal step before model fitting.
+* **Data journey:** Selected replacements create a Learning-stage pipeline step, even though the rules are user-specified rather than statistically learned. No selected replacement is recorded as inactive. Clearing selections removes this card’s step.
+* **Review scope:** Candidate charts may be sampled. Human decisions informed by the full data are not fold-fitted discovery; select and review rules accordingly.
 
 <details class="deep-dive">
   <summary>Click here for a fully expanded discussion of missing values.</summary>

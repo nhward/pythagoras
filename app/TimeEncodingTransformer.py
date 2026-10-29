@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -71,6 +72,8 @@ class TimeEncodingTransformer(TransformerMixin, BaseEstimator):
     ``schemas`` optionally fixes the card's detected date/time resolution across
     training folds. It contains no learned target information or numeric statistics.
     """
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'features': {'fixed': True}, 'schemas': {'fixed': True}}
+
     def __init__(self, columns, *, features=tuple(FEATURES), remove_original=True, schemas=None):
         self.columns=columns
         self.features=features

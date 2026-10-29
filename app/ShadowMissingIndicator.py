@@ -1,9 +1,13 @@
 """Feature-engine missing indicators with Pythagoras shadow names."""
+from typing import ClassVar
+
 from feature_engine.imputation import AddMissingIndicator
 
 
 class ShadowMissingIndicator(AddMissingIndicator):
     """Preserve original columns and name appended indicators shadow__<source>."""
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'variables': {'fixed': True}, 'missing_only': {'fixed': True}}
 
     def fit(self, X, y=None):
         super().fit(X, y)

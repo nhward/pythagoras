@@ -1,6 +1,8 @@
 """Ordered ranks and equal-score orthogonal polynomial contrasts."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -42,6 +44,13 @@ class OrderedEncodingTransformer(TransformerMixin, BaseEstimator):
     frequencies. OrdinalEncoder receives rank tokens to support explicitly
     ordered numeric labels that are not sorted by numerical value.
     """
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'method': {'kind': 'categorical',
+                'choices': ['ordinal', 'polynomial'],
+                'importance': 100},
+     'degree': {'kind': 'integer',
+                'bounds': [0, 10000],
+                'suggested': {'values': [0, 1, 2, 3]}}}
 
     def __init__(self, columns, *, method='ordinal', degree=0,
                  remove_original=True, handle_unknown='missing'):

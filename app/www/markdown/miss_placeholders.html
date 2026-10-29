@@ -257,8 +257,21 @@ border-bottom: 1px solid var(--bs-table-border-color) !important;
 table.table,
 table.dataframe,
 shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
 ) > tbody > tr:nth-of-type(even) > * {
 background-color: var(--bs-body-bg, #fff) !important;
+}
+
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
@@ -318,22 +331,22 @@ background-color: #e2e3e5 !important;
 }
 
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-strong-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
 background-color: #d95f02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-review-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
 background-color: #e6ab02 !important;
 color: #000 !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-expected-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
 background-color: #3978a8 !important;
 color: #fff !important;
 }
 shiny-data-frame .shiny-data-grid > table
-> tbody > tr:not(:hover) > .var-cardinality-not-assessed-row {
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
 background-color: #9aa7b2 !important;
 color: #000 !important;
 }
@@ -351,7 +364,11 @@ shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
 .var-cardinality-strong-review-row,
 .var-cardinality-review-row,
 .var-cardinality-expected-row,
-.var-cardinality-not-assessed-row
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
 ) {
 color: var(--bs-body-color, #212529) !important;
 }
@@ -366,6 +383,12 @@ z-index: 10;
 overflow: visible;
 background-color: var(--py-table-cell-hover) !important;
 white-space: normal;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
 }
 
 shiny-data-frame
@@ -837,7 +860,104 @@ content: "●";
 
 .js-plotly-plot .gtitle {
 fill: var(--bs-primary) !important;
-}</style>
+}
+
+.model-recipe-output { flex: 0 0 auto !important; min-width: 0; width: 100%; }
+.model-recipe {
+--recipe-accent: #176078;
+color: var(--bs-body-color, #24343e);
+background: var(--bs-tertiary-bg, #f3f7f9);
+border: 1px solid var(--bs-border-color, #d9e3e8);
+border-radius: .85rem;
+margin: .25rem; padding: 1.2rem;
+overflow-wrap: anywhere;
+}
+.model-recipe-header { padding-bottom: 1rem; border-bottom: 1px solid var(--bs-border-color, #d9e3e8); }
+.model-recipe-eyebrow { color: var(--recipe-accent); font-size: .78rem; font-weight: 600; letter-spacing: .04em; }
+.model-recipe .model-recipe-title { margin: .35rem 0; font-size: 1.4rem; line-height: 1.25; }
+.model-recipe-path { display: block; font-size: .78rem; color: var(--bs-secondary-color, #52636c); white-space: normal; }
+.model-recipe-badges { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }
+.model-recipe-badge { display: inline-flex; align-items: baseline; gap: .4rem; border-radius: .45rem; padding: .35rem .6rem; background: #e5edf5; color: #264860; font-size: .8rem; }
+.model-recipe-badge.is-ready { background: #dfefe7; color: #24583d; }
+.model-recipe-badge.is-review { background: #fff0d4; color: #704b13; }
+.model-recipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: .85rem; margin-top: 1rem; align-items: start; }
+.model-recipe-section { min-width: 0; padding: 1rem; background: var(--bs-body-bg, white); border: 1px solid var(--bs-border-color, #d9e3e8); border-radius: .6rem; }
+.model-recipe-section h6 { display: flex; align-items: center; gap: .5rem; color: var(--recipe-accent); margin: 0 0 .65rem; font-size: .9rem; font-weight: 650; }
+.model-recipe-section p, .model-recipe-section li { font-size: .88rem; line-height: 1.5; }
+.model-recipe-section p:last-child, .model-recipe-section ul, .model-recipe-section ol { margin-bottom: 0; }
+.model-recipe-section ul, .model-recipe-section ol { padding-left: 1.2rem; }
+.model-recipe-section li + li { margin-top: .4rem; }
+.model-recipe-section pre { margin: 0; padding: .7rem; background: var(--bs-tertiary-bg, #f3f7f9); border-radius: .4rem; font-size: .78rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.model-recipe-muted, .model-recipe-footer { color: var(--bs-secondary-color, #52636c); }
+.model-recipe-footer { margin-top: 1rem; font-size: .75rem; }
+.model-recipe-sources { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0 !important; }
+.model-recipe-sources li + li { margin-top: 0; }
+.model-recipe-empty { padding: 2rem; text-align: center; }
+.model-recipe-empty h5 { margin-top: .75rem; }
+.model-data-notice { font-size: .8rem; color: #704b13; padding: .35rem .5rem; }
+.card.fullscreen-active .model-recipe { padding: 1.5rem; width: 100%; max-width: none; margin: .25rem 0; box-sizing: border-box; }
+.model-recipe svg { margin: 0 !important; flex: 0 0 auto; }
+
+.flip-container:has(.model-recipe-output).flipped > .flippable > .front {
+pointer-events: none;
+
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output) > .flippable > .back {
+overflow-y: auto;
+overflow-x: hidden;
+touch-action: pan-y;
+}
+.card.fullscreen-active .model-recipe-output { align-self: stretch; max-width: none; }
+
+.resample-details { flex: 0 0 auto !important; min-width: 0; }
+.resample-wide { grid-column: 1 / -1; }
+.resample-details .shiny-html-output { flex: 0 0 auto; }
+.resample-table-scroll { overflow-x: auto; max-width: 100%; }
+.resample-details .table { margin-top: .65rem; }
+.resample-details .shiny-input-container { min-width: 9rem; margin-bottom: .3rem; }
+.resample-message { margin-top: .65rem; padding: .65rem .8rem; border-radius: .4rem; font-size: .88rem; }
+.resample-message.is-warning { background: #fff0d4; color: #704b13; }
+.resample-message.is-error { background: #fbe4e6; color: #842029; }
+.resample-message.is-ready { background: #dfefe7; color: #24583d; }
+.flip-container:has(.resample-details).flipped > .flippable > .front { pointer-events: none; }
+.flip-container:has(.resample-details):not(.flipped) > .flippable > .back { pointer-events: none; }
+.flip-container:has(.resample-details) > .flippable > .back { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+.model-method-recipes { padding: .25rem; }
+.model-method-recipe { margin-bottom: .75rem; }
+.model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
+
+.var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.var-modify-table .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+
+.nominal-navbar {
+--bs-navbar-padding-y: 0.1rem;
+--bs-navbar-brand-padding-y: 0;
+--bs-navbar-toggler-padding-y: 0.1rem;
+--bs-navbar-toggler-padding-x: 0.3rem;
+--bs-navbar-toggler-font-size: 0.85rem;
+}
+.nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
+.nominal-navbar .navbar-brand:empty { display: none; }
+.nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
+.nominal-navbar.force-collapse {flex-wrap: wrap;}
+.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
+.nominal-navbar.force-collapse .navbar-toggler {display: block;}
+.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
+.nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
+.nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }</style>
 </head>
 
 <body>
@@ -860,8 +980,8 @@ fill: var(--bs-primary) !important;
 <li><strong>Secondary:</strong> Replace confirmed placeholders consistently across the dataset.</li>
 </ol>
 <h4 id="how-it-works">🧠 How it works</h4>
-<p>Candidate values are configured separately for strings, integers, decimals, and dates. String matching can ignore case. Numeric matching can be restricted to values at the observed minimum or maximum, reducing the risk that an ordinary interior value such as -1 is misclassified.</p>
-<p>Candidates are evidence, not proof. A value is a placeholder only when its meaning in the source domain supports that conclusion. Confirmed replacements become the appropriate missing marker for the variable type.</p>
+<p>Candidate values are configured separately for strings, integers, decimals, and dates. String matching can ignore case. Numeric candidates can be restricted to values at the observed minimum or maximum, reducing the risk that an ordinary interior value such as -1 is misclassified. When replacements are selected, the full upstream data determines which column/value pairs qualify. Each candidate is checked against the unchanged data: replacing one extreme does not make an interior candidate eligible.</p>
+<p>Candidates are evidence, not proof. A value is a placeholder only when its meaning in the source domain supports that conclusion. Confirmed replacements become the appropriate missing marker for the variable type. They are stored as fixed rules in a sklearn-compatible pipeline step. Fitting validates the schema but learns no replacement values or thresholds. Training folds and prediction batches replay the same rules, without recalculating extrema. Case handling and numeric tolerance remain fixed. List variables have matching string elements removed; an emptied list becomes missing.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>Tabs show all variables or one broad type at a time. The heat maps compare existing missingness with occurrences of configured candidate placeholders. Use the type-specific tabs when a dense all-variable chart is difficult to read.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
@@ -890,8 +1010,10 @@ fill: var(--bs-primary) !important;
 <h4 id="data-flow">🔗 Data flow</h4>
 <ul>
 <li><strong>Input:</strong> The upstream data and its variable types.</li>
-<li><strong>Output:</strong> Data in which selected placeholders are materialized as missing values.</li>
-<li><strong>Data journey:</strong> A selected replacement creates a Cleaning step; no selected replacement is recorded as inactive.</li>
+<li><strong>Output:</strong> A preview with selected placeholders replaced, plus an unfitted <code>PlaceholderTransformer</code> in the pipeline. The original <code>clean_frame</code> remains unchanged.</li>
+<li><strong>Targets:</strong> The project pipeline uses <code>transform_x_y</code> to apply approved target rules to <code>y</code> as well as the role-bearing input frame. Rows and their order are preserved. An ordinary sklearn pipeline applies the feature transformation only. Missing targets may require a subsequent missingness-removal step before model fitting.</li>
+<li><strong>Data journey:</strong> Selected replacements create a Learning-stage pipeline step, even though the rules are user-specified rather than statistically learned. No selected replacement is recorded as inactive. Clearing selections removes this card’s step.</li>
+<li><strong>Review scope:</strong> Candidate charts may be sampled. Human decisions informed by the full data are not fold-fitted discovery; select and review rules accordingly.</li>
 </ul>
 <details class="deep-dive">
 <summary>

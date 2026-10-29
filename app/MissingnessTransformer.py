@@ -1,5 +1,7 @@
 """Fold-fitted column selection and target-aligned missing-row removal."""
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -11,6 +13,23 @@ from sklearn.utils.validation import check_is_fitted
 @recordable
 class MissingnessTransformer(TransformerMixin, BaseEstimator):
     """Learn excessive-missingness columns, then filter rows on retained columns."""
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'variable_threshold': {'label': 'Variable missingness proportion',
+                            'kind': 'float',
+                            'bounds': [0, 1],
+                            'suggested': {'mode': 'range',
+                                          'min': 0.3,
+                                          'max': 0.6,
+                                          'step': 0.1},
+                            'importance': 90},
+     'observation_threshold': {'label': 'Observation missingness proportion',
+                               'kind': 'float',
+                               'bounds': [0, 1],
+                               'suggested': {'mode': 'range',
+                                             'min': 0.3,
+                                             'max': 0.6,
+                                             'step': 0.1},
+                               'importance': 100}}
 
     def __init__(self, *, remove_variables=False, remove_observations=False,
                  variable_threshold=0.5, observation_threshold=0.5):

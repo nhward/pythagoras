@@ -2,9 +2,8 @@
 title: Model candidates specification
 ---
 
-`data_models` is an immutable diagnostic card after preparation and `obs_resample`.
-It reads the JSON catalogue through `estimator_catalogue` and performs no estimator
-imports, fitting, installation or automatic execution selection. Pure `_analyze`
+`data_models` is a mutable model-selection card after preparation and `obs_resample`.
+It reads the JSON catalogue through `estimator_catalogue`. Explicit Commit constructs an unfitted recipe; browsing performs no fitting, installation or automatic model selection. Pure `_analyze`
 and `_table` helpers separate requirements from display filters.
 
 Requirements derive from the modeling context and `model_predictors`. Structural
@@ -18,7 +17,7 @@ The table supports row selection and filtering. Details include parameters, cond
 subjective assessments and evidence URLs. Missing evaluation plans remain browsable.
 Unsupported types, infinities and empty datasets produce no compatible matches.
 
-Settings persist through standard immutable-card configuration. Display-only settings
+Settings persist through standard card configuration. Display-only settings
 must not invalidate analysis. Exports return the incoming proxy independently of
 settings and table rendering. No extended task or mutable-card commit is necessary.
 
@@ -83,3 +82,7 @@ and details use the shared taxonomy labels. Neighbor retrieval is lazy; nearest
 centroids, fitted kernels/GPs and trees are eager. Generic wrappers and Cubist with
 optional neighbor correction require configuration-specific descriptions. Differing
 recipe strategies show `Varies by recipe` without pooling capabilities.
+
+## Estimator commitment
+
+Commit applies the selected method's ranked summary recipe. Construction requires selectable catalogue evidence and a supported preparation adapter. Errors retain the previous commitment. The exported proxy preserves frame, clean_frame, roles and preprocessing and replaces its terminal data_models step. A Learning processing record names the committed model and recipe. No fit occurs. A change to upstream proxy identity invalidates this session commitment. The footer shows the committed estimator independently of row browsing. Predictors are selected before model fitting, preventing target leakage. Commit state is session-local; restoring configuration requires recommitment.

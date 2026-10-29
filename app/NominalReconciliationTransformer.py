@@ -1,5 +1,6 @@
 """Replay human-approved nominal mappings without learning from validation data."""
 from copy import deepcopy
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -49,6 +50,8 @@ class NominalReconciliationTransformer(TransformerMixin, BaseEstimator):
     Unmapped labels and missing values pass through. No frequencies, vocabulary,
     or similarity decisions are learned by fit.
     """
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'batches': {'fixed': True}}
 
     def __init__(self, batches):
         self.batches = batches

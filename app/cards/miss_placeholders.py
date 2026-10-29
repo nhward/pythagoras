@@ -20,14 +20,20 @@ import plotly.graph_objects as go
 import shinywidgets
 from card import Card
 from code_recording import recordable
-from cyclic_pandas import is_cyclic
 from module import Module
+from PlaceholderTransformer import (
+    PlaceholderTransformer,
+    _apply_list_placeholder_codes,
+    _columns_by_placeholder_kind,
+    _normalise_placeholder_text,
+    _scalar_placeholder_mask,
+    placeholder_rules,
+)
 from proxy_data import proxy_data as Pxy
+from roles import Role
 from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
-from text_pandas import is_text
-from var_types import key_from_dtype
 
 # Converts missing value placeholders to Na/NaN/NaT
 # Ideally this follows the correct conversion of strings to their real datatype esp. Datetime
@@ -55,161 +61,6 @@ def _placeholder_colour_map(present_codes: list[int]) -> dict[int, str]:
     return colours
 
 
-@recordable
-def _columns_by_placeholder_kind(df: pd.DataFrame) -> dict[str, list[str]]:
-    columns = {"int": [], "dec": [], "str": [], "dte": [], "bkt": []}
-    for column in df.columns:
-        kind = key_from_dtype(df[column].dtype)
-        if kind in ["geo", "cpx", "dur", "obj", "unk", "log"]:
-            continue
-        if kind == "cyc":
-            kind="str" if df[column].dtype.is_categorical else "dec"
-        if kind in ["cde", "nom", "ord", "txt"]:
-            kind="str"
-        columns[kind].append(column)
-    return columns
-
-
-@recordable
-def _normalise_placeholder_text(value: object, *, case_sensitive: bool) -> str:
-    text = str(value)
-    return text if case_sensitive else text.casefold()
-
-
-@recordable
-def _scalar_placeholder_mask(
-    series: pd.Series,
-    kind: str,
-    placeholder: object,
-    *,
-    float_eps: float,
-    extrema: bool,
-    case_sensitive: bool,
-) -> np.ndarray:
-    """Match one placeholder against a scalar-valued Series."""
-    if kind == "str":
-        values = series.astype("string").fillna("")
-        target = _normalise_placeholder_text(
-            placeholder,
-            case_sensitive=case_sensitive,
-        )
-        if not case_sensitive:
-            values = values.str.casefold()
-        return values.eq(target).to_numpy(dtype=bool, na_value=False)
-    if kind == "dte":
-        target = pd.to_datetime(placeholder, errors="coerce")
-        if pd.isna(target):
-            return np.zeros(len(series), dtype=bool)
-        return series.eq(target).to_numpy(dtype=bool, na_value=False)
-    if kind == "int":
-        try:
-            target = int(placeholder)
-        except (TypeError, ValueError):
-            return np.zeros(len(series), dtype=bool)
-        if extrema:
-            minimum, maximum = series.min(skipna=True), series.max(skipna=True)
-            if target != minimum and target != maximum:
-                return np.zeros(len(series), dtype=bool)
-        return series.eq(target).to_numpy(dtype=bool, na_value=False)
-    if kind == "dec":
-        try:
-            target = float(placeholder)
-        except (TypeError, ValueError):
-            return np.zeros(len(series), dtype=bool)
-        values = series.to_numpy(dtype="float64", na_value=np.nan)
-        finite = values[np.isfinite(values)]
-        if extrema and finite.size:  # noqa: SIM102
-            if not (
-                np.isclose(finite.min(), target, atol=float_eps)
-                or np.isclose(finite.max(), target, atol=float_eps)
-            ):
-                return np.zeros(len(series), dtype=bool)
-        return np.isfinite(values) & (np.abs(values - target) < float_eps)
-    return np.zeros(len(series), dtype=bool)
-
-
-@recordable
-def _apply_list_placeholder_codes(
-    df: pd.DataFrame,
-    columns: list[str],
-    lookup: dict[str, int],
-    codes_arr: np.ndarray,
-    col_pos: dict[str, int],
-    *,
-    case_sensitive: bool,
-) -> None:
-    """Scan every list element once and assign the first matching code per cell."""
-    if not lookup:
-        return
-    for column in columns:
-        output = codes_arr[:, col_pos[column]]
-        for row, value in enumerate(df[column].array):
-            if value is pd.NA:
-                continue
-            for item in value:
-                if not isinstance(item, str):
-                    continue
-                key = item if case_sensitive else item.casefold()
-                code = lookup.get(key)
-                if code is not None:
-                    output[row] = code
-                    break
-
-
-@recordable
-def _rebuild_custom_series(series: pd.Series, values: list[object]) -> pd.Series:
-    array = type(series.array)._from_sequence(values, dtype=series.dtype)
-    return pd.Series(array, index=series.index, name=series.name)
-
-
-@recordable
-def _replace_scalar_matches(series: pd.Series, mask: np.ndarray) -> pd.Series:
-    if not mask.any():
-        return series
-    if is_cyclic(series.dtype) or is_text(series.dtype):
-        values = list(series.array)
-        for position in np.flatnonzero(mask):
-            values[int(position)] = pd.NA
-        return _rebuild_custom_series(series, values)
-    result = series.copy()
-    result.loc[mask] = pd.NaT if pd.api.types.is_datetime64_any_dtype(series.dtype) else pd.NA
-    return result
-
-
-@recordable
-def _remove_list_placeholders(
-    series: pd.Series,
-    placeholders: set[str],
-    *,
-    case_sensitive: bool,
-) -> pd.Series:
-    """Remove matching string elements in one pass, preserving ListDtype."""
-    if not placeholders:
-        return series
-    changed = False
-    values: list[object] = []
-    for value in series.array:
-        if value is pd.NA:
-            values.append(pd.NA)
-            continue
-        retained = [
-            item
-            for item in value
-            if not (
-                isinstance(item, str)
-                and (item if case_sensitive else item.casefold()) in placeholders
-            )
-        ]
-        matched = len(retained) != len(value)
-        if matched:
-            changed = True
-            values.append(retained if retained else pd.NA)
-        else:
-            values.append(value)
-    if not changed:
-        return series
-    # TODO: Implement __setitem__/_putmask in the custom extension arrays so pandas-native masked assignment can replace this reconstruction step.
-    return _rebuild_custom_series(series, values)
 
 def instance():
     """
@@ -636,25 +487,20 @@ def instance():
 
         @this.record_code
         def _transform_data(source, replacements, extrema, case_sensitive):
-            full  = source
-            sentinels = replacements
-            if not sentinels:
-                return full.with_inactive_step(
-                    stage="Cleaning",
-                    card="miss_placeholders",
+            if not replacements:
+                return source.with_inactive_step(
+                    stage="Learning", card="miss_placeholders",
                     operation="Replace missing-value placeholders",
                 )
-            df = ResolvePlaceholders(data = full, sentinels=sentinels, extrema=extrema, case_sensitive=case_sensitive, drop_geometry = False)
-            return full.with_cleaned_data(
-                df,
-                card="miss_placeholders",
+            rules = placeholder_rules(source.frame, replacements,
+                extrema=extrema, case_sensitive=case_sensitive)
+            targets = [column for column in source.frame
+                       if Role.TARGET in source.role_map.roles_for(column)]
+            transformer = PlaceholderTransformer(rules, case_sensitive=case_sensitive,
+                target_columns=targets)
+            return source.with_pipeline_step(transformer, name="miss_placeholders",
                 operation="Replace missing-value placeholders",
-                parameters={
-                    "sentinels": sentinels,
-                    "extrema_only": bool(extrema),
-                    "case_sensitive": bool(case_sensitive),
-                },
-            )
+                preview_frame=transformer.fit_transform(source.frame))
 
         @this.reactable(calc = True)
         @this.record_context
@@ -770,7 +616,7 @@ def instance():
 
 
         @this.record_code
-        def ResolvePlaceholders(data, sentinels: str | None, float_eps: float = 1e-9, extrema: bool = True, case_sensitive: bool = False, drop_geometry: bool = True): #TODO: get drop_geometry to do something
+        def ResolvePlaceholders(data, sentinels: list[str] | None, float_eps: float = 1e-9, extrema: bool = True, case_sensitive: bool = False, drop_geometry: bool = True):
             """
             Builds a Pandas data frame with the specified sentinels converted to the relevant missing value indictor.
             
@@ -793,47 +639,10 @@ def instance():
                 raise ValueError(f"Unknown dataset type supplied: {type(data)}")
             if sentinels is None or len(sentinels) == 0:
                 return df
-            df = pd.DataFrame(df).copy()
-            type_to_cols = _columns_by_placeholder_kind(df)
-            parsed: dict[str, list[str]] = {
-                "int": [], "dec": [], "str": [], "dte": []
-            }
-            for sent in sentinels:
-                vtype, placeholder = sent.split(sep=": ", maxsplit=1)
-                if vtype in parsed:
-                    parsed[vtype].append(placeholder)
-            for vtype, placeholders in parsed.items():
-                for placeholder in placeholders:
-                    for col in type_to_cols[vtype]:
-                        mask = _scalar_placeholder_mask(
-                            df[col],
-                            vtype,
-                            placeholder,
-                            float_eps=float_eps,
-                            extrema=extrema,
-                            case_sensitive=case_sensitive,
-                        )
-                        if mask.any():
-                            this.log.debug(
-                                f"Replaced {int(mask.sum())} {placeholder} "
-                                f"{vtype} placeholders in {col}"
-                            )
-                            df[col] = _replace_scalar_matches(df[col], mask)
-
-            list_placeholders = {
-                _normalise_placeholder_text(
-                    placeholder,
-                    case_sensitive=case_sensitive,
-                )
-                for placeholder in parsed["str"]
-            }
-            for col in type_to_cols["bkt"]:
-                df[col] = _remove_list_placeholders(
-                    df[col],
-                    list_placeholders,
-                    case_sensitive=case_sensitive,
-                )
-            return df
+            rules = placeholder_rules(df, sentinels, extrema=extrema,
+                case_sensitive=case_sensitive, float_eps=float_eps)
+            return PlaceholderTransformer(rules, case_sensitive=case_sensitive,
+                float_eps=float_eps).fit_transform(df)
 
         @this.reactable(calc=True)
         @this.record_context

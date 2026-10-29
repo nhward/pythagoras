@@ -1,0 +1,19 @@
+---
+title: Tuning parameters specification
+---
+
+`tuning_parameters` is a mutable card discovered through the normal card picker. Place it after preprocessing and optionally after `data_models`. It records an inactive Learning journey entry until a valid commitment, then a successor carrying a defensive-copy tuning specification and a journey entry with the grid and combination count. It never fits an estimator or modifies parameter values.
+
+`app/tuning.py` discovers nested constructor parameters from `get_params(deep=True)`. Actual estimator objects and composite topology lists are represented through their children, not exposed as method alternatives. Class-local `tuning_metadata` overrides the application registry. Constructor signatures provide defaults; absent defaults are distinguished from None. Runtime scalar values provide conservative type inference; missing choices/ranges are not guessed. Fixed configuration is listed but cannot be activated.
+
+Each draft is keyed by full sklearn parameter path and implementation class. Finite numeric ranges use decimal arithmetic and require positive increments; integer ranges require integral endpoints and increments. Explicit choices use JSON scalars, including null. Known bounds and choices are validated, nonfinite numbers rejected, duplicates removed, and per-parameter counts capped at 10,000. Independent cardinalities are multiplied, with one configuration for an empty grid.
+
+The front table is searchable and sortable. A non-Boolean row editor contains the type, range or values, Save search definition, and a gated Auto-tune checkbox. Boolean rows contain only the Auto-tune checkbox and search both False and True. Updating drafts uses DataGrid.update_data rather than reexecuting the table renderer. Commit and Revert changes are in the footer above a status line. The flip side contains counts, active choices and the technical specification.
+
+The exported specification contains pipeline fingerprint, sklearn-compatible parameter grid, and combination count. `proxy_data.tuning_spec` returns a defensive copy only when the current pipeline fingerprint matches. Pipeline changes invalidate old commitments. Standard proxy cloning and derivation preserve the stored specification, subject to fingerprint validation. Draft and committed states participate in card configuration restoration. Removed paths or changed classes reconcile with an explicit notice.
+
+Tests cover discovery with and without models, required defaults, count/validation semantics, cloning and invalidation, unchanged pipeline values, checkbox gating, numeric editing, commit/revert and exported specification. This card does not run search, implement branches, infer all dependency constraints, or promise that every independently valid combination can fit.
+
+Card preview sample limits are excluded from transformer constructors; clustering previews sample before fitting while training fits all eligible fold rows. VariableTransformStep exposes deskew, scale and center Boolean constructor parameters, replacing the transforms tuple. ImputationStep supports all three styles internally and publishes method choices simple, knn and iterative.
+
+Random seeds and weighting configuration (including weight-column selections and weighting switches) are fixed, hidden by default, and cannot be activated. Range fields are hidden for explicit choices. Rows without suggested search spaces direct users to select the row and supply values in its editor.

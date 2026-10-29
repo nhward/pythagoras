@@ -1,6 +1,8 @@
 """Training-vocabulary binary encoding for Basket predictors."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -36,6 +38,8 @@ class BasketEncodingTransformer(TransformerMixin, BaseEstimator):
     Duplicates are ignored. Empty baskets encode as zeros; missing baskets encode
     as missing in every output. No reference item is dropped: items can coexist.
     """
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'remove_original': {'fixed': True}}
 
     def __init__(self, columns, *, remove_original=True):
         self.columns = columns

@@ -48,6 +48,7 @@ class proxy_data:
     _name: str = None
     _cleaning_records: tuple[CleaningRecord, ...] = field(default_factory=tuple)
     _pipeline: Pipeline | None = None
+    _tuning_spec: dict | None = None
     _clean_df: pd.DataFrame | None = None
     _processing_records: tuple[ProcessingRecord, ...] = field(default_factory=tuple)
 
@@ -360,6 +361,50 @@ class proxy_data:
             raise ValueError("No learning pipeline has been registered")
         return clone(self._pipeline)
 
+    @property
+    def tuning_spec(self):
+        """Return a defensive copy only while the committed pipeline still matches."""
+        from copy import deepcopy
+        from tuning import discover, fingerprint
+        if self._tuning_spec is None:
+            return None
+        if self._tuning_spec.get("fingerprint") != fingerprint(discover(self._pipeline)):
+            return None
+        return deepcopy(self._tuning_spec)
+
+    def with_tuning_spec(self, specification):
+        from copy import deepcopy
+        from dataclasses import replace
+        from tuning import discover, fingerprint
+        if specification.get("fingerprint") != fingerprint(discover(self._pipeline)):
+            raise ValueError("The tuning specification does not match this pipeline")
+        record = ProcessingRecord(
+            stage="Learning", card="tuning_parameters", operation="Define parameter tuning",
+            attempted=True, parameters={"grid": specification["grid"],
+                                        "combinations": specification["combinations"]},
+            input_shape=self.shape, output_shape=self.shape,
+            method="Independent parameter search",
+        )
+        records = tuple(r for r in self.processing_records if r.card != "tuning_parameters")
+        return replace(self, _tuning_spec=deepcopy(specification),
+                       _processing_records=(*records, record))
+
+    def with_estimator(self, estimator, *, label, recipe_id):
+        """Commit an unfitted terminal model while preserving data and preprocessing."""
+        from dataclasses import replace
+
+        if not isinstance(estimator, BaseEstimator) or not callable(getattr(estimator, "predict", None)):
+            raise TypeError("The committed estimator must implement fit and predict")
+        steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else [])
+                 if name != "data_models"]
+        steps.append(("data_models", clone(estimator)))
+        record = ProcessingRecord(stage="Learning", card="data_models",
+            operation=f"Committed estimator: {label}", attempted=True,
+            parameters={"recipe_id": recipe_id}, input_shape=self.shape,
+            output_shape=self.shape, method=label)
+        records = tuple(record for record in self.processing_records if record.card != "data_models")
+        return replace(self, _pipeline=Pipeline(steps), _processing_records=(*records, record))
+
     def with_pipeline_step(
         self,
         transformer: BaseEstimator,
@@ -463,7 +508,8 @@ class proxy_data:
             suffix += 1
 
         steps = [] if self._pipeline is None else list(self._pipeline.steps)
-        steps.append((step_name, clone(transformer)))
+        position = next((i for i, (name, _) in enumerate(steps) if name == "data_models"), len(steps))
+        steps.insert(position, (step_name, clone(transformer)))
         variables = getattr(transformer, "columns", None)
         if not variables:
             variables = getattr(transformer, "eligible", ())
@@ -497,6 +543,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _pipeline=Pipeline(steps),
             _clean_df=self.clean_frame.copy(),
@@ -529,6 +576,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -591,6 +639,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=(*self.cleaning_records, record),
             _clean_df=frame.copy(),
             _processing_records=(*self.processing_records, processing),
@@ -618,6 +667,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -691,6 +741,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -751,6 +802,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -768,6 +820,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -790,6 +843,7 @@ class proxy_data:
             _cluster_count=self.cluster_count,
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
+            _tuning_spec=self._tuning_spec,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -1000,6 +1054,8 @@ class proxy_data:
         if check_processing_records and self.processing_records != other.processing_records:
             return False
         if check_pipeline:
+            if self.tuning_spec != other.tuning_spec:
+                return False
             if self.pipeline_steps != other.pipeline_steps:
                 return False
             own_steps = [] if self._pipeline is None else self._pipeline.steps

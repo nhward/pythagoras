@@ -1,6 +1,8 @@
 """Train-only clustering followed by a nominal membership feature for new rows."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -16,13 +18,21 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
     """Append an unordered categorical feature without refitting in transform.
 
     ``columns`` names eligible predictors, not targets or observation weights.
-    Fitting may sample complete positive-weight rows; transform assigns every
+    Fitting uses all complete positive-weight rows; transform assigns every
     complete row using the fitted preprocessing and model. The weighting column
     is only needed during fit and is not a clustering coordinate.
     """
 
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'n_clusters': {'kind': 'integer',
+                    'suggested': {'values': [2, 3, 5, 8]},
+                    'importance': 100},
+     'method': {'fixed': True},
+     'centre': {'fixed': True},
+     'metric': {'fixed': True},
+     'weighting': {'fixed': True}}
+
     def __init__(self, columns, *, n_clusters=2, method="Partition", centre="centroids",
-                 metric="euclidean", standardize=True, weighting=None, limit=1000,
+                 metric="euclidean", standardize=True, weighting=None,
                  output_column="cluster", random_state=2025, min_points=5, border=True):
         self.min_points = min_points
         self.border = border
@@ -33,7 +43,6 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
         self.metric = metric
         self.standardize = standardize
         self.weighting = weighting
-        self.limit = limit
         self.output_column = output_column
         self.random_state = random_state
 
@@ -55,8 +64,6 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
             raise ValueError("Unsupported partition center or distance metric")
         if isinstance(self.n_clusters, bool) or not isinstance(self.n_clusters, (int, np.integer)) or self.n_clusters < 1:
             raise ValueError("n_clusters must be a positive integer")
-        if not isinstance(self.limit, (int, np.integer)) or self.limit < 1:
-            raise ValueError("limit must be a positive integer")
         if not isinstance(self.output_column, str) or not self.output_column.strip():
             raise ValueError("output_column must be a nonempty string")
         missing = set(self.columns) - set(X.columns)
@@ -74,8 +81,6 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
         frame = X[columns].astype(float).replace([np.inf, -np.inf], np.nan)
         frame = frame.loc[:, frame.iloc[np.flatnonzero(positive)].nunique() > 1]
         positions = np.flatnonzero(positive & frame.notna().all(axis=1).to_numpy())
-        if len(positions) > self.limit:
-            positions = np.sort(np.random.default_rng(self.random_state).choice(positions, self.limit, replace=False))
         x = frame.iloc[positions].to_numpy()
         if not len(x) or not x.shape[1]:
             raise ValueError("Clustering requires complete rows and varying numeric predictors")

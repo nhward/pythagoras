@@ -8,6 +8,7 @@ import string
 import warnings
 from functools import lru_cache
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -90,6 +91,18 @@ def characteristics(text):
 
 @recordable
 class TextEncodingTransformer(TransformerMixin,BaseEstimator):
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'weighting': {'kind': 'categorical',
+                   'choices': ['tfidf', 'counts', 'binary'],
+                   'importance': 100},
+     'analyzer': {'kind': 'categorical', 'choices': ['word', 'char']},
+     'ngram_max': {'kind': 'integer', 'bounds': [1, 3], 'suggested': {'values': [1, 2, 3]}},
+     'max_features': {'kind': 'integer',
+                      'bounds': [1, 4096],
+                      'suggested': {'values': [100, 500, 1000]}},
+     'components': {'kind': 'integer',
+                    'bounds': [1, 300],
+                    'suggested': {'values': [10, 20, 50]}}}
+
     def __init__(self,columns,*,methods=('bow',),remove_original=True,weighting='tfidf',
                  analyzer='word',ngram_max=1,lowercase=True,strip_accents=False,stop_words=None,
                  min_df=1,max_df=1.0,max_features=500,components=20,lsa_normalize=False,

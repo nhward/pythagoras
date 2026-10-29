@@ -1074,3 +1074,70 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
 .nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
 .nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
+/* Tuning controls wrap in compact cards and share a row when space allows. */
+.tuning-search { display: none; }
+.card.fullscreen-active .tuning-search { display: block; }
+.tuning-editor-detail { margin: .25rem 0; }
+.tuning-editor-controls {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: .4rem .65rem;
+  width: 100%;
+}
+.tuning-editor-controls > .shiny-input-container { flex: 1 1 9rem; width: auto; min-width: 0; }
+.tuning-editor-controls .shiny-input-container { margin-bottom: 0; }
+.tuning-editor-controls .control-label { font-size: .85rem; }
+.tuning-editor-controls .tuning-range { flex: 2 1 18rem; min-width: 0; }
+.tuning-range-fields { display: flex; gap: .5rem; }
+.tuning-range-fields > .shiny-input-container { flex: 1 1 0; width: auto; min-width: 0; }
+.tuning-editor-controls .tuning-values { flex: 2 1 18rem; min-width: 0; }
+.tuning-values > .shiny-input-container { width: 100%; }
+.tuning-editor-controls fieldset { flex: 0 0 auto; margin: 0; }
+.tuning-editor-controls fieldset .shiny-input-container { width: auto; }
+.tuning-editor-controls > .btn { flex: 0 0 auto; }
+
+/* Keep the expanded tuning specification within the review panel. */
+.tuning-specification-scroll {
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-bottom: 0;
+}
+.card.fullscreen-active .tuning-specification-scroll { max-height: 45vh; }
+
+/* WebKit must not route wheel gestures to the hidden front DataGrid. */
+.flip-container:has(.tuning-review-output).flipped > .flippable > .front {
+  pointer-events: none;
+  visibility: hidden;
+}
+.flip-container:has(.tuning-review-output):not(.flipped) > .flippable > .back {
+  pointer-events: none;
+  visibility: hidden;
+}
+.tuning-specification-scroll { touch-action: pan-y; }
+
+/* Let the candidates output consume remaining card height through its UI wrapper. */
+.model-candidates-table { min-height: 0; min-width: 0; overflow: hidden; }
+.model-candidates-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.model-candidates-table .shiny-data-grid { min-height: 0; overflow: auto; }
+
+.model-candidates-table.shiny-html-output { display: flex; flex-direction: column; }
+.front > div:has(> .model-candidates-summary) { flex: 0 0 auto; }
+.front > div:has(> .model-candidates-table) { min-height: 0; }
+.model-candidates-table > shiny-data-frame { height: 100%; max-height: none; flex: 1 1 0 !important; }
+.model-candidates-table .shiny-data-grid { flex: 1 1 0; height: 100%; max-height: none; }
+
+/* Allocate spare front-face height to the tuning grid, not the row editor. */
+.tuning-parameters-table.shiny-html-output {
+  display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+}
+.front > div:has(> .tuning-parameters-table) { min-height: 0; }
+.front > div:has(> .tuning-parameters-editor),
+.front > div:has(> .tuning-parameters-message),
+.front > .tuning-search,
+.front > .tuning-parameters-message { flex: 0 0 auto; }
+.tuning-parameters-table > shiny-data-frame {
+  min-height: 0; height: 100%; max-height: none; flex: 1 1 0 !important;
+}
+.tuning-parameters-table .shiny-data-grid {
+  min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
+}

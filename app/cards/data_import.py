@@ -437,19 +437,24 @@ def instance():
         ]
         panels.append(ui.nav_panel(
             "OpenML",
-            ui.tags.a("Browse OpenML", href="https://www.openml.org/search?type=data", target="_blank"),
-            ui.input_numeric("OpenMLPage", label="Catalogue page (100 datasets per page)",
-                             value=restored_input("OpenMLPage", 1), min=1, step=1),
-            ui.input_action_button("OpenMLBrowse", label="Load catalogue page", guide=this,
-                text="Load a page of active OpenML datasets. Search the selection within that page, or enter an exact dataset ID from the OpenML website."),
-            ui.input_selectize("OpenMLDataset", label="Dataset (or enter an exact ID)",
-                choices={str(restored_input("OpenMLDataset")): str(restored_input("OpenMLDataset"))} if restored_input("OpenMLDataset") else {},
-                selected=restored_input("OpenMLDataset"), options={"create": True},
-                guide=this, text="Catalogue labels show dataset ID, name, version, rows and columns. IDs identify a specific version. Large datasets may need substantial memory."),
-            ui.input_action_button("OpenMLDownload", label="Download preview", guide=this,
-                text="Download the selected dataset, including its target column. Inspect the flip side, then Commit Import. All columns initially have Predictor roles."),
-            ui.input_text("OName", label="Short name", value=restored_input("OName", "openml")),
-            ui.output_ui("OpenMLStatus"),
+            # Keep this longer form in normal document flow. Fill-item wrappers
+            # otherwise shrink below their controls and overlap in compact cards.
+            ui.div(
+                ui.tags.a("Browse OpenML", href="https://www.openml.org/search?type=data", target="_blank"),
+                ui.input_numeric("OpenMLPage", label="Catalogue page (100 datasets per page)",
+                                 value=restored_input("OpenMLPage", 1), min=1, step=1),
+                ui.input_action_button("OpenMLBrowse", label="Load catalogue page", guide=this,
+                    text="Load a page of active OpenML datasets. Search the selection within that page, or enter an exact dataset ID from the OpenML website."),
+                ui.input_selectize("OpenMLDataset", label="Dataset (or enter an exact ID)",
+                    choices={str(restored_input("OpenMLDataset")): str(restored_input("OpenMLDataset"))} if restored_input("OpenMLDataset") else {},
+                    selected=restored_input("OpenMLDataset"), options={"create": True},
+                    guide=this, text="Catalogue labels show dataset ID, name, version, rows and columns. IDs identify a specific version. Large datasets may need substantial memory."),
+                ui.input_action_button("OpenMLDownload", label="Download preview", guide=this,
+                    text="Download the selected dataset, including its target column. Inspect the flip side, then Commit Import. All columns initially have Predictor roles."),
+                ui.input_text("OName", label="Short name", value=restored_input("OName", "openml")),
+                ui.output_ui("OpenMLStatus"),
+                class_="card-scroll-content",
+            ),
         ))
         if not Module.IS_SHINYLIVE:
             uci_choices = UciChoices()
@@ -494,10 +499,11 @@ def instance():
     def back():
         return ui.TagList(
             ui.card_header("Data Summary", class_="text-primary text-center"),
-            ui.output_ui(id="Summary", 
+            ui.output_ui(
+                id="Summary", style="font-size: 0.85rem; line-height: 1.1;",
                 guide=this, title="Data Summary", position="top", priority=-10,
-                text="This summary shows information specific to diferent classes of data. It is available even before the data has been committed.",
-                style="font-size: 0.85rem; line-height: 1.1;")
+                text="This summary shows information specific to diferent classes of data. It is available even before the data has been committed."
+            )
         )
     
     this.back=back
@@ -506,7 +512,7 @@ def instance():
         return ui.TagList(
             ui.input_action_button(
                 id="Commit", label='Commit Import', icon=icon("gavel", title="Commit the import", a11y="sem"),
-                disabled=True, width="250px", class_="btn rounded-pill btn-sm d-block mx-auto btn-primary", style="border: 0px; box-shadow: none;",
+                disabled=True, width="220px", class_="btn rounded-pill btn-sm d-block mx-auto btn-primary", style="border: 0px; box-shadow: none;",
                 guide=this, title="Commit import button", position="top",
                 text="This button commits the file reading. It bounces momentarily when it is ready to be clicked."
             ),

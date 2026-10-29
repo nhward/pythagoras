@@ -347,9 +347,9 @@ def test_characteristic_sort_preserves_selected_recipe_and_hides_front(page, app
     expect(selected).to_be_visible()
     leading_rows = [table.locator('tbody tr').nth(i).text_content() for i in range(2)]
     # The virtualized DOM contains only a subset of the methods.
-    count = len(_table(_analyze(source(), load_catalogue(), {}), show_all=True))
+    _ = len(_table(_analyze(source(), load_catalogue(), {}), show_all=True))
     expect(page.locator('[id$="-Status"]')).to_have_text(
-        f'{count} methods shown · Select a row and flip to compare recipes.')
+        'No estimator committed. Select a method and Commit.')
     selected.click()
     card.hover()
     page.locator('[id$="-FlipButton"]').click()
@@ -431,3 +431,35 @@ def test_learning_strategy_column_and_details(page, app):
     expect(details).to_contain_text('Learning strategy')
     expect(details).to_contain_text('Lazy')
     expect(details).to_contain_text('query-specific neighbor retrieval')
+
+
+@pytest.mark.ui
+def test_commit_selected_model_exports_pipeline_and_status(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Hist Gradient Boosting Regressor', timeout=30000)
+    table.get_by_text('Hist Gradient Boosting Regressor', exact=True).click()
+    expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=True;pipeline=False')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed estimator: Hist Gradient Boosting Regressor')
+    expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=False;pipeline=True')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed estimator: Hist Gradient Boosting Regressor')
+
+
+@pytest.mark.ui
+def test_candidates_table_grows_to_fullscreen_height(page, app):
+    page.set_viewport_size({'width': 1400, 'height': 1000})
+    page.goto(app.url)
+    table = page.locator('.model-candidates-table')
+    expect(table).to_contain_text('Meets requirements', timeout=30000)
+    before = table.bounding_box()['height']
+    card = page.locator('.card').first
+    card.hover()
+    page.locator('[id$="-ExpandButton"]').click()
+    expect(card).to_have_class(__import__('re').compile('fullscreen-active'))
+    page.wait_for_timeout(600)
+    after = table.bounding_box()['height']
+    assert after > before + 200
+    grid = table.locator('shiny-data-frame')
+    assert grid.bounding_box()['height'] > after * .9

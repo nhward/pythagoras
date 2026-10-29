@@ -1,6 +1,8 @@
 """Sklearn-compatible sine/cosine encoding using explicit cyclic schema."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -17,6 +19,8 @@ class CyclicEncodingTransformer(TransformerMixin,BaseEstimator):
     level, with equally spaced positions. Periods and category order are schema,
     never estimated from a training subset. Transform uses only the fitted schema.
     """
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'handle_unknown': {'kind': 'categorical', 'choices': ['missing', 'error']}}
 
     def __init__(self,columns,*,remove_original=True,handle_unknown='missing'):
         self.columns=columns

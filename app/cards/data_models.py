@@ -1,4 +1,4 @@
-"""Inspect model recipes against current data; never fit or alter data."""
+"""Inspect model recipes and explicitly commit an unfitted estimator."""
 from __future__ import annotations
 
 import json
@@ -23,11 +23,12 @@ from estimator_catalogue import (
     requirements_from_proxy,
 )
 from faicons import icon_svg as icon
+from model_commit import build_model
 from model_taxonomy import LABELS, description_label, display_value, group_description
 from module import Module
 from proxy_data import proxy_data
 from roles import Role
-from shiny import render, req, ui
+from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from weighting import WeightingError, effective_weights
 
@@ -282,38 +283,73 @@ def _recipe_details(row, catalogue_version):
 
 
 def instance():
-    this = Card(file=__file__, mutable=False)
+    this = Card(file=__file__, mutable=True)
     this.long_name = 'Model method candidates'
     this.description = 'Identify modeling methods compatible with the current outcome, predictors and observation structure.'
-    this.front = lambda: ui.TagList(
-        ui.output_ui(id='Summary', guide=this, title="Summary", text="A one-line summary of the outcome, observation structure and predictors"), 
-        ui.output_ui(id='Table', guide=this, title="Candidate methods", text="A table of candidate methods that might be applicable to model the data in its current form when executed as a pipeline.").add_style("margin-top: 0.75rem;")
-    )
-    this.back = lambda: ui.TagList(
-        ui.output_ui(id='RecipeDetails', guide=this, title="Recipe", text="Details of the currently selected method recipe", class_="model-recipe-output")
-    )
-    this.settings = lambda: ui.TagList(
-        ui.input_checkbox(id='ShowAll', label='Show excluded and unreviewed recipes', value=False,
-            guide=this, position='left',
-            text='Include superseded methods, methods needing preprocessing, and unsupported or untested recipes. Readiness names the broader method; details explain the configuration and limitations. Unchecked hides these entries. Supersession groups methods for display and does not substitute fitted models.'),
-        ui.input_checkbox(id='InstalledOnly', label='Show installed packages only', value=False,
-            guide=this, position='left',
-            text='Hide methods whose required package is not installed in this runtime. Installation alone does not establish a matching version or validated support; check Installation and Evidence.'),
-        ui.input_checkbox(id='UseWeights', label='Use available observation weightings', value=False,
-            guide=this, position='left',
-            text='Require support for fitting with the effective observation weights assigned upstream. Absent, uniform or invalid weights use unweighted requirements; The front summary explains any fallback. This card does not fit models or apply weights.'),
-        ui.input_checkbox(id='Forecasting', label='Explore forecasting recipes', value=False,
-            guide=this, position='left',
-            text='Explore forecasting methods instead of the incoming outcome task. Assigned Sequence and Identifier roles determine time and panel requirements. These documented recipes still require forecasting adapters and validation.'),
-        ui.input_select(id='Output', label='Required prediction output', choices=CHOICES, selected='',
-            guide=this, position='left',
-            text='Require a particular prediction output in addition to the data and observation-structure requirements. Leave the default for no extra output requirement. Unreviewed output support appears as Untested when excluded recipes are shown.'),
-    )
-    this.footer = lambda: ui.output_text('Status')
 
+    this.front = lambda: ui.TagList(
+        ui.output_ui(
+            id='Summary', class_='model-candidates-summary', 
+            guide=this, title="Summary", position = "bottom", text="A one-line summary of the outcome, observation structure and predictors"
+        ), 
+        ui.output_ui(
+            id='Table', fill=True, fillable=True, class_='model-candidates-table', 
+            guide=this, title="Candidate methods", position = "bottom", text="A table of candidate methods that might be applicable to model the data in its current form when executed as a pipeline."
+        ).add_style("margin-top: 0.75rem;")
+    )
+
+    this.back = lambda: ui.TagList(
+        ui.output_ui(
+            id='RecipeDetails', class_="model-recipe-output",
+            guide=this, title="Recipe", position = "bottom", text="Details of the currently selected method recipe"
+        )
+    )
+
+    this.footer = lambda: ui.TagList(
+        ui.input_action_button(
+            id='Commit', label='Commit', icon=icon("gavel", title="Commit", a11y="sem"), 
+            width="220px", class_="btn rounded-pill btn-sm d-block mx-auto btn-primary", style="border: 0px; box-shadow: none;",
+            guide=this, position = "top", text="Whether to model the data with the current row's model"
+        ), 
+        ui.output_text(
+            id='Status',
+            guide=this, position = "top", text="A record of the current model choice."
+        ), 
+    )
+
+    this.settings = lambda: ui.TagList(
+        ui.input_checkbox(
+            id='ShowAll', label='Show excluded and unreviewed recipes', value=False,
+            guide=this, position='left',
+            text='Include superseded methods, methods needing preprocessing, and unsupported or untested recipes. Readiness names the broader method; details explain the configuration and limitations. Unchecked hides these entries. Supersession groups methods for display and does not substitute fitted models.'
+        ),
+        ui.input_checkbox(
+            id='InstalledOnly', label='Show installed packages only', value=False,
+            guide=this, position='left',
+            text='Hide methods whose required package is not installed in this runtime. Installation alone does not establish a matching version or validated support; check Installation and Evidence.'
+        ),
+        ui.input_checkbox(
+            id='UseWeights', label='Use available observation weightings', value=False,
+            guide=this, position='left',
+            text='Require support for fitting with the effective observation weights assigned upstream. Absent, uniform or invalid weights use unweighted requirements; The front summary explains any fallback. This card does not fit models or apply weights.'
+        ),
+        ui.input_checkbox(
+            id='Forecasting', label='Explore forecasting recipes', value=False,
+            guide=this, position='left',
+            text='Explore forecasting methods instead of the incoming outcome task. Assigned Sequence and Identifier roles determine time and panel requirements. These documented recipes still require forecasting adapters and validation.'
+        ),
+        ui.input_select(
+            id='Output', label='Required prediction output', choices=CHOICES, selected='',
+            guide=this, position='left',
+            text='Require a particular prediction output in addition to the data and observation-structure requirements. Leave the default for no extra output requirement. Unreviewed output support appears as Untested when excluded recipes are shown.'
+        ),
+    )
+    
     def server(input, output, session):
         catalogue = load_catalogue()
         versions = installed_versions()
+        Committed = reactive.Value(None)
+        CommitError = reactive.Value('')
 
         @this.reactable(calc=True)
         def Incoming():
@@ -365,11 +401,50 @@ def instance():
         def Table2():
             return render.DataGrid(Display().set_index('ID'), selection_mode='row', filters=False, width='100%')
 
+        @this.reactable(calc=True)
+        def SelectedRecipe():
+            selected = Table2.data_view(selected=True)
+            if selected.empty:
+                return None
+            groups = _method_groups(Results(), show_all=bool(input.ShowAll()), installed_only=bool(input.InstalledOnly()))
+            rows = groups.get(selected.index[0], [])
+            return rows[0] if rows else None
+
+        @this.reactable(triggers=[input.Commit])
+        def CommitModel():
+            row = SelectedRecipe()
+            if row is None:
+                CommitError.set('Select a method first.')
+                return
+            try:
+                model = build_model(row, Incoming().model_predictors)
+                Incoming().with_estimator(model, label=_model_labels(row['estimator'])['Model'],
+                                          recipe_id=row['id'])
+            except Exception as exc:  # noqa: BLE001
+                CommitError.set(str(exc))
+                return
+            Committed.set((Incoming(), model, _model_labels(row['estimator'])['Model'], row['id']))
+            CommitError.set('')
+
+        @this.reactable(calc=True)
+        def Exported():
+            source = Incoming()
+            committed = Committed()
+            if committed is None or committed[0] is not source:
+                return source
+            return source.with_estimator(committed[1], label=committed[2], recipe_id=committed[3])
+
         @output
         @render.text
         def Status():
-            count = len(Table2.data_view())
-            return f'{count} methods shown · Select a row and flip to compare recipes.' if count else 'No matching methods. Show excluded and unreviewed recipes for explanations.'
+            committed = Committed()
+            message = (f'Committed estimator: {committed[2]} · {committed[3]}'
+                       if committed is not None and committed[0] is Incoming()
+                       else 'No estimator committed. Select a method and Commit.')
+            if committed is not None and committed[0] is not Incoming():
+                message += ' Upstream data changed; commit again.'
+            error = CommitError()
+            return f'{message} {error}' if error else message
 
         @output
         @render.ui
@@ -397,7 +472,7 @@ def instance():
                     open=(index == 0), class_='model-method-recipe')
                   for index, row in enumerate(rows)), class_='model-method-recipes')
 
-        return Incoming
+        return Exported
 
     this.server = server
     return this

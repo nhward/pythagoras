@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from inspect import signature
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,15 @@ class TargetEncodingTransformer(TransformerMixin, BaseEstimator):
     is for inference, not for generating features for a training estimator.
     An explicit y overrides the configured target column when fitting.
     """
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'method': {'kind': 'categorical',
+                'choices': ['auto', 'smooth', 'mean'],
+                'importance': 100},
+     'smoothing': {'kind': 'float',
+                   'bounds': [0, 1000000],
+                   'suggested': {'values': [1.0, 10.0, 100.0]},
+                   'importance': 90},
+     'cv': {'kind': 'integer', 'bounds': [2, 10000], 'suggested': {'values': [3, 5, 10]}}}
 
     def __init__(self, columns, *, target, target_type='continuous', method='auto',
                  smoothing=10., cv=5, remove_original=True, random_state=2025):

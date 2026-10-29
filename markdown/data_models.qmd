@@ -10,7 +10,7 @@ preparation and Observation resampling, before choosing a model to train.*
 
 The card displays recipes from the versioned capability catalogue. It does not fit,
 benchmark, install or automatically select a model, and it leaves incoming data and
-pipeline metadata unchanged.
+pipeline metadata unchanged until Commit is pressed.
 
 #### 🎯 Goals
 
@@ -142,7 +142,7 @@ horizon or lag configuration. Evaluation readiness remains separate from browsin
 
 - **Input:** Current predictors, stable outcome data, roles, modeling context and
   evaluation metadata, plus the JSON catalogue and installed-package metadata.
-- **Output:** The incoming proxy passes through unchanged.
+- **Output:** Until commitment, the incoming proxy passes through unchanged. Commit adds an unfitted terminal estimator recipe to the pipeline and a Learning entry to the data journey; data values remain unchanged.
 - **Data journey:** No cleaning operation, learned transformation or evaluation plan
   is added. Display changes do not train models or start extended tasks.
 
@@ -202,3 +202,9 @@ capabilities. Readiness and evidence still describe the named summary recipe.
 The characteristics do not establish compatibility, installation, integration,
 or successful validation. **Capacity growth** is reserved for stage 2 and is not
 currently assessed or displayed as a filter.
+
+### Committing a model
+
+Select a method and press **Commit**. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. Browsing other rows does not change it. Recommit to replace the model; changing upstream data requires a fresh commitment.
+
+Commit does not fit a model. The pipeline selects predictor-role columns before the estimator, excluding outcomes and other non-predictor roles. Supported preparation is fitted only when the pipeline is trained. Unvalidated, unavailable, or adapter-dependent recipes cannot be committed; the footer explains the reason and retains any previous commitment. Weighting requirements remain catalogue checks; training consumers must supply fit weights explicitly.

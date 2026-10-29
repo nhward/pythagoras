@@ -205,6 +205,7 @@ def instance():
     this.defer_configuration_input("Stratifier")
     this.register_configuration_state_field("evaluation_plan")
     this.register_configuration_state_field("partition_mapping")
+    
     this.front = lambda: ui.TagList(
         ui.output_ui("Summary"),
         shinywidgets.output_widget("Chart", fill=True, guide=this, title="Evaluation membership", position="left",
@@ -229,6 +230,7 @@ def instance():
                     class_='resample-table-scroll'), wide=True),
             class_='model-recipe-grid'),
         class_='model-recipe resample-details card-scroll-content')
+        
     this.footer = lambda: ui.TagList(
         ui.output_ui(id="GoalControl"), 
         ui.output_ui(id="Status")
@@ -557,11 +559,11 @@ def instance():
         def Table():
             return render.DataTable(Results()[0].diagnostics, width="100%", height=None)
 
-        @output
-        @render.download(filename="evaluation-membership.csv")
-        def Membership():
-            for j, frame in enumerate(Results()[0].membership_frames(Incoming())):
-                yield frame.to_csv(index=False, header=j == 0)
+        # @output
+        # @render.download(filename="evaluation-membership.csv")
+        # def Membership():
+        #     for j, frame in enumerate(Results()[0].membership_frames(Incoming())):
+        #         yield frame.to_csv(index=False, header=j == 0)
 
         session.on_ended(Calculate.cancel)
         @this.export_check

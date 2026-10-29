@@ -615,3 +615,30 @@ class TestWebKitUI:
         page.goto(app.url)
         by_id(page, "ExpandButton").click(force=True)
         expect(get_card(page)).to_be_visible()
+
+
+@pytest.mark.unit
+def test_export_registers_replayable_pipeline_and_preserves_clean_frame(card_module):
+    from pandas.testing import assert_frame_equal
+    from roles import Role, RoleMap
+    from sklearn.preprocessing import FunctionTransformer
+
+    frame = sample_frame()
+    roles = RoleMap()
+    roles.set_roles('integer', [Role.TARGET])
+    source = proxy_data(_df=frame, _roles=roles)
+    upstream = FunctionTransformer()
+    source = source.with_pipeline_step(upstream, name='upstream', preview_frame=frame)
+    _, helpers = recorded_helpers(card_module, frame=source)
+    result = helpers['_transform_data'](source, ['int: -999', 'str: NA'], True, False)
+    assert result.pipeline_steps == ('upstream', 'miss_placeholders')
+    assert_frame_equal(result.clean_frame, frame)
+    assert result.cleaning_records == source.cleaning_records
+    pipe = result.pipeline_for_training().fit(frame, frame.integer)
+    transformed, target = pipe.transform_x_y(frame, frame.integer)
+    assert_frame_equal(transformed, result.frame)
+    assert target.isna().tolist() == [True, False, True]
+    assert not hasattr(result.pipeline.steps[-1][1], 'rules_')
+    inactive = helpers['_transform_data'](source, [], True, False)
+    assert inactive.pipeline_steps == source.pipeline_steps
+    assert_frame_equal(inactive.frame, frame)

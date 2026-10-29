@@ -5,6 +5,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 if __name__ == "__main__":
     ROOT = Path(__file__).resolve().parent.parent
@@ -176,6 +177,10 @@ def _restore_continuous(original: pd.Series, values: np.ndarray) -> pd.Series:
 @recordable
 class ImputationStep(TransformerMixin, BaseEstimator):
     """A DataFrame-preserving sklearn imputation step for Pythagoras."""
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {
+        "method": {"kind": "categorical", "choices": ["simple", "knn", "iterative"]},
+    }
 
     def __init__(
         self,

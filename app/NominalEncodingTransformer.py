@@ -1,6 +1,8 @@
 """Train-only one-hot encoding with DataFrame and missing-value preservation."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from code_recording import recordable
@@ -18,6 +20,9 @@ class NominalEncodingTransformer(TransformerMixin, BaseEstimator):
     Integer tokens let sklearn handle even mixed-type categorical labels without
     merging labels with identical text representations.
     """
+
+    tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'handle_unknown': {'fixed': True},
+     'max_categories': {'kind': 'integer', 'suggested': {'values': [None, 10, 25, 50]}}}
 
     def __init__(self, columns, *, remove_original=True, min_frequency=None,
                  max_categories=None, handle_unknown='ignore'):
