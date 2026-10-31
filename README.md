@@ -19,9 +19,13 @@ Rather than forcing a rigid pipeline, Pythagoras allows users to:
 - Insert or remove analytical components at runtime
 - Inspect and extract the underlying code used at each step
 
-The result is a system that addresses both:
-- the **data problem** (cleaning, transforming, modeling)
-- the **workflow problem** (how analysis is structured, communicated, and reproduced)
+The result is a system that addresses the:
+
+- **data problem** - cleaning, transforming, modeling
+- **workflow problem** - how analysis is structured, communicated, and reproduced
+- **tuning problem** - how to optimize choices
+- **leakage problem** - how to assess correctly
+- **fairness problem** - how to be fair
 
 ***
 
@@ -196,6 +200,7 @@ Drag-and-drop ordering is handled via:
 * [Missingness sets](app/www/markdown/miss_sets.html) Do missing values have common causes?
 * [Excessive missingness](app/www/markdown/miss_map.html) Is excessive missingness present?
 * [Missingness rules](app/www/markdown/miss_rules.html) Is missingness explainable?
+* [Manual imputation](app/www/markdown/miss_manual.html) Review tree branches and supply typed replacements
 * [Learned imputation](app/www/markdown/miss_impute.html) How well does learned imputation perform?
 * &&& [Manual imputation]() Values in {variable} are missing when {reason} because the missing values should actually be {value}.
 

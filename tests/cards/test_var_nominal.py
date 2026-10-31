@@ -135,3 +135,26 @@ def test_fullscreen_editors_are_scoped_to_variable_tabs(page, app):
     panels.get_by_role('tab', name='Colour', exact=True).click()
     editor.locator('summary').click()
     expect(editor.locator('[id$="_Destination"]')).to_have_value('Colour group')
+
+
+@pytest.mark.ui
+@pytest.mark.parametrize('fixture_name', ['app', 'learned_app'])
+def test_stratifier_setting_never_exposes_targets(page, request, fixture_name):
+    application = request.getfixturevalue(fixture_name)
+    page.goto(application.url)
+    panels = page.locator('[id$="-Panels"]')
+    expect(panels.get_by_role('tab', name='Day', exact=True)).to_be_visible(timeout=20000)
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    page.get_by_label('Include nominal Stratifiers', exact=True).check()
+    expect(panels.get_by_role('tab', name='Stratum', exact=True)).to_be_visible()
+    expect(panels.get_by_role('tab', name='Outcome', exact=True)).to_have_count(0)
+    expect(panels.get_by_role('tab', name='Dual', exact=True)).to_have_count(0)
+    panels.get_by_role('tab', name='Stratum', exact=True).click()
+    panels.locator('.tab-pane.active tr').filter(has_text='Mon. → Monday').locator('input[value="accept"]').check()
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('1 recorded decisions')
+    expect(page.locator('[id$="-TargetProbe"]')).to_have_text('Outcome Mon.: 3; Dual Mon.: 3')
+    expect(page.locator('[id$="-PipelineProbe"]')).to_contain_text('replay=True')
+    expect(page.locator('[id$="-Status"]')).not_to_contain_text('Target-label')

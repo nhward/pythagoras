@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Manual imputation</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+</style>
+
+
+
+
+<style type="text/css">
+:root {
+--py-table-row-hover: #f0f1cc;
+--py-table-cell-hover: #d4d4b8;
+}
+
+body.bslib-gap-spacing {
+gap: 0.25rem;
+}
+
+.hidden {
+display: none !important;
+}
+
+.flip-container {
+perspective: 1000px;
+}
+.flippable {
+position: relative;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 1.3s ease-in-out;
+}
+.flip-container.flipped .flippable {
+transform: rotateY(180deg);
+}
+.front,
+.back {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+-webkit-backface-visibility: hidden;
+}
+.front {
+z-index: 2;
+transform: rotateY(0);
+}
+.back {
+z-index: 1;
+transform: rotateY(180deg);
+}
+
+.bslib-card,
+.card {
+position: relative;
+overflow: visible;
+}
+.card {
+outline: 1px solid grey;
+}
+.card.shadow {
+box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
+}
+.card.fullscreen-active {
+position: fixed;
+inset: 0;
+z-index: 1050;
+width: 100vw;
+height: 100vh !important;
+max-height: none !important;
+min-height: 0 !important;
+margin: 0 !important;
+border-radius: 0;
+transition: all 0.5s ease;
+}
+.card.fullscreen-active .card-body {
+flex: 1 1 auto;
+overflow-y: auto;
+padding: 2rem;
+}
+.card.fullscreen-active .card-footer {
+flex-shrink: 0;
+margin-top: 0;
+padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.card.fullscreen-active .drag-handle {
+display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
+
+#shiny-modal-wrapper {
+position: absolute;
+z-index: 1060 !important;
+}
+
+.hover-card {
+position: relative;
+}
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+visibility: visible !important;
+}
+.hover-card:not(.tour-running) .hover-btn {
+visibility: hidden;
+}
+
+.cards-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+margin: 0 auto;
+gap: 0.5rem;
+}
+.drag-ghost {
+opacity: 0.5;
+}
+.drag-handle {
+display: inline-flex;
+align-items: center;
+padding: 0 0.4rem;
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+.drag-handle * {
+cursor: inherit;
+}
+.drag-tab {
+position: absolute !important;
+top: 50%;
+left: 0;
+z-index: 2;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 28px;
+height: 48px;
+transform: translate(-50%, -50%);
+border: 1px solid rgba(0, 0, 0, 0.06);
+border-radius: 999px;
+outline: 1px solid grey;
+background: #f3f4f6;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-tab::before {
+width: 10px;
+height: 20px;
+background:
+radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+opacity: 0.55;
+content: "";
+}
+.dragging .drag-tab,
+.drag-tab:active {
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+@media (max-width: 600px) {
+.drag-tab {
+display: none;
+}
+}
+
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
+max-width: 180px;
+padding: 0.2rem 0.4rem;
+overflow: hidden;
+line-height: 1.2;
+text-align: left;
+text-overflow: ellipsis;
+vertical-align: middle;
+white-space: nowrap;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+overflow: visible !important;
+white-space: normal !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
+line-height: 1.2;
+white-space: pre-line !important;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) {
+border-top: 1px solid var(--bs-table-border-color) !important;
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+border-collapse: collapse;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+background-color: var(--bs-body-bg, #fff) !important;
+}
+
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-informative-row {
+background-color: rgba(233, 36, 66, 0.22) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-strong-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-weak-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-strong-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-moderate-row {
+background-color: #fff3cd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-weak-row {
+background-color: #cff4fc !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-stable-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-excluded-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-random-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-uncertain-row {
+background-color: #ddcfa7 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-patterned-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
+background-color: #d95f02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
+background-color: #e6ab02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
+background-color: #3978a8 !important;
+color: #fff !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
+background-color: #9aa7b2 !important;
+color: #000 !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+background-color: var(--py-table-row-hover) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
+> :is(
+.var-cardinality-strong-review-row,
+.var-cardinality-review-row,
+.var-cardinality-expected-row,
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
+) {
+color: var(--bs-body-color, #212529) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+position: relative;
+z-index: 10;
+overflow: visible;
+background-color: var(--py-table-cell-hover) !important;
+white-space: normal;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-top: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+border-bottom: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-bottom: 1px solid #000 !important;
+}
+
+.across-row{
+display:flex;
+align-items:end;
+gap:.5rem
+}
+.across-row .shiny-input-container{
+flex:1
+}
+.across-row .btn{
+flex:none;
+margin-bottom:0
+}
+
+.roles-layout {
+display: grid;
+grid-template-columns: auto 1fr;
+gap: 1rem;
+align-items: start;
+width: 100%;
+min-width: 0;
+overflow-x: auto;
+}
+.roles-grid {
+display: grid;
+grid-template-columns: repeat(11, minmax(200px, 1fr));
+gap: 1rem;
+width: 100%;
+overflow-x: auto;
+min-width: 0;
+}
+.roles-grid > * {
+min-width: 0;
+}
+.role-box {
+border: 1px solid #d0d7de;
+border-radius: 10px;
+padding: 0.75rem;
+min-height: 315px;
+background: #d5e6f8;
+width: 100%;
+min-width: 0;
+}
+.role-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+width: 100%;
+min-width: 0;
+}
+.role-list {
+min-height: 220px;
+padding: 0.25rem;
+border: 1px dashed #c7ced6;
+border-radius: 8px;
+background: white;
+width: 100%;
+min-width: 0;
+overflow-y: auto;
+}
+.var-chip {
+border: 1px solid #c7ced6;
+border-radius: 999px;
+padding: 0.35rem 0.7rem;
+margin: 0.35rem 0;
+background: #d0ddf6;
+cursor: grab;
+user-select: none;
+width: 100%;
+min-width: 0;
+}
+.ghost {
+opacity: 0.4;
+}
+.chosen {
+background: #dce9ff;
+}
+
+.selectize-control.multi .selectize-input > .item {
+background-color: #dce6f2;
+color: #1f3b5c;
+border-radius: 999px;
+padding: 2px 10px;
+margin: 2px;
+border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+border-radius: 6px;
+padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+background-color: #dce6f2;
+color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+background-color: var(--bs-primary);
+color: white;
+}
+ span.btn.btn-default.btn-file:has(.shiny-input-file) {
+background-color: var(--bs-primary);
+border-color: var(--bs-primary);
+color: white;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group {
+display: inline-flex;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox, label.checkbox-inline) {
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
+background-color: #0b5494;
+border-color: var(--bs-primary, #0d6efd);
+color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span::before {
+content: "☐";
+display: inline-block;
+flex: 0 0 1em;
+width: 1em;
+font-size: 1em;
+line-height: 1;
+text-align: center;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+content: "☑";
+color: currentColor;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) {
+margin-bottom: 0;
+}
+
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+padding: 0px 0px 0px 0px !important;
+}
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+padding-top: 20px;
+padding-left: 12px;
+}
+.bslib-card .card-header {
+padding-right: 40px !important;
+}
+body.fullscreen-mode { overflow: hidden; } 
+
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
+.dragging, .dragging * {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+}
+
+@keyframes pulse-outline {
+0% { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+70% { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+animation: pulse-outline 700ms ease-out;
+}
+
+@keyframes jello {
+0% { transform: scale3d(1, 1, 1); }
+30% { transform: scale3d(1.07, 0.93, 1); }
+45% { transform: scale3d(0.95, 1.05, 1); }
+60% { transform: scale3d(1.03, 0.97, 1); }
+75% { transform: scale3d(0.99, 1.01, 1); }
+100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+will-change: transform; 
+}
+
+@media (prefers-reduced-motion: reduce) {
+.card.animate-jello { animation: none; }
+.card.animate-highlight { animation-duration: 300ms; }
+}
+
+.progress-bar {
+height: 1rem !important;
+}
+.vertically-scrollable-footer {
+max-height: 70px;
+overflow-y: auto;
+}
+
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
+
+.card .card-body.flip-container {
+overflow: hidden;
+}
+.flip-container > .flippable > :is(.front, .back) {
+overflow: auto;
+min-height: 0;
+}
+
+.flip-container shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 1 1 auto;
+min-height: 0;
+}
+
+.card-scroll-content {
+flex: 0 0 auto;
+min-width: 0;
+}
+.card-scroll-content shiny-data-frame,
+.card-scroll-content shiny-data-frame > .html-fill-container,
+.card-scroll-content shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 0 0 auto;
+height: auto;
+}
+
+.card-footer .shiny-input-radiogroup {
+margin-inline: auto;
+margin-bottom: 0;
+max-width: 100%;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup .shiny-options-group {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.card-footer .shiny-input-radiogroup :is(.radio, label.radio-inline) {
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup :is(.radio label, label.radio-inline) {
+position: relative;
+padding-left: 0;
+margin-bottom: 0;
+}
+
+.card-footer .shiny-input-radiogroup input[type="radio"] {
+position: absolute;
+opacity: 0;
+width: 1px;
+height: 1px;
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.card-footer .shiny-input-radiogroup label:hover > input[type="radio"] + span,
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span {
+background-color: #0b5494;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span::before {
+content: "○";
+flex: 0 0 1em;
+width: 1em;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
+content: "●";
+}
+
+.js-plotly-plot .gtitle {
+fill: var(--bs-primary) !important;
+}
+
+.model-recipe-output { flex: 0 0 auto !important; min-width: 0; width: 100%; }
+.model-recipe {
+--recipe-accent: #176078;
+color: var(--bs-body-color, #24343e);
+background: var(--bs-tertiary-bg, #f3f7f9);
+border: 1px solid var(--bs-border-color, #d9e3e8);
+border-radius: .85rem;
+margin: .25rem; padding: 1.2rem;
+overflow-wrap: anywhere;
+}
+.model-recipe-header { padding-bottom: 1rem; border-bottom: 1px solid var(--bs-border-color, #d9e3e8); }
+.model-recipe-eyebrow { color: var(--recipe-accent); font-size: .78rem; font-weight: 600; letter-spacing: .04em; }
+.model-recipe .model-recipe-title { margin: .35rem 0; font-size: 1.4rem; line-height: 1.25; }
+.model-recipe-path { display: block; font-size: .78rem; color: var(--bs-secondary-color, #52636c); white-space: normal; }
+.model-recipe-badges { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }
+.model-recipe-badge { display: inline-flex; align-items: baseline; gap: .4rem; border-radius: .45rem; padding: .35rem .6rem; background: #e5edf5; color: #264860; font-size: .8rem; }
+.model-recipe-badge.is-ready { background: #dfefe7; color: #24583d; }
+.model-recipe-badge.is-review { background: #fff0d4; color: #704b13; }
+.model-recipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: .85rem; margin-top: 1rem; align-items: start; }
+.model-recipe-section { min-width: 0; padding: 1rem; background: var(--bs-body-bg, white); border: 1px solid var(--bs-border-color, #d9e3e8); border-radius: .6rem; }
+.model-recipe-section h6 { display: flex; align-items: center; gap: .5rem; color: var(--recipe-accent); margin: 0 0 .65rem; font-size: .9rem; font-weight: 650; }
+.model-recipe-section p, .model-recipe-section li { font-size: .88rem; line-height: 1.5; }
+.model-recipe-section p:last-child, .model-recipe-section ul, .model-recipe-section ol { margin-bottom: 0; }
+.model-recipe-section ul, .model-recipe-section ol { padding-left: 1.2rem; }
+.model-recipe-section li + li { margin-top: .4rem; }
+.model-recipe-section pre { margin: 0; padding: .7rem; background: var(--bs-tertiary-bg, #f3f7f9); border-radius: .4rem; font-size: .78rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.model-recipe-muted, .model-recipe-footer { color: var(--bs-secondary-color, #52636c); }
+.model-recipe-footer { margin-top: 1rem; font-size: .75rem; }
+.model-recipe-sources { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0 !important; }
+.model-recipe-sources li + li { margin-top: 0; }
+.model-recipe-empty { padding: 2rem; text-align: center; }
+.model-recipe-empty h5 { margin-top: .75rem; }
+.model-data-notice { font-size: .8rem; color: #704b13; padding: .35rem .5rem; }
+.card.fullscreen-active .model-recipe { padding: 1.5rem; width: 100%; max-width: none; margin: .25rem 0; box-sizing: border-box; }
+.model-recipe svg { margin: 0 !important; flex: 0 0 auto; }
+
+.flip-container:has(.model-recipe-output).flipped > .flippable > .front {
+pointer-events: none;
+
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output) > .flippable > .back {
+overflow-y: auto;
+overflow-x: hidden;
+touch-action: pan-y;
+}
+.card.fullscreen-active .model-recipe-output { align-self: stretch; max-width: none; }
+
+.resample-details { flex: 0 0 auto !important; min-width: 0; }
+.resample-wide { grid-column: 1 / -1; }
+.resample-details .shiny-html-output { flex: 0 0 auto; }
+.resample-table-scroll { overflow-x: auto; max-width: 100%; }
+.resample-details .table { margin-top: .65rem; }
+.resample-details .shiny-input-container { min-width: 9rem; margin-bottom: .3rem; }
+.resample-message { margin-top: .65rem; padding: .65rem .8rem; border-radius: .4rem; font-size: .88rem; }
+.resample-message.is-warning { background: #fff0d4; color: #704b13; }
+.resample-message.is-error { background: #fbe4e6; color: #842029; }
+.resample-message.is-ready { background: #dfefe7; color: #24583d; }
+.flip-container:has(.resample-details).flipped > .flippable > .front { pointer-events: none; }
+.flip-container:has(.resample-details):not(.flipped) > .flippable > .back { pointer-events: none; }
+.flip-container:has(.resample-details) > .flippable > .back { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+.model-method-recipes { padding: .25rem; }
+.model-method-recipe { margin-bottom: .75rem; }
+.model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
+
+.var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.var-modify-table .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+
+.nominal-navbar {
+--bs-navbar-padding-y: 0.1rem;
+--bs-navbar-brand-padding-y: 0;
+--bs-navbar-toggler-padding-y: 0.1rem;
+--bs-navbar-toggler-padding-x: 0.3rem;
+--bs-navbar-toggler-font-size: 0.85rem;
+}
+.nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
+.nominal-navbar .navbar-brand:empty { display: none; }
+.nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
+.nominal-navbar.force-collapse {flex-wrap: wrap;}
+.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
+.nominal-navbar.force-collapse .navbar-toggler {display: block;}
+.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
+.nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
+.nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
+
+.tuning-search { display: none; }
+.card.fullscreen-active .tuning-search { display: block; }
+.tuning-editor-detail { margin: .25rem 0; }
+.tuning-editor-controls {
+display: flex; flex-wrap: wrap; align-items: flex-end; gap: .4rem .65rem;
+width: 100%;
+}
+.tuning-editor-controls > .shiny-input-container { flex: 1 1 9rem; width: auto; min-width: 0; }
+.tuning-editor-controls .shiny-input-container { margin-bottom: 0; }
+.tuning-editor-controls .control-label { font-size: .85rem; }
+.tuning-editor-controls .tuning-range { flex: 2 1 18rem; min-width: 0; }
+.tuning-range-fields { display: flex; gap: .5rem; }
+.tuning-range-fields > .shiny-input-container { flex: 1 1 0; width: auto; min-width: 0; }
+.tuning-editor-controls .tuning-values { flex: 2 1 18rem; min-width: 0; }
+.tuning-values > .shiny-input-container { width: 100%; }
+.tuning-editor-controls fieldset { flex: 0 0 auto; margin: 0; }
+.tuning-editor-controls fieldset .shiny-input-container { width: auto; }
+.tuning-editor-controls > .btn { flex: 0 0 auto; }
+
+.tuning-specification-scroll {
+max-height: 12rem;
+overflow: auto;
+white-space: pre-wrap;
+overflow-wrap: anywhere;
+margin-bottom: 0;
+}
+.card.fullscreen-active .tuning-specification-scroll { max-height: 45vh; }
+
+.flip-container:has(.tuning-review-output).flipped > .flippable > .front {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.tuning-review-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.tuning-specification-scroll { touch-action: pan-y; }
+
+.model-candidates-table { min-height: 0; min-width: 0; overflow: hidden; }
+.model-candidates-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.model-candidates-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.model-candidates-table.shiny-html-output { display: flex; flex-direction: column; }
+.front > div:has(> .model-candidates-summary) { flex: 0 0 auto; }
+.front > div:has(> .model-candidates-table) { min-height: 0; }
+.model-candidates-table > shiny-data-frame { height: 100%; max-height: none; flex: 1 1 0 !important; }
+.model-candidates-table .shiny-data-grid { flex: 1 1 0; height: 100%; max-height: none; }
+
+.tuning-parameters-table.shiny-html-output {
+display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+}
+.front > div:has(> .tuning-parameters-table) { min-height: 0; }
+.front > div:has(> .tuning-parameters-editor),
+.front > div:has(> .tuning-parameters-message),
+.front > .tuning-search,
+.front > .tuning-parameters-message { flex: 0 0 auto; }
+.tuning-parameters-table > shiny-data-frame {
+min-height: 0; height: 100%; max-height: none; flex: 1 1 0 !important;
+}
+.tuning-parameters-table .shiny-data-grid {
+min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
+}
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Manual imputation</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<h4 id="purpose">🧭 Purpose</h4>
+<p>Use your domain knowledge to fill missing values in groups suggested by a decision tree, without writing conditions or code. For example, enter <strong>0</strong> in the leaf for missing <code>HEALTHCARE_COST</code> values where <code>HEALTHCARE_BASIS</code> is <strong>FREE</strong>.</p>
+<h4 id="how-it-works">🧠 How it works</h4>
+<p>Choose an incomplete variable using its tab in the navigation bar. Only variables with at least one qualifying missingness-predicting leaf receive a tab. A shallow classification tree predicts whether its values are missing. Each leaf reports the number and proportion missing. A leaf includes an optional <strong>Fill missing values</strong> checkbox and replacement control only if it predicts missingness and meets <strong>Minimum leaf accuracy</strong>. Other leaves remain in the tree for context without editable fields.</p>
+<p>Every supported non-Target variable is eligible as a split predictor, including Identity variables. The destination itself, Target-role variables, and generated shadow variables are excluded. Ordered, Cyclic, list, geometry, and other unsupported complex types are skipped in this phase. Numeric, Boolean, unordered categorical/string, and datetime variables are supported. Skipped destinations and unavailable split types are listed on the card. Observations are equally weighted; weighting-role variables may be split predictors but do not weight the tree.</p>
+<p>Split predictors retain missing values. The tree learns which side receives them; each split displays that routing. Categorical splits compare a single category with the other known categories. Previously unseen categories follow the stored missing-value route. Integer and numeric splits use the tree’s float32 representation, also used during replay.</p>
+<h4 id="front">🏞️ Front</h4>
+<p>The tree and leaf controls share one scrollable diagram. Branches are labelled <strong>Yes</strong> and <strong>No</strong>. For a category question such as <code>BASIS = FREE?</code>, Yes means FREE and No means another known category. Missing predictors follow the explicitly labelled missing route.</p>
+<p>Select <strong>Fill missing values</strong> only on branches where you know an appropriate replacement. Zero and False are actual values; an unchecked field means leave missing. Inputs are checked again on the server. Dates use a date picker with a separate validated time field. Integer replacements must be whole numbers within the dtype’s range and the browser’s exact integer range (±9,007,199,254,740,991), and categorical replacements must belong to the observed labels in the current pipeline preview or the additional level. Unused dtype categories, including placeholder labels already converted to missing values upstream, are not offered. The reviewed vocabulary is stored with each rule and remains valid when labels are absent from an individual training fold.</p>
+<h4 id="flip-side">🔄 Flip side</h4>
+<p>Each committed rule reads <strong>missing VARIABLE ← value when</strong>, followed by one condition per line, joined with <strong>and</strong>. Optional <strong>Missing-value handling</strong> details explain missing/unseen predictor routing without cluttering the rule. These rules remain fixed when proposal settings change.</p>
+<h4 id="controls-and-actions">🛠️ Controls and actions</h4>
+<p><strong>Commit rules</strong> applies the completed drafts across <strong>all variable tabs</strong> together, including tabs that are not currently selected. An invalid enabled field in any current draft rejects the entire commit, leaving the previous commitments intact. An unchecked leaf removes its replacement when that variable’s draft is committed. A variable with no draft for the current proposal settings retains its previously committed rules.</p>
+<p><strong>Reset</strong> removes every committed rule, unchecks every <strong>Fill missing values</strong> field, and clears replacement entries across all variables, including inactive tabs and saved drafts for earlier proposal settings. It restores the incoming data and leaves tree-depth and additional-category settings unchanged. No replacement is reapplied until it is entered and committed again.</p>
+<p>Draft controls persist while switching variable tabs and through saved card configuration, until Reset is used. Changing incoming data, schema, or roles clears the decisions, with a notification. Changing tree depth or the additional category setting creates a separate proposal draft and never transfers a replacement to a different leaf. Committed rules remain until explicitly replaced or cleared.</p>
+<h4 id="settings">⚙️ Settings</h4>
+<ul>
+<li><strong>Maximum Tree depth parameter:</strong> 1–5, default 3, following Missingness types. The minimum leaf size is 2% of the incoming observations. These settings constrain proposals, not the committed transformer.</li>
+<li><strong>Minimum leaf accuracy:</strong> 0.50–1.00 in steps of 0.05, default 0.80. Accuracy here is the proportion of incoming rows within a leaf that are missing. A leaf must predict missingness (strictly more than half missing) and meet the threshold inclusively. A 50/50 tie predicts non-missingness and is excluded even at 0.50. Variables without qualifying leaves have no tab. This describes the fitted leaves; it is not held-out validation accuracy. Changing the threshold preserves drafts and committed rules; subsequent commits only consider qualifying leaves and preserve commitments for variables with no qualifying tab.</li>
+<li><strong>Additional categorical level:</strong> optional shared label such as <code>Other</code>. It becomes selectable for unordered categorical variables. It is added to a variable’s categories only when used in a committed replacement. Ordered category placement is deferred to a later phase.</li>
+</ul>
+<h4 id="data-flow">🔗 Data flow</h4>
+<p>The card adds a <code>ManualImputationTransformer</code> pipeline instance after preceding transformations. Its constructor parameters contain the approved branch conditions, missing-predictor routing, category vocabulary, and typed replacement values. <code>fit()</code> validates this fixed configuration; it does not discover or refit a tree. Both training and test data receive the same reviewed rules. The interactive full-data preview stays separate from the original clean data and the unfitted training pipeline.</p>
+<p>All rules evaluate against the same incoming frame, before any replacements. Observed cells, row order, duplicate indices, and unrelated columns are preserved. Fields left incomplete are optional unless their checkbox is selected. A leaf can contain both observed and missing values; only its missing destination cells are filled.</p>
+<h4 id="interpretation-and-limitations">⛔️ Interpretation and limitations</h4>
+<p>A tree finds an association with missingness; it does not establish that a particular replacement is correct. Identity variables can produce specific, poorly generalising branches. Target exclusion avoids direct target leakage, but branches selected using the complete dataset can still influence evaluation. For strict holdout assessment, review and freeze preprocessing using development data before inspecting held-out data.</p>
+<p>No tree structure is available when all destination values are missing or no supported split predictors exist. The card still offers a single leaf so a justified unconditional replacement can be entered.</p>
+
+
+
+
+
+</body></html>

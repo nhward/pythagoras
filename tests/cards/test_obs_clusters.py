@@ -541,7 +541,15 @@ def test_idle_membership_table_and_charts_settle(page, request, fixture_name):
         # The table must retain all records without mounting all 2,000 rows.
         assert grid.evaluate('(el) => el.scrollHeight > el.clientHeight && el.clientHeight > 0')
         assert 0 < grid.locator('tbody tr').count() < 2000
-        grid.evaluate('(el) => { el.scrollTop = el.scrollHeight; }')
+        # Visibility can precede the flip/layout settling. WebKit may reset an
+        # early scroll as the virtualized table measures its viewport, so wait
+        # for the requested row while keeping the scroll at the current bottom.
+        page.wait_for_function("""id => {
+            const grid = document.getElementById(id)?.querySelector('.shiny-data-grid');
+            if (!grid) return false;
+            grid.scrollTop = grid.scrollHeight;
+            return [...grid.querySelectorAll('tbody td')].some(cell => cell.textContent.trim() === '2000');
+        }""", arg=by_id(page, 'Membership').get_attribute('id'))
         expect(grid.get_by_text('2000', exact=True)).to_be_visible()
         page.wait_for_timeout(1500)
         grid.evaluate("""el => { window.clusterIdleMutations = {}; window.clusterIdleObserver.observe(el, {subtree: true, childList: true, attributes: true}); }""")

@@ -208,14 +208,16 @@ class TestWebKitTables:
         self, page: Page, app: ShinyAppProc
     ):
         page.goto(app.url)
-        for tab, output_id in (
-            ("Url", "Url"),
-            ("Packages", "Packages"),
-            ("Folders", "Folders"),
-            ("Summary", "Summary"),
-        ):
-            page.get_by_role("tab", name=tab, exact=True).click()
-            expect(by_id(page, output_id)).to_be_visible()
+        # Wait for initial rendering before interacting with the navbar. An
+        # output wrapper alone does not establish that its table has settled.
+        controller.OutputTable(page, namespaced_id(page, "Summary")).expect_ncol(2)
+        for _ in range(3):
+            for label, columns in (("Url", 2), ("Packages", 2), ("Folders", 3), ("Summary", 2)):
+                tab = page.get_by_role("tab", name=label, exact=True)
+                tab.click()
+                expect(tab).to_have_attribute("aria-selected", "true")
+                expect(by_id(page, label)).to_be_visible()
+                controller.OutputTable(page, namespaced_id(page, label)).expect_ncol(columns)
 
 
 class TestWebKitCardControls:

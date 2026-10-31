@@ -1,6 +1,4 @@
 """Fixed, reviewed mappings replay in cloned training pipelines."""
-import functools
-import operator
 import pickle
 
 import pandas as pd
@@ -77,19 +75,40 @@ def test_export_appends_once_preserves_upstream_and_clean_data():
 
 
 @pytest.mark.unit
-def test_targets_cleaned_separately_and_stratifiers_replayed():
-    X = pd.DataFrame({c: pd.Categorical(['a', 'b']) for c in ['x', 'target', 'stratum']})
+@pytest.mark.parametrize('with_pipeline', [False, True])
+def test_targets_excluded_from_restored_mappings_and_stratifiers_replayed(with_pipeline):
+    X = pd.DataFrame({c: pd.Categorical(['a', 'b']) for c in ['x', 'target', 'stratum', 'dual']})
     roles = RoleMap()
     for column, role in [('x', Role.PREDICTOR), ('target', Role.TARGET), ('stratum', Role.STRATIFIER)]:
         roles.set_roles(column, [role])
+    roles.set_roles('dual', [Role.PREDICTOR, Role.TARGET])
     source = proxy_data(_df=X, _roles=roles)
-    state = card.fresh_state()
-    state['batches'] = [functools.reduce(operator.iadd, (batch(c, 'a', 'b') for c in X), [])]
+    if with_pipeline:
+        upstream = NominalReconciliationTransformer([])
+        source = source.with_pipeline_step(upstream, name='upstream', preview_frame=upstream.fit_transform(X))
+    assert card.eligible_columns(source) == ['x']
+    assert card.eligible_columns(source, True) == ['x', 'stratum']
+    state = card.fresh_state(card.source_fingerprint(source))
+    state['batches'] = [sum((batch(c, 'a', 'b') for c in X), [])]
+    state['manual'] = batch('target', 'a', 'b')
+    target_item = state['manual'][0]
+    state['ledger'] = [dict(target_item, decision='accept')]
+    state['decisions'] = {target_item['key']: 'accept'}
+    state['expected'] = {'target': {'levels': ['b']}, 'x': {'levels': ['b']}}
+    cleaned_state = card.without_target_decisions(source, state)
+    assert not cleaned_state['manual'] and not cleaned_state['ledger'] and not cleaned_state['decisions']
+    assert set(cleaned_state['expected']) == {'x'}
+    assert state['manual']  # State sanitization does not mutate the saved object.
     result = card.export_reconciliation(source, state)
-    assert result.clean_frame.target.tolist() == ['b', 'b']
-    assert result.clean_frame.x.tolist() == ['a', 'b']
-    assert result.clean_frame.stratum.tolist() == ['a', 'b']
+    assert_frame_equal(result.clean_frame, X)
+    assert result.frame.target.tolist() == ['a', 'b']
+    assert result.frame.dual.tolist() == ['a', 'b']
+    assert result.frame.x.tolist() == ['b', 'b']
+    assert result.frame.stratum.tolist() == ['b', 'b']
     assert set(result._pipeline.steps[-1][1].columns) == {'x', 'stratum'}
+    assert_frame_equal(card.committed_frame(source, state), result.frame)
     assert_frame_equal(result.pipeline_for_training().fit_transform(result.clean_frame), result.frame)
-    with pytest.raises(ValueError, match='Target-label'):
-        card.export_reconciliation(result, state)
+    target_only = card.fresh_state()
+    target_only['batches'] = [batch('target', 'a', 'b')]
+    assert card.export_reconciliation(source, target_only) is source
+    assert_frame_equal(card.committed_frame(source, target_only), source.frame)

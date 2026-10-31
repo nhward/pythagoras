@@ -4,6 +4,7 @@ import inspect
 import pickle
 from functools import lru_cache
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -122,7 +123,8 @@ def test_transformer_recording_preserves_sklearn_pickle_and_replay():
     source = Module.clean_code(registry["LogicalEncodingTransformer"])
     assert "recordable" not in source
     namespace = {"pd": pd, "np": np, "BaseEstimator": BaseEstimator,
-                     "TransformerMixin": TransformerMixin, "check_is_fitted": check_is_fitted}
+                     "TransformerMixin": TransformerMixin, "check_is_fitted": check_is_fitted,
+                     "ClassVar": ClassVar}
     exec(source, namespace)  # noqa: S102
     replay = namespace["LogicalEncodingTransformer"](["flag"]).fit_transform(frame)
     pd.testing.assert_frame_equal(replay, expected)

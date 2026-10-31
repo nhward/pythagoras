@@ -1,0 +1,51 @@
+---
+title: Manual imputation
+---
+
+#### 🧭 Purpose
+
+Use your domain knowledge to fill missing values in groups suggested by a decision tree, without writing conditions or code. For example, enter **0** in the leaf for missing `HEALTHCARE_COST` values where `HEALTHCARE_BASIS` is **FREE**.
+
+#### 🧠 How it works
+
+Choose an incomplete variable using its tab in the navigation bar. Only variables with at least one qualifying missingness-predicting leaf receive a tab. A shallow classification tree predicts whether its values are missing. Each leaf reports the number and proportion missing. A leaf includes an optional **Fill missing values** checkbox and replacement control only if it predicts missingness and meets **Minimum leaf accuracy**. Other leaves remain in the tree for context without editable fields.
+
+Every supported non-Target variable is eligible as a split predictor, including Identity variables. The destination itself, Target-role variables, and generated shadow variables are excluded. Ordered, Cyclic, list, geometry, and other unsupported complex types are skipped in this phase. Numeric, Boolean, unordered categorical/string, and datetime variables are supported. Skipped destinations and unavailable split types are listed on the card. Observations are equally weighted; weighting-role variables may be split predictors but do not weight the tree.
+
+Split predictors retain missing values. The tree learns which side receives them; each split displays that routing. Categorical splits compare a single category with the other known categories. Previously unseen categories follow the stored missing-value route. Integer and numeric splits use the tree's float32 representation, also used during replay.
+
+#### 🏞️ Front
+
+The tree and leaf controls share one scrollable diagram. Branches are labelled **Yes** and **No**. For a category question such as `BASIS = FREE?`, Yes means FREE and No means another known category. Missing predictors follow the explicitly labelled missing route.
+
+Select **Fill missing values** only on branches where you know an appropriate replacement. Zero and False are actual values; an unchecked field means leave missing. Inputs are checked again on the server. Dates use a date picker with a separate validated time field. Integer replacements must be whole numbers within the dtype's range and the browser's exact integer range (±9,007,199,254,740,991), and categorical replacements must belong to the observed labels in the current pipeline preview or the additional level. Unused dtype categories, including placeholder labels already converted to missing values upstream, are not offered. The reviewed vocabulary is stored with each rule and remains valid when labels are absent from an individual training fold.
+
+#### 🔄 Flip side
+
+Each committed rule reads **missing VARIABLE ← value when**, followed by one condition per line, joined with **and**. Optional **Missing-value handling** details explain missing/unseen predictor routing without cluttering the rule. These rules remain fixed when proposal settings change.
+
+#### 🛠️ Controls and actions
+
+**Commit rules** applies the completed drafts across **all variable tabs** together, including tabs that are not currently selected. An invalid enabled field in any current draft rejects the entire commit, leaving the previous commitments intact. An unchecked leaf removes its replacement when that variable's draft is committed. A variable with no draft for the current proposal settings retains its previously committed rules.
+
+**Reset** removes every committed rule, unchecks every **Fill missing values** field, and clears replacement entries across all variables, including inactive tabs and saved drafts for earlier proposal settings. It restores the incoming data and leaves tree-depth and additional-category settings unchanged. No replacement is reapplied until it is entered and committed again.
+
+Draft controls persist while switching variable tabs and through saved card configuration, until Reset is used. Changing incoming data, schema, or roles clears the decisions, with a notification. Changing tree depth or the additional category setting creates a separate proposal draft and never transfers a replacement to a different leaf. Committed rules remain until explicitly replaced or cleared.
+
+#### ⚙️ Settings
+
+* **Maximum Tree depth parameter:** 1–5, default 3, following Missingness types. The minimum leaf size is 2% of the incoming observations. These settings constrain proposals, not the committed transformer.
+* **Minimum leaf accuracy:** 0.50–1.00 in steps of 0.05, default 0.80. Accuracy here is the proportion of incoming rows within a leaf that are missing. A leaf must predict missingness (strictly more than half missing) and meet the threshold inclusively. A 50/50 tie predicts non-missingness and is excluded even at 0.50. Variables without qualifying leaves have no tab. This describes the fitted leaves; it is not held-out validation accuracy. Changing the threshold preserves drafts and committed rules; subsequent commits only consider qualifying leaves and preserve commitments for variables with no qualifying tab.
+* **Additional categorical level:** optional shared label such as `Other`. It becomes selectable for unordered categorical variables. It is added to a variable's categories only when used in a committed replacement. Ordered category placement is deferred to a later phase.
+
+#### 🔗 Data flow
+
+The card adds a `ManualImputationTransformer` pipeline instance after preceding transformations. Its constructor parameters contain the approved branch conditions, missing-predictor routing, category vocabulary, and typed replacement values. `fit()` validates this fixed configuration; it does not discover or refit a tree. Both training and test data receive the same reviewed rules. The interactive full-data preview stays separate from the original clean data and the unfitted training pipeline.
+
+All rules evaluate against the same incoming frame, before any replacements. Observed cells, row order, duplicate indices, and unrelated columns are preserved. Fields left incomplete are optional unless their checkbox is selected. A leaf can contain both observed and missing values; only its missing destination cells are filled.
+
+#### ⛔️ Interpretation and limitations
+
+A tree finds an association with missingness; it does not establish that a particular replacement is correct. Identity variables can produce specific, poorly generalising branches. Target exclusion avoids direct target leakage, but branches selected using the complete dataset can still influence evaluation. For strict holdout assessment, review and freeze preprocessing using development data before inspecting held-out data.
+
+No tree structure is available when all destination values are missing or no supported split predictors exist. The card still offers a single leaf so a justified unconditional replacement can be entered.

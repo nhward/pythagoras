@@ -36,21 +36,14 @@ def instance():
     this.footer = lambda: ui.TagList(
         ui.div(
             ui.input_action_button(
-                id='Commit', 
-                label='Commit', 
-                icon=icon("gavel", title="Commit", a11y="sem"),
-                width="220px", 
+                id='Commit', label='Commit', icon=icon("gavel", title="Commit", a11y="sem"), width="220px", 
                 class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
                 guide=this, position = "top", text="<strong>Commit</strong> applies the configured tuning to the pipeline. It does not initiate the tuning."
-
             ),
             ui.input_action_button(
-                id='Revert', 
-                label=None, 
-                icon=icon("arrow-rotate-left", title="Revert", a11y="sem"),
+                id='Revert', label=None, icon=icon("arrow-rotate-left", title="Revert", a11y="sem"),
                 class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
                 guide=this, title = "Revert", position = "top", text="<strong>Revert</strong> restores the last committed draft"
-
             ),
             id="Commit-Revert",
             class_="btn-group mx-auto text-center gap-2",

@@ -34,7 +34,7 @@ MAX_PROPOSALS = 100
 def eligible_columns(source, include_special=False):
     allowed = {Role.PREDICTOR}
     if include_special:
-        allowed |= {Role.TARGET, Role.STRATIFIER}
+        allowed.add(Role.STRATIFIER)
     return [c for c in source.frame if isinstance(c, str)
             and isinstance(source.frame[c].dtype, pd.CategoricalDtype)
             and not source.frame[c].dtype.ordered
@@ -130,36 +130,43 @@ def source_fingerprint(source):
 
 
 @recordable
+def non_target_batches(source, state):
+    """Exclude targets even from restored decisions made by older versions."""
+    return [items for batch in state['batches']
+            if (items := [p for p in batch if Role.TARGET not in source.role_map.roles_for(p['column'])])]
+
+
+def without_target_decisions(source, state):
+    targets = set(source.role_map.columns_with_role(Role.TARGET))
+    current = deepcopy(state)
+    items = [p for batch in current['batches'] for p in batch] + current['ledger'] + current['manual']
+    removed = {p['key'] for p in items if p['column'] in targets}
+    current['batches'] = non_target_batches(source, state)
+    for field in ('ledger', 'manual'):
+        current[field] = [p for p in current[field] if p['column'] not in targets]
+    current['expected'] = {c: v for c, v in current['expected'].items() if c not in targets}
+    current['decisions'] = {key: value for key, value in current['decisions'].items() if key not in removed}
+    return current
+
+
+@recordable
 def committed_frame(source, state):
     frame = source.frame
-    for batch in state['batches']:
+    for batch in non_target_batches(source, state):
         frame = apply_merges(frame, batch)
     return frame
 
 
 @recordable
 def export_reconciliation(source, state):
-    """Replay feature mappings; target corrections remain pre-pipeline cleaning."""
-    target_batches, feature_batches = [], []
-    for batch in state['batches']:
-        target_batches.append([p for p in batch if Role.TARGET in source.role_map.roles_for(p['column'])])
-        feature_batches.append([p for p in batch if Role.TARGET not in source.role_map.roles_for(p['column'])])
-    target_batches = [b for b in target_batches if b]
-    feature_batches = [b for b in feature_batches if b]
-    if target_batches:
-        if source.has_pipeline:
-            raise ValueError('Target-label corrections must precede learning steps.')
-        target_frame = source.frame
-        for batch in target_batches:
-            target_frame = apply_merges(target_frame, batch)
-        source = source.with_cleaned_data(target_frame, card='var_nominal',
-            operation='Reconcile target labels', parameters={'merges': target_batches})
-    if feature_batches:
-        transformer = NominalReconciliationTransformer(feature_batches)
-        preview = transformer.fit_transform(source.frame)
-        source = source.with_pipeline_step(transformer, name='var_nominal',
-            operation='Apply approved nominal mappings', preview_frame=preview)
-    return source
+    """Replay fixed non-target mappings before or after other pipeline steps."""
+    batches = non_target_batches(source, state)
+    if not batches:
+        return source
+    transformer = NominalReconciliationTransformer(batches)
+    preview = transformer.fit_transform(source.frame)
+    return source.with_pipeline_step(transformer, name='var_nominal',
+        operation='Apply approved nominal mappings', preview_frame=preview)
 
 
 def bar_chart(series, expected=()):
@@ -207,7 +214,7 @@ def instance():
     this.settings = lambda: ui.TagList(
         ui.input_slider(id='Similarity', label='Minimum similarity', min=0.5, max=1, value=0.65, step=0.05),
         ui.input_slider(id='Rare', label='Low-frequency threshold (%)', min=0, max=10, value=2, step=0.5),
-        ui.input_checkbox(id='Special', label='Include nominal Targets and Stratifiers', value=False),
+        ui.input_checkbox(id='Special', label='Include nominal Stratifiers', value=False),
     )
 
     def server(input, output, session):
@@ -230,14 +237,17 @@ def instance():
             fingerprint = source_fingerprint(Source())
             if current['fingerprint'] != fingerprint:
                 return fresh_state(fingerprint)
-            return current
+            return without_target_decisions(Source(), current)
 
         @reactive.effect
         def reconcile_source():
             current = State()
             if state() != current:
                 if state()['fingerprint'] is not None:
-                    ui.notification_show('Incoming nominal data changed; reconciliation decisions were reset.', type='warning')
+                    message = ('Incoming nominal data changed; reconciliation decisions were reset.'
+                               if state()['fingerprint'] != current['fingerprint']
+                               else 'Target-role decisions were removed; targets are excluded from nominal reconciliation.')
+                    ui.notification_show(message, type='warning')
                 state.set(current)
 
         @reactive.calc
@@ -451,9 +461,6 @@ def instance():
             current = deepcopy(State())
             visible = visible_proposals(Items(), current['decisions'])
             accepted = [p for p in visible if current['decisions'].get(p['key']) == 'accept']
-            if Source().has_pipeline and any(Role.TARGET in Source().role_map.roles_for(p['column']) for p in accepted):
-                ui.notification_show('Target-label corrections must precede learning steps. Commit predictor or stratifier mappings separately.', type='error')
-                return
             try:
                 apply_merges(Frame(), accepted)
             except ValueError as error:
@@ -481,7 +488,7 @@ def instance():
         def Status():
             current = State()
             pending = sum(current['decisions'].get(p['key']) == 'accept' for p in Items())
-            mess = f"{pending} accepted proposals pending · {len(current['ledger'])} recorded decisions" + (' · Target-label corrections must precede learning steps.' if Source().has_pipeline else '')
+            mess = f"{pending} accepted proposals pending · {len(current['ledger'])} recorded decisions"
             return ui.span(mess, class_ = "text-primary")
 
         @output
