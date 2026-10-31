@@ -363,8 +363,7 @@ def instance():
     this.defer_configuration_input("Colour")
     this.long_name = "Parallel coordinates"
     this.description = (
-        "This card compares observations across several variables in a "
-        "parallel-coordinates chart. Each line represents one complete observation."
+        "Compare observations across several variables as a series of lines."
     )
 
     this.front = lambda: ui.TagList(

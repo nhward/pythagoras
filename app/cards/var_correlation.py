@@ -895,8 +895,7 @@ def instance():
     this = Card(file=__file__, mutable=False)
     this.long_name = "Variable association"
     this.description = (
-        "This card compares eligible numeric and categorical variables using linear, rank, non-linear, "
-        "predictive, and directional measures of association."
+        "Visualise the associations between pairs of variables using various methods."
     )
 
     def _panel(method: CorrelationMethod):

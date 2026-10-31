@@ -31,7 +31,7 @@ def instance():
     """Create the immutable missingness-association-rules card."""
     this = Card(file=__file__, mutable=False)
     this.long_name = "Missingness rules"
-    this.description = "This card visualises Association Rules that describe patterns of missingness."
+    this.description = "Visualise Association Rules that describe patterns of missingness."
 
     this.front = lambda: ui.TagList(
         ui.span(

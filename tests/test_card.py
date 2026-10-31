@@ -36,6 +36,7 @@ def test_card_initialisation(card):
     assert card.allow_full_screen is True
     assert card.max_height == "450px"
     assert card.mutable is False
+    assert card.pipeline_compatible is True
     assert card.initially_hidden is False
     assert card.description is None
     # Script and CSS additions
@@ -127,3 +128,53 @@ class FakeModuleSession:
 
     async def destroy(self):
         self.destroy_count += 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('name, compatible', [
+    ('data_import', False), ('var_modify', False), ('var_roles', False),
+    ('obs_duplicates', False), ('var_nominal', True), ('miss_map', True),
+])
+def test_card_factories_declare_pipeline_compatibility(name, compatible, monkeypatch):
+    import importlib
+    from module import Module
+    monkeypatch.setattr(Module, 'Instances', {})
+    instance = importlib.import_module(f'cards.{name}').instance()
+    assert instance.pipeline_compatible is compatible
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('mutable', [True, False])
+def test_pipeline_compatibility_is_independent_of_mutability(mutable):
+    import pandas as pd
+    from proxy_data import proxy_data
+    from shiny import reactive
+    from sklearn.preprocessing import FunctionTransformer
+
+    c = Card(file=f'/tmp/compatibility_{mutable}.py', mutable=mutable, pipeline_compatible=False)
+    raw = proxy_data(pd.DataFrame({'x': [1, 2]}))
+    step = FunctionTransformer()
+    learned = raw.with_pipeline_step(step, name='upstream', preview_frame=step.fit_transform(raw.frame))
+    c._imports.set(learned)
+    calls = []
+    guarded = c.guard_position(lambda: calls.append('export') or raw)
+    with reactive.isolate():
+        assert guarded() is learned
+        assert 'not pipeline-compatible' in c.position_error()
+    assert calls == []  # Reject before an export can discard the pipeline.
+    c._imports.set(raw)
+    with reactive.isolate():
+        assert guarded() is raw
+        assert c.position_error() is None
+    assert calls == ['export']
+
+
+@pytest.mark.unit
+def test_incompatible_import_can_produce_data_without_an_incoming_source():
+    from shiny import reactive
+    c = Card(file='/tmp/import_without_source.py', mutable=True, pipeline_compatible=False)
+    result = object()
+    guarded = c.guard_position(lambda: result)
+    with reactive.isolate():
+        assert guarded() is result
+        assert c.position_error() is None

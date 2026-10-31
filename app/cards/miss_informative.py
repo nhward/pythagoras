@@ -472,7 +472,7 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.export_inputs('Shadow', 'InformativeOnly')
     this.long_name = "Informative Missingness"
-    this.description = "This card uses a Random Forest model to assess the informative missingness of each predictor's missing values."
+    this.description = "Assess the predictive information of each predictor's missing values."
 
     this.front = lambda: ui.TagList(
         ui.output_ui("ImportanceTitle"),

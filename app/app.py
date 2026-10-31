@@ -33,8 +33,10 @@ import cards  # noqa: F401
 from cards import sys_bookmark
 from faicons import icon_svg as icon
 from jsonschema import validate
+from card_catalogue import discover_cards, rebuild_catalogue
 from module import Module
-from shiny import App, reactive, req, ui
+from shiny import App, reactive, render, req, ui
+from shiny.types import SilentException
 
 log = logging.getLogger("pythagoras")
 if not log.handlers:
@@ -741,6 +743,8 @@ def application():
 
     # main server function for the app
     def server(input, output, session):
+        CatalogueRevision = reactive.Value(0)
+        CatalogueMessage = reactive.Value('')
         Module.ModSession = session
         ActiveConfiguration = reactive.Value(None)
         card_nodes: dict[str, CardNode] = {}
@@ -896,6 +900,9 @@ def application():
                 if not hasattr(module, "instance"):
                     raise AttributeError(f"{module_name} does not define instance()")
                 module = module.instance()
+                if module.update_card_catalogue():
+                    with reactive.isolate():
+                        CatalogueRevision.set(CatalogueRevision() + 1)
                 module.max_height = str(settings["max_card_height"])
                 module._reuse_cards = bool(settings["reuse_cards"])
                 restore = getattr(module, "restore_configuration_state", None)
@@ -961,16 +968,11 @@ def application():
         @reactive.calc
         def available_cards():
             """
-            Return {display_name: file_path} for all card files in cards_dir.
+            Return {module_id: file_path}; display labels come from the catalogue.
             Assumes each card file defines instance().
             This is not filesystem-reactive but instead uses invalidation to pick up file changes (eventually)
             """
-            cardDict = {}
-            cards_dir = Module.ROOT / "cards"
-            for path in sorted(cards_dir.glob("*.py")):
-                if path.name in {"__init__.py", "sys_bookmark.py", "template.py"}:
-                    continue
-                cardDict[path.stem] = path
+            cardDict = discover_cards(Module.ROOT)
             # re-evaluate every hour
             reactive.invalidate_later(3600)
             return cardDict
@@ -1019,14 +1021,22 @@ def application():
                 ui.navset_tab(
                     ui.nav_panel(
                         "New card",
-                        ui.input_select(
+                        ui.input_selectize(
                             id="CardPicker_selected",
-                            label="Choose a card to insert",
-                            choices=list(cardDict.keys()),
+                            label="Search cards by name, module or description",
+                            width="100%",
+                            choices=Module.card_catalogue.choices(cardDict),
+                            options={"placeholder": "Type to search cards…", "maxOptions": 1000},
                             selected=(
                                 next(iter(cardDict.keys())) if cardDict else None
                             ),
                         ),
+                        ui.output_ui('CardPicker_details'),
+                        ui.input_action_button('RebuildCardCatalogue', label='Rebuild card catalogue',
+                                               class_='btn btn-outline-secondary btn-sm', disabled=Module.IS_SHINYLIVE),
+                        ui.output_text('CardCatalogueStatus'),
+                        ui.help_text('Catalogue rebuilding is available in the native app. Browser sessions use bundled descriptions and update them as cards are opened.') if Module.IS_SHINYLIVE else None,
+                        ui.tags.style("#CardPicker_selected + .selectize-control .option {white-space:normal;padding:9px;} #CardPicker_selected + .selectize-control .item {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .card-picker-details {min-height:110px;padding:12px;margin-bottom:12px;border:1px solid var(--bs-border-color,#ddd);border-radius:6px;}"),
                         value="card",
                     ),
                     ui.nav_panel(
@@ -1067,6 +1077,7 @@ def application():
                     selected=selected,
                 ),
                 title="Manage cards and sections",
+                size="xl",
                 footer=ui.div(
                     ui.input_action_button(
                         id = "CardPicker_cancel", 
@@ -1086,6 +1097,66 @@ def application():
                 ),
                 easy_close=True
             )
+
+        @output
+        @render.ui
+        def CardPicker_details():
+            CatalogueRevision()
+            name = input.CardPicker_selected()
+            req(name in available_cards())
+            entry = Module.card_catalogue.entry(name)
+            def flag(value):
+                return 'Unknown' if value is None else ('Yes' if value else 'No')
+            return ui.div(
+                ui.h5(entry['long_name'] or name), ui.code(name),
+                ui.p(entry['description'] or 'No description recorded yet. The module name is shown until this card is opened or the catalogue is rebuilt.'),
+                ui.div(f"Changes data: {flag(entry['mutable'])} · Pipeline-compatible: {flag(entry['pipeline_compatible'])}", class_='text-muted'),
+                class_='card-picker-details',
+            )
+
+        @reactive.extended_task
+        async def RebuildCatalogue():
+            return await rebuild_catalogue(Module.card_catalogue)
+
+        @reactive.effect
+        @reactive.event(input.RebuildCardCatalogue)
+        def start_catalogue_rebuild():
+            if Module.IS_SHINYLIVE:
+                ui.notification_show('Rebuild the catalogue in the native app.', type='message')
+                return
+            if RebuildCatalogue.status() != 'running':
+                CatalogueMessage.set('')
+                RebuildCatalogue.invoke()
+
+        @reactive.effect
+        def catalogue_rebuilt():
+            try:
+                result = RebuildCatalogue.result()
+            except SilentException:
+                raise
+            except Exception as error:
+                CatalogueMessage.set(f'Catalogue rebuild failed: {error}')
+                return
+            with reactive.isolate():
+                CatalogueRevision.set(CatalogueRevision() + 1)
+                try:
+                    selected = input.CardPicker_selected()
+                except SilentException:
+                    selected = None
+            ui.update_selectize('CardPicker_selected', choices=Module.card_catalogue.choices(available_cards()), selected=selected)
+            message = f"Updated descriptions for {result['updated']} cards."
+            if result['errors']:
+                message += ' Could not inspect: ' + ', '.join(sorted(result['errors'])) + '. Existing descriptions or filenames are retained.'
+            if result['write_error']:
+                message += ' Descriptions are available for this run, but could not be saved to disk.'
+            CatalogueMessage.set(message)
+
+        @output
+        @render.text
+        def CardCatalogueStatus():
+            return 'Rebuilding card catalogue…' if RebuildCatalogue.status() == 'running' else CatalogueMessage()
+
+        session.on_ended(RebuildCatalogue.cancel)
 
         def show_add_modal(*, section: str, selected="card"):
             ModalSection.set(section)

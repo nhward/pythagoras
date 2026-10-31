@@ -217,11 +217,11 @@ def instance():
     """
     Creates an instance of Card configured as "roleAssign".
     """
-    this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this = Card(file=__file__, mutable=True, pipeline_compatible=False) # "mutable" means it can change the pxd - probably with a commit button
     this.export_inputs('Separator', 'CardinalityThreshold', 'MaxObs')
     this.register_configuration_input("role_map")
     this.long_name = "Role Assignment"
-    this.description = "This card enables variables to be assigned to roles and removes variables assigned the None role from downstream data. Multiple Weighting variables are multiplied: balance__ names identify balancing factors; other names identify importance weights. Each must be finite, numeric, nonnegative and nonmissing."
+    this.description = "Assign variables to roles they will have in the current analysis."
 
 
     def front():

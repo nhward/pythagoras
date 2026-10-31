@@ -46,3 +46,5 @@ rsconnect-python/
 htmlcov/
 /test-results/
 /playwright-report/
+# Native card catalogue writer lock
+app/data/card_catalogue.json.lock

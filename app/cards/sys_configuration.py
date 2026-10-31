@@ -31,7 +31,7 @@ def instance():
     """
     this = Card(file=__file__, mutable=False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Configuration"
-    this.description = "This card records the host-system configuration."
+    this.description = "List the host-system configuration."
 
 
     def front():

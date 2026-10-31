@@ -211,10 +211,10 @@ def instance():
     """
     Creates an instance of Card configured as "dataImport".
     """
-    this=Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
+    this=Card(file=__file__, mutable=True, pipeline_compatible=False) # "mutable" means it can change the pxd - probably with a commit button
     this.generic_configuration_state = False
     this.long_name="Data import"
-    this.description="This card facilitates the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
+    this.description="Facilitate the ingestion of data, be it numeric, categorical, textual, temporal or spatial."
     this.requires_import=False
     this._restored_configuration_state = {}
     this._obsolete_configuration_inputs = {}

@@ -19,3 +19,25 @@ def test_late_cleaning_passes_through_and_recovers(page, app):
     page.get_by_label('Learning step upstream').check()
     expect(notice).to_contain_text('Card disabled in this position')
     expect(result).to_have_text("columns=['x']; pipeline=True")
+
+
+incompatible_app = create_app_fixture(app='scenarios/pipeline_compatibility.py', scope='function')
+
+
+@pytest.mark.ui
+def test_declared_incompatibility_prevents_pipeline_replacement(page, incompatible_app):
+    page.goto(incompatible_app.url)
+    notice = page.locator('[id$="-PositionNotice"]')
+    result = page.locator('[id$="-Result"]')
+    calls = page.locator('[id$="-Calls"]')
+    expect(notice).to_contain_text('not pipeline-compatible', timeout=20000)
+    expect(result).to_have_text("columns=['x']; pipeline=True")
+    expect(calls).to_have_text('0')
+    page.get_by_label('Learning step upstream').uncheck()
+    expect(notice).to_be_empty()
+    expect(result).to_have_text("columns=['replacement']; pipeline=False")
+    expect(calls).to_have_text('1')
+    page.get_by_label('Learning step upstream').check()
+    expect(notice).to_contain_text('not pipeline-compatible')
+    expect(result).to_have_text("columns=['x']; pipeline=True")
+    expect(calls).to_have_text('1')

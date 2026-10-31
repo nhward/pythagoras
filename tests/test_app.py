@@ -664,6 +664,28 @@ class TestApplicationHelpers:
 
 class TestApplicationBrowser:
     @pytest.mark.ui
+    def test_card_picker_search_descriptions_and_isolated_rebuild(self, page: Page, app: ShinyAppProc):
+        page.goto(app.url)
+        wait_for_shiny_ready(page)
+        page.locator('#ManageCardSection').click()
+        dialog = page.get_by_role('dialog')
+        expect(page.locator('.modal-dialog')).to_have_class(re.compile('modal-xl'))
+        search = page.locator('#CardPicker_selected-selectized')
+        search.fill('diversity')  # Description text, not the module or long name.
+        option = page.locator('.selectize-dropdown [data-value="obs_duplicates"]')
+        expect(option).to_be_visible()
+        search.press('Enter')
+        expect(dialog.locator('.card-picker-details')).to_contain_text('Observation duplicates')
+        expect(dialog.locator('.card-picker-details')).to_contain_text('Pipeline-compatible: No')
+        expect(dialog.locator('.card-picker-details')).to_contain_text('Changes data: Yes')
+        before = page.locator('.cards-grid > .card').evaluate_all('cards => cards.map(c => c.id)')
+        dialog.get_by_role('button', name='Rebuild card catalogue', exact=True).click()
+        expect(page.locator('#CardCatalogueStatus')).to_contain_text(re.compile(r'Updated descriptions for \d+ cards'), timeout=60000)
+        expect(page.locator('#CardPicker_selected')).to_have_value('obs_duplicates')
+        assert page.locator('.cards-grid > .card').evaluate_all('cards => cards.map(c => c.id)') == before
+        expect(dialog.locator('.card-picker-details')).to_contain_text('Observation duplicates')
+
+    @pytest.mark.ui
     def test_shell_loads(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         wait_for_shiny_ready(page)
@@ -1134,7 +1156,7 @@ class TestApplicationBrowser:
         expect(dialog.get_by_role("tab", name="New card", exact=True)).to_have_class(
             "nav-link active"
         )
-        page.locator("#CardPicker_selected").select_option("data_tabulation")
+        page.locator("#CardPicker_selected").evaluate("el => el.selectize.setValue('data_tabulation')")
         dialog.get_by_role("button", name="Add card", exact=True).click()
 
         added_card = page.locator(

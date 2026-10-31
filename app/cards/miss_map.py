@@ -304,7 +304,7 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.export_inputs('Remove', 'VariableThreshold', 'ObservationThreshold')
     this.long_name = "Excessive missingness"
-    this.description = "This card maps missing values across variables and observations and can remove excessive missingness from the dataset."
+    this.description = "Map missing values across variables and observations looking for excessive missingness."
 
     this.front = lambda: ui.TagList(
         ui.span("Missingness map", class_="text-primary text-center d-block"),

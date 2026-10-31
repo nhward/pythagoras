@@ -247,7 +247,7 @@ def instance():
     """Create the immutable missingness-set card."""
     this = Card(file=__file__, mutable=False)
     this.long_name = "Missingness sets"
-    this.description = "This card visualises which variables are missing together, both as individual sets and as exact intersections."
+    this.description = "Visualise sets of variables that are missing together."
 
     this.front = lambda: ui.TagList(
         ui.span("Missingness sets", class_="text-primary text-center d-block"),

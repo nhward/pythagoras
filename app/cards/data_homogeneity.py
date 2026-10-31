@@ -598,7 +598,7 @@ def _summary_row_styles(table: pd.DataFrame) -> list[dict[str, object]]:
 def instance():
     this = Card(file=__file__, mutable=False)
     this.long_name = "Data homogeneity"
-    this.description = "This card examines whether variable distributions remain homogeneous through a meaningful observation sequence; a time sequence makes this a data-drift analysis."
+    this.description = "Examine whether the data drifts through a meaningful observation sequence."
 
     this.front = lambda: ui.TagList(
         ui.span("Distribution drift through the observation sequence", class_="text-primary text-center d-block"),

@@ -357,3 +357,8 @@ Pythagoras is not just a Shiny app.
 It is an attempt to build:
 
 A modular, inspectable, reorder-able "visual language" for data analysis.
+### Card descriptions and discovery
+
+The **Manage cards and sections** modal offers searchable card names and descriptions, with data-changing and pipeline-compatibility properties. Its **Rebuild card catalogue** button refreshes descriptions in an isolated subprocess. Normal card creation also updates the catalogue lazily. Missing descriptions fall back to module names.
+
+Metadata is stored in `app/data/card_catalogue.json`; `PYTHAGORAS_CARD_CATALOGUE_PATH` can select a writable native cache elsewhere. Read-only installations retain updates in memory. Shinylive uses the bundled catalogue with in-memory lazy updates; rebuild descriptions in the native app before exporting it. See [the catalogue contract](specs/card_catalogue.qmd) for details.

@@ -1077,7 +1077,14 @@ min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
 <li>Insert or remove analytical components at runtime</li>
 <li>Inspect and extract the underlying code used at each step</li>
 </ul>
-<p>The result is a system that addresses both: - the <strong>data problem</strong> (cleaning, transforming, modeling) - the <strong>workflow problem</strong> (how analysis is structured, communicated, and reproduced)</p>
+<p>The result is a system that addresses the:</p>
+<ul>
+<li><strong>data problem</strong> - cleaning, transforming, modeling</li>
+<li><strong>workflow problem</strong> - how analysis is structured, communicated, and reproduced</li>
+<li><strong>tuning problem</strong> - how to optimize choices</li>
+<li><strong>leakage problem</strong> - how to assess correctly</li>
+<li><strong>fairness problem</strong> - how to be fair</li>
+</ul>
 <hr>
 <h2 id="core-concepts">Core Concepts</h2>
 <h3 id="cards">🏞️ Cards</h3>
@@ -1352,7 +1359,9 @@ min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
 <p>Summary</p>
 <p>Pythagoras is not just a Shiny app.</p>
 <p>It is an attempt to build:</p>
-<p>A modular, inspectable, reorder-able “visual language” for data analysis.</p>
+<p>A modular, inspectable, reorder-able “visual language” for data analysis. ### Card descriptions and discovery</p>
+<p>The <strong>Manage cards and sections</strong> modal offers searchable card names and descriptions, with data-changing and pipeline-compatibility properties. Its <strong>Rebuild card catalogue</strong> button refreshes descriptions in an isolated subprocess. Normal card creation also updates the catalogue lazily. Missing descriptions fall back to module names.</p>
+<p>Metadata is stored in <code>app/data/card_catalogue.json</code>; <code>PYTHAGORAS_CARD_CATALOGUE_PATH</code> can select a writable native cache elsewhere. Read-only installations retain updates in memory. Shinylive uses the bundled catalogue with in-memory lazy updates; rebuild descriptions in the native app before exporting it. See <a href="specs/card_catalogue.qmd">the catalogue contract</a> for details.</p>
 
 
 

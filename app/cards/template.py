@@ -5,6 +5,9 @@ DESIGN CHECKLIST
 * Define the question, intended audience and meaning of each output.
 * Choose MUTABLE below: this concerns exported proxy data, not interactive UI.
   Diagnostic cards pass through unchanged; mutable cards return a successor.
+* Set pipeline_compatible=False for operations that replace source data, change
+  roles/types, or perform materialised cleaning. It defaults to True independently
+  of mutable; compatible mutable cards must preserve/replay the incoming pipeline.
 * Specify eligible roles AND semantic types. Do not accidentally analyze an
   Identifier, Target, Weighting, geometry or shadow column as a Predictor.
 * Decide explicitly about observation weights, missing/nonfinite values,

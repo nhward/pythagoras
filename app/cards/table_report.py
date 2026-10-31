@@ -32,7 +32,7 @@ def instance():
     """
     this = Card(file=__file__, mutable=False) # "mutable" means it can change the pxd - probably with a commit button
     this.long_name = "Table report"
-    this.description = "This card enables the data to be interactively reported."
+    this.description = "Interactively report on the data's structure."
     
     this.front = lambda: ui.output_ui( # Using dynamic data tables to avoid "sortable" problem of multiple tables
         id = "Tablereport",

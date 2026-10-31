@@ -37,11 +37,8 @@ from shinywidgets import render_widget
 def instance():
     """Create the immutable variable-dissimilarity card."""
     this = Card(file=__file__, mutable=False)
-    this.long_name = "Variable Dissimilarity"
-    this.description = (
-        "This card explores the characteristics of each variable and builds "
-        "a dissimilarity matrix visualized as a hierarchy chart."
-    )
+    this.long_name = "Variable Family tree"
+    this.description = "Explore the family tree of variables visualized as a hierarchy chart."
 
     this.front = lambda: ui.TagList(
         ui.div(

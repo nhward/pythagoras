@@ -667,7 +667,7 @@ def instance():
     """Create the immutable variable-cardinality card."""
     this = Card(file=__file__, mutable=False)
     this.long_name = "Variable cardinality"
-    this.description = "This card profiles distinct values and highlights data-type and cardinality combinations to review."
+    this.description = "Profile the number of distinct values and highlight variables to review."
 
     this.front = lambda: ui.TagList(
         ui.span(

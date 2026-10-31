@@ -597,7 +597,7 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.export_inputs('Apply', 'Method', 'Neighbours', 'Iterations', 'Repeats', 'Holdout', 'Jobs')
     this.long_name = "Learned Imputation"
-    this.description = "This card imputes eligible predictor values with scikit-learn and evaluates the selected imputation method using repeated artificial masking."
+    this.description = "Statistically impute missing predictor values and evaluate these imputations."
 
     this.front = lambda: ui.TagList(
         ui.span("Missing values before and after imputation", class_="text-primary text-center d-block"),

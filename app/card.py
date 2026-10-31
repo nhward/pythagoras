@@ -18,6 +18,7 @@
 ##        Expand/contract card
 ##        Confirm and remove card
 ##    Namespaced UI via shiny.module.ui/server
+##    Mutable and pipeline_compatible Boolean declarations
 ##    Reactive input binding and pass-through outputs for non-mutable cards
 ##    Reactive helpers:
 ##        isFullScreen
@@ -54,6 +55,7 @@ class Card(Module):
         allow_remove=True,
         allow_drag=True,
         mutable=False,
+        pipeline_compatible: bool = True,
         *args,
         **kwargs,
     ):  # will be inherited by child classes
@@ -66,6 +68,7 @@ class Card(Module):
         self.allow_remove = allow_remove
         self.allow_drag = allow_drag
         self.mutable = mutable
+        self.pipeline_compatible = pipeline_compatible
         self.position_error = reactive.Value(None)
         self.initially_hidden = False
         self.description = None
@@ -80,9 +83,23 @@ class Card(Module):
     SHADOW_PREFIX = "shadow__"
 
     def guard_position(self, export):
-        """Disable an incompatible export without interrupting downstream cards."""
+        """Use declared compatibility to pass through an upstream pipeline."""
         @reactive.calc
         def guarded():
+            if not self.pipeline_compatible:
+                # Import cards can produce data without an incoming source.
+                # Wait for a connected source when present; do not require one
+                # merely to check compatibility at the start of a workflow.
+                incoming = None
+                if self._upstream is not None:
+                    upstream = self._upstream()
+                    if upstream is not None:
+                        incoming = upstream()
+                if incoming is None and self._imports.is_set():
+                    incoming = self._imports.get()
+                if incoming is not None and incoming.has_pipeline:
+                    self.position_error.set('This card is not pipeline-compatible')
+                    return incoming
             try:
                 result = export()
             except CardPositionError as error:
@@ -211,6 +228,7 @@ class Card(Module):
         return self._footer is not None
 
     def call_ui(self):
+        self.update_card_catalogue()
 
         @module.ui
         def ui_cardfunc():
@@ -627,8 +645,13 @@ class Card(Module):
                     f"Card {self.namespace!r} returned a non-reactive output"
                 )
             if self.mutable:
-                card_output = self.export_readiness.bind(self, card_output, input, session)
-                card_output = self.guard_position(card_output)
+                # Guard the producer too: incompatible cards must not prepare a
+                # replacement while their published output is passing through.
+                producer = self.guard_position(card_output) if not self.pipeline_compatible else card_output
+                card_output = self.export_readiness.bind(self, producer, input, session)
+            # Position compatibility is independent of mutability. Keep an outer
+            # guard so invalid placement cannot wait on this card's own inputs.
+            card_output = self.guard_position(card_output)
             self.output_data = card_output
 
             @output
@@ -636,7 +659,7 @@ class Card(Module):
             def PositionNotice():
                 # Also evaluate the guard when this is the last workflow card
                 # and no downstream card has requested its export yet.
-                if self.mutable:
+                if self.mutable or not self.pipeline_compatible:
                     try:
                         card_output()
                     except SilentException:
@@ -664,6 +687,9 @@ class Card(Module):
                 except Exception:  # noqa: BLE001
                     # Consumers still report the error; do not mask it with a
                     # spinner that suggests more waiting will fix the problem.
+                    self.waiting.set(None)
+                    return
+                if self.position_error():
                     self.waiting.set(None)
                     return
                 phase = self.export_readiness.phase()

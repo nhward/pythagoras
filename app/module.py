@@ -62,6 +62,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import shinywidgets as _sw
+from card_catalogue import CardCatalogue
 from code_recording import recordable, recording_context, source_for
 from export_readiness import ExportReadiness, equivalent
 from faicons import icon_svg as icon
@@ -239,6 +240,10 @@ class Module(ABC):
     IS_SHINYLIVE = sys.platform == "emscripten"
     N_JOBS = 1 if IS_SHINYLIVE else -1
     ROOT = Path(__file__).resolve().parent   # pythagorus/app
+    card_catalogue: ClassVar[CardCatalogue] = CardCatalogue(
+        ROOT, environ.get('PYTHAGORAS_CARD_CATALOGUE_PATH'),
+        persistent=not IS_SHINYLIVE and environ.get('PYTHAGORAS_CATALOGUE_WORKER') != '1',
+    )
     ModSession = None
     Instances: ClassVar[dict] = {}  # class level dictionary of all instances keyed by their namespaces (possibly including deleted ones with empty values)
     script_list: ClassVar[list] = [
@@ -681,6 +686,14 @@ class Module(ABC):
             )
             self._configuration_warned_ids.add(input_id)
 
+
+    def update_card_catalogue(self):
+        """Capture final factory metadata without making card use depend on I/O."""
+        try:
+            return Module.card_catalogue.capture(self)
+        except Exception as error:
+            self.log.warning('Could not update card catalogue for %s: %s', self.name, error)
+            return False
 
     def reset(self):
         self.log.debug(f"🧹 Cleaning up namespace {self.namespace}")

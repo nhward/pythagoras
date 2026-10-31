@@ -1,0 +1,13 @@
+---
+title: Card pipeline compatibility
+---
+
+`Card` has a Boolean `pipeline_compatible` constructor argument and instance attribute, alongside `mutable`. It defaults to `True` independently of mutability. Immutable cards remain compatible pass-through diagnostics; compatible mutable cards must preserve and replay the incoming pipeline.
+
+Exactly four production cards declare `pipeline_compatible=False`: `data_import`, `var_modify`, `var_roles`, and `obs_duplicates`. These create/replace source data, change schema/roles, or perform materialised row cleaning. `var_nominal` excludes Targets and remains compatible through fixed transformer mappings.
+
+The shared Card position guard checks the declaration before invoking an export. When an incompatible card has a pipeline-bearing upstream input, the upstream proxy passes through unchanged and PositionNotice explains that the card belongs before the first learning step. The guarded producer must not prepare replacement data while the public export is passing through; an outer guard avoids blocking downstream data on the disabled card's own configuration readiness. This guard applies independently of mutability. An import card with no incoming data may still produce its initial source.
+
+Moving the card before the pipeline (or removing upstream learning) restores normal export and clears the notice. A disabled position does not show a misleading bookmark/calculation wait. Existing proxy-level checks and CardPositionError handling remain as data-integrity safeguards; they do not determine the declared compatibility metadata.
+
+The property describes pipeline placement, not whether a card itself is a sklearn estimator, contributes a transformer, or is suitable for a particular dataset. It is code-defined metadata, not a user input or bookmarked setting. Future card catalogues should read it directly rather than infer compatibility from mutability, imports, filenames, or transformation attempts.

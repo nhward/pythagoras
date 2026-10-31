@@ -69,7 +69,7 @@ def instance():
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
     this.export_inputs('Replace', 'NA_CaseSensitive', 'NA_Extrema')
     this.long_name = "Missing value placeholders"
-    this.description = "This card detects any potential missing-value placeholders and allows their replacement with NA."
+    this.description = "Detect missing-value placeholders and replace with NA."
 
     #############################
     # Define the user-interface #

@@ -74,7 +74,7 @@ def instance():
     """Create the immutable application-log card."""
     this = Card(file=__file__, mutable=False)
     this.long_name = "System log"
-    this.description = "This card lists recent application and card log records, with filtering and text search."
+    this.description = "List recent logged messages, warnings and errors."
 
     this.front = lambda: ui.output_data_frame(
         id="LogTable",

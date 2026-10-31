@@ -234,10 +234,10 @@ def _duplicates_figure(
 
 def instance():
     """Create the mutable observation-duplicates card."""
-    this = Card(file=__file__, mutable=True)
+    this = Card(file=__file__, mutable=True, pipeline_compatible=False)
     this.export_inputs('RemoveExact', 'SignificantFigures', 'UseTarget')
     this.long_name = "Observation duplicates"
-    this.description = "This card explores the diversity of observations of a dataset with respect to duplicates and near duplicates."
+    this.description = "Detect observation duplicates and near-duplicates."
     
     this.front=lambda: ui.TagList(
         ui.output_ui(id="FrontTitle"),

@@ -1,0 +1,341 @@
+{
+  "cards": {
+    "data_coverage": {
+      "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",
+      "long_name": "Data coverage",
+      "module": "data_coverage",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "ccf4dc269f9f6ad00e467b8d31c9da3bf663d0da02e241ec73034409db102ab9"
+    },
+    "data_homogeneity": {
+      "description": "Examine whether the data drifts through a meaningful observation sequence.",
+      "long_name": "Data homogeneity",
+      "module": "data_homogeneity",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "1ef2f8084e624c9f08b9f1641dd6b9c4b822ff7b544f5a4237a15473c6603a9e"
+    },
+    "data_import": {
+      "description": "Facilitate the ingestion of data, be it numeric, categorical, textual, temporal or spatial.",
+      "long_name": "Data import",
+      "module": "data_import",
+      "mutable": true,
+      "pipeline_compatible": false,
+      "source_hash": "e3cf8b1879c4015e932b32a5f53ab52ba0c931a40df13265eb1b68c2327b2412"
+    },
+    "data_models": {
+      "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
+      "long_name": "Model method candidates",
+      "module": "data_models",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "c52c9b71080f5accbe18cab1addf9e9abe290912ec52eb11666840ea99531e4c"
+    },
+    "data_parallel": {
+      "description": "Compare observations across several variables as a series of lines.",
+      "long_name": "Parallel coordinates",
+      "module": "data_parallel",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "76a83822b49850f0274ead209c478cede6e94e8bcaaf35028bd68ecfa157bfd7"
+    },
+    "data_provenance": {
+      "description": "Diagrammatically show the sequence of operations.",
+      "long_name": "Data journey",
+      "module": "data_provenance",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "f0b98a68ba111bc683f24a11c3b7b8cc399f03465d97307174517c9d070fc685"
+    },
+    "data_strata": {
+      "description": "Compare numeric distributions across strata with violin or box plots and ANOVA.",
+      "long_name": "Data strata comparison",
+      "module": "data_strata",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "1ab4c178d9db543a7d8d29ad93531eecaa068d024c46eaf9e6012d262181612c"
+    },
+    "data_structure": {
+      "description": "Distinguish temporal, spatial and textual content from the organization of observations.",
+      "long_name": "Data structure overview",
+      "module": "data_structure",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "bcaffa5fba282b69b430c2d388a95e731e492831275d60d4abf2f87e3a3655c5"
+    },
+    "data_tabulation": {
+      "description": "List, search and export the data.",
+      "long_name": "Data tabulation",
+      "module": "data_tabulation",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "991b0e8eb1c54e58d6ca33e80dd654516e3b73325c4dcdad28d73a572e37cf87"
+    },
+    "miss_impute": {
+      "description": "Statistically impute missing predictor values and evaluate these imputations.",
+      "long_name": "Learned Imputation",
+      "module": "miss_impute",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "2ff8793c43d43c51c6ced131d73eac25190b06aa754a29e7d86fa44f4c6d77d3"
+    },
+    "miss_informative": {
+      "description": "Assess the predictive information of each predictor's missing values.",
+      "long_name": "Informative Missingness",
+      "module": "miss_informative",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "401115aba1541723c79eedd7e82e6db3b5152ae7b86b10ba94e0ee6be63a0850"
+    },
+    "miss_manual": {
+      "description": "Review missingness branches and supply optional, typed replacements.",
+      "long_name": "Manual imputation",
+      "module": "miss_manual",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "0af52395120bf00387ec2d6ef1c990cc69b41d9c1377040f5ccec5d42d2d217b"
+    },
+    "miss_map": {
+      "description": "Map missing values across variables and observations looking for excessive missingness.",
+      "long_name": "Excessive missingness",
+      "module": "miss_map",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "b9a6150c339f1994bb68a98c05733d88f0ce7a130795c81fb2b7a329482dd72d"
+    },
+    "miss_placeholders": {
+      "description": "Detect missing-value placeholders and replace with NA.",
+      "long_name": "Missing value placeholders",
+      "module": "miss_placeholders",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "8d8de1c5a01d24a9fedd2a353af2962ef5838177b478ceb1b2e944a863193d29"
+    },
+    "miss_rules": {
+      "description": "Visualise Association Rules that describe patterns of missingness.",
+      "long_name": "Missingness rules",
+      "module": "miss_rules",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "be0502cc8197ee67a724bc4d0f95186d5f20e20cbc70c102d97ed4d3650478ff"
+    },
+    "miss_sets": {
+      "description": "Visualise sets of variables that are missing together.",
+      "long_name": "Missingness sets",
+      "module": "miss_sets",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "088b3ce4d80ab69eda17e806c60ad84279fab7bed229eb9cacff010725a27c04"
+    },
+    "miss_type": {
+      "description": "Assess whether each variable's missingness is random or not.",
+      "long_name": "Missingness Type",
+      "module": "miss_type",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "5c63685ecf467acefd22a914f63faa34f7f7b22d4744746af76d905734dc998d"
+    },
+    "obs_cluster_profile": {
+      "description": "Explain cluster memberships using an interpretable tree and held-out fidelity scores.",
+      "long_name": "Cluster profiling",
+      "module": "obs_cluster_profile",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "64f4287f477dbae79e21fcd4aa671684d12ef6a6a05c6670ddd4adc62683dae1"
+    },
+    "obs_clusters": {
+      "description": "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers.",
+      "long_name": "Cluster membership",
+      "module": "obs_clusters",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "e56ae3a738ef05b5709ce35748b7675a5adee8902022e29d3ecb7e71817aecca"
+    },
+    "obs_dependence": {
+      "description": "Are observations ordered in time or repeated within entities, and is serial dependence detectable?",
+      "long_name": "Observation dependence",
+      "module": "obs_dependence",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "3a524473d65925af5d5a5de6f91625a5c00fd58433875c47b15b1fd5a636fc58"
+    },
+    "obs_duplicates": {
+      "description": "Detect observation duplicates and near-duplicates.",
+      "long_name": "Observation duplicates",
+      "module": "obs_duplicates",
+      "mutable": true,
+      "pipeline_compatible": false,
+      "source_hash": "0ccf26ba93389c8bf6b450e3c1e42443a308c1877eba0dfb31cde11b66658c3a"
+    },
+    "obs_k_clusters": {
+      "description": "Assess cluster counts using seven clustering families and two resampling evaluations and record a number-of-clusters decision for downstream cluster analysis.",
+      "long_name": "Number of clusters",
+      "module": "obs_k_clusters",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "99952f7c20f07999318091f251db76811f9edd6d5cede01deb9c8e535d57bfbe"
+    },
+    "obs_outliers": {
+      "description": "Compare complementary outlier scores to investigate unusual observations and disagreements between methods.",
+      "long_name": "Observation outliers",
+      "module": "obs_outliers",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "f168767df36d50be423a5edc99ca37d8e1c4b7710b46d73ddc7aebf1d224ef8d"
+    },
+    "obs_resample": {
+      "description": "Choose a prediction goal; assigned roles determine evaluation splits.",
+      "long_name": "Observation resampling",
+      "module": "obs_resample",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "26b4d97dfd011cd321eb7112bc6659c1df38132ef8de9a46c8511558be905573"
+    },
+    "obs_weighting": {
+      "description": "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights.",
+      "long_name": "Observation Weighting",
+      "module": "obs_weighting",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "746cdec1453e2450307c06e177f043ad2c0aaf4a164e7a1f936ae44076f7d407"
+    },
+    "sys_configuration": {
+      "description": "List the host-system configuration.",
+      "long_name": "Configuration",
+      "module": "sys_configuration",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "dfbbad5b13d2548a1691cac0273d041715b0eba09c262326c602398c5c493cd0"
+    },
+    "system_log": {
+      "description": "List recent logged messages, warnings and errors.",
+      "long_name": "System log",
+      "module": "system_log",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "421aeb61ce75216ef0087fb2e3e1bb6c2c97b9caa2d2db73d6b0655ce4007dad"
+    },
+    "table_report": {
+      "description": "Interactively report on the data's structure.",
+      "long_name": "Table report",
+      "module": "table_report",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "8d52da96553a96ac808c1d7f58c8b9644a5cccff1cd96e51b4b85689e51e01cd"
+    },
+    "targ_balance": {
+      "description": "Assess the target's imbalance and adjust it through reweignting or resampling.",
+      "long_name": "Target balance",
+      "module": "targ_balance",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "586c53933b75ce695cae786b358a977c4c1a52f5767fcd370b91cb2af29a80bc"
+    },
+    "tuning_parameters": {
+      "description": "Define and commit search values for published pipeline parameters.",
+      "long_name": "Tuning parameters",
+      "module": "tuning_parameters",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "0e14791c2a5b86691107e8d13a29ab0e05140d1d52a92c2a76567ef91d64f78b"
+    },
+    "var_cardinality": {
+      "description": "Profile the number of distinct values and highlight variables to review.",
+      "long_name": "Variable cardinality",
+      "module": "var_cardinality",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "f7135a5b71c5ba345676d5d238a2a22eced9cc91b0b2db8ddcf80d71c0ff6399"
+    },
+    "var_continuous": {
+      "description": "Inspect sorted decimal variables for discontinuities.",
+      "long_name": "Variable continuity",
+      "module": "var_continuous",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "f77ef2772e2e271b25c32874de978cc94231a5a31381769c12a998bc29500d0c"
+    },
+    "var_correlation": {
+      "description": "Visualise the associations between pairs of variables using various methods.",
+      "long_name": "Variable association",
+      "module": "var_correlation",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "6d3d6825de2d2f1bd50613a2902d8c3afd4c8f661c13e8337d0ef4e0b02ff4f9"
+    },
+    "var_dissimilar": {
+      "description": "Explore the family tree of variables visualized as a hierarchy chart.",
+      "long_name": "Variable Family tree",
+      "module": "var_dissimilar",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "eac412075dd76edd7da26aae235b1832f8b30d9f37041fbdb282907da2daca42"
+    },
+    "var_encode": {
+      "description": "Encode nominal, Code, Ordered, Cyclic, Logical and Basket predictors through sklearn pipeline steps.",
+      "long_name": "Variable encoding",
+      "module": "var_encode",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "e89e9b65abc7a24f14627aa1f9c7d0b3518766badd59c2d82bc81e2cb86d0012"
+    },
+    "var_modify": {
+      "description": "Modify variable characteristics such as name, data-type, and order.",
+      "long_name": "Modification",
+      "module": "var_modify",
+      "mutable": true,
+      "pipeline_compatible": false,
+      "source_hash": "cc0044281190bf15c235855b6b0cf0eca46bc365406cc53905f115a75043041b"
+    },
+    "var_nominal": {
+      "description": "Review and commit nominal label corrections and rare-level pooling.",
+      "long_name": "Nominal variables",
+      "module": "var_nominal",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "c66048716be944be554f565ade6972bc7065fc9b8962b23bd186f7914710f30c"
+    },
+    "var_pairs": {
+      "description": "Explore pairs of variables using charts suited to their semantic types.",
+      "long_name": "Variable pairs",
+      "module": "var_pairs",
+      "mutable": false,
+      "pipeline_compatible": true,
+      "source_hash": "4180157ae59cc73a330d1665dfbbc5dc75c97c5768acb234715b3a6f70ae98b3"
+    },
+    "var_roles": {
+      "description": "Assign variables to roles they will have in the current analysis.",
+      "long_name": "Role Assignment",
+      "module": "var_roles",
+      "mutable": true,
+      "pipeline_compatible": false,
+      "source_hash": "012c8ffb5d4a452b2419f4f274d87f67a98382091f2b9e381d442da14e77b7f5"
+    },
+    "var_text_encode": {
+      "description": "Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.",
+      "long_name": "Text encoding",
+      "module": "var_text_encode",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "c097350935e2168314ce3c6a9ec9aed395dfa5d18fc2d2a8215f635cf5c76fd5"
+    },
+    "var_time_encode": {
+      "description": "Generate numeric and cyclic time predictors before Variable encoding.",
+      "long_name": "Time feature encoding",
+      "module": "var_time_encode",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "5157ffeb1fe274ab15f19dde394c9ac1867072640204ffeece99772d6586a86e"
+    },
+    "var_transform": {
+      "description": "Transform the location, spread, and shape of continuous numeric variables.",
+      "long_name": "Variable Transform",
+      "module": "var_transform",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "a38eea05754211a67993151273ec4ce7cf53cc114e52f6b4f62ef8e9fc219c86"
+    }
+  },
+  "schema_version": 1
+}

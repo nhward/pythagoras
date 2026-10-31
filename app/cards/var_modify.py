@@ -221,12 +221,12 @@ def instance():
     - expand delimiter-separated basket-like data into lists.
     """
 
-    this = Card(file=__file__, mutable=True)
+    this = Card(file=__file__, mutable=True, pipeline_compatible=False)
     this.register_configuration_state_field(_MODIFICATION_STATE_FIELD)
     for transient_input in ("NewName", "NewDataType", "NewOrder"):
         this.exclude_configuration_input(transient_input)
     this.long_name = "Modification"
-    this.description = "This card allows the basic modification of variables such as name, data-type, and cyclic-order ."
+    this.description = "Modify variable characteristics such as name, data-type, and order."
 
     DATE_FORMATS = [
         "%Y-%m-%d",  # 2026-05-16

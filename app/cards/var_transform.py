@@ -654,7 +654,7 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.export_inputs('Transform', 'IncludeTarget', 'UseWeights', 'Robust')
     this.long_name = "Variable Transform"
-    this.description = "This card explores and applies transformations to the location, spread, and shape of continuous numeric predictors and, when explicitly enabled, one continuous target."
+    this.description = "Transform the location, spread, and shape of continuous numeric variables."
 
     this.front = lambda: ui.TagList(
         ui.span(

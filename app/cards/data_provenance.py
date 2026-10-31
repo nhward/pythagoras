@@ -433,7 +433,7 @@ def instance():
     """Create the immutable data-provenance card."""
     this = Card(file=__file__, mutable=False)
     this.long_name = "Data journey"
-    this.description = "This card shows the order of cleaning operations, learned transformations and learned models."
+    this.description = "Diagrammatically show the sequence of operations."
 
     this.front = lambda: ui.TagList(
         ui.span(

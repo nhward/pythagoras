@@ -1149,7 +1149,7 @@ def instance():
     this = Card(file=__file__, mutable=False)
     this.defer_configuration_input("Target")
     this.long_name = "Missingness Type"
-    this.description = "This card uses decision trees to assess whether each variable's missingness is random or not."
+    this.description = "Assess whether each variable's missingness is random or not."
 
     this.front = lambda: ui.navset_bar(
         ui.nav_panel(
