@@ -22,7 +22,7 @@
       "module": "data_import",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "e3cf8b1879c4015e932b32a5f53ab52ba0c931a40df13265eb1b68c2327b2412"
+      "source_hash": "9cf6df895107c7e29a988204cdda79c1e168f08e788cb3aab568826a2b600f5a"
     },
     "data_models": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",

@@ -82,6 +82,8 @@ Opening a workflow section creates and resumes every card in that section and al
 
 Bookmarks open the first workflow section by default, skipping Start. Enable **Restore last active section** in the card and section management dialog to reopen the bookmarked section instead. This preference is saved as `settings.restore_last_active_section` in the configuration JSON. Older bookmarks inherit the application's default for this setting.
 
+The bookmark data-name picker defaults to the first committed import in live workflow order, including restored imports. Names use the same normalization as bookmark filenames. **Save bookmark** is enabled only when the selected name matches that committed dataset; other names are for loading bookmarks. The committed name remains selectable before its first save. Provisional import edits do not change the committed name, and bookmark-list refreshes preserve a valid manual selection.
+
 This enables:
 
 - Rapid experimentation

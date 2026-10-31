@@ -200,7 +200,7 @@ def test_manager_card_cannot_be_removed_or_dragged(bookmark_module):
     markup = str(card.call_ui())
     assert "CloseButton" not in markup
     assert "drag-handle" not in markup
-    assert "Save bookmark" in markup
+    assert "SaveControl" in markup  # Save is rendered with reactive enablement.
 
 
 @pytest.mark.unit
@@ -290,3 +290,78 @@ def test_purge_confirmation_cancel_and_single_file_noop(page, tmp_path, monkeypa
     page.wait_for_timeout(300)
     expect(dialog).to_have_count(0)
     assert latest.exists() and other.exists()
+
+
+@pytest.mark.unit
+def test_committed_name_default_and_manual_choice_preservation(bookmark_module):
+    names = ['Accounts', 'Customer-accounts', 'Zebra']
+    choose = bookmark_module.default_data_name
+    assert choose(names, 'Customer-accounts') == 'Customer-accounts'
+    assert choose(names, 'Customer-accounts', 'Zebra', 'Customer-accounts') == 'Zebra'
+    assert choose(names, 'Accounts', 'Zebra', 'Customer-accounts') == 'Accounts'
+    assert choose(names, 'Missing', 'Zebra') == 'Zebra'
+    assert choose(names, 'Missing') == 'Accounts'
+    assert choose([], 'Missing') is None
+    assert bookmark_module.bookmark_data_key('Customer accounts') == 'Customer-accounts'
+
+
+@pytest.mark.unit
+def test_committed_name_overrides_draft_filename_and_supports_openml(bookmark_module, configuration):
+    created = datetime(2026, 9, 11, 14, 42, 8, tzinfo=timezone.utc)
+    filename = bookmark_module.bookmark_filename(configuration, created, data_name='Committed source')
+    assert filename.startswith('Committed-source--')
+    state = configuration['layout'][0]['cards'][0]['state']
+    state['last_committed_tab'] = 'OpenML'
+    state['inputs']['OName'] = 'OpenML source'
+    assert bookmark_module.data_source_name(configuration) == 'OpenML source'
+
+
+default_app = create_app_fixture(app='../scenarios/bookmark_default.py', scope='function')
+
+
+@pytest.mark.ui
+def test_default_tracks_committed_name_but_refresh_preserves_manual_choice(page, default_app):
+    from playwright.sync_api import expect
+    page.goto(default_app.url)
+    chooser = page.locator('[id$="-SelectedDataName"]')
+    def records(names):
+        return [{'filename': f'{n}--20260921T100000+0000.pythagoras.json', 'dataName': n,
+                 'timestamp': '20260921T100000+0000', 'displayTime': '21 Sep 2026', 'createdAt': 1} for n in names]
+    def publish(names):
+        page.evaluate("records => Shiny.setInputValue('sys_bookmark-BrowserBookmarks', records, {priority:'event'})", records(names))
+    page.wait_for_function('window.Shiny?.setInputValue !== undefined')
+    publish(['Zebra-data', 'Accounts'])
+    expect(chooser).to_have_value('Zebra-data', timeout=20000)
+    save = page.locator('[id$="-SaveBookmark"]')
+    expect(save).to_be_enabled()
+    expect(chooser.locator('option')).to_have_text(['Accounts', 'Zebra-data'])
+    chooser.select_option('Accounts')
+    expect(save).to_be_disabled()
+    page.evaluate("Shiny.setInputValue('sys_bookmark-SaveBookmark', 1, {priority:'event'})")
+    expect(page.get_by_text('Select the committed data name before saving a bookmark.', exact=True)).to_be_visible()
+    publish(['Zebra-data', 'Accounts', 'Beta'])
+    expect(chooser.locator('option')).to_have_count(3)
+    expect(chooser).to_have_value('Accounts')
+    current = page.get_by_label('Committed import (test)', exact=True)
+    current.select_option('Unavailable')
+    expect(chooser).to_have_value('Unavailable')
+    expect(save).to_be_enabled()
+    chooser.select_option('Accounts')
+    expect(save).to_be_disabled()
+    current.select_option('Zebra data')
+    expect(chooser).to_have_value('Zebra-data')
+    expect(save).to_be_enabled()
+    # With no existing bookmarks, the committed name is still offered for a first save.
+    publish([])
+    expect(chooser.locator('option')).to_have_text(['Zebra-data'])
+    expect(save).to_be_enabled()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('committed,selected,expected', [
+    ('Customer accounts', 'Customer-accounts', True),
+    ('Customer accounts', 'Other', False), ('Customer accounts', None, False),
+    (None, 'Customer-accounts', False), ('', 'analysis', False),
+])
+def test_save_requires_the_true_committed_name(bookmark_module, committed, selected, expected):
+    assert bookmark_module.can_save_bookmark(committed, selected) is expected

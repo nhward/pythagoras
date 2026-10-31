@@ -23,6 +23,7 @@ from code_recording import recordable
 from faicons import icon_svg as icon
 from module import Module
 from shiny import reactive, render, req, ui
+from shiny.types import SilentException
 
 BOOKMARK_SUFFIX = ".pythagoras.json"
 BOOKMARK_DIRECTORY_ENV = "PYTHAGORAS_BOOKMARK_DIR"
@@ -64,6 +65,7 @@ def data_source_name(configuration: Mapping[str, object]) -> str:
                 "Dataset based": "DName",
                 "Web based": "UName",
                 "UC Irvine": "IName",
+                "OpenML": "OName",
             }.get(committed)
             value = inputs.get(input_name) if input_name else None
             if isinstance(value, str) and value.strip():
@@ -72,13 +74,34 @@ def data_source_name(configuration: Mapping[str, object]) -> str:
 
 
 @recordable
+def bookmark_data_key(name: str) -> str:
+    """Use the same normalization for chooser defaults and saved filenames."""
+    return re.sub(r"[^A-Za-z0-9]+", "-", name).strip('-') or 'analysis'
+
+
+def default_data_name(names, preferred, current=None, previous_preferred=None):
+    if preferred in names and preferred != previous_preferred:
+        return preferred
+    if current in names:
+        return current
+    if preferred in names:
+        return preferred
+    return names[0] if names else None
+
+
+def can_save_bookmark(committed_name, selected_name):
+    return bool(committed_name and selected_name == bookmark_data_key(committed_name))
+
+
+@recordable
 def bookmark_filename(
     configuration: Mapping[str, object],
     created_at: datetime,
+    *,
+    data_name: str | None = None,
 ) -> str:
     """Return a portable filename based on data name and creation time."""
-    slug = re.sub(r"[^A-Za-z0-9]+", "-", data_source_name(configuration))
-    slug = slug.strip("-") or "analysis"
+    slug = bookmark_data_key(data_name or data_source_name(configuration))
     timestamp = created_at.strftime("%Y%m%dT%H%M%S%z")
     return f"{slug}--{timestamp}{BOOKMARK_SUFFIX}"
 
@@ -266,6 +289,7 @@ def save_local_bookmark(
 def instance(
     *,
     configuration_provider: Callable[[], Mapping[str, object]] | None = None,
+    committed_data_name_provider: Callable[[], str | None] | None = None,
     configuration_validator: Callable[[Mapping[str, object]], None] | None = None,
 ):
     """Create the application-level bookmark manager card."""
@@ -296,12 +320,7 @@ def instance(
     )
 
     this.footer=lambda: ui.div(
-        ui.input_action_button(
-            id="SaveBookmark", label="Save bookmark", icon=icon("bookmark", title="Save bookmark", a11y="sem"),
-            width="150px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
-            guide=this, position="top",
-            text="This button saves a bookmark for the current state of Pythagoras. It will use the current data 'name' and suffix this with the current timestamp."
-        ),
+        ui.output_ui('SaveControl'),
         ui.input_action_button(
             id="LoadBookmark", label="Load selected", icon=icon("folder-open", title="Load bookmark", a11y="sem"),
             width="150px", class_="btn rounded-pill btn-sm btn-primary", style="border: 0px; box-shadow: none;",
@@ -314,6 +333,26 @@ def instance(
 
     def server(input, output, session):
         pending_purge = None
+        previous_preferred = None
+
+        @reactive.calc
+        def CommittedName():
+            return committed_data_name_provider() if committed_data_name_provider else None
+
+        @output
+        @render.ui
+        def SaveControl():
+            try:
+                enabled = can_save_bookmark(CommittedName(), input.SelectedDataName())
+            except SilentException:
+                enabled = False
+            return ui.input_action_button(
+                id='SaveBookmark', label='Save bookmark', disabled=not enabled,
+                icon=icon('bookmark', title='Save bookmark', a11y='sem'), width='150px',
+                class_='btn rounded-pill btn-sm btn-primary', style='border:0;box-shadow:none;',
+                guide=this, position='top',
+                text='Save is available only for the committed dataset. Selecting another data name is for loading its bookmarks; saving always uses the true committed name.',
+            )
 
         @output
         @render.ui
@@ -455,16 +494,25 @@ def instance(
         @render.ui
         @this.record_context
         def BookmarkDataChooser():
-            names = list(
-                dict.fromkeys(
-                    str(record["data_name"])
-                    for record in BookmarkRecords()
-                    if record.get("data_name")
-                )
-            )
+            nonlocal previous_preferred
+            names = sorted({str(record['data_name']) for record in BookmarkRecords() if record.get('data_name')})
+            try:
+                name = CommittedName()
+                preferred = bookmark_data_key(name) if name else None
+            except SilentException:
+                preferred = previous_preferred  # Keep a valid manual choice while card order binds.
+            if preferred and preferred not in names:
+                names = sorted([*names, preferred])
+            with reactive.isolate():
+                try:
+                    current = input.SelectedDataName()
+                except SilentException:
+                    current = None
+            selected = default_data_name(names, preferred, current, previous_preferred)
+            previous_preferred = preferred
             return ui.input_select(
-                id="SelectedDataName", label="Data name", choices={name: name for name in names}, selected=names[0] if names else None,
-                guide=this, position="bottom", text="This dialogue selects the recent saved data names. The most recent is at the top."
+                id="SelectedDataName", label="Data name", choices={name: name for name in names}, selected=selected,
+                guide=this, position="bottom", text="Data names are alphabetical. The committed import selects the default, even before its first bookmark is saved. Other data names are available for loading; Save is disabled while one is selected."
             )
 
         @output
@@ -483,11 +531,6 @@ def instance(
                 choices = {}
             else:
                 selected_data = input.SelectedDataName()
-                available_names = {
-                    str(record["data_name"]) for record in selectable_records
-                }
-                if selected_data not in available_names:
-                    selected_data = str(selectable_records[0]["data_name"])
                 choices = {
                     str(record["timestamp"]): str(record["display_time"])
                     for record in selectable_records
@@ -521,12 +564,20 @@ def instance(
         @this.record_context
         async def SaveBookmark():
             try:
+                committed_name = CommittedName()
+                selected_name = input.SelectedDataName()
+            except SilentException:
+                committed_name = selected_name = None
+            if not can_save_bookmark(committed_name, selected_name):
+                ui.notification_show('Select the committed data name before saving a bookmark.', type='warning')
+                return
+            try:
                 if configuration_provider is None:
                     ui.notification_show("No configuration provider is available.", type="error")
                     return
                 created_at = datetime.now().astimezone()
                 snapshot = dict(configuration_provider())
-                filename = bookmark_filename(snapshot, created_at)
+                filename = bookmark_filename(snapshot, created_at, data_name=committed_name)
                 candidate = with_bookmark_metadata(
                     snapshot,
                     filename=filename,

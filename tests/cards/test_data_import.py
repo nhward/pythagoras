@@ -401,6 +401,7 @@ class TestInstance:
         card.reactable = lambda **kwargs: record
         card.isFullScreen = lambda: False
         dataset_value = reactive.Value(None)
+        dataset_name = reactive.Value("restored iris")
         inputs = InputNamespace(
             ServerFile=lambda: None,
             NativeFilePicker=lambda: 0,
@@ -412,7 +413,7 @@ class TestInstance:
             UciDataset=lambda: None,
             Url=lambda: "https://example.test/draft.csv",
             FName=lambda: "",
-            DName=lambda: "restored iris",
+            DName=dataset_name,
             UName=lambda: "web draft",
             OpenMLPage=lambda: 1,
             OpenMLDataset=lambda: None,
@@ -438,6 +439,12 @@ class TestInstance:
         with reactive.isolate():
             restored = exported()
         assert restored.name == "restored iris"
+        with reactive.isolate():
+            assert card.committed_data_name() == 'restored iris'
+        dataset_name.set('uncommitted rename')
+        with reactive.isolate():
+            assert card.committed_data_name() == 'restored iris'
+        assert card.configuration_state()['inputs']['DName'] == 'restored iris'
         assert restored.shape == (150, 5)
         assert card.configuration_state()["last_committed_tab"] == "Dataset based"
 

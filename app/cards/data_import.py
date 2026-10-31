@@ -545,6 +545,13 @@ def instance():
 
         #### Shiny variables ----
         CommittedData=reactive.Value(None)
+
+        @reactive.calc
+        def committed_data_name():
+            data = CommittedData()
+            return data.name if data is not None else None
+
+        this.committed_data_name = committed_data_name
         restored_inputs = this._restored_configuration_state.get("inputs", {})
         restored_committed_tab = this._restored_configuration_state.get(
             "last_committed_tab"
@@ -735,6 +742,11 @@ def instance():
                     "Sheet": input.Sheet(),
                 }
                 committed_tab = LastCommittedTab()
+                committed = CommittedData()
+                name_field = {'File based': 'FName', 'Dataset based': 'DName', 'Web based': 'UName',
+                              'UC Irvine': 'IName', 'OpenML': 'OName'}.get(committed_tab)
+                if committed is not None and name_field:
+                    values[name_field] = committed.name
             return {
                 "inputs": values,
                 "last_committed_tab": committed_tab,

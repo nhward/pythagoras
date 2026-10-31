@@ -99,7 +99,7 @@ class TestInstance:
     def test_metadata_and_regions(self, card):
         assert card.name == "miss_type"
         assert card.long_name == "Missingness Type"
-        assert "decision trees" in card.description
+        assert "variable's missingness is random or not" in card.description
         assert not card.mutable
         assert card.hasSidebar()
         assert card.hasFlipSide()

@@ -1,0 +1,15 @@
+---
+title: Committed data names in the bookmark manager
+---
+
+The application-level `sys_bookmark` card receives `committed_data_name_provider`, a reactive callable returning the true committed name or None. It does not inspect a pipeline proxy or use process-global/session-proxy attributes. Each data_import server exposes `committed_data_name()`, reading CommittedData directly without requiring export readiness or active-card status. Manual commits and restored commits share this state. Uncommitted input/preview/name changes do not affect it. Serialization retains the actual short name for the last committed import mode, while other provisional inputs remain saved as before.
+
+The app provider selects the first committed data_import in live FlowOrder. It therefore follows section/card order, additions and removals, ignores uncommitted imports, and uses only this session's card_nodes. Bookmark filenames and picker defaults use the same provider, not independent last-commit state. `bookmark_data_key` applies the existing filename-safe normalization to raw names; OpenML OName is also recognized by the legacy configuration-derived fallback helper.
+
+The picker lists names alphabetically and includes the committed dataset even if it has no existing bookmarks, permitting a first save. Initially or when the committed name changes, it selects that name. A catalogue refresh preserves a valid manual choice. Temporarily unbound workflow order does not discard the last preferred name. No committed import leaves Save disabled, while existing bookmarks can still be loaded.
+
+SaveControl renders Save bookmark disabled unless the picker value equals the normalized actual committed name. The save handler repeats that check before obtaining the configuration or writing/sending any bookmark; a stale or injected event for another dataset is rejected without closing the manager. Saving always derives the filename from the true committed name, never the picker value. Selecting another dataset is for Load selected (or local purge), not Save bookmark.
+
+The timestamp chooser only lists versions of the selected name. A committed dataset without saved versions has no timestamp choices; it must not borrow another dataset's latest timestamp. The same selection and Save rules apply to native local files, server/browser storage, and Shinylive storage.
+
+Focused tests cover normalization, first committed import ordering, restoration and provisional renaming, manual chooser preservation, missing bookmark versions, Save enablement, backend rejection, first-save availability, OpenML fallback, and existing loading/saving/purge behaviour.

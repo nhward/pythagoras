@@ -180,7 +180,7 @@ class TestInstance:
     def test_metadata_and_regions(self, card):
         assert card.name == "miss_placeholders"
         assert card.long_name == "Missing value placeholders"
-        assert "replacement with NA" in card.description
+        assert "replace with NA" in card.description
         assert card.mutable
         assert card.hasSidebar()
         assert card.hasFlipSide()

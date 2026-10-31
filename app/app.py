@@ -101,6 +101,19 @@ def wire_card_nodes(
         source = node
 
 
+def first_committed_data_name(order, nodes):
+    """Read committed imports in live workflow order, never provisional names."""
+    for namespace in order:
+        node = nodes.get(namespace)
+        if node is None or node.card.name != 'data_import':
+            continue
+        getter = getattr(node.card, 'committed_data_name', None)
+        name = getter() if callable(getter) else None
+        if name:
+            return name
+    return None
+
+
 def update_card_activity(
     order: Sequence[str], current: str, nodes: dict[str, CardNode],
 ) -> None:
@@ -1465,8 +1478,13 @@ def application():
                 candidate.pop("active_section", None)
             return candidate
 
+        @reactive.calc
+        def committed_data_name():
+            return first_committed_data_name(FlowOrder(), card_nodes)
+
         bookmark_manager = sys_bookmark.instance(
             configuration_provider=snapshot_configuration,
+            committed_data_name_provider=committed_data_name,
             configuration_validator=validate_configuration,
         )
         bookmark_manager.call_server(

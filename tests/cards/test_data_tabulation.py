@@ -127,7 +127,7 @@ class TestInstance:
     def test_metadata(self, card):
         assert card.name == "data_tabulation"
         assert card.long_name == "Data tabulation"
-        assert "listed and searched" in card.description
+        assert "List, search and export" in card.description
         assert not card.mutable
 
     @pytest.mark.unit

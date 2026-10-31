@@ -160,8 +160,8 @@ class TestInstance:
     @pytest.mark.unit
     def test_metadata_and_regions(self, card):
         assert card.name == "var_dissimilar"
-        assert card.long_name == "Variable Dissimilarity"
-        assert "dissimilarity matrix" in card.description
+        assert card.long_name == "Variable Family tree"
+        assert "visualized as a hierarchy chart" in card.description
         assert not card.mutable
         assert card.hasSidebar()
         assert card.hasFlipSide()
@@ -439,7 +439,7 @@ class TestWebKitUI:
     def test_card_chart_and_settings_render(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         expect(get_card(page)).to_be_visible()
-        expect(page.get_by_text("Variable Dissimilarity", exact=True)).to_be_visible()
+        expect(page.get_by_text("Variable Family tree", exact=True)).to_be_visible()
         expect(by_id(page, "Chart")).to_be_visible()
         for control in ("Robust", "Qgram", "Which", "Style", "MaxObs"):
             expect(by_id(page, control)).to_be_attached()

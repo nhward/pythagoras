@@ -170,7 +170,7 @@ class TestInstance:
     def test_metadata(self, card):
         assert card.name == "var_roles"
         assert card.long_name == "Role Assignment"
-        assert "assigned to roles" in card.description
+        assert "variables to roles they will have" in card.description
         assert card.mutable
 
     @pytest.mark.unit

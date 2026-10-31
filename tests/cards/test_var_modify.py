@@ -177,7 +177,7 @@ class TestInstance:
     def test_metadata(self, card):
         assert card.name == "var_modify"
         assert card.long_name == "Modification"
-        assert "modification of variables" in card.description
+        assert "Modify variable characteristics" in card.description
         assert card.mutable
 
     @pytest.mark.unit

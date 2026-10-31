@@ -135,7 +135,7 @@ class TestCardDefinition:
     def test_metadata_regions_and_immutability(self, card):
         assert card.name == "var_correlation"
         assert card.long_name == "Variable association"
-        assert "directional measures" in card.description
+        assert "between pairs of variables" in card.description
         assert card.mutable is False
         assert card.hasSidebar()
         assert card.hasFlipSide()

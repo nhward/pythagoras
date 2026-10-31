@@ -671,7 +671,7 @@ class TestApplicationBrowser:
         dialog = page.get_by_role('dialog')
         expect(page.locator('.modal-dialog')).to_have_class(re.compile('modal-xl'))
         search = page.locator('#CardPicker_selected-selectized')
-        search.fill('diversity')  # Description text, not the module or long name.
+        search.fill('near-duplicates')  # Description text, not the module or long name.
         option = page.locator('.selectize-dropdown [data-value="obs_duplicates"]')
         expect(option).to_be_visible()
         search.press('Enter')
@@ -795,6 +795,32 @@ class TestApplicationBrowser:
         expect(dialog.locator("[id$='-SaveBookmark']")).to_be_visible()
 
     @pytest.mark.ui
+    def test_bookmark_default_matches_restored_committed_import(self, page: Page, bookmark_restore_app: ShinyAppProc):
+        shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+        BOOKMARK_RESTORE_DIR.mkdir(parents=True)
+        try:
+            for key, name, timestamp in [('Accounts', 'Accounts', '20260921T100000+0000'),
+                                         ('Zebra-data', 'Zebra data', '20260922T100000+0000')]:
+                candidate = json.loads(CONFIG_FILE.read_text(encoding='utf-8'))
+                candidate['settings']['section_style'] = 'tab'
+                imported = next(c for g in candidate['layout'] for c in g['cards'] if c['module'] == 'data_import')
+                imported['state']['last_committed_tab'] = 'Dataset based'
+                imported['state']['inputs'].update(Navset='Dataset based', Dataset='sklearn::iris', DName=name)
+                filename = f'{key}--{timestamp}.pythagoras.json'
+                candidate['bookmark'] = {'filename': filename, 'created_at': datetime.now().astimezone().isoformat()}
+                (BOOKMARK_RESTORE_DIR / filename).write_text(json.dumps(candidate), encoding='utf-8')
+                time.sleep(.05)
+            page.goto(bookmark_restore_app.url)
+            wait_for_shiny_ready(page)
+            expect(page.locator('[id^="data_import"][id$="-Name"]').first).to_contain_text('Zebra data', timeout=20000)
+            page.locator('#SaveConfiguration').click()
+            names = page.get_by_role('dialog').locator('[id$="-SelectedDataName"]')
+            expect(names.locator('option')).to_have_text(['Accounts', 'Zebra-data'])
+            expect(names).to_have_value('Zebra-data')
+        finally:
+            shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+
+    @pytest.mark.ui
     def test_local_bookmarks_are_selected_by_data_name_then_time(
         self, page: Page, bookmark_restore_app: ShinyAppProc
     ):
@@ -850,11 +876,17 @@ class TestApplicationBrowser:
             data_names = dialog.locator("[id$='-SelectedDataName']")
             saved_times = dialog.locator("[id$='-SelectedBookmarkTime']")
 
-            expect(data_names).to_have_value("Assmnt")
+            # This legacy fixture's actual committed name differs from its
+            # saved filename stem. Offer it for a first save, without borrowing
+            # a timestamp from another data name.
+            expect(data_names).to_have_value("latest-Assmnt")
             assert data_names.locator("option").all_text_contents() == [
-                "Assmnt",
-                "Other",
+                "Assmnt", "Other", "latest-Assmnt",
             ]
+            expect(saved_times.locator('option')).to_have_count(0)
+            expect(dialog.locator('[id$="-SaveBookmark"]')).to_be_enabled()
+            data_names.select_option('Assmnt')
+            expect(dialog.locator('[id$="-SaveBookmark"]')).to_be_disabled()
             expect(saved_times).to_have_value("20260911T154501+1200")
             assert saved_times.locator("option").all_text_contents()[0] != (
                 "20260911T154501+1200"
@@ -1584,3 +1616,14 @@ def test_hidden_learning_controls_feed_data_journey(page, workflow_restore_app, 
         expect(page.locator('#sys_configuration-Card')).to_have_count(0)
     finally:
         shutil.rmtree(BOOKMARK_RESTORE_DIR, ignore_errors=True)
+
+
+@pytest.mark.unit
+def test_committed_import_name_follows_live_order_and_ignores_uncommitted(app_module):
+    def node(name, value):
+        return SimpleNamespace(card=SimpleNamespace(name=name, committed_data_name=lambda: value))
+    nodes = {'draft': node('data_import', None), 'first': node('data_import', 'First data'),
+             'second': node('data_import', 'Second data'), 'other': node('var_modify', 'Not an import')}
+    assert app_module.first_committed_data_name(('draft', 'other', 'first', 'second'), nodes) == 'First data'
+    assert app_module.first_committed_data_name(('second', 'first'), nodes) == 'Second data'
+    assert app_module.first_committed_data_name(('draft', 'other', 'removed'), nodes) is None
