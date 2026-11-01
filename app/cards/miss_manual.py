@@ -234,9 +234,10 @@ def apply_rules(source, rules, name='miss_manual'):
     return source.with_pipeline_step(transformer, name=name, operation='Manual imputation', preview_frame=preview)
 
 
+# .flip-container:has(.miss-manual-variables):not(.flipped) > .flippable > .back {visibility:hidden;pointer-events:none;}
+# .flip-container:has(.miss-manual-variables).flipped > .flippable > .front {visibility:hidden;pointer-events:none;}
+
 STYLE = """
-.flip-container:has(.miss-manual-variables):not(.flipped) > .flippable > .back {visibility:hidden;pointer-events:none;}
-.flip-container:has(.miss-manual-variables).flipped > .flippable > .front {visibility:hidden;pointer-events:none;}
 .front:has(.miss-manual-variables) {display:flex;flex-direction:column;overflow:hidden;}
 .front:has(.miss-manual-variables) > .form-group {flex:0 0 auto;margin-bottom:8px;}
 .miss-manual-variables > div, .miss-manual-variables .tab-content {display:flex;flex-direction:column;flex:1;min-height:0;}
@@ -383,7 +384,7 @@ def instance():
             )
 
         @this.reactable(calc=True)
-        @this.settle(seconds=0.3)
+        @this.settle(seconds=2)
         def Depth():
             return int(input.MaxTreeDepth() or 3)
 
@@ -402,7 +403,7 @@ def instance():
             return cache[column]
 
         @this.reactable(calc=True)
-        @this.settle(seconds=0.3)
+        @this.settle(seconds=2)
         def MinimumAccuracy():
             value = input.MinLeafAccuracy()
             return float(value if value is not None else 0.8)
@@ -516,7 +517,7 @@ def instance():
             svg = ui.HTML(f'<svg width="{width}" height="{leaf_y+leaf_height}" aria-hidden="true">' + ''.join(edges) + '</svg>')
             unavailable = [c for c in proposal['omitted'] if c not in skipped]
             omitted = ui.p('Unavailable split types: ' + ', '.join(unavailable)) if unavailable else None
-            return ui.TagList(notice, omitted, ui.div(ui.div(svg, *panels, class_='miss-manual-tree', style=f'width:{width}px;height:{leaf_y+leaf_height}px;'), class_='miss-manual-scroll'))
+            return ui.TagList(notice, ui.div(ui.div(svg, *panels, class_='miss-manual-tree', style=f'width:{width}px;height:{leaf_y+leaf_height}px;'), class_='miss-manual-scroll'), omitted)
 
         def register_tree(column):
             @output(id=tree_id(column))

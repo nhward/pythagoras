@@ -30,10 +30,10 @@ if str(ROOT) not in sys.path:
 os.chdir(ROOT)
 
 import cards  # noqa: F401
+from card_catalogue import discover_cards, rebuild_catalogue
 from cards import sys_bookmark
 from faicons import icon_svg as icon
 from jsonschema import validate
-from card_catalogue import discover_cards, rebuild_catalogue
 from module import Module
 from shiny import App, reactive, render, req, ui
 from shiny.types import SilentException
@@ -1147,7 +1147,7 @@ def application():
                 result = RebuildCatalogue.result()
             except SilentException:
                 raise
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001
                 CatalogueMessage.set(f'Catalogue rebuild failed: {error}')
                 return
             with reactive.isolate():

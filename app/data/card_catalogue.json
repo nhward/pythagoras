@@ -94,7 +94,7 @@
       "module": "miss_manual",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "0af52395120bf00387ec2d6ef1c990cc69b41d9c1377040f5ccec5d42d2d217b"
+      "source_hash": "9a147b9861bcf6e6805700138404a327eb7c1c2795ba48fe1bd959da7de8f89f"
     },
     "miss_map": {
       "description": "Map missing values across variables and observations looking for excessive missingness.",
