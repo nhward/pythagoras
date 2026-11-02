@@ -411,10 +411,7 @@ class TestWebKitUI:
         get_card(page).locator(".collapse-toggle").click()
         expect(by_id(page, "IncludeTarget")).to_be_visible()
         by_id(page, "IncludeTarget").check()
-        expect(by_id(page, "Check")).to_contain_text(
-            "4 available continuous numeric variables, including the target",
-            timeout=20_000,
-        )
+        expect(by_id(page, "Check")).to_contain_text("4 available continuous numeric variables, including the target", timeout=20_000)
         by_id(page, "Transform").locator('input[value="Scale"]').check(force=True)
         expect(by_id(page, "Check")).to_contain_text(
             re.compile(r"Transformed 4 variables(?:, including the target,)? using Common spread"),

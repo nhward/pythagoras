@@ -318,7 +318,7 @@
       "module": "var_select",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "ab9594329ec0c7cbfbf2655621f3c257293f9615fd7d2797973a764df4ff7799"
+      "source_hash": "69d3218271e6122c2a7c2016403b92c4b5091affe2dd5a5dace47ea14a267e7f"
     },
     "var_text_encode": {
       "description": "Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.",
@@ -342,7 +342,7 @@
       "module": "var_transform",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "115b755dc83901266b14ecf104c3e6e4fb4ad3cf22d0323024a7437835f4945c"
+      "source_hash": "e46b354faa0e08cd3f7daa3231bc0834b179151feeec61e852a59afa3db015c2"
     }
   },
   "schema_version": 1

@@ -758,7 +758,9 @@ def instance():
                     name for name in ("Deskew", "Scale", "Center")
                     if name in selected
                 ],
-                "include_target": bool(selected) and target is not None and bool(input.IncludeTarget()),
+                # Inclusion also controls diagnostics before a transform is
+                # selected. Inactive exports bypass Analysis()/Options().
+                "include_target": target is not None and bool(input.IncludeTarget()),
                 "use_weights": scale_or_center and not robust and bool(source.role_map.columns_with_role(Role.WEIGHTING)) and bool(input.UseWeights()),
                 "robust": robust,
             }
