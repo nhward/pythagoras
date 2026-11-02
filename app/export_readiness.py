@@ -142,3 +142,14 @@ class ExportReadiness:
             return value
 
         return export
+
+
+def read_active_inputs(inputs, defaults, active):
+    """Read required active controls without depending on inactive UI values."""
+    values = dict(defaults)
+    for name in defaults:
+        if name in active:
+            value = getattr(inputs, name)()
+            req(value is not None)
+            values[name] = value
+    return values

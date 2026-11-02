@@ -30,7 +30,7 @@
       "module": "data_models",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "c52c9b71080f5accbe18cab1addf9e9abe290912ec52eb11666840ea99531e4c"
+      "source_hash": "94edc2b1780aecf57f778646cb3f23aadfab4c6bc45ff9a9d375aa9baf97d623"
     },
     "data_parallel": {
       "description": "Compare observations across several variables as a series of lines.",
@@ -70,7 +70,7 @@
       "module": "data_tabulation",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "991b0e8eb1c54e58d6ca33e80dd654516e3b73325c4dcdad28d73a572e37cf87"
+      "source_hash": "a6ce81a286ce54bcdeb4b8dee25201c1a9396977455c7cbe7552e08cc4dab66b"
     },
     "miss_impute": {
       "description": "Statistically impute missing predictor values and evaluate these imputations.",
@@ -78,7 +78,7 @@
       "module": "miss_impute",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "2ff8793c43d43c51c6ced131d73eac25190b06aa754a29e7d86fa44f4c6d77d3"
+      "source_hash": "80301106905c133dac82bb3513b5d6cc90b8a73db9c55bfe94ffcfb0f7ebd98f"
     },
     "miss_informative": {
       "description": "Assess the predictive information of each predictor's missing values.",
@@ -86,7 +86,7 @@
       "module": "miss_informative",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "401115aba1541723c79eedd7e82e6db3b5152ae7b86b10ba94e0ee6be63a0850"
+      "source_hash": "7fc513559dd4f97a2cfc715291ddc3f937588408af3c8980b27a4a2c7a22c8f6"
     },
     "miss_manual": {
       "description": "Review missingness branches and supply optional, typed replacements.",
@@ -94,7 +94,7 @@
       "module": "miss_manual",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "9a147b9861bcf6e6805700138404a327eb7c1c2795ba48fe1bd959da7de8f89f"
+      "source_hash": "004f75dc07bb24cda23a7020fc9dc005da30419e4535f4f57b4883116dab71a9"
     },
     "miss_map": {
       "description": "Map missing values across variables and observations looking for excessive missingness.",
@@ -102,7 +102,7 @@
       "module": "miss_map",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "b9a6150c339f1994bb68a98c05733d88f0ce7a130795c81fb2b7a329482dd72d"
+      "source_hash": "1d453e896fe53970994e8a7b3cf68c69226e16a2d7ec273efbefe30265166445"
     },
     "miss_placeholders": {
       "description": "Detect missing-value placeholders and replace with NA.",
@@ -110,7 +110,7 @@
       "module": "miss_placeholders",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "8d8de1c5a01d24a9fedd2a353af2962ef5838177b478ceb1b2e944a863193d29"
+      "source_hash": "6d3d7907a09941363aec07da06dcfe271024111fc5b850f0ddb97321deae4d0a"
     },
     "miss_rules": {
       "description": "Visualise Association Rules that describe patterns of missingness.",
@@ -150,7 +150,7 @@
       "module": "obs_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "e56ae3a738ef05b5709ce35748b7675a5adee8902022e29d3ecb7e71817aecca"
+      "source_hash": "c20a871fb288e5ba06e5e6af98eb50e29a22862f44e5c57fce0241fed1db4008"
     },
     "obs_dependence": {
       "description": "Are observations ordered in time or repeated within entities, and is serial dependence detectable?",
@@ -166,7 +166,7 @@
       "module": "obs_duplicates",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "0ccf26ba93389c8bf6b450e3c1e42443a308c1877eba0dfb31cde11b66658c3a"
+      "source_hash": "6cb03fd7c6a8465a1446a99801ceaf52b7819a7037a3eaab2e51f3acf589cf04"
     },
     "obs_k_clusters": {
       "description": "Assess cluster counts using seven clustering families and two resampling evaluations and record a number-of-clusters decision for downstream cluster analysis.",
@@ -174,7 +174,7 @@
       "module": "obs_k_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "99952f7c20f07999318091f251db76811f9edd6d5cede01deb9c8e535d57bfbe"
+      "source_hash": "48db65b4c4501c54b2faebd904062cfd2acc51d831e1df2967dcc6f03657bbcc"
     },
     "obs_outliers": {
       "description": "Compare complementary outlier scores to investigate unusual observations and disagreements between methods.",
@@ -190,7 +190,7 @@
       "module": "obs_resample",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "26b4d97dfd011cd321eb7112bc6659c1df38132ef8de9a46c8511558be905573"
+      "source_hash": "e9015c93e8197891f789d9014247929cc06643581294815746e8afab57222015"
     },
     "obs_weighting": {
       "description": "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights.",
@@ -198,7 +198,7 @@
       "module": "obs_weighting",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "746cdec1453e2450307c06e177f043ad2c0aaf4a164e7a1f936ae44076f7d407"
+      "source_hash": "c364dc16e19488a381c32c546c983043f5c9254ad4f5510c23c0449ee65b6502"
     },
     "sys_configuration": {
       "description": "List the host-system configuration.",
@@ -230,7 +230,7 @@
       "module": "targ_balance",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "586c53933b75ce695cae786b358a977c4c1a52f5767fcd370b91cb2af29a80bc"
+      "source_hash": "fb259f093643d96c3a643d1f0e51c2c27e7a1eb6b1988bb76088e1091b0dd522"
     },
     "tuning_parameters": {
       "description": "Define and commit search values for published pipeline parameters.",
@@ -278,7 +278,7 @@
       "module": "var_encode",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "e89e9b65abc7a24f14627aa1f9c7d0b3518766badd59c2d82bc81e2cb86d0012"
+      "source_hash": "ed0a8308b85ce830a3c0b7cb046e6a2ed8a710fb1ab38c601f545e5159f02518"
     },
     "var_modify": {
       "description": "Modify variable characteristics such as name, data-type, and order.",
@@ -310,7 +310,15 @@
       "module": "var_roles",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "012c8ffb5d4a452b2419f4f274d87f67a98382091f2b9e381d442da14e77b7f5"
+      "source_hash": "345bc0a78ab6897397dd50dd34d6c75d0c30d2f956311865034d6414eea8cc60"
+    },
+    "var_select": {
+      "description": "Learn a subset of variables via shadow selection.",
+      "long_name": "Variable selection",
+      "module": "var_select",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "ab9594329ec0c7cbfbf2655621f3c257293f9615fd7d2797973a764df4ff7799"
     },
     "var_text_encode": {
       "description": "Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.",
@@ -318,7 +326,7 @@
       "module": "var_text_encode",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "c097350935e2168314ce3c6a9ec9aed395dfa5d18fc2d2a8215f635cf5c76fd5"
+      "source_hash": "9968c606ca35bad422df36c6d855eb5385d4920a5530b02707d7a4bfbf52c640"
     },
     "var_time_encode": {
       "description": "Generate numeric and cyclic time predictors before Variable encoding.",
@@ -326,7 +334,7 @@
       "module": "var_time_encode",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "5157ffeb1fe274ab15f19dde394c9ac1867072640204ffeece99772d6586a86e"
+      "source_hash": "bfe5540d60182c5d45f5ec1d511665592be454bbc289dcf60dd1e8aee128c323"
     },
     "var_transform": {
       "description": "Transform the location, spread, and shape of continuous numeric variables.",
@@ -334,7 +342,7 @@
       "module": "var_transform",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "a38eea05754211a67993151273ec4ce7cf53cc114e52f6b4f62ef8e9fc219c86"
+      "source_hash": "115b755dc83901266b14ecf104c3e6e4fb4ad3cf22d0323024a7437835f4945c"
     }
   },
   "schema_version": 1

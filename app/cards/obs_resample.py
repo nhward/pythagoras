@@ -195,12 +195,9 @@ def _figure(overview, *, full=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Goal', 'Stratifier')
-    this.export_inputs('Task', 'Duration', 'Event', 'EventValue', 'CensoredValue', 'TimeUnit', 'TimeOrigin')
-    this.export_inputs('Folds', 'Seed', 'Gap', 'Expanding')
+    this.export_inputs('Goal', 'Task')
     this.long_name = "Observation resampling"
     this.description = "Choose a prediction goal; assigned roles determine evaluation splits."
-    this.export_inputs("Window", "Horizon", "Step", allow_none=True)
     this.defer_configuration_input("Goal")
     this.defer_configuration_input("Stratifier")
     this.register_configuration_state_field("evaluation_plan")
@@ -309,9 +306,10 @@ def instance():
             req(task is not None)
             if task == "inherit":
                 return source
-            context = ModellingContext(task=task, duration=input.Duration() or "", event=input.Event() or "",
+            context = (ModellingContext(task=task, duration=input.Duration() or "", event=input.Event() or "",
                 event_value=input.EventValue() or "", censored_value=input.CensoredValue() or "",
                 time_unit=input.TimeUnit() or "", time_origin=input.TimeOrigin() or "")
+                if task == "survival" else ModellingContext(task=task))
             return source.with_modelling_context(context)
 
         @this.reactable()
@@ -411,7 +409,7 @@ def instance():
             options = {"goal": goal}
             if goal == "none":
                 return options
-            options["stratifier"] = input.Stratifier() or None
+            options["stratifier"] = (input.Stratifier() or None) if stratifier_choices(Incoming()) else None
             options["partition_map"] = Mapping()
             if "validation" not in options["partition_map"].values():
                 if goal == "future":
@@ -462,12 +460,12 @@ def instance():
         @this.record_context
         def Export():
             source = Incoming()
-            if Options()["goal"] == "none":
+            if input.Goal() == "none":
                 return source
             return source.with_evaluation_plan(Results()[0], card=this.name)
 
         def state():
-            if Options()["goal"] == "none":
+            if input.Goal() == "none":
                 return None
             return Results()[0].bookmark()
         this.register_configuration_state_provider("evaluation_plan", state)
@@ -476,7 +474,7 @@ def instance():
         @output
         @render.ui
         def Summary():
-            if Options()["goal"] == "none":
+            if input.Goal() == "none":
                 return ui.div("Choose a prediction goal", class_="text-primary text-center small")
             try:
                 plan = Results()[0]
@@ -494,7 +492,7 @@ def instance():
         @output
         @render.ui
         def Status():
-            if Options()["goal"] == "none":
+            if input.Goal() == "none":
                 return ui.span("Outcome context is retained; incoming evaluation metadata passes through (invalidated if context changed).", class_="text-secondary")
             try:
                 plan = Results()[0]
@@ -566,10 +564,16 @@ def instance():
         #         yield frame.to_csv(index=False, header=j == 0)
 
         session.on_ended(Calculate.cancel)
+        this.export_inputs('Duration','Event','EventValue','CensoredValue','TimeUnit','TimeOrigin', when=lambda: input.Task() == 'survival')
+        this.export_inputs('Stratifier', when=lambda: input.Goal() != 'none' and bool(stratifier_choices(Incoming())))
+        this.export_inputs('Folds','Seed', when=lambda: input.Goal() not in (None,'none','future') and 'validation' not in Mapping().values())
+        this.export_inputs('Gap','Expanding', when=lambda: input.Goal() == 'future' and 'validation' not in Mapping().values())
+        this.export_inputs('Window','Horizon','Step', allow_none=True, when=lambda: input.Goal() == 'future' and 'validation' not in Mapping().values())
+
         @this.export_check
         def export_ready():
-            this.require_settled(Options)
-            if Options()["goal"] != "none":
+            if input.Goal() != 'none':
+                this.require_settled(Options)
                 Calculate.require_current(Incoming(), Options())
 
         return Export

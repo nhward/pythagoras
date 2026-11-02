@@ -198,7 +198,6 @@ def _figure(source, result, *, limit=500, bins=30, full=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Component', 'TestPolicy')
     this.long_name = "Observation Weighting"
     this.description = "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights."
     this.front = lambda: ui.div(
@@ -262,8 +261,10 @@ def instance():
         def Applied():
             try:
                 source = Incoming()
+                if not _columns(source):
+                    return source, None
                 power = float(input.Power() or "1") if _can_transform(source) else 1.
-                exported = _apply(source, input.Component(), power, input.TestPolicy())
+                exported = _apply(source, input.Component() if power != 1 else EFFECTIVE, power, input.TestPolicy())
                 return exported, None
             except WeightingError as error:
                 return None, str(error)
@@ -308,6 +309,8 @@ def instance():
                            + warning + scroll + " Summaries and distribution use all observations; bars may be thinned.",
                            class_="text-warning" if warning else "text-secondary")
 
+        this.export_inputs('TestPolicy', when=lambda: bool(_columns(Incoming())))
+        this.export_inputs('Component', when=lambda: _can_transform(Incoming()) and input.Power() not in (None, '1', 1))
         this.export_inputs("Power", when=lambda: _can_transform(Incoming()))
 
         return Export

@@ -772,6 +772,7 @@ def instance():
         @this.reactable(calc=True)
         @this.record_context
         def ChosenCount():
+            req(input.Maximum() is not None)
             incoming = incomingproxy_data().cluster_count or 1
             try:
                 count = int(input.K() or incoming)
@@ -784,6 +785,8 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def Options():
+            req(all(v is not None for v in (input.Maximum(),input.MaxObs(),input.MinPoints(),input.GraphNeighbours(),
+                input.EvaluationLimit(),input.StabilityRepeats(),input.GapReferences(),input.StabilityThreshold())))
             return {"maximum": int(input.Maximum()), "limit": 10**int(input.MaxObs()),
                         "metric": input.Metric(), "method": input.Method(), "centre": input.Centre(),
                         "use_weights": bool(input.UseWeights()),

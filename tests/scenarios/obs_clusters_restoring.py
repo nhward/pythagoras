@@ -14,16 +14,13 @@ from proxy_data import proxy_data
 from roles import Role
 from shiny import reactive, render, ui
 
-# Deliberately deliver one obsolete completion, as happens while bookmark
-# settings/upstream data are still settling. A restored checkbox requests it.
+# Deliver obsolete diagnostic and membership completions until the upstream
+# update, as happens while restored settings/data are still settling.
 original_analyze = cluster_module._analyze
 stale_finished = threading.Event()
-first_run = True
 def restored_analysis(*args, **kwargs):
-    global first_run
     result = original_analyze(*args, **kwargs)
-    if first_run:
-        first_run = False
+    if result.source.cluster_count == 2:
         result.options = dict(result.options, projection='obsolete-restored-option')
         stale_finished.set()
     return result

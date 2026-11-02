@@ -1,0 +1,31 @@
+---
+title: Conditional card export prerequisites
+---
+
+Export readiness concerns the data and pipeline a card publishes. A setting is required only when the selected operation uses it. Diagnostic tabs, draft controls, and settings for other methods must not hold up an otherwise valid export. Settings remain available in the UI.
+
+The audit covers every production module in `app/cards`. Conditional declarations and the reactive calculations behind the export must agree: skipping an `export_inputs()` requirement is insufficient if a shared calculation still reads that input. Method-specific options therefore read only active controls, using neutral values for unused arguments. Restored active controls still require browser acknowledgement, and selected asynchronous operations still require a matching successful result.
+
+| Card | Export requirements |
+|---|---|
+| `miss_impute` | Apply choice; selected imputer and its own fitting parameters when applied. Cross-validation repetitions, holdout, jobs, and display thresholds are diagnostic. Export fitting runs separately from diagnostic evaluation. |
+| `miss_informative` | Shadow choices; sampling/missingness thresholds when shadows are selected; forest controls and completion only for informative-only selection. |
+| `miss_manual` | Accepted rules. Tree-preview depth, accuracy, and extra-level controls do not gate accepted rules. |
+| `miss_map` | Removal choices; each threshold only for its selected removal operation. |
+| `miss_placeholders` | Replacement choices; matching options only when replacements are selected. |
+| `obs_clusters` | Membership choices. New memberships require the fitting settings of their own methods; accepted plans remain fixed. Projection, hierarchy, and chart controls are diagnostic. |
+| `obs_duplicates` | Removal choice; duplicate-definition controls only when removal is selected. |
+| `obs_k_clusters` | K and Maximum, which clips K. Diagnostic method, sample, graph, and stability controls do not gate explicit K. |
+| `obs_resample` | Goal and task. Survival fields only for a survival task; splitting controls only for the selected design, respecting predefined validation partitions. No split calculation is required for Goal=None. |
+| `obs_weighting` | No weighting settings without weighting columns. Test policy when weights exist; power when transformable; component only when changing power. |
+| `targ_balance` | Mode when eligible; only settings used by the selected weighting/resampling recipe. Mode=None passes through independently of diagnostic controls. |
+| `var_encode` | Encoding choices and settings of selected families. Export fitting runs independently of diagnostic families. |
+| `var_roles` | Accepted role assignments. Preview settings are required when revalidating accepted assignments against new upstream data, not for unchanged accepted data. |
+| `var_select` | Recommendation choice; common fitting controls and only that method's parameters. Optional stability diagnostics do not gate the recommendation. |
+| `var_text_encode` | Encoding choices and settings of selected text methods. Characteristics do not require vocabulary, LSA, or embedding settings; LSA does not require bag-of-words weighting. |
+| `var_time_encode` | Encoding choice; features and original-column policy only when enabled. |
+| `var_transform` | Transform choices; target inclusion only with a continuous target; robust settings only for centring/scaling; weights only for nonrobust centring/scaling with weighting columns. |
+
+`data_import`, `data_models`, `tuning_parameters`, `var_modify`, and `var_nominal` already export committed state rather than unaccepted preview settings; their contracts are retained. Immutable diagnostic cards retain their pass-through exports. The template's Apply-only example remains appropriate.
+
+`tests/cards/test_conditional_exports.py` exercises missing inactive inputs through real card exports, checks that sessions remain responsive, and verifies that missing active inputs still pause export. Existing card regressions cover commitment, restoration, tabs, and upstream changes.

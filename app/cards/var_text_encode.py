@@ -47,11 +47,11 @@ def _predictors(source):
 
 
 @recordable
-def _analyze(source,**options):
+def _analyze(source,methods=None,**options):
     columns=_predictors(source)
     if not columns:return AnalysisResult()
     try:
-        model=TextEncodingTransformer(columns,methods=tuple(METHODS),remove_original=False,**options)
+        model=TextEncodingTransformer(columns,methods=tuple(METHODS) if methods is None else tuple(methods),remove_original=False,**options)
         return AnalysisResult(model,model.fit_transform(source.frame))
     except (ValueError,TypeError,OSError) as error:return AnalysisResult(error=str(error))
 
@@ -93,8 +93,7 @@ def _detail(result,method):
 
 def instance():
     this=Card(file=__file__,mutable=True)
-    this.export_inputs('Encode', 'RemoveOriginal')
-    this.export_inputs('Weighting', 'Analyzer', 'NgramMax', 'Lowercase', 'StripAccents', 'StopWords', 'MinDF', 'MaxDF', 'MaxFeatures', 'Components', 'LSANormalize', 'EmbeddingLowercase')
+    this.export_inputs('Encode')
     this.exclude_configuration_input('EmbeddingFile')
     this.long_name='Text encoding'
     this.description='Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.'
@@ -230,33 +229,49 @@ def instance():
             return input.Encode() or []
 
 
+        def ActiveSettings(kinds):
+            active = {'RemoveOriginal'} if kinds else set()
+            if set(kinds) & {'bow','lsa'}:
+                active.update(('Analyzer','NgramMax','Lowercase','StripAccents','MinDF','MaxDF','MaxFeatures'))
+                if input.Analyzer() == 'word':
+                    active.add('StopWords')
+            if 'bow' in kinds:
+                active.add('Weighting')
+            if 'lsa' in kinds:
+                active.update(('Components','LSANormalize'))
+            if 'embedding' in kinds:
+                active.add('EmbeddingLowercase')
+            return active
+
+        def OptionsFor(kinds):
+            from export_readiness import read_active_inputs
+            v = read_active_inputs(input, {'RemoveOriginal':True,'Weighting':'tfidf','Analyzer':'word','NgramMax':1,
+                'Lowercase':True,'StripAccents':False,'StopWords':'','MinDF':1,'MaxDF':1.,'MaxFeatures':500,
+                'Components':20,'LSANormalize':False,'EmbeddingLowercase':True}, ActiveSettings(kinds))
+            upload = (input.EmbeddingFile() or []) if 'embedding' in kinds else []
+            path = upload[0]['datapath'] if upload else ''
+            try:
+                digest = embedding_identity(path) if path else ''
+            except (ValueError,OSError):
+                digest = 'invalid'
+            return {'weighting':v['Weighting'],'analyzer':v['Analyzer'],'ngram_max':int(v['NgramMax']),
+                'lowercase':bool(v['Lowercase']),'strip_accents':bool(v['StripAccents']),
+                'stop_words':[w.strip() for w in v['StopWords'].splitlines() if w.strip()] or None,
+                'min_df':int(v['MinDF']),'max_df':float(v['MaxDF']),'max_features':int(v['MaxFeatures']),
+                'components':int(v['Components']),'lsa_normalize':bool(v['LSANormalize']),
+                'embedding_path':path,'embedding_digest':digest,'embedding_label':upload[0]['name'] if upload else '',
+                'embedding_lowercase':bool(v['EmbeddingLowercase'])}
+
         @this.reactable(calc=True)
         @this.settle(2)
-        @this.record_context
         def Options():
-            upload=input.EmbeddingFile() or []
-            path=upload[0]['datapath'] if upload else ''
-            # Digest check is small and local; no resource download is performed.
-            try:digest=embedding_identity(path) if path else ''
-            except (ValueError,OSError):digest='invalid'
-            return {
-                'weighting': input.Weighting(),
-                'analyzer': input.Analyzer(),
-                'ngram_max': int(input.NgramMax() or 1),
-                'lowercase': bool(input.Lowercase()),
-                'strip_accents': bool(input.StripAccents()),
-                'stop_words': [w.strip() for w in (input.StopWords() or '').splitlines() if w.strip()] or None,
-                'min_df': int(input.MinDF() or 1),
-                'max_df': float(input.MaxDF()),
-                'max_features': int(input.MaxFeatures() or 500),
-                'components': int(input.Components() or 20),
-                'lsa_normalize': bool(input.LSANormalize()),
-                'embedding_path': path,
-                'embedding_digest': digest,
-                'embedding_label': upload[0]['name'] if upload else '',
-                'embedding_lowercase': bool(input.EmbeddingLowercase())
-            }
+            active = next((method for method,label in METHODS.items() if label == input.EncodingType()), 'bow')
+            return OptionsFor(set(Encode()) | {active})
 
+        @this.reactable(calc=True)
+        @this.settle(2)
+        def ExportOptions():
+            return {**OptionsFor(set(input.Encode() or [])), 'methods':tuple(input.Encode() or [])}
 
         @busy.track('Preparing text features…')
         @this.extended_task
@@ -281,6 +296,18 @@ def instance():
             return result
 
 
+        @busy.track('Fitting selected text encodings…')
+        @this.extended_task
+        @this.record_context
+        async def CalculateExport(source, options):
+            return _analyze(source, **options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze, source, **options)
+
+        @this.reactable()
+        def StartExport():
+            CalculateExport.cancel()
+            if input.Encode():
+                CalculateExport.invoke(incomingproxy_data().clone(), ExportOptions())
+
         @this.reactable(calc=True)
         @this.record_context
         def Export():
@@ -288,7 +315,7 @@ def instance():
             selected=tuple(Encode())
             if not selected:
                 return source
-            return _apply(source,Analysis(), selected, bool(input.RemoveOriginal()))
+            return _apply(source,CalculateExport.result(), selected, bool(input.RemoveOriginal()))
 
 
         def register(method):
@@ -388,13 +415,17 @@ def instance():
             return busy.ui()
         
         session.on_ended(Calculate.cancel)
+        session.on_ended(CalculateExport.cancel)
         
+        for name in ('RemoveOriginal','Weighting','Analyzer','NgramMax','Lowercase','StripAccents','StopWords','MinDF','MaxDF','MaxFeatures','Components','LSANormalize','EmbeddingLowercase'):
+            this.export_inputs(name, when=lambda name=name: name in ActiveSettings(set(input.Encode() or [])))
+
         @this.export_check
         def export_ready():
             this.require_settled(Encode)
             if Encode():
-                this.require_settled(Options)
-                Calculate.require_current(incomingproxy_data(), Options())
+                this.require_settled(ExportOptions)
+                CalculateExport.require_current(incomingproxy_data(), ExportOptions())
 
         return Export
     this.server=server

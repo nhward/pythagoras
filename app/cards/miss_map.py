@@ -302,7 +302,7 @@ def _missingness_figure(
 def instance():
     """Create the mutable missingness-map card."""
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Remove', 'VariableThreshold', 'ObservationThreshold')
+    this.export_inputs('Remove')
     this.long_name = "Excessive missingness"
     this.description = "Map missing values across variables and observations looking for excessive missingness."
 
@@ -383,12 +383,14 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def VariableThreshold():
+            req(input.VariableThreshold() is not None)
             return float(input.VariableThreshold()) / 100
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
         @this.record_context
         def ObservationThreshold():
+            req(input.ObservationThreshold() is not None)
             return float(input.ObservationThreshold()) / 100
 
         @this.reactable(calc=True)
@@ -400,8 +402,8 @@ def instance():
                 source,
                 remove_variables="Variables" in selected,
                 remove_observations="Observations" in selected,
-                variable_threshold=VariableThreshold(),
-                observation_threshold=ObservationThreshold(),
+                variable_threshold=VariableThreshold() if "Variables" in selected else .5,
+                observation_threshold=ObservationThreshold() if "Observations" in selected else .5,
             )
 
         @this.reactable(calc=True)
@@ -481,9 +483,16 @@ def instance():
                 return ui.span("No variables or observations exceed their thresholds.", class_="text-success")
             return ui.span("; ".join(messages), class_="text-warning")
 
+        this.export_inputs('VariableThreshold', when=lambda: 'Variables' in (input.Remove() or []))
+        this.export_inputs('ObservationThreshold', when=lambda: 'Observations' in (input.Remove() or []))
+
         @this.export_check
         def export_ready():
-            this.require_settled(Remove, VariableThreshold, ObservationThreshold)
+            this.require_settled(Remove)
+            if 'Variables' in Remove():
+                this.require_settled(VariableThreshold)
+            if 'Observations' in Remove():
+                this.require_settled(ObservationThreshold)
 
         return TransformedData
 

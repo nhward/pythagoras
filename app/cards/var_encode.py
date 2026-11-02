@@ -188,6 +188,9 @@ def _analyze_panels(source, options):
     results = {}
     intermediate = source
     for kind,analyze in [('nominal',_analyze),('code',_analyze_code),('ordered',_analyze_ordered),('cyclic',_analyze_cyclic),('logical',_analyze_logical),('basket',_analyze_basket)]:
+        if options.get('only_selected') and kind not in options['selected']:
+            results[kind] = Encoding()
+            continue
         result = analyze(intermediate,**options.get(kind,{}))
         results[kind] = result
         if kind in options['selected'] and not result.error:
@@ -271,8 +274,7 @@ def _encoding_audit(source, results, selected):
 
 def instance():
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Encode', 'RemoveOriginal')
-    this.export_inputs('MinFrequency', 'MaxCategories', 'Unknown', 'CodeMethod', 'CodeSmoothing', 'CodeFolds', 'CodeTargetType', 'OrderedMethod', 'OrderedDegree', 'OrderedUnknown', 'CyclicUnknown')
+    this.export_inputs('Encode')
     this.long_name = 'Variable encoding'
     this.description = 'Encode nominal, Code, Ordered, Cyclic, Logical and Basket predictors through sklearn pipeline steps.'
 
@@ -462,36 +464,46 @@ def instance():
         def Encode():
             return tuple(input.Encode() or [])
 
+        def ActiveSettings(kinds):
+            active = {'RemoveOriginal'} if kinds else set()
+            if 'nominal' in kinds:
+                active.update(('MinFrequency','MaxCategories','Unknown'))
+            if 'code' in kinds:
+                active.update(('CodeMethod','CodeFolds','CodeTargetType'))
+                if input.CodeMethod() == 'smooth':
+                    active.add('CodeSmoothing')
+            if 'ordered' in kinds:
+                active.update(('OrderedMethod','OrderedUnknown'))
+                if input.OrderedMethod() == 'polynomial':
+                    active.add('OrderedDegree')
+            if 'cyclic' in kinds:
+                active.add('CyclicUnknown')
+            return active
+
+        def SettingsFor(kinds):
+            from export_readiness import read_active_inputs
+            v = read_active_inputs(input, {'RemoveOriginal':True,'MinFrequency':1,'MaxCategories':0,'Unknown':'ignore',
+                'CodeMethod':'auto','CodeSmoothing':10,'CodeFolds':5,'CodeTargetType':'auto',
+                'OrderedMethod':'ordinal','OrderedDegree':0,'OrderedUnknown':'missing','CyclicUnknown':'missing'}, ActiveSettings(kinds))
+            remove = bool(v['RemoveOriginal'])
+            return {'nominal':{'remove_original':remove,'min_frequency':max(1,int(v['MinFrequency'])),
+                              'max_categories':max(0,int(v['MaxCategories'])),'handle_unknown':v['Unknown']},
+                'code':{'remove_original':remove,'method':v['CodeMethod'],'smoothing':float(v['CodeSmoothing']),
+                        'cv':int(v['CodeFolds']),'target_type':v['CodeTargetType']},
+                'ordered':{'remove_original':remove,'method':v['OrderedMethod'],'degree':int(v['OrderedDegree']),
+                           'handle_unknown':v['OrderedUnknown']},
+                'cyclic':{'remove_original':remove,'handle_unknown':v['CyclicUnknown']},
+                'logical':{'remove_original':remove}, 'basket':{'remove_original':remove}}
+
         @this.reactable(calc=True)
         @this.settle(2)
         def Settings():
-            return {
-                'nominal': {
-                    'remove_original': bool(input.RemoveOriginal()),
-                    'min_frequency': max(1,int(input.MinFrequency() or 1)),
-                    'max_categories': max(0,int(input.MaxCategories() or 0)), 
-                    'handle_unknown': input.Unknown()
-                },
-                'code': {
-                    'remove_original': bool(input.RemoveOriginal()), 
-                    'method': input.CodeMethod(),
-                    'smoothing': float(input.CodeSmoothing() or 0), 
-                    'cv': int(input.CodeFolds()),
-                    'target_type': input.CodeTargetType()
-                },
-                'ordered': {
-                    'remove_original': bool(input.RemoveOriginal()), 
-                    'method': input.OrderedMethod(),
-                    'degree': int(input.OrderedDegree() or 0), 
-                    'handle_unknown': input.OrderedUnknown()
-                },
-                'cyclic': {
-                    'remove_original': bool(input.RemoveOriginal()), 
-                    'handle_unknown': input.CyclicUnknown()
-                },
-                'logical':{'remove_original': bool(input.RemoveOriginal())},
-                'basket':{'remove_original': bool(input.RemoveOriginal())},
-            }
+            return SettingsFor(set(Encode()) | {(input.EncodingType() or 'Nominal').lower()})
+
+        @this.reactable(calc=True)
+        @this.settle(2)
+        def ExportOptions():
+            return {**SettingsFor(set(input.Encode() or [])), 'selected':tuple(input.Encode() or []), 'only_selected':True}
 
         @this.reactable(calc=True)
         def Options():
@@ -522,6 +534,18 @@ def instance():
             req(source.equals(IncomingData()) and options==Options())
             return result
 
+        @busy.track('Fitting selected encodings…')
+        @this.extended_task
+        @this.record_context
+        async def CalculateExport(source, options):
+            return _analyze_panels(source, options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze_panels, source, options)
+
+        @this.reactable()
+        def StartExport():
+            CalculateExport.cancel()
+            if input.Encode():
+                CalculateExport.invoke(IncomingData().clone(), ExportOptions())
+
         @this.reactable(calc=True)
         @this.record_context
         def Export():
@@ -529,7 +553,7 @@ def instance():
             selected = Encode()
             if not selected:
                 return source
-            results = Analysis()
+            results = CalculateExport.result()
             for kind in ('nominal','code','ordered','cyclic','logical','basket'):
                 if kind in selected and not results[kind].error:
                     source = _apply(source, results[kind])
@@ -761,13 +785,17 @@ def instance():
             return busy.ui()
 
         session.on_ended(Calculate.cancel)
+        session.on_ended(CalculateExport.cancel)
+
+        for name in ('RemoveOriginal','MinFrequency','MaxCategories','Unknown','CodeMethod','CodeSmoothing','CodeFolds','CodeTargetType','OrderedMethod','OrderedDegree','OrderedUnknown','CyclicUnknown'):
+            this.export_inputs(name, when=lambda name=name: name in ActiveSettings(set(input.Encode() or [])))
 
         @this.export_check
         def export_ready():
             this.require_settled(Encode)
             if Encode():
-                this.require_settled(Settings)
-                Calculate.require_current(IncomingData(), Options())
+                this.require_settled(ExportOptions)
+                CalculateExport.require_current(IncomingData(), ExportOptions())
 
         return Export
     this.server = server

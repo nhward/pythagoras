@@ -326,8 +326,6 @@ def _figure(result, method, fullscreen=False):
 def instance():
     this = Card(file=__file__, mutable=True)
     this.export_inputs('IncludeMembership')
-    this.export_inputs("Limit", "Standardize", "UseWeights", "Metric", "Centre", "Linkage",
-                       "MinPoints", "Border", "Neighbours", "Projection", "Perplexity")
     this.long_name = "Cluster membership"
     this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers."
 
@@ -412,6 +410,7 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def Options():
+            req(all(v is not None for v in (input.Limit(),input.MinPoints(),input.Neighbours(),input.Perplexity())))
             return {
                 "limit": 10**int(input.Limit()), 
                 "standardize": bool(input.Standardize()), 
@@ -425,6 +424,52 @@ def instance():
                 "projection": input.Projection(),
                 "perplexity": int(input.Perplexity())
             }
+
+        def PendingMemberships():
+            if (incomingproxy_data().cluster_count or 1) == 1:
+                return set()
+            requested = set(input.IncludeMembership() or []) & {'Partition','Mixture','Density'}
+            saved = committed.get()
+            return requested - (set(saved[1]) if saved and saved[0].equals(incomingproxy_data()) else set())
+
+        def MembershipSettings():
+            from export_readiness import read_active_inputs
+            methods = PendingMemberships()
+            active = {'Limit','Standardize','UseWeights'} if methods else set()
+            if 'Partition' in methods:
+                active.add('Centre')
+            if 'Density' in methods or ('Partition' in methods and input.Centre() == 'medoids'):
+                active.add('Metric')
+            if 'Density' in methods:
+                active.update(('MinPoints','Border'))
+            values = read_active_inputs(input, {'Limit':4,'Standardize':True,'UseWeights':True,
+                'Centre':'centroids','Metric':'euclidean','MinPoints':5,'Border':True}, active)
+            return {'limit':10**int(values['Limit']),'standardize':bool(values['Standardize']),
+                'use_weights':bool(values['UseWeights']),'centre':values['Centre'],'metric':values['Metric'],
+                'min_points':int(values['MinPoints']),'border':bool(values['Border']),
+                'linkage':'average','neighbours':10,'projection':'pca','perplexity':30}
+
+        @this.reactable(calc=True)
+        @this.settle(seconds=2)
+        def MembershipOptions():
+            return MembershipSettings()
+
+        @busy.track('Preparing requested memberships…')
+        @this.extended_task
+        @this.record_context
+        async def CalculateMembership(source, options):
+            return _analyze(source, **options) if Module.IS_SHINYLIVE else await asyncio.to_thread(_analyze,source,**options)
+
+        @this.reactable()
+        def StartMembership():
+            CalculateMembership.cancel()
+            if PendingMemberships():
+                CalculateMembership.invoke(incomingproxy_data().clone(), MembershipOptions())
+
+        @this.reactable(calc=True)
+        def CurrentMembership():
+            result = CalculateMembership.result()
+            return result if result.source.equals(incomingproxy_data()) and result.options == MembershipSettings() else None
 
         @busy.track("Calculating cluster memberships…")
         @this.extended_task
@@ -531,9 +576,9 @@ def instance():
             if reset_pending or requested == set(plans):
                 return
             additions = requested - set(plans)
-            result = CurrentAnalysis() if additions else None
+            result = CurrentMembership() if additions else None
             if additions:
-                this.require_settled(Options)
+                this.require_settled(MembershipOptions)
                 # Effects understand ordinary silent validation, whereas the
                 # output-only cancellation exception would close the session.
                 req(result is not None)
@@ -622,7 +667,13 @@ def instance():
             return render.DataTable(frame, width="100%")
 
         session.on_ended(Calculate.cancel)
+        session.on_ended(CalculateMembership.cancel)
         
+        this.export_inputs('Limit','Standardize','UseWeights', when=lambda: bool(PendingMemberships()))
+        this.export_inputs('Centre', when=lambda: 'Partition' in PendingMemberships())
+        this.export_inputs('Metric', when=lambda: 'Density' in PendingMemberships() or ('Partition' in PendingMemberships() and input.Centre() == 'medoids'))
+        this.export_inputs('MinPoints','Border', when=lambda: 'Density' in PendingMemberships())
+
         @this.export_check
         def export_ready():
             source = incomingproxy_data()

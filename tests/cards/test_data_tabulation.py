@@ -402,3 +402,33 @@ class TestWebKitUI:
         with page.expect_download() as download_info:
             export.click()
         assert download_info.value.suggested_filename == "data_tabulation_data.csv"
+
+
+scroll_app = create_app_fixture(app='../scenarios/data_tabulation_scroll.py', scope='function')
+
+
+@pytest.mark.ui
+@pytest.mark.parametrize('fullscreen', [False, True])
+def test_structure_wheel_scrolls_both_axes_with_sticky_headers(page, scroll_app, fullscreen):
+    page.set_viewport_size({'width':1000, 'height':800})
+    page.goto(scroll_app.url)
+    expect(by_id(page, 'DataTable2').locator('table')).to_be_visible()
+    if fullscreen:
+        by_id(page, 'ExpandButton').click(force=True)
+    by_id(page, 'FlipButton').click(force=True)
+    grid = by_id(page, 'Structure').locator('.shiny-data-grid')
+    expect(grid).to_be_visible()
+    page.wait_for_timeout(1500)  # Complete the 1.3 s flip before hit testing.
+    page.wait_for_function('id => {const g=document.getElementById(id).querySelector(".shiny-data-grid");return g && g.scrollHeight>g.clientHeight && g.scrollWidth>g.clientWidth;}',
+                           arg=namespaced_id(page, 'Structure'))
+    header = grid.locator('thead')
+    top = header.bounding_box()['y']
+    grid.hover()
+    page.mouse.wheel(0, 600)
+    page.wait_for_function('id => document.getElementById(id).querySelector(".shiny-data-grid").scrollTop>100',
+                           arg=namespaced_id(page, 'Structure'))
+    assert abs(header.bounding_box()['y'] - top) < 2
+    page.mouse.wheel(600, 0)
+    page.wait_for_function('id => document.getElementById(id).querySelector(".shiny-data-grid").scrollLeft>100',
+                           arg=namespaced_id(page, 'Structure'))
+    assert abs(header.bounding_box()['y'] - top) < 2

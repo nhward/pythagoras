@@ -417,7 +417,7 @@ def instance():
                 CommitError.set('Select a method first.')
                 return
             try:
-                model = build_model(row, Incoming().model_predictors)
+                model = build_model(row, Incoming())
                 Incoming().with_estimator(model, label=_model_labels(row['estimator'])['Model'],
                                           recipe_id=row['id'])
             except Exception as exc:  # noqa: BLE001

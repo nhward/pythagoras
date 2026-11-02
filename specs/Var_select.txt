@@ -1,0 +1,30 @@
+Plan a new card that will perform feature selection.
+The card shall be called "var_select".
+
+Since the card's incoming data can expect to be mixed and have missing values, the feature selection methods needs to be tolerant of both.
+It is important that each method actually select predictors and not merely rate them. Each method must be sklearn compatible. The selected method will be a step in the pipeline.
+
+I want to leave anything to do with dimensional reduction to a future card.
+
+I want the card to have a navset_bar of methods to explore, much like, say, the obs_cluster card.
+I particularly like the Boruta method (see borutaPy). I want that to be one of the methods. The difficulty is deciding on one or two more.
+
+In the font panel I would like a visualization of some sort. On the flip-side, the user can view data/information that supports the visualization.
+The footer should be a checkbox group (with a "None") option. The button should allow the user to pick one of the feature selection method's recommendations.
+
+The output of the card should be a proxy_data object with a) a dataset with fewer predictors, b) a pipeline with a transformer step added at the end.
+The card should only select from the predictor role. All other roles, including treatment, pass through unchanged. The flip-side table lists all incoming variables; non-predictors have Decision="Pass through" and Included=true. 
+
+Boruta:
+
+This is not a fast method so parallel processing of some kind will be needed. Another option when there are many variables, is to use some fast alternative feature selection to reduce the problem to a smaller set of variables.
+In R, there is a chart that visualizes the conclusions. I would like something similar in python. Maybe someone has already converted it. Maybe you can generate a look-alike version in plotly.
+Since Boruta needs a model, I recommend a random forest provided it can handle mixed data with missing values.
+
+Other methods:
+
+I get disenchanted reading about other methods. 
+They seem to confuse low variance with low predictive value, or they calculate variable importance but trivialize the interpretation, or they involve penalization which is a modeling choice 
+that is an option when you decline to feature-select in advance. 
+
+Please develop a plan for this card.

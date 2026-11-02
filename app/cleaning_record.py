@@ -56,3 +56,8 @@ class CleaningRecord:
         )
         object.__setattr__(self, "input_shape", _validate_shape("input_shape", self.input_shape))
         object.__setattr__(self, "output_shape", _validate_shape("output_shape", self.output_shape))
+
+    def __reduce__(self):
+        """Serialize ordinary parameters and restore their read-only wrapper."""
+        return (type(self), (self.card, self.operation, dict(self.parameters),
+                             self.input_shape, self.output_shape))

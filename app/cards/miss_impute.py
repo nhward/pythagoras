@@ -473,7 +473,7 @@ def _evaluate_column(frame: pd.DataFrame, eligible: list[str], predictors: list[
 
 
 @recordable
-def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, repeats: int, holdout: float, seed: int, jobs: int) -> ImputationResult:
+def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, repeats: int, holdout: float, seed: int, jobs: int, evaluate: bool = True) -> ImputationResult:
     frame = data.frame.copy()
     eligible, excluded = _eligible_columns(frame, data.role_map)
     predictors = _predictor_columns(frame, data.role_map)
@@ -484,7 +484,7 @@ def _analyse(data: proxy_data, method: str, neighbours: int, iterations: int, re
     methods = transformer.methods_
     assessed = collect_job_code(Parallel(n_jobs=max(1, int(jobs)), prefer="threads")(
         delayed(recorded_job)(_evaluate_column, frame, eligible, predictors, column, method, neighbours, iterations, repeats, holdout, seed)
-        for column in eligible
+        for column in eligible if evaluate
     ))
     evaluation = pd.DataFrame(assessed)
     if not evaluation.empty:
@@ -595,7 +595,7 @@ def _missingness_figure(summary: pd.DataFrame, applied: bool, full_screen: bool 
 
 def instance():
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Apply', 'Method', 'Neighbours', 'Iterations', 'Repeats', 'Holdout', 'Jobs')
+    this.export_inputs('Apply')
     this.long_name = "Learned Imputation"
     this.description = "Statistically impute missing predictor values and evaluate these imputations."
 
@@ -670,26 +670,36 @@ def instance():
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
-        @this.record_context
+        def FitOptions():
+            from export_readiness import read_active_inputs
+            method = input.Method()
+            req(method is not None)
+            active = {'Method'} | ({'Neighbours'} if method == 'knn' else set()) | ({'Iterations'} if method == 'iterative' else set())
+            values = read_active_inputs(input, {'Method':'simple','Neighbours':3,'Iterations':10}, active)
+            return {'method':values['Method'], 'neighbours':int(values['Neighbours']),
+                    'iterations':int(values['Iterations']), 'seed':2025}
+
+        @this.reactable(calc=True)
+        @this.settle(seconds=2)
         def Options():
-            return {
-                "method": str(input.Method()), "neighbours": int(input.Neighbours()),
-                "iterations": int(input.Iterations()), "repeats": int(input.Repeats()),
-                "holdout": float(input.Holdout()) / 100, "seed": 2025,
-                "jobs": int(input.Jobs()),
-            }
+            from export_readiness import read_active_inputs
+            values = read_active_inputs(input, {'Repeats':3,'Holdout':20,'Jobs':1}, {'Repeats','Holdout','Jobs'})
+            return {**FitOptions(), 'repeats':int(values['Repeats']), 'holdout':float(values['Holdout'])/100,
+                    'jobs':int(values['Jobs'])}
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
         @this.record_context
         def MinImprovement():
+            req(input.MinImprovement() is not None)
             return float(input.MinImprovement())
 
         @busy.track("Imputing and cross-validating missing values…")
         @this.extended_task
         @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
-            return await asyncio.to_thread(_analyse, data, **options)
+            return (_analyse(data, **options) if Module.IS_SHINYLIVE
+                    else await asyncio.to_thread(_analyse, data, **options))
 
         @this.reactable()
         @this.record_context
@@ -702,6 +712,20 @@ def instance():
         def Analysis():
             return Calculate.result()
 
+        @busy.track('Fitting imputation…')
+        @this.extended_task
+        @this.record_context
+        async def CalculateExport(source, options):
+            options = {**options, "repeats":1, "holdout":.2, "jobs":1, "evaluate":False}
+            return (_analyse(source, **options) if Module.IS_SHINYLIVE
+                    else await asyncio.to_thread(_analyse, source, **options))
+
+        @this.reactable()
+        def StartExport():
+            CalculateExport.cancel()
+            if 'Apply' in (input.Apply() or []):
+                CalculateExport.invoke(incomingproxy_data().clone(), FitOptions())
+
         @this.reactable(calc=True)
         @this.record_context
         def TransformedData():
@@ -711,9 +735,8 @@ def instance():
                     stage="Learning",
                     card=this.namespace,
                     operation=this.long_name,
-                    parameters=Options(),
                 )
-            analysis = Analysis()
+            analysis = CalculateExport.result()
             return _apply_analysis(
                 source,
                 analysis,
@@ -773,12 +796,17 @@ def instance():
             return ui.span(f"Ready to impute {eligible} predictors using {METHOD_LABELS.get(Options()['method'], Options()['method'])}.", class_="text-primary")
 
         session.on_ended(Calculate.cancel)
+        session.on_ended(CalculateExport.cancel)
+
+        this.export_inputs('Method', when=lambda: 'Apply' in (input.Apply() or []))
+        this.export_inputs('Neighbours', when=lambda: 'Apply' in (input.Apply() or []) and input.Method() == 'knn')
+        this.export_inputs('Iterations', when=lambda: 'Apply' in (input.Apply() or []) and input.Method() == 'iterative')
 
         @this.export_check
         def export_ready():
-            this.require_settled(Options)
             if "Apply" in (input.Apply() or []):
-                Calculate.require_current(incomingproxy_data(), Options())
+                this.require_settled(FitOptions)
+                CalculateExport.require_current(incomingproxy_data(), FitOptions())
 
         return TransformedData
 

@@ -1,0 +1,133 @@
+# Variable selection (`var_select`): proposed implementation plan
+
+Status: implemented, 2 November 2026. The original brief remains in `Var_select.txt`.
+
+## Recommendation
+
+Build two method tabs: **Boruta** and **GrootCV**. Exclude sequential selection: its dependence on a particular downstream estimator makes it premature at this point in the Pythagoras workflow. Do not add a method merely to fill the navigation bar.
+
+| Method | Selection goal | Actual recommendation | Main qualification |
+|---|---|---|---|
+| Boruta | Find all variables with detectable predictive information relative to shuffled shadows | Confirmed variables; optionally confirmed plus tentative | Iterative, forest-dependent, and potentially expensive |
+| GrootCV | Shadow-based selection using repeated LightGBM cross-validation | Variables passing the algorithm's shadow threshold | Different evidence from Boruta; not a hypothesis test with Boruta's error control |
+
+Boruta is explicitly an all-relevant selector with sklearn-style fit/transform methods. Its output distinguishes confirmed and tentative features. These categories should remain visible rather than turning its output into an arbitrary importance cutoff. [BorutaPy project](https://github.com/scikit-learn-contrib/boruta_py).
+
+GrootCV is a sklearn-compatible selector using LightGBM cross-validation and a shadow-derived threshold. ARFS also provides Leshy and BoostAGroota; Leshy is too close to Boruta to be my preferred second tab. GrootCV supplies a useful alternative importance engine and repeated-fold evidence, although agreement between the two methods is not independent confirmation. [ARFS selector API](https://arfs.readthedocs.io/en/latest/arfs.feature_selection.html).
+
+Do not include variance thresholds, penalized-model selection, standalone importance rankings, PCA, embeddings, or other dimensional reduction. Permutation importance alone does not define a selected subset; correlated predictors can also obscure its interpretation. [sklearn permutation-importance guidance](https://scikit-learn.org/stable/modules/permutation_importance.html).
+
+## Data and role contract
+
+Selection is supervised. Initially support one classification or regression target using `ModellingContext.resolved_task`; do not infer classification merely because a numeric outcome has few values. Explain unsupported ordinal, survival, multi-target, or unresolved outcomes in the card status. Leave all method settings accessible.
+
+Candidate columns are variables assigned only the Predictor role, in incoming column order. All other columns, including Treatment, pass through unchanged. Any additional non-Predictor role protects a variable from selection. The flip-side table lists every incoming variable; protected variables have Decision="Pass through" and Included=true, with selection statistics left blank.
+
+Preserve row count, index (including duplicates), column order, original values, missingness and dtypes. Only unselected candidate columns disappear. A selector may keep every candidate; report “No variables removed” rather than force a reduction. If it selects none, report that explicitly and require a different recipe or `None` before exporting to downstream models that require predictors. Do not silently keep the top variable.
+
+Use labelled development observations for preview fitting when an evaluation plan exists. Never use final holdout or prediction outcomes. Without a plan, use eligible labelled rows and mark the result exploratory. Missing outcomes exclude rows from supervised fitting, not from transformed output. If earlier learned transformations exist, obtain development inputs by refitting those transformations on the appropriate raw training rows; slicing a globally fitted preview is insufficient.
+
+Respect observation-importance weights and structural/group/time splitting where supported. Distinguish balancing weights from importance weights. Unsupported weighting or splitting must produce an explicit method status, never silently fall back to unweighted fitting or random folds. Inner validation partitions must be generated within the current outer training rows.
+
+## Mixed data and missing values
+
+The public transformer accepts the incoming DataFrame directly. Preprocessing is private to selection: exported data retains raw selected variables.
+
+The installed sklearn version is 1.9.1; the project dependency currently permits versions from 1.4. The stable forest API supports numeric missing values, but mixed nominal inputs still require an encoding strategy. BorutaPy itself calls `check_X_y` without allowing missing values, before fitting the estimator. Native forest missing-value support therefore does not solve the Boruta input contract. [Stable forest API](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html), [BorutaPy validation source](https://raw.githubusercontent.com/scikit-learn-contrib/boruta_py/master/boruta/boruta_py.py).
+
+### Prefer native categorical forests; retain encoding as a fallback
+
+Research update, 2 November 2026: investigate native categorical forests before committing to the grouped one-hot adaptation below. This can preserve one importance and one shadow per original variable, reducing both statistical and implementation complications.
+
+- **Installed sklearn 1.9.1:** numeric missing-value support, no `categorical_features` parameter on RandomForestClassifier. Raising the project's floor to this release does not solve nominal handling.
+- **sklearn development branch:** RandomForestClassifier/Regressor expose `categorical_features`, including `"from_dtype"`, with missing categories represented by NaN. Current documented restrictions include binary classification or single-output regression, no categorical `absolute_error` regression, no categorical warm start, and a category-count cap. The development page identifies itself as 1.10.dev0 but labels this parameter “Added in version 1.11”; do not promise that `scikit-learn>=1.10` provides it. Pin an exact tested development build for an isolated prototype, or wait for a released version with verified capabilities. Multiclass support remains a blocker for a universal card backend. [Development classifier API](https://scikit-learn.org/dev/modules/generated/sklearn.ensemble.RandomForestClassifier.html), [development regressor API](https://scikit-learn.org/dev/modules/generated/sklearn.ensemble.RandomForestRegressor.html).
+- **Released LightGBM random-forest mode:** the stable 4.7.0 documentation provides sklearn-style LGBMClassifier/LGBMRegressor with `boosting_type='rf'`, native categorical splits, missing-value handling and `feature_importances_`. Prototype a pinned 4.7.0 environment first; this is a proposed reproducible baseline, not a claimed historical minimum version or validated project dependency. Set explicit row/feature sampling and use gain importance as the initial candidate. This is LightGBM's forest implementation, so do not claim equivalence to sklearn's forest. [Forest mode parameters](https://lightgbm.readthedocs.io/en/stable/Parameters.html), [sklearn-style API](https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.LGBMClassifier.html), [categorical/missing support](https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html).
+
+**BorutaPy still needs an adapter.** Preserve categorical metadata while active columns are removed and shadows are appended, permit predictor NaNs without permitting missing outcomes, and pass the updated categorical mask to every forest fit. A one-time categorical mask on the original estimator is insufficient. These changes are a mixed-data adaptation of BorutaPy, even when the forest itself handles inputs natively. Keep preprocessing/codebooks fold-fitted and original-variable identities stable. Numeric category codes explicitly marked as categorical are acceptable; unmarked ordinal codes are not.
+
+If native routes fail validation, the fallback is numerical median imputation plus missingness indicators and categorical missing-value handling plus one-hot encoding. Fit these only on selection training rows. Handle unseen categories and all-missing columns explicitly. Boolean variables are categorical unless assigned otherwise. Reject unsupported datetime, complex or nested objects with column-level explanations.
+
+For that fallback, all encoded components of an original variable form one selection group. Shuffle the original variable to construct its shadow, then apply the same preprocessing and importance aggregation to real and shadow groups. Do not map “any selected dummy” back to a source variable and claim unchanged Boruta semantics. Group-score calibration and cardinality-bias simulations are acceptance requirements. Native categorical selection avoids this particular grouping problem, but still needs cardinality-bias testing.
+
+For GrootCV, use a pinned ARFS/LightGBM combination with explicit categorical identities and missing-value handling. Verify that raw-variable identities survive folds, shadows and selection in the actual installed release. Documentation is evidence for a prototype, not proof of runtime readiness. If grouped Boruta proves too difficult to validate, present Leshy as a proposed alternative Boruta-family backend for discussion; do not silently substitute it for the requested BorutaPy-based method.
+
+## Boruta behavior and chart
+
+Use classification/regression random forests as the reference estimators, prioritizing the native categorical prototype described above. Expose tree depth, tree count/automatic tree count, iteration budget, significance level, shadow percentile and seed in settings. Start from documented BorutaPy defaults (`perc=100`, `alpha=0.05`, `max_iter=100`, `two_step=True`); make any application overrides explicit. Do not describe these settings as exact R parity.
+
+Offer **Confirmed** and **Confirmed + tentative** as alternative policies within the Boruta tab. Default to Confirmed. Explain unresolved decisions at the iteration limit; avoid automatically resolving them by ranking. Capture terminal decision state separately from any package weak-support heuristic.
+
+Build a Plotly chart inspired by the R display: horizontal per-variable boxplots across iterations, colored green/amber/red for confirmed/tentative/rejected, ordered by median importance. Include observed shadow-reference distributions in blue and the actual decision-threshold history in hover or a companion trace. Label the scale “forest impurity importance”; it is not an effect size. The distributions describe algorithm iterations, not confidence intervals.
+
+BorutaPy exposes real-feature importance history, but full shadow distributions and terminal state require instrumentation. Capture real and shadow histories during execution; omit initialization rows and distinguish inactive/rejected iterations from observed zeros. An ordinary importance bar chart must not be presented as the R-style history plot. [BorutaPy implementation](https://raw.githubusercontent.com/scikit-learn-contrib/boruta_py/master/boruta/boruta_py.py).
+
+## Card interaction
+
+Follow `app/cards/obs_clusters.py`: a filling `navset_bar` on the front, one method per tab, and a matching evidence panel on the reverse. Keep the compact chart readable; fullscreen adds search, more displayed variables and independently scrollable detail. Display limits change rendering only.
+
+GrootCV's front shows per-variable importance distributions across folds/repeats with the algorithm's threshold. Do not imply its colors mean Boruta confirmation.
+
+The reverse side contains a sortable table with Variable, Role, Decision, Included, and method-specific evidence. Omit rank from the table. Boruta decisions are Confirmed, Tentative, Rejected and Pass through; GrootCV decisions are Selected, Rejected and Pass through. Included reflects the inclusion policy. Include iteration count, shadow comparison and missingness for Boruta; fold/repeat summaries and cutoff for GrootCV. Keep settings, target/task, eligible rows, exclusions, seed, package versions and runtime in a technical panel. Distinguish rejected, unresolved, unsupported and pre-screened-out variables.
+
+The footer contains a radio group with `None`, `Boruta`, and `GrootCV`, followed by status and retained/removed counts. Selecting a method automatically applies its recommendation when ready. There is no Apply button. The active exploration tab is independent of the chosen method. Boruta's confirmed/tentative policy is configured inside its tab.
+
+Default to `None`, immediately passing the incoming proxy through without a selector. A selected method automatically recomputes after input, target, role, upstream pipeline or fitting-setting changes. Pending, failed or empty recommendations block downstream export, rather than retaining a stale recipe or silently passing through data. Status identifies the selected method's pending/error/applied state even when another chart tab is open. Bookmarks persist the scalar radio choice and settings, then recompute and validate the recommendation. Legacy checkbox lists and the former `selection` commitment field are migrated during restoration; saved fitted masks are never replayed.
+
+## Pipeline architecture
+
+Add `app/FeatureSelectionTransformer.py`, a cloneable `BaseEstimator`/`TransformerMixin` wrapper, with method backends in a focused helper module. Constructor arguments contain configuration only, including the candidate schema and policy; fitted attributes include `selected_columns_`, `support_`, `feature_names_in_` and `diagnostics_`. Provide `get_support()` and `get_feature_names_out()` with a documented distinction between candidate support and full-frame passthrough columns.
+
+`fit(X, y)` learns selection from the current training partition. `transform(X)` uses fitted column decisions only, needs no target, and preserves every row. Missing expected columns produce a clear schema error. Upstream fitted steps may remove candidates in individual folds: select among surviving candidates and record their absence; do not encode the preview's surviving subset as a fixed training schema.
+
+Fit a separate clone for display. Then call `source.with_pipeline_step(unfitted_recipe, name='var_select', preview_frame=preview, removed_columns=preview_removed_columns)`. This helper already clones the transformer and retains `clean_frame`. Only preview removals update preview roles; the recipe must retain all eligible upstream candidates. Inspect downstream model construction to ensure it uses the training pipeline's fitted output schema, not the preview's selected list. This is a required integration check.
+
+Commit the **selection procedure**, not a globally learned column mask. Each training fold can select a different subset. The final refit learns the deployment subset; charts describe the preview subset. Method/settings choices made after exploring development outcomes remain model-selection decisions and require an untouched evaluation set for final performance claims.
+
+## Performance and execution
+
+Run only the active method initially; cache completed methods by data/pipeline fingerprint and options. Debounce reactive changes and use the existing extended-task/busy conventions. Do not start every expensive method on each edit.
+
+Boruta iterations are dependent; parallelize forest trees rather than iterations. Allocate a bounded worker budget at one level only. For GrootCV, parallelize folds/candidates or model internals, avoiding nested worker multiplication. Record seed and effective concurrency.
+
+Use a cancellable worker process or cooperative iteration boundaries for expensive backends. Cancelling an await on `asyncio.to_thread` does not stop the underlying fit. Kill obsolete workers or wait for cooperative cancellation, and reject stale completions by generation/fingerprint. Show iterations/folds completed and the iteration budget rather than a misleading exact time estimate. Resolve native-worker availability separately for Shinylive.
+
+Do not enable automatic pre-screening initially. A cheap univariate screen can remove interaction-only predictors, contradicting the all-relevant goal. Later offer an explicit approximate two-stage recipe, with its screen refitted inside every training fold and discarded candidates labeled “not examined by Boruta”. Benchmark GrootCV/BoostAGroota as alternatives before promising either is faster. Preview row sampling must be visible and must not become a hidden training restriction.
+
+## Delivery sequence and acceptance
+
+1. Prototype and pin dependencies. Validate native categorical forest/BorutaPy adapters first, with grouped encoding as fallback. Compare stock numeric BorutaPy with adaptations on equivalent inputs; test categorical shadows, missingness-only signal, cardinality bias, null data, correlated predictors and interactions. Check GrootCV categorical/multiclass/weight behavior and history availability. Resolve backend and licensing constraints before UI work.
+2. Implement the transformer and proxy integration. Verify cloning, serialization/source recording, nested parameters, replay imports, protected roles and downstream schema handling.
+3. Implement the two-tab card, Plotly charts, reverse tables, automatic radio selection, configuration restoration and cancellation lifecycle. Register the card in the normal catalogue/configuration flow and add user documentation plus rendered HTML following repository conventions.
+4. Add focused unit and browser coverage. Confirm whole-variable selection, unchanged passthrough data, unseen categories, nullable/all-missing inputs, row/index preservation, all/none outcomes, deterministic seeds, treatment passthrough, stale-result rejection, restoration and real wheel scrolling after a flip.
+5. Demonstrate leakage protection by perturbing held-out targets and confirming unchanged fitted selection for the corresponding training fold. Verify inner preprocessing never sees its validation rows, reserved rows never enter preview fitting, and globally fitted preview masks are absent from exported recipes. Test cancellation actually releases compute resources.
+
+Acceptance requires meaningful selected subsets, not just scores; mixed/missing inputs without manual upstream preparation; auditable decisions on original variables; and fresh fold-fitted selection in exported training pipelines.
+
+
+## Implementation notes
+
+`app/cards/var_select.py` supplies the card, `FeatureSelectionTransformer.py` the cloneable recipe, and `feature_selection.py` the native categorical adapters. `selection_analysis.py` fits development-only previews through a fresh upstream pipeline. `selection_jobs.py` / `feature_selection_worker.py` isolate native computation and terminate obsolete processes. Committed recipes retain complete candidate lists; downstream catalogue models accept the fitted selection schema, including when selection is added after model commitment.
+
+Pin LightGBM 4.7.0 for native Python and LightGBM 4.5.0 for Emscripten/Pyodide using platform markers; install BorutaPy 0.4.3 in both environments; require sklearn >=1.6 for the validation API. Released ARFS 3.0.0 was inspected but is not a runtime dependency: its categorical encoding/fold handling needed correction. The local GrootCV adaptation implements its normalized mean-absolute-SHAP shadow rule with native LightGBM contributions, fold-local categorical dictionaries and stratified classification folds. It retains the ARFS 3.0.0 cutoff calculation (mean of fold shadow maxima plus the maximum shadow mean, divided by the number of these terms and the cutoff divisor), rather than treating the prose documentation as an exact algorithm. Zero-information fits select nothing. The ARFS MIT notice is included in `app/data/licenses/ARFS-MIT.txt`.
+
+Boruta uses normalized forest gain rather than sklearn impurity importance, and a fixed user-defined tree budget rather than automatic tree counts. Terminal tentative states remain distinct from BorutaPy rough-fix support. The back grid supplies filtering in both compact and fullscreen layouts. GrootCV inherits upstream splitting designs and rebuilds inner splits within each current training partition; fold-count and initial-window adjustments are reported. Its controls remain available. Shinylive runs `analyze_selection` inline instead of launching the native worker, matching the other cards. The browser requirements enable LightGBM 4.5.0 and BorutaPy 0.4.3. The card normalizes browser worker settings to one; the transformer independently enforces one effective worker during browser fits and exported-pipeline refits. Missing dependencies are reported through the analysis status. There is no automatic pre-screening, no preview sampling and no dimensional reduction.
+
+Focused tests cover native mixed/nullable/all-missing input, whole-variable categories, multiclass selection, protected roles, deterministic cloning/replay, training-mask independence, upstream refitting, reserved-target exclusion, fold-local codebooks, strict weighting, empty/all-variable policies, process cancellation, downstream fitted schemas, and browser exploration/radio selection/flip/automatic refresh. User documentation is `markdown/var_select.qmd`, rendered to `app/www/markdown/var_select.html`.
+
+### Synthetic smoke observations
+
+A deterministic 500-row check (seed 18 for data, selector seed 2025; 100 trees, Boruta budget 35, GrootCV 3 folds × 2 repeats) included continuous noise, missing nominal values and a 150-level categorical variable. Both methods selected nothing in its null case and retained both copies of a correlated signal. Both retained the missingness-only signal, with GrootCV also retaining one noise variable. In a binary XOR case Boruta retained only one interaction component and GrootCV retained both components plus noise. These are small smoke examples, not calibrated error-rate estimates or comparative performance guarantees. They demonstrate why recommendations stay optional and the engine-relative limitation is documented.
+
+### Pyodide regression
+
+`tests/cards/test_var_select_pyodide.py` serves cached Shinylive WebAssembly assets and locally downloaded pure-Python dependency wheels to WebKit. It uses actual Pyodide 0.27.7, LightGBM 4.5.0, BorutaPy 0.4.3 and sklearn 1.6.1, verifies the browser dependency markers, and runs both selectors on mixed nominal/Boolean/numeric/missing data with a regression and a multiclass outcome. It checks Predictor-only eligibility and Treatment passthrough, raw passthrough values and duplicate indices, unfitted exported recipes, and fresh training-pipeline fits and held-out transforms. A requested four workers becomes one effective worker in both preview and pipeline fitting. All four method/outcome cases passed. This validates the selector and proxy/pipeline integration in the browser Python runtime; it is not a full application deployment test. The test skips when the cached assets or dependency wheels are absent; its module docstring provides wheel preparation instructions. Native selection remains on LightGBM 4.7.0.
+
+## Upstream resampling and optional stability
+
+`selection_resampling.py` copies only design parameters from the upstream evaluation recipe into the selector constructor. It never copies outer memberships, reserved positions or fitted masks. Inner fits use the existing `evaluation_plan.build_plan` engine on their local rows and structural metadata, honoring K-fold, stratification variables, grouped/leave-one-group-out boundaries, temporal horizon/gap/step and expanding/rolling policy. The upstream fold count/seed take precedence over the card fallback; grouped K caps at local group cardinality. Temporal initial windows shrink only as needed to fit local training times; fixed horizons/gaps do not silently shrink. Predefined validation supplies boundary constraints rather than reusable inner memberships: independent/grouped/forward inner designs are derived locally, with explicit notes for derived forward window sizes. Missing metadata, insufficient horizons or missing training classes are errors, not fallbacks to random folds. Fitted `inner_splits_` are relative to the current fit input and disappear on cloning; technical evidence reports boundaries and adjustments.
+
+The optional `Stability` setting runs a separate, cancellable diagnostic job for the explored method after its ordinary recommendation is ready. `selection_stability` refits a fresh complete upstream pipeline plus selector on each validated upstream training split, using its training outcomes only. The result contains counts, decisions and failures, never a model, recipe or consensus mask. The main recommendation cache and exported pipeline do not depend on this setting or result. Native main fits take priority over diagnostic fits; Shinylive runs the same diagnostic inline and single-threaded.
+
+The optional front chart shows selection frequency; reverse evidence adds selected/eligible/successful/planned counts and a per-fold decision table with raw training, validation and fitted row counts. Frequency divides selected by eligible successful fits. Upstream-removed candidates are unavailable, failed fits are separate, and zero eligible fits have an undefined frequency. Single-split plans are explicitly described as unable to show between-fold variation. This is an inspection aid, not calibrated stability selection, a relevance probability, or an automatic threshold.
+
+Regression coverage includes local group isolation and K adjustment, inherited stratification, expanding/rolling temporal gaps and window reduction, predefined validation exclusion and derived forward windows, fit-local memberships after outer refitting, partial diagnostic failures, upstream variable removal, diagnostic-only subprocess transport, and unchanged exports when the diagnostic is toggled. WebKit checks front/reverse evidence and unchanged radio-selected output. The real Pyodide regression also exercises inherited grouped and temporal designs and grouped-fold stability.

@@ -1055,6 +1055,16 @@ min-height: 0; height: 100%; max-height: none; flex: 1 1 0 !important;
 .tuning-parameters-table .shiny-data-grid {
 min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
 }
+
+.flip-container:has(.var-select-evidence).flipped > .flippable > .front,
+.flip-container:has(.var-select-evidence):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.var-select-evidence > .shiny-data-grid-output {
+flex: 1 1 0;
+min-height: 0;
+}
 </style>
 </head>
 

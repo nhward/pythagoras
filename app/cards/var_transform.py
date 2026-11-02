@@ -652,7 +652,7 @@ def _distribution_figure(
 
 def instance():
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Transform', 'IncludeTarget', 'UseWeights', 'Robust')
+    this.export_inputs('Transform')
     this.long_name = "Variable Transform"
     this.description = "Transform the location, spread, and shape of continuous numeric variables."
 
@@ -749,15 +749,18 @@ def instance():
         @this.record_context
         def Options():
             selected = list(input.Transform() or [])
-            target = _continuous_target(incomingproxy_data())
+            source = incomingproxy_data()
+            target = _continuous_target(source)
+            scale_or_center = bool({"Scale", "Center"}.intersection(selected))
+            robust = scale_or_center and bool(input.Robust())
             return {
                 "transforms": [
                     name for name in ("Deskew", "Scale", "Center")
                     if name in selected
                 ],
-                "include_target": target is not None and bool(input.IncludeTarget()),
-                "use_weights": bool(input.UseWeights()),
-                "robust": bool(input.Robust()),
+                "include_target": bool(selected) and target is not None and bool(input.IncludeTarget()),
+                "use_weights": scale_or_center and not robust and bool(source.role_map.columns_with_role(Role.WEIGHTING)) and bool(input.UseWeights()),
+                "robust": robust,
             }
 
         @busy.track("Transforming continuous numeric predictors…")
@@ -781,6 +784,8 @@ def instance():
         @this.record_context
         def TransformedData():
             source = incomingproxy_data()
+            if not input.Transform():
+                return source.with_inactive_step(stage='Learning', card=this.namespace, operation=this.long_name)
             analysis = Analysis()
             return _apply_analysis(
                 source,
@@ -865,10 +870,15 @@ def instance():
 
         session.on_ended(Calculate.cancel)
 
+        this.export_inputs('Robust', when=lambda: bool({'Scale', 'Center'}.intersection(input.Transform() or [])))
+        this.export_inputs('UseWeights', when=lambda: bool({'Scale', 'Center'}.intersection(input.Transform() or [])) and not input.Robust() and bool(incomingproxy_data().role_map.columns_with_role(Role.WEIGHTING)))
+        this.export_inputs('IncludeTarget', when=lambda: bool(input.Transform()) and _continuous_target(incomingproxy_data()) is not None)
+
         @this.export_check
         def export_ready():
-            this.require_settled(Options)
-            Calculate.require_current(incomingproxy_data(), Options())
+            if input.Transform():
+                this.require_settled(Options)
+                Calculate.require_current(incomingproxy_data(), Options())
 
         return TransformedData
 

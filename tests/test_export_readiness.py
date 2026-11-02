@@ -199,3 +199,38 @@ async def test_obsolete_flush_callback_and_export_error_do_not_publish_stale_dat
     finally:
         for item in effects:
             item.destroy()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_inactive_method_controls_do_not_invalidate_fitting_options():
+    from export_readiness import read_active_inputs
+
+    method = reactive.Value('simple')
+    neighbours = reactive.Value(None)
+    inputs = SimpleNamespace(Method=method, Neighbours=neighbours)
+    calls = []
+
+    @reactive.calc
+    def options():
+        active = {'Method'} | ({'Neighbours'} if method() == 'knn' else set())
+        result = read_active_inputs(inputs, {'Method':'simple', 'Neighbours':3}, active)
+        calls.append(result)
+        return result
+
+    with reactive.isolate():
+        assert options()['Neighbours'] == 3
+    neighbours.set(7)
+    await reactive.flush()
+    with reactive.isolate():
+        assert options()['Neighbours'] == 3
+    assert len(calls) == 1
+
+    method.set('knn')
+    await reactive.flush()
+    with reactive.isolate():
+        assert options()['Neighbours'] == 7
+    neighbours.set(None)
+    await reactive.flush()
+    with reactive.isolate(), pytest.raises(SilentException):
+        options()

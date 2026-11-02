@@ -397,7 +397,12 @@ class proxy_data:
             raise TypeError("The committed estimator must implement fit and predict")
         steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else [])
                  if name != "data_models"]
-        steps.append(("data_models", clone(estimator)))
+        model = clone(estimator)
+        for _, step in steps:
+            if getattr(step, 'selection_step', False):
+                from model_commit import with_selection_schema
+                model = with_selection_schema(model, step.predictors)
+        steps.append(("data_models", model))
         record = ProcessingRecord(stage="Learning", card="data_models",
             operation=f"Committed estimator: {label}", attempted=True,
             parameters={"recipe_id": recipe_id}, input_shape=self.shape,
@@ -509,6 +514,10 @@ class proxy_data:
 
         steps = [] if self._pipeline is None else list(self._pipeline.steps)
         position = next((i for i, (name, _) in enumerate(steps) if name == "data_models"), len(steps))
+        if getattr(transformer, 'selection_step', False):
+            from model_commit import with_selection_schema
+            steps = [(n, with_selection_schema(s, transformer.predictors) if n == 'data_models' else s)
+                     for n, s in steps]
         steps.insert(position, (step_name, clone(transformer)))
         variables = getattr(transformer, "columns", None)
         if not variables:

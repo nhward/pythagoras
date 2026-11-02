@@ -218,7 +218,6 @@ def instance():
     Creates an instance of Card configured as "roleAssign".
     """
     this = Card(file=__file__, mutable=True, pipeline_compatible=False) # "mutable" means it can change the pxd - probably with a commit button
-    this.export_inputs('Separator', 'CardinalityThreshold', 'MaxObs')
     this.register_configuration_input("role_map")
     this.long_name = "Role Assignment"
     this.description = "Assign variables to roles they will have in the current analysis."
@@ -311,6 +310,7 @@ def instance():
         # Keep the accepted/restored plan separate from the browser's draft.
         # Retain it even if an intermediate upstream restoration is invalid.
         accepted_role_map = restored_role_map
+        validated_source = None
         restored_roles_consumed = False
         protected_columns: tuple[str, ...] | None = None
         protected_role_map: dict[str, list[str]] | None = None
@@ -333,6 +333,7 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def MaxObs():
+            req(input.MaxObs() is not None)
             return 10**input.MaxObs()
 
         @this.record_code
@@ -348,6 +349,7 @@ def instance():
         @this.reactable()
         @this.record_context
         def PxdChange():
+            nonlocal validated_source
             data = incomingproxy_data()
             this.export_readiness.check(input)
             # Only upstream changes trigger replay. Reading settings in isolation
@@ -356,12 +358,16 @@ def instance():
                 role_map = accepted_role_map
                 if _role_map_covers_columns(role_map, data.columns):
                     roles = RoleMap.from_primitive(role_map)
+                    if validated_source is data or (validated_source is not None and validated_source.equals(data)):
+                        OutputData.set(_apply_roles(data, roles))
+                        return
                     sample = data.sample(n=10**input.MaxObs(), mode="random", keep_geometry=True)
                     messages = sample.validate(
                         role_map=roles, separator=input.Separator(),
                         low_cardinality=input.CardinalityThreshold(),
                     )
                     if not messages:
+                        validated_source = data.clone()
                         OutputData.set(_apply_roles(data, roles))
                         return
                 # Never export a stale dataset or invalid restored assignments.
@@ -454,10 +460,11 @@ def instance():
         @this.reactable(triggers = [input.Commit])
         @this.record_context
         def CommitEvent():
-            nonlocal accepted_role_map
+            nonlocal accepted_role_map, validated_source
             req(not ValidateMap())
             OutputData.set(Committed())
             accepted_role_map = RoleMap.from_primitive(input.role_map()).to_primitive()
+            validated_source = incomingproxy_data().clone()
 
 
         @output
@@ -485,6 +492,10 @@ def instance():
             else:
                 i = len(messages)
                 return ui.span(i,": ", messages[i-1], class_ = "text-danger")
+
+        this.export_inputs('Separator', 'CardinalityThreshold', 'MaxObs',
+            when=lambda: _role_map_covers_columns(accepted_role_map, incomingproxy_data().columns)
+            and not (validated_source is not None and validated_source.equals(incomingproxy_data())))
 
         return OutputData
 

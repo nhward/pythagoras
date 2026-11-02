@@ -51,3 +51,9 @@ class ProcessingRecord:
             self, "parameters", MappingProxyType(deepcopy(dict(self.parameters))),
         )
         object.__setattr__(self, "variables", tuple(map(str, self.variables)))
+
+    def __reduce__(self):
+        """Serialize ordinary parameters and restore their read-only wrapper."""
+        return (type(self), (self.stage, self.card, self.operation, self.attempted,
+                             dict(self.parameters), self.input_shape, self.output_shape,
+                             self.method, self.variables))

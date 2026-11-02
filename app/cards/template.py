@@ -17,6 +17,10 @@ DESIGN CHECKLIST
   position in the current input, not necessarily the original source file.
 * Separate analysis from plotting so full-screen, tab and display-only changes
   do not retrain models. Pure helpers should be testable without Shiny.
+* Declare export prerequisites, not every setting: use export_inputs() for
+  controls that affect the published data/recipe, with when= for conditional
+  controls. Export calculations must also avoid reading inactive controls.
+  Diagnostic settings and tasks must not delay an otherwise valid export.
 * Mark reusable computations and transformer classes with @recordable. Put
   @this.record_context INSIDE Shiny render/reactive/extended-task decorators.
   It scopes shared-helper recordings to this card without displaying callbacks.
@@ -63,6 +67,10 @@ from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
 
 MUTABLE = False  # Change to True only when this card exports modified proxy data.
+# This example's mutable operation performs materialised row cleaning. Choose
+# this independently when replacing it: learned transformers are usually both
+# mutable AND pipeline-compatible; immutable diagnostics usually are compatible.
+PIPELINE_COMPATIBLE = not MUTABLE
 ACTION = "Remove completely empty rows"  # Example only; replace for a real card.
 
 
@@ -112,7 +120,7 @@ def _figure(result, *, top=10, full_screen=False):
         figure = go.Figure(go.Bar(x=table["Variable"], y=table["Missing cells"]))
         figure.update_layout(
             title={
-                "text": "my title",
+                "text": "Missing cells by variable",
                 'font':{'size':17},
                 'x': 0.5,
                 'xanchor': "center"
@@ -134,8 +142,11 @@ def _figure(result, *, top=10, full_screen=False):
 def instance():
     # The file stem supplies the card identity and namespace. Copy under the
     # intended name; do not manually prefix UI IDs with a namespace.
-    this = Card(file=__file__, mutable=MUTABLE)
+    this = Card(file=__file__, mutable=MUTABLE,
+                pipeline_compatible=PIPELINE_COMPATIBLE)
     if MUTABLE:
+        # Apply always determines whether the operation is enabled. An empty
+        # checkbox selection is valid; None means its input is not ready.
         this.export_inputs("Apply")
     this.long_name = "Card template"
     this.description = "Developer example: missing cells by variable."
@@ -186,6 +197,21 @@ def instance():
     def server(input, output, session):
         busy = this.busy()
         analyze = _analyze
+
+        # CONDITIONAL EXPORT SETTINGS (adapt when adding real controls):
+        # Register here when the predicate needs this server's input object.
+        # if MUTABLE:
+        #     this.export_inputs("Method", when=lambda: ACTION in (input.Apply() or []))
+        #     this.export_inputs("Neighbours", when=lambda:
+        #         ACTION in (input.Apply() or []) and input.Method() == "knn")
+        # Require the controlling choice itself (Apply above). In Options(),
+        # read Method only while enabled and Neighbours only for knn; use a
+        # neutral default otherwise. read_active_inputs() in export_readiness
+        # can help when several methods share a function signature. A when=
+        # declaration alone cannot remove dependencies from Options()/Export().
+        # Never register Top here: it affects display only. allow_none=True is
+        # for controls where None is a legitimate configured value, not a way
+        # to bypass initialization or restoration of required settings.
 
         @this.reactable(calc=True)
         @this.record_context
@@ -299,9 +325,16 @@ def instance():
         if MUTABLE:
             @this.export_check
             def export_ready():
+                # export_inputs: browser binding/restored-value acknowledgement.
+                # require_settled: debounced options match the current controls.
+                # require_current: a task completed for the current arguments.
                 this.require_settled(Enabled)
-                # If an extended task PRODUCES exported data, also call:
-                # Calculate.require_current(Incoming(), Options())
+                # If fitting PRODUCES exported data, gate it only while enabled:
+                # if Enabled():
+                #     this.require_settled(Options)
+                #     Fit.require_current(Incoming(), Options())
+                # Use exactly the arguments passed to Fit.invoke(). Keep export
+                # fitting separate if diagnostics use additional controls/work.
                 # This template's task is diagnostic-only, so do not wait for it.
 
         return Export if MUTABLE else Incoming

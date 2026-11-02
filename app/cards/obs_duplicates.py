@@ -235,7 +235,7 @@ def _duplicates_figure(
 def instance():
     """Create the mutable observation-duplicates card."""
     this = Card(file=__file__, mutable=True, pipeline_compatible=False)
-    this.export_inputs('RemoveExact', 'SignificantFigures', 'UseTarget')
+    this.export_inputs('RemoveExact')
     this.long_name = "Observation duplicates"
     this.description = "Detect observation duplicates and near-duplicates."
     
@@ -316,6 +316,7 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def SignificantFigures():
+            req(input.SignificantFigures() is not None)
             return max(1, int(input.SignificantFigures()))
 
         @this.reactable(calc=True)
@@ -510,10 +511,13 @@ def instance():
 
         session.on_ended(CalculateDuplicates.cancel)
 
+        this.export_inputs('SignificantFigures', 'UseTarget', when=lambda: BUTTON_VALUE in (input.RemoveExact() or []))
+
         @this.export_check
         def export_ready():
-            this.require_settled(SignificantFigures)
-            ExactDuplicateCount()  # SomeDupl must resolve its control update first.
+            if BUTTON_VALUE in (input.RemoveExact() or []):
+                this.require_settled(SignificantFigures)
+                ExactDuplicateCount()  # SomeDupl must resolve its control update first.
 
         return TransformedData
 

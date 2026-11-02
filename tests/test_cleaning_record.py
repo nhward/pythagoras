@@ -59,3 +59,22 @@ def test_cleaning_record_requires_descriptive_names(field):
 def test_cleaning_record_rejects_invalid_shapes(shape):
     with pytest.raises(ValueError, match="input_shape"):
         CleaningRecord("var_modify", "Convert variable types", input_shape=shape)
+
+
+@pytest.mark.parametrize('record_type', ['cleaning', 'processing'])
+def test_records_are_hashable_and_pickleable_without_losing_readonly_parameters(record_type):
+    import pickle
+    from joblib import hash as job_hash
+    from processing_record import ProcessingRecord
+    if record_type == 'cleaning':
+        record = CleaningRecord('example', 'Clean data', {'nested': {'columns': ['x']}}, (3, 2), (3, 1))
+    else:
+        record = ProcessingRecord('Learning', 'example', 'Learn transform', True,
+            {'nested': {'columns': ['x']}}, (3, 2), (3, 1), 'Example', ('x',))
+    restored = pickle.loads(pickle.dumps(record))
+    assert restored == record
+    assert job_hash(record) == job_hash(restored)
+    with pytest.raises(TypeError):
+        restored.parameters['new'] = True
+    restored.parameters['nested']['columns'].append('y')
+    assert record.parameters['nested']['columns'] == ['x']

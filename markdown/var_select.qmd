@@ -1,0 +1,76 @@
+---
+title: Variable selection
+---
+
+#### Purpose
+
+Compare **Boruta** and **GrootCV** recommendations for selecting original Predictor variables. Both compare predictive evidence with shuffled shadow variables. They produce subsets, and do not perform dimensional reduction.
+
+#### Methods
+
+| Tab | Recommendation | Interpretation |
+|:---|:---|:---|
+| Boruta | Confirmed variables, or confirmed plus tentative | BorutaPy's iterative testing with a native categorical LightGBM random forest. Green means confirmed, amber unresolved, red rejected. |
+| GrootCV | Variables passing a shadow-derived threshold | Repeated-fold normalized mean absolute TreeSHAP using LightGBM. Green means selected; it does not mean Boruta confirmation. |
+
+Both are relative to their selection engine. The eventual downstream model can be chosen separately. Selection does not guarantee improved prediction, find causal effects, or establish that rejected variables are irrelevant to every possible model. Correlated and interaction-only predictors can be difficult to identify, and high-cardinality categories can bias importance.
+
+#### Mixed and missing data
+
+Numerical values, nominal categories, Boolean variables and missing predictor values are handled internally. Each original variable has one shadow and one selection decision; categories are explicitly marked as nominal rather than treated as ordered measurements. Export retains original values, dtypes and missingness. It only removes unselected eligible variables.
+
+Missing outcomes exclude rows from supervised fitting, while transformed output preserves every incoming row and its index. Infinite numerical predictors, unsupported nested values and datetime/complex inputs produce an explanation. Assign one regression or classification outcome; ordinal and survival selection are not supported yet. All other roles pass through unchanged. An additional non-Predictor role protects a variable even if it also has the Predictor role.
+
+Treatment, Identifier, Sensitive, Target, and all other non-Predictor roles are excluded from selection and retained in the output. The flip-side evidence table lists every incoming variable: protected variables have **Decision = Pass through** and **Included = true**, with no selection importance assigned.
+
+#### Explore and select
+
+Use the tabs to compare methods. The front shows importance distributions across observed iterations or folds and blue shadow references. These distributions are **not confidence intervals**. Boruta uses normalized forest gain; GrootCV uses normalized mean absolute TreeSHAP. Their numerical scales are not comparable.
+
+Flip the card for the variable decisions, inclusion policy, missing proportions, number of observed fits and threshold evidence. Rejected variables can have fewer fitted iterations. The technical panel records the engine adaptations, versions, target, settings, elapsed time and preview population. Expand the card for more space. The display limit changes the chart only; the evidence grid includes every incoming variable and offers filters. Decision is Confirmed, Tentative, Rejected, or Pass through for Boruta, and Selected, Rejected, or Pass through for GrootCV. Included reflects the chosen inclusion policy.
+
+Choose one option in the footer radio group. Its recommendation is applied automatically when ready:
+
+- **None** passes through all incoming variables without adding a selector.
+- **Boruta** applies its configured confirmed/tentative policy.
+- **GrootCV** applies its threshold-based subset.
+
+The selected radio option is independent of the chart tab. Merely inspecting a method never changes the outgoing data. Selecting None immediately restores incoming data. Selecting a method pauses downstream export until its current recommendation is ready. A failed or empty recommendation is explained in the status and keeps export paused; choose None or review the settings. A recommendation retaining all variables is allowed. Changing data, roles, outcome or fitting settings automatically recomputes the selected method and replaces its recipe when ready. An old recommendation is never exported for new settings. Bookmarks save the radio choice and settings, then recompute and validate the result after restoration; older checkbox-group bookmarks are migrated automatically.
+
+#### Training and evaluation
+
+Selecting a method appends an **unfitted selection recipe** once its recommendation is ready. Each cross-validation training fold learns its own subset. The preview subset is not a fixed list used during evaluation. A final training fit learns the deployment subset, which can differ from the chart.
+
+With an evaluation plan, preview fitting uses development observations and refits upstream learning steps on those observations. Final holdout and prediction rows are excluded. Without a plan, the preview is exploratory. Repeated exploration still makes method choice a model-selection decision; retain an untouched evaluation set for final performance assessment.
+
+When **obs_resample** is upstream, GrootCV inherits its splitting design: ordinary or stratified folds, grouped folds, leave-one-group-out, or forward-time windows. Each selector fit rebuilds that design using only its current training rows. Original outer fold memberships and reserved rows are never carried into inner selection. The upstream fold count and seed are used where applicable; the card's inner-fold setting is a fallback when no count is supplied. Repeats vary shuffled assignments and shadows; fixed or temporal boundaries remain fixed across repeats.
+
+Grouped fold counts are capped at the groups available in the current training partition. If a temporal training partition is shorter than the original initial window, that initial window shrinks while the horizon, gap, step and expanding/rolling policy remain unchanged. Insufficient time support or missing training classes produce an explanation, not a random-fold fallback. The technical panel reports adjustments and actual inner split counts/boundaries.
+
+For predefined validation, external validation rows remain excluded from the preview fit. GrootCV derives independent, grouped or forward-time inner splits from the upstream objective. When predefined future validation supplies no window sizes, local forward blocks are derived from the current training times and the fallback fold count, and this is stated in the technical notes.
+
+Without an upstream plan, GrootCV retains random regression folds and stratified classification folds; declared time structure requires a suitable upstream design. Boruta itself does not use inner cross-validation, estimate held-out performance, or change its shadow procedure for dependence.
+
+Importance weights are validated and used during model fitting when enabled. Balancing weights are excluded from this card's direct weighting configuration. Upstream training samplers still run according to their own recipes. Weighting failures never silently become unweighted calculations.
+
+#### Optional selection stability
+
+Enable **Explore fold-by-fold selection stability** in Settings to inspect the active method across the upstream `obs_resample` training folds. The full upstream learning pipeline and selector are refitted independently on each training subset. Validation and holdout outcomes do not enter those fits. This can multiply the computation substantially.
+
+The front then shows selection frequencies. The reverse adds frequency/count columns to the decision table and provides a **Fold-by-fold stability** detail panel. A variable's frequency is its number of selected folds divided by its number of eligible, successful folds. Variables removed by upstream preprocessing are marked unavailable; failed fits are reported separately. Inspect the eligible/successful/planned counts, especially when coverage is partial. A plan with a single split cannot show between-fold variation.
+
+This is a diagnostic only: it never constructs a consensus subset, adds a frequency cutoff, changes the selected recommendation, or becomes an export prerequisite. Selecting Boruta or GrootCV still exports that method's ordinary fold-fitted recipe. Correlated substitutes can each have low frequency; overlapping training folds are dependent, and frequency is not a relevance probability or confidence interval. The diagnostic needs an upstream plan and remains separate from both methods' own iteration/fold importance distributions. Turn it off to return to the importance chart.
+
+#### Performance and settings
+
+Selection runs automatically for the explored method; cached results are reused for unchanged data and settings. On the Python server, fits run in a cancellable worker process. In Shinylive, analysis runs inline, following the other cards; inline work occupies the browser runtime until it finishes. Worker threads are bounded and assigned at the tree engine level. Browser fits always use one effective worker, including refits of exported recipes; a larger worker setting is ignored in Shinylive. No automatic pre-screening or hidden row sampling is performed.
+
+The tree and iteration budgets, depth, shadow threshold, significance/correction settings, folds/repeats, seed and importance weighting can be reviewed in Settings. A larger GrootCV shadow divisor lowers its selection threshold. The Boruta tentative policy includes all terminal unresolved variables, without applying BorutaPy's rough-fix heuristic.
+
+Native Python uses LightGBM 4.7.0; Shinylive uses the bundled WebAssembly build of LightGBM 4.5.0. BorutaPy 0.4.3 is installed in both environments. Both selectors and their exported-pipeline refits have passed mixed/missing-data regression and multiclass-classification checks in WebKit using the cached Shinylive Pyodide 0.27.7 runtime with sklearn 1.6.1. Different runtime versions can produce different recommendations. Missing packages are reported in the card status. GrootCV is an application adaptation of the ARFS 3.0.0 selection rule, retaining categorical metadata, training-fold codebooks and seeded shadows, and using LightGBM's native TreeSHAP contributions. It does not require installing ARFS or SHAP.
+
+#### References
+
+- [BorutaPy](https://github.com/scikit-learn-contrib/boruta_py)
+- [ARFS GrootCV](https://arfs.readthedocs.io/en/stable/arfs.feature_selection.html)
+- [LightGBM categorical and missing-value handling](https://lightgbm.readthedocs.io/en/stable/Advanced-Topics.html)

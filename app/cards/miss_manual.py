@@ -260,7 +260,6 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = 'Manual imputation'
     this.description = 'Review missingness branches and supply optional, typed replacements.'
-    this.export_inputs('MaxTreeDepth', 'MinLeafAccuracy', 'ExtraLevel')
     this.register_configuration_state_field('manual')
     this.defer_configuration_input('Variable')
 

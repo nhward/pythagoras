@@ -310,13 +310,46 @@ def instance():
                 disabled=bool(reason)
             )
 
+        def ActiveControls():
+            mode = input.Mode()
+            active = {'Mode','UseWeights'}
+            if mode == 'none' or mode is None:
+                return active
+            if input.UseWeights():
+                active.add('Evaluation')
+            if mode == 'resample':
+                req(input.CountFraction() is not None)
+                fraction = float(input.CountFraction())
+                active.add('CountFraction')
+                if fraction > 0:
+                    active.add('Up')
+                if fraction < 100:
+                    active.add('Down')
+                up = input.Up() if 'Up' in active else 'random'
+                down = input.Down() if 'Down' in active else 'random'
+                if up == 'smote' or down != 'random':
+                    active.update(('Metric','Normalize'))
+                if up == 'smote' or down == 'nearmiss':
+                    active.add('Neighbors')
+                if down == 'medoids':
+                    active.add('MedoidLimit')
+                if down in ('medoids','centroids','stratified'):
+                    active.add('Iterations')
+                if down == 'centroids':
+                    active.add('Voting')
+            return active
+
         @this.reactable(calc=True)
         def RawOptions():
-            req(input.Neighbors() is not None, input.MedoidLimit() is not None, input.Iterations() is not None)
-            return {"use_weights": bool(input.UseWeights()), "mode": input.Mode() or "none", "up": input.Up(), "down": input.Down(),
-                        "count_fraction": float(input.CountFraction()) / 100, "metric": input.Metric(),
-                        "normalize": bool(input.Normalize()), "evaluation": input.Evaluation(), "voting": input.Voting(),
-                        "neighbors": int(input.Neighbors()), "medoid_limit": int(input.MedoidLimit()), "iterations": int(input.Iterations())}
+            from export_readiness import read_active_inputs
+            values = read_active_inputs(input, {'Mode':'none','UseWeights':True,'CountFraction':50,
+                'Up':'random','Down':'random','Metric':'euclidean','Normalize':True,
+                'Evaluation':'none','Voting':'hard','Neighbors':5,'MedoidLimit':500,'Iterations':100}, ActiveControls())
+            return {'use_weights':bool(values['UseWeights']),'mode':values['Mode'],
+                'up':values['Up'],'down':values['Down'],'count_fraction':float(values['CountFraction'])/100,
+                'metric':values['Metric'],'normalize':bool(values['Normalize']),'evaluation':values['Evaluation'],
+                'voting':values['Voting'],'neighbors':int(values['Neighbors']),
+                'medoid_limit':int(values['MedoidLimit']),'iterations':int(values['Iterations'])}
 
         @this.reactable(calc=True)
         @this.settle(seconds=1)
@@ -413,7 +446,9 @@ def instance():
             return busy.ui()
 
         session.on_ended(Calculate.cancel)
-        this.export_inputs("Mode", "UseWeights", "Up", "Down", "CountFraction", "Metric", "Normalize", "Evaluation", "Voting", "Neighbors", "MedoidLimit", "Iterations", when=lambda: not Eligibility()[1])
+        this.export_inputs('Mode', when=lambda: not Eligibility()[1])
+        for name in ('UseWeights','CountFraction','Up','Down','Metric','Normalize','Evaluation','Voting','Neighbors','MedoidLimit','Iterations'):
+            this.export_inputs(name, when=lambda name=name: not Eligibility()[1] and input.Mode() not in (None,'none') and name in ActiveControls())
 
         @this.export_check
         def export_ready():

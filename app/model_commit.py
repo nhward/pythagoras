@@ -8,7 +8,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
 
-def prepare_predictors(frame, *, columns, preparation):
+def prepare_predictors(frame, *, columns, preparation, selected_schema=False):
+    if selected_schema:
+        columns = [c for c in columns if c in frame]
+        if not columns:
+            raise ValueError('The fitted selection retained no model predictors')
     result = frame.loc[:, columns].copy()
     categorical = result.select_dtypes(include=['category', 'object', 'string', 'bool']).columns
     for column in categorical:
@@ -33,6 +37,15 @@ def commit_problem(row):
 
 
 def build_model(row, predictors):
+    selected_schema = False
+    if hasattr(predictors, 'model_predictors'):
+        source = predictors
+        predictors = list(source.model_predictors)
+        for _, step in (() if source.pipeline is None else source.pipeline.steps):
+            if getattr(step, 'selection_step', False):
+                selected_schema = True
+                predictors.extend(step.predictors)
+        predictors = list(dict.fromkeys(predictors))
     problem = commit_problem(row)
     if problem:
         raise ValueError(problem)
@@ -41,7 +54,7 @@ def build_model(row, predictors):
     estimator = getattr(import_module(module), name)(**profile['construction']['parameters'])
     preparation = profile['construction']['preparation']
     steps = [('predictors', FunctionTransformer(prepare_predictors,
-        kw_args={'columns': list(predictors), 'preparation': preparation}))]
+        kw_args={'columns': list(predictors), 'preparation': preparation, 'selected_schema': selected_schema}))]
     if preparation == 'impute_onehot':
         steps.append(('prepare', ColumnTransformer([
             ('numeric', Pipeline([('impute', SimpleImputer(strategy='median')),
@@ -52,3 +65,18 @@ def build_model(row, predictors):
         ])))
     steps.append(('estimator', estimator))
     return Pipeline(steps)
+
+
+def with_selection_schema(estimator, candidates):
+    """Clone a catalogue model and let its fitted selector determine predictors."""
+    from sklearn.base import clone
+    result = clone(estimator)
+    if not isinstance(result, Pipeline):
+        return result
+    preparation = result.named_steps.get('predictors')
+    if isinstance(preparation, FunctionTransformer) and preparation.func is prepare_predictors:
+        options = dict(preparation.kw_args)
+        options['columns'] = list(dict.fromkeys([*options['columns'], *candidates]))
+        options['selected_schema'] = True
+        preparation.set_params(kw_args=options)
+    return result

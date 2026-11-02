@@ -470,7 +470,7 @@ def _shadow_choices(eligible, importance, informative_only=True):
 def instance():
     """Create the mutable missingness-type card."""
     this = Card(file=__file__, mutable=True)
-    this.export_inputs('Shadow', 'InformativeOnly')
+    this.export_inputs('Shadow')
     this.long_name = "Informative Missingness"
     this.description = "Assess the predictive information of each predictor's missing values."
 
@@ -570,6 +570,7 @@ def instance():
         @this.settle(seconds=2)
         @this.record_context
         def MaxObs():
+            req(input.MaxObs() is not None)
             return 10**input.MaxObs()
 
         @this.reactable(calc = True)
@@ -581,16 +582,19 @@ def instance():
         @this.reactable(calc=True)
         @this.settle(seconds=2)
         def CVFolds():
+            req(input.CVFolds() is not None)
             return input.CVFolds()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinMissProp():
+            req(input.MinMissProp() is not None)
             return input.MinMissProp()
 
         @this.reactable(calc=True)
         @this.settle(seconds=2)
         def MinBalancedAccuracy():
+            req(input.MinBalancedAccuracy() is not None)
             return input.MinBalancedAccuracy()
 
         @this.reactable(calc=True)
@@ -838,6 +842,7 @@ def instance():
 
         session.on_ended(CalculateAnalysis.cancel)
 
+        this.export_inputs("InformativeOnly", when=lambda: bool(input.Shadow()))
         this.export_inputs("MaxObs", "MinMissProp", when=lambda: bool(input.Shadow()))
         this.export_inputs("CVFolds", "MinBalancedAccuracy", "UseWeights",
                            when=lambda: bool(input.Shadow()) and bool(input.InformativeOnly()))

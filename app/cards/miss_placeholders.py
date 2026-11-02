@@ -67,7 +67,7 @@ def instance():
     Creates an instance of Card configured as MissPlaceholders.
     """
     this = Card(file=__file__, mutable=True) # "mutable" means it can change the pxd - probably with a commit button
-    this.export_inputs('Replace', 'NA_CaseSensitive', 'NA_Extrema')
+    this.export_inputs('Replace')
     this.long_name = "Missing value placeholders"
     this.description = "Detect missing-value placeholders and replace with NA."
 
@@ -505,7 +505,8 @@ def instance():
         @this.reactable(calc = True)
         @this.record_context
         def TransformedData():
-            return _transform_data(incomingproxy_data(), Replace(), input.NA_Extrema(), input.NA_CaseSensitive())
+            selected = Replace()
+            return _transform_data(incomingproxy_data(), selected, input.NA_Extrema() if selected else True, input.NA_CaseSensitive() if selected else False)
 
         @this.record_code
         def _summary_frame(state):
@@ -683,6 +684,8 @@ def instance():
                 "codes": codes_df,
                 "legend": legend,
             }
+
+        this.export_inputs('NA_CaseSensitive', 'NA_Extrema', when=lambda: bool(input.Replace()))
 
         @this.export_check
         def export_ready():

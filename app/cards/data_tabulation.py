@@ -46,6 +46,7 @@ def instance():
     
     this.back = lambda: ui.output_ui(
         id = "StructTable",
+        fill=True, fillable=True, class_="data-tabulation-structure",
         title = "The meta-data", 
         guide = this,
         text = 'The structure of the dataset.',
@@ -380,7 +381,7 @@ def instance():
                 summary=False,
                 filters=False,
                 width="100%",
-                height="98%",
+                height=None,
             )
 
     this.server = server
