@@ -136,7 +136,7 @@ def instance():
         ui.output_data_frame(id='Evidence'),
         ui.tags.details(
             ui.tags.summary(id='Technical evidence'), 
-            ui.output_text_verbatim(id='Technical'),
+            ui.output_code(id='Technical'),
             style='max-height: 180px; overflow: auto; flex-shrink: 0;'
         ),
         ui.tags.details(ui.tags.summary('Fold-by-fold stability'), ui.output_data_frame('StabilityDetails'),

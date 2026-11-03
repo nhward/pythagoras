@@ -718,12 +718,7 @@ def instance():
             id="Labels", label="Label chart points", value=False,
             guide=this, title="Point labels", position="left",
             text="Show variable names beside chart points. Hover information remains available when labels are hidden.",
-        ),
-        ui.input_slider( #TODO: make this fixed as it is elsewhere
-            id="Digits", label="Table decimal places", min=1, max=8,
-            value=3, step=1, guide=this, title="Decimal places",
-            position="left", text="Rounds numeric values in the flip-side statistics table to this many decimal places. It changes presentation only and does not alter fitted transformations or exported values.",
-        ),
+        )
     )
 
     def server(input, output, session):
@@ -833,10 +828,9 @@ def instance():
         @render.data_frame
         @this.record_context
         def StatisticsTable():
-            digits = int(input.Digits())
             table = Analysis().statistics.copy()
             numeric = table.select_dtypes(include="number").columns
-            table[numeric] = table[numeric].round(digits)
+            table[numeric] = table[numeric].round(4)
             return render.DataTable(table, width="100%", height="98%")
 
         @output

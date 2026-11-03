@@ -315,7 +315,7 @@ def instance(
     )
 
     this.back=lambda: ui.TagList(
-        ui.output_text_verbatim("StorageLocation"),
+        ui.output_code("StorageLocation"),
         ui.output_ui("LocalBookmarkFiles")
     )
 

@@ -117,6 +117,12 @@ class TextArray(ExtensionArray):
         result = self._data[item]
         return type(self)(result) if isinstance(result, np.ndarray) else result
 
+    def __setitem__(self, key, value):
+        if pd.api.types.is_scalar(value):
+            self._data[key] = _normalize_text_scalar(value, coerce=False)
+        else:
+            self._data[key] = type(self)._from_sequence(value, dtype=self.dtype)._data
+
     def __eq__(self, other):
         if isinstance(other, TextArray):
             if len(other) != len(self):

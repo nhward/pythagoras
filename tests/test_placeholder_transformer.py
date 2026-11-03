@@ -104,3 +104,39 @@ def test_target_replacement_composes_with_missingness_removal():
     assert model.X_.index.tolist() == [7, 8]
     assert model.y_.tolist() == [0, 1]
     assert model.y_.index.tolist() == [7, 8]
+
+
+@pytest.mark.parametrize("kind", ["basket", "text", "numeric_cycle", "categorical_cycle"])
+def test_custom_array_masked_assignment(kind):
+    from cyclic_pandas import CyclicArray, CyclicDtype
+    from list_pandas import ListArray
+    from text_pandas import TextArray
+
+    if kind == "basket":
+        array = ListArray._from_sequence([["a"], ["b"], ["c"]])
+        replacement = ["replacement"]
+    elif kind == "text":
+        array = TextArray._from_sequence(["a", "b", "c"])
+        replacement = "replacement"
+    elif kind == "numeric_cycle":
+        array = CyclicArray._from_sequence([1, 2, 3], dtype=CyclicDtype(period=24))
+        replacement = 25
+    else:
+        array = CyclicArray._from_sequence(
+            ["a", "b", "c"], dtype=CyclicDtype(categories=["a", "b", "c"])
+        )
+        replacement = "a"
+    source = pd.Series(array, index=[4, 4, 9], name="values")
+    mask = np.array([True, False, True])
+    result = source.mask(mask, pd.NA)
+    assert result.isna().tolist() == [True, False, True]
+    assert not source.isna().any()
+    assert result.dtype == source.dtype
+    assert result.index.equals(source.index)
+    result.array[0] = replacement
+    replacements = type(array)._from_sequence([replacement, pd.NA], dtype=array.dtype)
+    result.loc[mask] = replacements
+    expected = type(array)._from_sequence([replacement], dtype=array.dtype)[0]
+    assert result.iloc[0] == expected
+    assert result.iloc[1] == source.iloc[1]
+    assert result.iloc[2] is pd.NA

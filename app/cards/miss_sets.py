@@ -115,8 +115,8 @@ def _upset_figure(
     figure = make_subplots(
         rows=2,
         cols=2,
-        row_heights=[0.56, 0.44],
-        column_widths=[0.32, 0.68],
+        row_heights=[0.3, 0.7],
+        column_widths=[0.3, 0.7],
         horizontal_spacing=0.025,
         vertical_spacing=0.055,
         specs=[[None, {}], [{}, {}]],

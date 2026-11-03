@@ -384,13 +384,13 @@ def instance():
             text="Remove encoded source columns from the card's output. Alternatively, retain them with their existing roles alongside the encoded numeric indicators."
         ),
         ui.h5('Nominal encoding'),
-        ui.input_numeric(
-            id='MinFrequency', label='Minimum level count', value=1, min=1, step=1, 
+        ui.input_slider(
+            id='MinFrequency', label='Minimum level count', value=1, min=1, max=10, step=1, 
             guide=this, position='left',
             text='Rare nominal-levels that are observed fewer than this minimum are pooled into an infrequent group. "1" disables this threshold.'
         ),
-        ui.input_numeric( #TODO slider?
-            id='MaxCategories', label='Maximum categories (0 = unlimited)', value=0, min=0, step=1, 
+        ui.input_slider(
+            id='MaxCategories', label='Maximum categories (0 = unlimited)', value=0, min=0, max=4096, step=1, 
             guide=this, position='left',
             text='Keep at most this many nominal-levels, including the pooled infrequent category. "0" or "1" disables the limit. 4096 nominal-levels is the algorithmic upper limit.'
         ),
@@ -405,8 +405,8 @@ def instance():
             guide=this, position='left',
             text='The "Empirical Bayes" option chooses smoothing automatically and is the general default. The "Fixed smoothing" option blends each level mean with the global mean using the specified prior strength. The "No smoothing" option uses raw level means and can be unstable for rare codes.'
         ),
-        ui.input_numeric(  #TODO slider?
-            id='CodeSmoothing', label='Target smoothing strength', value=10, min=0, step=1, 
+        ui.input_slider(
+            id='CodeSmoothing', label='Target smoothing strength', value=10, min=0, max=50, step=1, 
             guide=this, position='left',
             text='Used only by the "fixed-strength smoothing" option: (level target sum + strength × overall mean) / (level count + strength). Larger values shrink rare levels more. For classification the calculation applies to class indicators.'
         ),
@@ -426,7 +426,7 @@ def instance():
             guide=this, position='left',
             text='Ordinal ranks uses sklearn OrdinalEncoder to produce 0, 1, …, d−1 in the declared level order. Polynomial contrasts provide an R contr.poly-style alternative: linear (L), quadratic (Q), cubic (C), and higher terms. With all degrees, d levels produce d−1 columns, excluding the constant. Both methods treat rank spacing as equal; actual numeric level labels do not supply distances.'
         ),
-        ui.input_numeric( #TODO slider?
+        ui.input_slider(
             id='OrderedDegree', label='Maximum polynomial degree (0 = all)', value=0, min=0, max=64, step=1, 
             guide=this, position='left',
             text='Used only for polynomial contrasts. Zero includes all d−1 degrees; a positive value caps the degree at that value or d−1, whichever is smaller. At most 64 degrees are supported. Full contrasts allow arbitrary level effects in a linear model; restricting degree imposes a simpler trend. Columns are orthogonal over equally weighted levels, not necessarily across an unbalanced sample.'

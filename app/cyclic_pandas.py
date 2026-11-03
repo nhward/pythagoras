@@ -245,6 +245,13 @@ class CyclicArray(ExtensionArray):
             return pd.NA if result == -1 else self.dtype.categories[int(result)]
         return pd.NA if np.isnan(result) else result.item()
 
+    def __setitem__(self, key, value):
+        scalar = pd.api.types.is_scalar(value)
+        encoded = type(self)._from_sequence(
+            [value] if scalar else value, dtype=self.dtype
+        )._data
+        self._data[key] = encoded[0] if scalar else encoded
+
     def __eq__(self, other):
         if isinstance(other, CyclicArray):
             if self.dtype != other.dtype:

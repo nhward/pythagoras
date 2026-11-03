@@ -102,7 +102,7 @@
       "module": "miss_map",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "1d453e896fe53970994e8a7b3cf68c69226e16a2d7ec273efbefe30265166445"
+      "source_hash": "62576e03c45850b04d649d3fcab334ac84ef3d418ac3468a7ae38440721dd8d3"
     },
     "miss_placeholders": {
       "description": "Detect missing-value placeholders and replace with NA.",
@@ -126,7 +126,7 @@
       "module": "miss_sets",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "088b3ce4d80ab69eda17e806c60ad84279fab7bed229eb9cacff010725a27c04"
+      "source_hash": "67aeeefaf647eff8649bc1c97fe5b69bc5b264de2efa4181dd6c13cf62285eb0"
     },
     "miss_type": {
       "description": "Assess whether each variable's missingness is random or not.",
@@ -206,7 +206,7 @@
       "module": "sys_configuration",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "dfbbad5b13d2548a1691cac0273d041715b0eba09c262326c602398c5c493cd0"
+      "source_hash": "4a69ed0a7859f4dab1b34ab0870fed6ea8647622cfcfda70bd9bdae0019bd929"
     },
     "system_log": {
       "description": "List recent logged messages, warnings and errors.",
@@ -278,7 +278,7 @@
       "module": "var_encode",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "ed0a8308b85ce830a3c0b7cb046e6a2ed8a710fb1ab38c601f545e5159f02518"
+      "source_hash": "fae16395d5a5f1beeb42ad0fa63963d0ee547434e18d0356631901c473318e12"
     },
     "var_modify": {
       "description": "Modify variable characteristics such as name, data-type, and order.",
@@ -318,7 +318,7 @@
       "module": "var_select",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "69d3218271e6122c2a7c2016403b92c4b5091affe2dd5a5dace47ea14a267e7f"
+      "source_hash": "261efcd340fe3bc9bd6f8d459a9ab6f14fbff2ad7ab975ecde9c5f8c45054200"
     },
     "var_text_encode": {
       "description": "Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.",
@@ -342,7 +342,7 @@
       "module": "var_transform",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "e46b354faa0e08cd3f7daa3231bc0834b179151feeec61e852a59afa3db015c2"
+      "source_hash": "d5498db19eaa7feebdc528ff40130f0a975e6eab92ae9c96c0f5d31763c3849b"
     }
   },
   "schema_version": 1

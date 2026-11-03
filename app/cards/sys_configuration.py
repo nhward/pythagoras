@@ -54,7 +54,7 @@ def instance():
     this.front = front
 
     def back():
-        return ui.output_text_verbatim(id = "Session", guide = this, title = "Session", priority = -10, position = "bottom", text = "Shows conventional Python session information. Full-screen mode includes additional dependency, standard-library, and private-package detail.")
+        return ui.output_code(id = "Session", guide = this, title = "Session", priority = -10, position = "bottom", text = "Shows conventional Python session information. Full-screen mode includes additional dependency, standard-library, and private-package detail.")
     this.back = back
   
     def footer():

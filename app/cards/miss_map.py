@@ -243,55 +243,55 @@ def _missingness_figure(
         text=np.broadcast_to(np.asarray([str(column) for column in columns])[:, None], matrix.shape),
     )
 
-    if full_screen:
-        figure = make_subplots(
-            rows=2,
-            cols=2,
-            row_heights=[0.78, 0.22],
-            column_widths=[0.82, 0.18],
-            horizontal_spacing=0.035,
-            vertical_spacing=0.045,
-            specs=[[{}, {}], [{}, None]],
-        )
-        figure.add_trace(heatmap, row=1, col=1)
-        variable_proportions = matrix.mean(axis=1)
-        figure.add_trace(go.Bar(
-            x=variable_proportions,
-            y=y,
-            orientation="h",
-            marker_color="#154c79",
-            hovertemplate="%{x:.1%} missing<extra></extra>",
-            showlegend=False,
-        ), row=1, col=2)
-        # Hiding complete variables is a display choice only. Observation
-        # missingness (and therefore its threshold) must retain every variable
-        # in the transformed data, matching removal and issue calculations.
-        observation_proportions = missing.mean(axis=1)
-        figure.add_trace(go.Bar(
-            x=x,
-            y=observation_proportions,
-            marker_color="#154c79",
-            hovertemplate="%{y:.1%} missing<extra></extra>",
-            showlegend=False,
-        ), row=2, col=1)
-        figure.update_xaxes(showticklabels=False, range=[-0.5, len(x) - 0.5], row=1, col=1)
-        figure.update_yaxes(tickmode="array", tickvals=y, ticktext=list(map(str, columns)), range=[len(y) - 0.5, -0.5], row=1, col=1)
-        figure.update_yaxes(showticklabels=False, range=[len(y) - 0.5, -0.5], row=1, col=2)
-        figure.update_xaxes(title_text="Variable missingness", tickformat=".0%", range=[0, 1], row=1, col=2)
-        figure.update_xaxes(title_text="Observations", showticklabels=False, range=[-0.5, len(x) - 0.5], row=2, col=1)
-        figure.update_yaxes(title_text="Missingness", tickformat=".0%", range=[0, 1], row=2, col=1)
-        if show_thresholds:
-            figure.add_vline(x=variable_threshold, line_dash="dash", line_color="#b22222", row=1, col=2)
-            figure.add_hline(y=observation_threshold, line_dash="dash", line_color="#b22222", row=2, col=1)
-    else:
-        figure = go.Figure(heatmap)
-        figure.update_xaxes(title_text="Observations", showticklabels=False, range=[-0.5, len(x) - 0.5])
-        figure.update_yaxes(tickmode="array", tickvals=y, ticktext=list(map(str, columns)), range=[len(y) - 0.5, -0.5])
+    figure = make_subplots(
+        rows=2,
+        cols=2,
+        row_heights=[0.25, 0.75],
+        column_widths=[0.25, 0.75],
+        horizontal_spacing=0.035,
+        vertical_spacing=0.045,
+        specs=[[None, {}], [{}, {}]],
+    )
+    variable_proportions = matrix.mean(axis=1)
+    hist1 = go.Bar(
+        x=variable_proportions,
+        y=y,
+        orientation="h",
+        marker_color="#154c79",
+        hovertemplate="%{x:.1%} missing<extra></extra>",
+        showlegend=False,
+    )
+    # Hiding complete variables is a display choice only. Observation
+    # missingness (and therefore its threshold) must retain every variable
+    # in the transformed data, matching removal and issue calculations.
+    observation_proportions = missing.mean(axis=1)
+    hist2 = go.Bar(
+        x=x,
+        y=observation_proportions,
+        marker_color="#154c79",
+        hovertemplate="%{y:.1%} missing<extra></extra>",
+        showlegend=False,
+    )
+    max_v = min(max(variable_proportions.max(),variable_threshold*1.1),1.0)
+    figure.update_xaxes(showticklabels=False, range=[-0.5, len(x) - 0.5], row=1, col=2)
+    figure.update_xaxes(title_text="Missingness", tickformat=".0%", range=[max_v,0], row=2, col=1)
+    figure.update_xaxes(title_text="Observations", showticklabels=False, range=[-0.5, len(x) - 0.5], row=2, col=2)
+    max_o = min(max(observation_proportions.max(),observation_threshold*1.1), 1.0)
+    figure.update_yaxes(showticklabels=True, tickmode="array", tickvals=y, ticktext=list(map(str, columns)), range=[len(y) - 0.5, -0.5], row=2, col=1)
+    figure.update_yaxes(title_text="Missingness", tickformat=".0%", range=[0, max_o], row=1, col=2)
+    figure.update_yaxes(showticklabels=False, range=[len(y) - 0.5, -0.5], row=2, col=2)
+    figure.add_trace(hist2, row=1, col=2)
+    figure.add_trace(hist1, row=2, col=1)
+    figure.add_trace(heatmap, row=2, col=2)
+    if show_thresholds:
+        figure.add_vline(x=variable_threshold, line_dash="dash", line_color="#b22222", row=2, col=1)
+        figure.add_hline(y=observation_threshold, line_dash="dash", line_color="#b22222", row=1, col=2)
 
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        margin={"l": 15, "r": 20, "t": 10, "b": 35},
+        plot_bgcolor="#bbd6f8",
+        margin={"l": 15, "r": 20, "t": 10, "b": 15},
         showlegend=False,
         modebar={"orientation": "v"},
         font={"size": 13 if full_screen else 10},

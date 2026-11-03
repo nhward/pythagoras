@@ -156,6 +156,14 @@ class ListArray(ExtensionArray):
             return type(self)(result, self.dtype)
         return result
 
+    def __setitem__(self, key, value):
+        if isinstance(key, (int, np.integer)):
+            self._data[key] = _normalize_list_scalar(value)
+        elif _is_missing_scalar(value):
+            self._data[key] = pd.NA
+        else:
+            self._data[key] = type(self)._from_sequence(value, dtype=self.dtype)._data
+
     def __eq__(self, other):
         if isinstance(other, ListArray):
             if len(other) != len(self):

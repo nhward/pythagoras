@@ -5,10 +5,8 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 from code_recording import recordable
-from cyclic_pandas import is_cyclic
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
-from text_pandas import is_text
 from var_types import key_from_dtype
 
 
@@ -114,20 +112,9 @@ def _apply_list_placeholder_codes(
 
 
 @recordable
-def _rebuild_custom_series(series: pd.Series, values: list[object]) -> pd.Series:
-    array = type(series.array)._from_sequence(values, dtype=series.dtype)
-    return pd.Series(array, index=series.index, name=series.name)
-
-
-@recordable
 def _replace_scalar_matches(series: pd.Series, mask: np.ndarray) -> pd.Series:
     if not mask.any():
         return series
-    if is_cyclic(series.dtype) or is_text(series.dtype):
-        values = list(series.array)
-        for position in np.flatnonzero(mask):
-            values[int(position)] = pd.NA
-        return _rebuild_custom_series(series, values)
     result = series.copy()
     result.loc[mask] = pd.NaT if pd.api.types.is_datetime64_any_dtype(series.dtype) else pd.NA
     return result
@@ -143,11 +130,10 @@ def _remove_list_placeholders(
     """Remove matching string elements in one pass, preserving ListDtype."""
     if not placeholders:
         return series
-    changed = False
+    positions: list[int] = []
     values: list[object] = []
-    for value in series.array:
+    for position, value in enumerate(series.array):
         if value is pd.NA:
-            values.append(pd.NA)
             continue
         retained = [
             item
@@ -159,14 +145,15 @@ def _remove_list_placeholders(
         ]
         matched = len(retained) != len(value)
         if matched:
-            changed = True
+            positions.append(position)
             values.append(retained if retained else pd.NA)
-        else:
-            values.append(value)
-    if not changed:
+    if not positions:
         return series
-    # TODO: Implement __setitem__/_putmask in the custom extension arrays so pandas-native masked assignment can replace this reconstruction step.
-    return _rebuild_custom_series(series, values)
+    result = series.copy()
+    mask = np.zeros(len(series), dtype=bool)
+    mask[positions] = True
+    result.loc[mask] = type(series.array)._from_sequence(values, dtype=series.dtype)
+    return result
 
 
 @recordable

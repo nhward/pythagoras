@@ -1065,6 +1065,38 @@ visibility: hidden;
 flex: 1 1 0;
 min-height: 0;
 }
+
+.data-tabulation-structure {
+min-height: 0;
+min-width: 0;
+overflow: hidden;
+}
+.data-tabulation-structure > shiny-data-frame,
+.data-tabulation-structure > shiny-data-frame > .html-fill-container {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+}
+.data-tabulation-structure .shiny-data-grid {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+overflow: auto;
+}
+.data-tabulation-structure .shiny-data-grid > table {
+min-width: 70rem;
+}
+.data-tabulation-structure .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+.flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
+.flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
 </style>
 </head>
 
