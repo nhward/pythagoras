@@ -629,6 +629,24 @@ document.addEventListener("DOMContentLoaded", () => {
         Shiny.setInputValue(msg.id, msg.value, { priority: "event" });
     });
 
+    Shiny.addCustomMessageHandler("update_navbar_collapse", (msg) => {
+        const navbar = document.getElementById(msg.id)?.closest(".navbar");
+        if (!navbar) return;
+        const collapsed = Boolean(msg.collapsed);
+        if (navbar.classList.contains("force-collapse") === collapsed) return;
+        navbar.classList.toggle("force-collapse", collapsed);
+        // Expanded mode applies at every viewport width, including fullscreen.
+        navbar.classList.toggle("navbar-expand", !collapsed);
+        const menu = navbar.querySelector(".navbar-collapse");
+        if (menu) {
+            bootstrap.Collapse.getInstance(menu)?.dispose();
+            menu.classList.remove("show", "collapsing");
+            menu.classList.add("collapse");
+            menu.style.height = "";
+        }
+        navbar.querySelector(".navbar-toggler")?.setAttribute("aria-expanded", "false");
+    });
+
     Shiny.addCustomMessageHandler("UpdateCardOrder", (msg) => {
         publishCardOrder(msg.id, msg.input_id);
     });

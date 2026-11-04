@@ -34,6 +34,7 @@ from proxy_data import proxy_data
 from roles import Role
 from shiny import render, req, ui
 from shiny.types import SilentOperationInProgressException
+from shiny.ui.fill import as_fill_item, as_fillable_container
 from shinywidgets import render_widget
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.metrics import balanced_accuracy_score, r2_score
@@ -1119,10 +1120,10 @@ def _tree_figure(analysis: TreeAnalysis) -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#bbd6f8",
         margin={
-            "l": 25,
-            "r": 25,
-            "t": 25,
-            "b": 25,
+            "l": 0,
+            "r": 0,
+            "t": 0,
+            "b": 0,
         },
         showlegend=False,
         xaxis={
@@ -1150,11 +1151,10 @@ def instance():
     this.defer_configuration_input("Target")
     this.long_name = "Missingness Type"
     this.description = "Assess whether each variable's missingness is random or not."
-
     this.front = lambda: ui.navset_bar(
         ui.nav_panel(
             "Obs-count",
-            ui.span("Predicting missing-value counts in observations ", class_="text-info text-center d-block"),
+            ui.span("Predicting missing-value counts in observations ", class_="text-primary text-center d-block"),
             shinywidgets.output_widget(
                 id="Tree",
                 fill=True,
@@ -1169,10 +1169,10 @@ def instance():
         padding = 0, 
         fillable = True,
         navbar_options=ui.navbar_options(
-                collapsible=False,
+                collapsible=True,
                 underline = True,
                 bg="lightgrey",
-                class_="nominal-navbar",
+                class_="nominal-navbar navbar-expand",
             )
     )
 
@@ -1425,6 +1425,19 @@ def instance():
         current_tabs: tuple[str, ...] = ()
         registered_tree_outputs: set[str] = set()
 
+        @this.reactable()
+        async def UpdateNavbarCollapse():
+            # Include the permanent Obs-count panel in the tab count.
+            collapsed = (
+                not this.isFullScreen()
+                and len(MissingVariables()) + 1
+                > this.config.get("settings", {}).get("max_collapse", 6)
+            )
+            await session.send_custom_message(
+                "update_navbar_collapse",
+                {"id": session.ns("Target"), "collapsed": collapsed},
+            )
+
         @this.reactable(triggers=[MissingVariables])
         @this.record_context
         def UpdateChoices():
@@ -1434,7 +1447,6 @@ def instance():
                 current_tabs,
                 desired_tabs,
             )
-
             if input.Target() in removed_tabs:
                 ui.update_navset(id="Target", selected=OBS_COUNT)
             for var in removed_tabs:
@@ -1458,6 +1470,10 @@ def instance():
                     ),
                     value=var,
                 )
+                # insert_nav_panel bypasses navset_bar's initial fill/spacing setup.
+                panel.content = as_fillable_container(as_fill_item(panel.content))
+                panel.content.add_class("bslib-gap-spacing")
+                panel.content.add_style("padding: 0; --bslib-navbar-margin: 0;")
                 ui.insert_nav_panel(
                     id="Target",
                     nav_panel=panel,
@@ -1694,6 +1710,14 @@ def instance():
                 )
             analysis = Model()
             if analysis.task == "classification":
+                # result() signals an output-in-progress while the full table
+                # runs. Keep the front usable; FDR-adjusted interpretation
+                # still needs the completed diagnostics for every variable.
+                if CalculateTypeTable.status() in {"initial", "running"}:
+                    return ui.span(
+                        "The tree is ready. Missingness classification is still in progress.",
+                        class_="text-info text-center d-block",
+                    )
                 table = TypeTable()
                 selected = table.loc[table["Variable"] == SelectedTarget()]
                 req(not selected.empty)

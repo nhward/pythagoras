@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +28,12 @@ app = create_app_fixture(app="../scenarios/miss_type.py", scope="function")
 restore_app = create_app_fixture(
     app="../scenarios/miss_type_restore.py",
     scope="function",
+)
+collapse_app = create_app_fixture(
+    app="../scenarios/miss_type_collapse.py", scope="function"
+)
+slow_app = create_app_fixture(
+    app="../scenarios/miss_type_slow.py", scope="function"
 )
 
 @pytest.fixture(scope="session")
@@ -500,6 +507,84 @@ class TestTableAndPlot:
 
 
 class TestWebKitUI:
+    @pytest.mark.ui
+    def test_obs_count_widget_is_namespaced_and_renders(
+        self, page: Page, app: ShinyAppProc
+    ):
+        page.goto(app.url)
+        tree = by_id(page, "Tree")
+        expect(tree).to_be_visible(timeout=30_000)
+        expect(page.locator('[id="Tree"]')).to_have_count(0)
+        expect(tree.locator(".plotly")).to_be_attached(timeout=30_000)
+        expect(tree).not_to_have_class(re.compile(r".*recalculating.*"))
+        span_offset = """el => {
+            const pane = el.closest('.tab-pane');
+            return pane.querySelector('span').getBoundingClientRect().top
+                - pane.getBoundingClientRect().top;
+        }"""
+        obs_count_offset = tree.evaluate(span_offset)
+        chart_gap = """el => el.getBoundingClientRect().top
+            - el.closest('.tab-pane').querySelector('span').getBoundingClientRect().bottom"""
+        assert tree.evaluate(chart_gap) == pytest.approx(0, abs=1)
+        target = page.get_by_role("tab", name="target", exact=True)
+        target.click()
+        expect(by_id(page, "target__Tree").locator(".plotly")).to_be_attached(
+            timeout=30_000
+        )
+        assert by_id(page, "target__Tree").evaluate(span_offset) == pytest.approx(
+            obs_count_offset, abs=1
+        )
+        assert by_id(page, "target__Tree").evaluate(chart_gap) == pytest.approx(0, abs=1)
+        page.get_by_role("tab", name="Obs-count", exact=True).click()
+        expect(tree).to_be_visible()
+        expect(tree.locator(".plotly")).to_be_attached()
+
+    @pytest.mark.ui
+    def test_front_tree_ready_while_type_table_is_running(
+        self, page: Page, slow_app: ShinyAppProc
+    ):
+        page.goto(slow_app.url)
+        page.get_by_role("tab", name="target", exact=True).click(timeout=30_000)
+        summary = by_id(page, "Summary")
+        expect(summary).to_contain_text("The tree is ready.", timeout=8_000)
+        expect(by_id(page, "target__Tree").locator(".plotly")).to_be_attached()
+        expect(summary).not_to_have_class(re.compile(r".*recalculating.*"))
+        expect(summary).to_contain_text("Interpretation: Patterned.", timeout=30_000)
+
+    @pytest.mark.ui
+    def test_dynamic_navbar_collapse_and_fullscreen(
+        self, page: Page, collapse_app: ShinyAppProc
+    ):
+        page.goto(collapse_app.url)
+        navbar = get_card(page).locator(".nominal-navbar")
+        toggle = navbar.get_by_role("button", name="Toggle navigation")
+        target = page.get_by_role("tab", name="target", exact=True)
+        expect(navbar).to_have_class(re.compile(r".*force-collapse.*"), timeout=30_000)
+        expect(target).to_be_hidden()
+        toggle.click()
+        expect(target).to_be_visible()
+        target.click()
+        expect(target).to_have_attribute("aria-selected", "true")
+
+        get_card(page).locator(".expand-btn").click()
+        expect(toggle).to_be_hidden()
+        expect(target).to_be_visible()
+        expect(target).to_have_attribute("aria-selected", "true")
+        get_card(page).locator(".contract-btn").click()
+        expect(toggle).to_be_visible()
+        expect(target).to_be_hidden()
+
+        set_shiny_input(page, "MinMissProp", 0.5)
+        expect(target).to_have_count(0, timeout=30_000)
+        expect(toggle).to_be_hidden()
+        expect(page.get_by_role("tab", name="Obs-count", exact=True)).to_be_visible()
+        set_shiny_input(page, "MinMissProp", 0.49)
+        expect(toggle).to_be_visible(timeout=30_000)
+        expect(target).to_be_hidden()
+        toggle.click()
+        expect(target).to_be_visible()
+        expect(page.locator(".shiny-notification-error")).to_have_count(0)
+
     @pytest.mark.ui
     def test_bookmark_selects_dynamic_target_after_panel_creation(
         self,

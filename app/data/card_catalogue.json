@@ -94,7 +94,7 @@
       "module": "miss_manual",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "004f75dc07bb24cda23a7020fc9dc005da30419e4535f4f57b4883116dab71a9"
+      "source_hash": "4f02157e3dcecf2771eaa041c49ec41624828ad5a010adb05eb54548dcde0d43"
     },
     "miss_map": {
       "description": "Map missing values across variables and observations looking for excessive missingness.",
@@ -102,7 +102,7 @@
       "module": "miss_map",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "62576e03c45850b04d649d3fcab334ac84ef3d418ac3468a7ae38440721dd8d3"
+      "source_hash": "cfe93ba5022ce758b3775594b9db56e484a1ba73321846fa83c0be166b2dabe9"
     },
     "miss_placeholders": {
       "description": "Detect missing-value placeholders and replace with NA.",
@@ -134,7 +134,7 @@
       "module": "miss_type",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "5c63685ecf467acefd22a914f63faa34f7f7b22d4744746af76d905734dc998d"
+      "source_hash": "b8f23a7a1dbd50529cc14e9a59ccd23e87c501a8ed8820c33967610ca7b9755e"
     },
     "obs_cluster_profile": {
       "description": "Explain cluster memberships using an interpretable tree and held-out fidelity scores.",
@@ -294,7 +294,7 @@
       "module": "var_nominal",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "c66048716be944be554f565ade6972bc7065fc9b8962b23bd186f7914710f30c"
+      "source_hash": "184a7e4ae9ffd5f57ca3883b4eb728f44c110e986da1e395e559faa7bcb10422"
     },
     "var_pairs": {
       "description": "Explore pairs of variables using charts suited to their semantic types.",

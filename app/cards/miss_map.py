@@ -293,6 +293,7 @@ def _missingness_figure(
         plot_bgcolor="#bbd6f8",
         margin={"l": 15, "r": 20, "t": 10, "b": 15},
         showlegend=False,
+        hovermode="closest" if full_screen else False,
         modebar={"orientation": "v"},
         font={"size": 13 if full_screen else 10},
     )
@@ -349,8 +350,8 @@ def instance():
             guide = this, text = "Orders heat-map columns from highest to lowest missing proportion. Turn this off when the original variable order carries useful structural meaning.", position="left"
         ),
         ui.input_checkbox(
-            id="ShowThresholds", label="Show thresholds in full screen", value=True,
-            guide = this, text = "Displays the variable and observation thresholds as reference lines in full-screen mode. It does not change classification or removal.", position="left"
+            id="ShowThresholds", label="Show thresholds", value=True,
+            guide = this, text = "Displays the variable and observation thresholds as reference lines. It does not change classification or removal.", position="left"
         ),
         ui.input_slider(
             id="MaxObs", label="Maximum observations to analyze", min=3, max=7, value=4, ticks=True, pre="10^",

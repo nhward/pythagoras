@@ -109,6 +109,13 @@ z-index: 1;
 transform: rotateY(180deg);
 }
 
+.card .html-fill-container:has(> span + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> span + .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + .shiny-ipywidget-output) {
+row-gap: 0 !important;
+}
+
 .bslib-card,
 .card {
 position: relative;

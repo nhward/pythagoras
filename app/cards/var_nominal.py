@@ -450,7 +450,7 @@ def instance():
                     class_=(
                         "nominal-navbar force-collapse"
                         if not this.isFullScreen() and len(panels) > this.config.get("settings", {}).get("max_collapse", 6)
-                        else "nominal-navbar"
+                        else "nominal-navbar force-expand"
                     ),
                 )
             )
