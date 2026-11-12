@@ -3,8 +3,10 @@ import json
 import os
 import sys
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
 APP_ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(APP_ROOT)
 sys.path.insert(0, str(APP_ROOT))
@@ -53,7 +55,7 @@ def server(input, output, session):
             return 'added=none'
         nominal = all(isinstance(data.frame[name].dtype, pd.CategoricalDtype) and not data.frame[name].cat.ordered for name in added)
         stratifiers = all(Role.STRATIFIER in data.role_map.roles_for(name) for name in added)
-        methods = [record.parameters['method'] for record in data.processing_records if record.operation == 'Add cluster membership']
+        methods = [method for record in data.processing_records if record.operation == 'Add cluster membership' for method in record.parameters.get('methods', (record.parameters.get('method'),))]
         return f"added={','.join(added)}; methods={','.join(methods)}; nominal={nominal}; stratifiers={stratifiers}; pipeline={','.join(data.pipeline_steps)}; clean_columns={','.join(data.clean_frame.columns)}"
     @output(suspend_when_hidden=False)
     @render.text
@@ -66,8 +68,8 @@ def server(input, output, session):
             'weighting': sorted(data.role_map.columns_with_role(Role.WEIGHTING)),
             'levels': {col: list(data.frame[col].cat.categories) for col in added},
             'assigned': {col: int(data.frame[col].notna().sum()) for col in added},
-            'recipes': {step.method: {'centre': step.centre, 'weighting': step.weighting}
-                        for _, step in data.pipeline.steps} if data.has_pipeline else {},
+            'recipes': {method: {'centre': step.centre, 'weighting': step.weighting}
+                        for _, step in data.pipeline.steps for method in step.methods} if data.has_pipeline else {},
         }, sort_keys=True)
     return selected
 this.server = server

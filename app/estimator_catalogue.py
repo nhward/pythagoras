@@ -84,6 +84,46 @@ def find_profiles(catalogue, *, task=None, required=(), validated_only=True,
 TASK_ALIASES = {'regression': 'regressor', 'classification': 'classifier'}
 
 
+@lru_cache(maxsize=4)
+def _resampling_records(path, modified_ns, size):
+    return json.loads(Path(path).read_text())['recipes']
+
+
+def implicit_resampling(profile):
+    """Reviewed recipe evidence, not a class-name suffix heuristic.
+
+    Parameter drift invalidates the review rather than silently claiming no CV.
+    """
+    path = DEFAULT_PATH.with_name('implicit_resampling.json')
+    stat = path.stat()
+    records = _resampling_records(str(path), stat.st_mtime_ns, stat.st_size)
+    record = records.get(profile['id'])
+    if (record is None or record['parameters'] != profile.get('construction', {}).get('parameters', {})
+            or record['package_version'] != profile.get('reviewed_package_version')):
+        return {'status': 'unknown', 'reason': 'Internal validation/tuning splits have not been reviewed for this configuration.'}
+    return {k: record[k] for k in ('status', 'reason')}
+
+
+@lru_cache(maxsize=4)
+def _throughput_records(path, modified_ns, size):
+    data = json.loads(Path(path).read_text())
+    for record in data['recipes'].values():
+        if record['rating'] not in {'Low', 'Medium', 'High'} or not record['reason'] or not record['sources']:
+            raise ValueError('Invalid prediction throughput assessment.')
+    return data['recipes']
+
+
+def prediction_throughput(profile):
+    """Documentation-informed model-only guidance, separate from runtime evidence."""
+    path = DEFAULT_PATH.with_name('prediction_throughput.json')
+    stat = path.stat()
+    record = _throughput_records(str(path), stat.st_mtime_ns, stat.st_size).get(profile['id'])
+    if (record is None or record['configuration'] != profile.get('construction', profile.get('parameters', {}))
+            or record['package_version'] != profile.get('reviewed_package_version', profile.get('documentation_version'))):
+        return None
+    return deepcopy(record)
+
+
 def assess_profiles(catalogue, *, task, required=(), structure=(), outputs=(),
                     available_requirements=(), package_versions=None):
     """Return explanatory rows, including excluded and unverified recipes.
@@ -128,6 +168,8 @@ def assess_profiles(catalogue, *, task, required=(), structure=(), outputs=(),
             compatibility = 'incompatible' if reasons else 'unknown' if unknown else 'compatible'
             result.append({'id': profile['id'], 'estimator': profile['estimator'], 'task': profile['task'],
                            'purpose': purpose,
+                           'implicit_resampling': implicit_resampling(profile),
+                           'prediction_throughput': prediction_throughput(profile),
                            'superseded_by': deepcopy(entries.get(profile['estimator'], {}).get('superseded_by')),
                            'compatibility': compatibility, 'reasons': reasons + unknown,
                            'evidence': 'probe_passed' if verified else 'documentation_only' if specialist else profile['validation'],

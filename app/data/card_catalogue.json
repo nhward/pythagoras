@@ -30,7 +30,7 @@
       "module": "data_models",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "94edc2b1780aecf57f778646cb3f23aadfab4c6bc45ff9a9d375aa9baf97d623"
+      "source_hash": "81a789cf9efccdd39ddc6ab47745b12975cff45e5bb6e2280ca71d526cf412ef"
     },
     "data_parallel": {
       "description": "Compare observations across several variables as a series of lines.",
@@ -70,7 +70,7 @@
       "module": "data_tabulation",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "a6ce81a286ce54bcdeb4b8dee25201c1a9396977455c7cbe7552e08cc4dab66b"
+      "source_hash": "72f2290dcae3c711261c26585e8637c91e207ba3376632ca32fa011d35de3bd9"
     },
     "miss_impute": {
       "description": "Statistically impute missing predictor values and evaluate these imputations.",
@@ -78,7 +78,7 @@
       "module": "miss_impute",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "80301106905c133dac82bb3513b5d6cc90b8a73db9c55bfe94ffcfb0f7ebd98f"
+      "source_hash": "88ec041606c75c3ab377b1c4f4911377c3abab76dcfe886d769ba5dc7eacbae2"
     },
     "miss_informative": {
       "description": "Assess the predictive information of each predictor's missing values.",
@@ -134,7 +134,7 @@
       "module": "miss_type",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "b8f23a7a1dbd50529cc14e9a59ccd23e87c501a8ed8820c33967610ca7b9755e"
+      "source_hash": "aba874511b6cde5ff10a280d6b81a20c037bdea9c291245c860a10dfc0528ee9"
     },
     "obs_cluster_profile": {
       "description": "Explain cluster memberships using an interpretable tree and held-out fidelity scores.",
@@ -142,7 +142,7 @@
       "module": "obs_cluster_profile",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "64f4287f477dbae79e21fcd4aa671684d12ef6a6a05c6670ddd4adc62683dae1"
+      "source_hash": "e1305637da1b299f099d9aaba3103c302a80bcad32c21fc025286ac837d84770"
     },
     "obs_clusters": {
       "description": "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers.",
@@ -150,7 +150,7 @@
       "module": "obs_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "c20a871fb288e5ba06e5e6af98eb50e29a22862f44e5c57fce0241fed1db4008"
+      "source_hash": "e73b78caddd9060d48bd849fe748bf37632aa52600efa556abbbaa2dbc0efb96"
     },
     "obs_dependence": {
       "description": "Are observations ordered in time or repeated within entities, and is serial dependence detectable?",
@@ -190,7 +190,7 @@
       "module": "obs_resample",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "e9015c93e8197891f789d9014247929cc06643581294815746e8afab57222015"
+      "source_hash": "82997b72508c1d76980435c6497478c9b7ee070b46e2f1e6e57c5d22cfce4520"
     },
     "obs_weighting": {
       "description": "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights.",
@@ -200,13 +200,21 @@
       "pipeline_compatible": true,
       "source_hash": "c364dc16e19488a381c32c546c983043f5c9254ad4f5510c23c0449ee65b6502"
     },
+    "pipeline_tune": {
+      "description": "Optimize committed pipeline and model parameters using fixed evaluation splits.",
+      "long_name": "Pipeline tuning",
+      "module": "pipeline_tune",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "8b389cdc454d3fe43d2c5755d559dacdb4e556e74bcb38b061f35a865f2af4ca"
+    },
     "sys_configuration": {
       "description": "List the host-system configuration.",
       "long_name": "Configuration",
       "module": "sys_configuration",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "4a69ed0a7859f4dab1b34ab0870fed6ea8647622cfcfda70bd9bdae0019bd929"
+      "source_hash": "f9e68f938ebcdec355f9ae85989164793fcba937ac27f20d0192c40bbb91bce0"
     },
     "system_log": {
       "description": "List recent logged messages, warnings and errors.",
@@ -222,7 +230,7 @@
       "module": "table_report",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "8d52da96553a96ac808c1d7f58c8b9644a5cccff1cd96e51b4b85689e51e01cd"
+      "source_hash": "e6f92ff2fe9057cdf509bee1dc8e833b698bb63155094b8313765066ae09af02"
     },
     "targ_balance": {
       "description": "Assess the target's imbalance and adjust it through reweignting or resampling.",
@@ -238,7 +246,7 @@
       "module": "tuning_parameters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "0e14791c2a5b86691107e8d13a29ab0e05140d1d52a92c2a76567ef91d64f78b"
+      "source_hash": "b49be46583395db577e7f629403c833c5b50b21eb751245434995c217046c0d7"
     },
     "var_cardinality": {
       "description": "Profile the number of distinct values and highlight variables to review.",
@@ -342,7 +350,7 @@
       "module": "var_transform",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "d5498db19eaa7feebdc528ff40130f0a975e6eab92ae9c96c0f5d31763c3849b"
+      "source_hash": "4b16653d0bb425ef1e07c4160d2e338f961c94adb6ebc36632f8c35abdf644a4"
     }
   },
   "schema_version": 1

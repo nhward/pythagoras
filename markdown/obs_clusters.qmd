@@ -47,15 +47,17 @@ The footer offers three independent checkboxes:
 
 | Control | Added nominal Stratifier |
 |:--------|:-------------------------|
-| **Add Partition members** | `cluster_partition` |
-| **Add Mixture members** | `cluster_mixture` |
-| **Add DBSCAN members** | `cluster_density` |
+| **Partition** | `cluster__partition` |
+| **Mixture** | `cluster__mixture` |
+| **Density** | `cluster__density` |
 
 Membership levels are `c1`, `c2`, and so on, with `unallocated` as an additional DBSCAN level. These are unordered categorical labels.
 
-Select any combination, independently of the active tab. A numeric suffix avoids existing column names. Each selection immediately adds a preview column and a learned pipeline step. Unchecking removes that method's addition. All three controls remain visible but disabled when incoming K is 1, including DBSCAN.
+Select any combination, independently of the active tab. A numeric suffix avoids existing column names. A selection adds preview columns and one composite learned pipeline step. Unchecking removes that method's column from the group. All three controls remain visible but disabled when incoming K is 1, including Density.
 
-Each selected recipe stays fixed until unchecked and checked again. Changing settings may therefore change the charts without updating an already selected recipe. Incoming data changes, including a new K, clear the selections. Failed additions are explained in the existing status text.
+The selected methods are exported as one composite pipeline transformer with one shared **K** tuning parameter. Partition and Mixture use K as their cluster count; Density searches for a group count close to K and may not achieve it exactly. Each method is fitted independently on the same training-fold input, then the selected membership columns are appended without removing validation or prediction rows. Method-specific settings such as Density minimum points and border allocation remain constructor parameters, held fixed for now and available for future tuning support.
+
+The group stays fixed while merely editing chart settings. Changing the selected methods recommits the whole group with the current settings, keeping existing membership-column names. A failed group update retains the previous commitment and explains the problem. Incoming data changes, including a new K, clear the selections. The tuning table and Data journey show one `obs_clusters` pipeline step for the group rather than one step per method.
 
 Memberships are assigned to all rows with complete fitted predictors, including unsampled and zero-weight rows. Incomplete rows retain missing labels. DBSCAN assigns the nearest training core observation's cluster within the learned radius, otherwise **unallocated**. With border assignment disabled, a row must also meet the minimum neighborhood importance mass against the fixed training observations. New rows never create or merge clusters.
 

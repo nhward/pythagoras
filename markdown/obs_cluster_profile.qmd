@@ -13,7 +13,7 @@ _Explain existing cluster memberships with readable decision trees and assess ho
 
 #### 🧠 How it works
 
-Each eligible membership column gets its own classification tree. Eligible names are `cluster_partition`, `cluster_mixture`, and `cluster_density`, optionally followed by a numeric suffix such as `_2`. The column must have the Stratifier role. The assigned Target variable is not used as the response.
+Each eligible membership column gets its own classification tree. Current generated names are `cluster__partition`, `cluster__mixture`, and `cluster__density`, optionally followed by a numeric suffix such as `_2`. The column must have the Stratifier role. All recognized membership names are excluded from explanatory predictors, even if assigned the Predictor role. The assigned Target variable is not used as the response.
 
 Only Predictor-role columns supply explanatory variables. All recognized membership columns are excluded, even if assigned Predictor, along with weighting and shadow columns. Geometry, complex numbers, and nested values are unsupported. Numeric predictors receive median imputation; categorical predictors receive most-frequent imputation and one-hot encoding, which represents each category by a presence indicator. Dates are represented numerically.
 

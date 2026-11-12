@@ -12,6 +12,7 @@ from typing import ClassVar
 
 import numpy as np
 import pandas as pd
+from bundled_parameters import BundledParametersMixin
 from code_recording import recordable
 from scipy import sparse
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -90,7 +91,7 @@ def characteristics(text):
 
 
 @recordable
-class TextEncodingTransformer(TransformerMixin,BaseEstimator):
+class TextEncodingTransformer(BundledParametersMixin, TransformerMixin,BaseEstimator):
     tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {'weighting': {'kind': 'categorical',
                    'choices': ['tfidf', 'counts', 'binary'],
                    'importance': 100},
@@ -103,10 +104,32 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
                     'bounds': [1, 300],
                     'suggested': {'values': [10, 20, 50]}}}
 
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {'vectorizer': {'selector': 'methods',
+                    'values': ['bow', 'lsa'],
+                    'parameters': {'weighting': 'weighting',
+                                   'analyzer': 'analyzer',
+                                   'ngram_max': 'ngram_max',
+                                   'lowercase': 'lowercase',
+                                   'strip_accents': 'strip_accents',
+                                   'stop_words': 'stop_words',
+                                   'min_df': 'min_df',
+                                   'max_df': 'max_df',
+                                   'max_features': 'max_features'}},
+     'lsa': {'selector': 'methods',
+             'values': ['lsa'],
+             'parameters': {'components': 'components', 'lsa_normalize': 'normalize'}},
+     'embedding': {'selector': 'methods',
+                   'values': ['embedding'],
+                   'parameters': {'embedding_path': 'embedding_path',
+                                  'embedding_digest': 'embedding_digest',
+                                  'embedding_lowercase': 'embedding_lowercase',
+                                  'embedding_label': 'embedding_label'}}}
+
     def __init__(self,columns,*,methods=('bow',),remove_original=True,weighting='tfidf',
                  analyzer='word',ngram_max=1,lowercase=True,strip_accents=False,stop_words=None,
                  min_df=1,max_df=1.0,max_features=500,components=20,lsa_normalize=False,
-                 embedding_path='',embedding_digest='',embedding_lowercase=True,embedding_label=''):
+                 embedding_path='',embedding_digest='',embedding_lowercase=True,embedding_label='',
+                 vectorizer=None, lsa=None, embedding=None):
         self.columns=columns;self.methods=methods;self.remove_original=remove_original
         self.weighting=weighting;self.analyzer=analyzer;self.ngram_max=ngram_max
         self.lowercase=lowercase;self.strip_accents=strip_accents;self.stop_words=stop_words
@@ -114,6 +137,8 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
         self.components=components;self.lsa_normalize=lsa_normalize
         self.embedding_path=embedding_path;self.embedding_digest=embedding_digest
         self.embedding_lowercase=embedding_lowercase;self.embedding_label=embedding_label
+        self._init_parameter_groups(vectorizer=vectorizer, lsa=lsa, embedding=embedding)
+
 
     def _validate(self,X):
         if not isinstance(X,pd.DataFrame) or not X.columns.is_unique:
@@ -121,18 +146,18 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
         if any(c not in X for c in self.columns):raise ValueError('A source text column is missing.')
 
     def _vectorizer(self):
-        return CountVectorizer(analyzer=self.analyzer,ngram_range=(1,int(self.ngram_max)),
-            lowercase=self.lowercase,strip_accents='unicode' if self.strip_accents else None,
-            stop_words=self.stop_words if self.analyzer=='word' else None,
-            min_df=int(self.min_df),max_df=float(self.max_df),max_features=int(self.max_features),
-            binary=self.weighting=='binary',token_pattern=r'(?u)\b\w+\b' if self.analyzer=='word' else None)
+        return CountVectorizer(analyzer=self.parameter_value('analyzer'),ngram_range=(1,int(self.parameter_value('ngram_max'))),
+            lowercase=self.parameter_value('lowercase'),strip_accents='unicode' if self.parameter_value('strip_accents') else None,
+            stop_words=self.parameter_value('stop_words') if self.parameter_value('analyzer')=='word' else None,
+            min_df=int(self.parameter_value('min_df')),max_df=float(self.parameter_value('max_df')),max_features=int(self.parameter_value('max_features')),
+            binary=self.parameter_value('weighting')=='binary',token_pattern=r'(?u)\b\w+\b' if self.parameter_value('analyzer')=='word' else None)
 
     def fit(self,X,y=None):
         self._validate(X)
         if any(m not in METHODS for m in self.methods):raise ValueError('Unknown text encoding method.')
-        if self.weighting not in ('tfidf','counts','binary'):raise ValueError('Unknown term weighting.')
-        if self.analyzer not in ('word','char') or not 1<=self.ngram_max<=3:raise ValueError('Unsupported tokenizer settings.')
-        if not 1<=self.max_features<=4096 or not 1<=self.components<=300:raise ValueError('Vocabulary/component limits exceeded.')
+        if self.parameter_value('weighting') not in ('tfidf','counts','binary'):raise ValueError('Unknown term weighting.')
+        if self.parameter_value('analyzer') not in ('word','char') or not 1<=self.parameter_value('ngram_max')<=3:raise ValueError('Unsupported tokenizer settings.')
+        if not 1<=self.parameter_value('max_features')<=4096 or not 1<=self.parameter_value('components')<=300:raise ValueError('Vocabulary/component limits exceeded.')
         self.feature_names_in_=np.asarray(X.columns,dtype=object);self.n_features_in_=len(X.columns)
         self.models_={};self.summary_=[];self.details_={m:[] for m in self.methods};self.missing_names_={}
         used=set(X.columns)
@@ -156,7 +181,7 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
                         vectorizer=self._vectorizer();matrix=vectorizer.fit_transform(valid)
                         terms=vectorizer.get_feature_names_out()
                         model={'vectorizer':vectorizer,'tfidf':None}
-                        if method=='lsa' or self.weighting=='tfidf':
+                        if method=='lsa' or self.parameter_value('weighting')=='tfidf':
                             model['tfidf']=TfidfTransformer();matrix=model['tfidf'].fit_transform(matrix)
                         if method=='bow':
                             suffixes=[str(t) for t in terms]+['unknown_fraction']
@@ -165,7 +190,7 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
                             order=np.argsort(-frequencies,kind='stable')[:100]
                             self.details_[method].extend({'Source':str(column),'Term':str(terms[i]),'Document frequency':int(frequencies[i])} for i in order)
                         else:
-                            width=min(int(self.components),matrix.shape[0]-1,matrix.shape[1]-1)
+                            width=min(int(self.parameter_value('components')),matrix.shape[0]-1,matrix.shape[1]-1)
                             if width<1:raise ValueError('LSA requires at least two nonmissing documents and two vocabulary terms.')
                             model['svd']=TruncatedSVD(n_components=width,random_state=2025)
                             with warnings.catch_warnings():
@@ -184,12 +209,12 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
                         sentiment_model();suffixes=['compound','positive','negative','neutral']
                         row['Notes']='VADER 3.3.2, English; fixed lexicon and rules. Not reliable for sarcasm or unsupported languages.'
                     elif method=='embedding':
-                        if not self.embedding_path or not self.embedding_digest:raise ValueError('Load a pretrained Word2Vec text file to enable embeddings.')
-                        vectors,width=_load_vectors(self.embedding_path,self.embedding_digest)
+                        if not self.parameter_value('embedding_path') or not self.parameter_value('embedding_digest'):raise ValueError('Load a pretrained Word2Vec text file to enable embeddings.')
+                        vectors,width=_load_vectors(self.parameter_value('embedding_path'),self.parameter_value('embedding_digest'))
                         # Copy only vocabulary needed for training? No: unseen training tokens may exist in pretrained resource.
                         model={'vectors':vectors,'width':width}
                         suffixes=[f'dimension_{i+1}' for i in range(width)]+['coverage']
-                        row['Notes']=f'Mean word vectors; {self.embedding_label or Path(self.embedding_path).name}; SHA256 {self.embedding_digest[:12]}. Verify model language and license.'
+                        row['Notes']=f"Mean word vectors; {self.parameter_value('embedding_label') or Path(self.parameter_value('embedding_path')).name}; SHA256 {self.parameter_value('embedding_digest')[:12]}. Verify model language and license."
                     else:
                         suffixes=list(STATS)
                         row['Notes']='Unicode word tokens; punctuation is ASCII; uppercase and other fractions use all characters as denominator.'
@@ -245,7 +270,7 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
                     parts.append(block)
                     continue
                 values=model['svd'].transform(matrix) if len(X) else np.empty((0,len(model['names'])))
-                if self.lsa_normalize and len(X):values=normalize(values)
+                if self.parameter_value('lsa_normalize') and len(X):values=normalize(values)
             elif method=='sentiment':
                 values=np.full((len(X),4),np.nan)
                 for i,t in enumerate(texts):
@@ -255,7 +280,7 @@ class TextEncodingTransformer(TransformerMixin,BaseEstimator):
             elif method=='embedding':
                 values=np.full((len(X),model['width']+1),np.nan)
                 for i,t in enumerate(texts):
-                    tokens=TOKEN.findall(t.lower() if self.embedding_lowercase else t)
+                    tokens=TOKEN.findall(t.lower() if self.parameter_value('embedding_lowercase') else t)
                     known=[model['vectors'][token] for token in tokens if token in model['vectors']]
                     values[i,-1]=len(known)/len(tokens) if tokens else 0
                     if known:values[i,:-1]=np.mean(known,axis=0)

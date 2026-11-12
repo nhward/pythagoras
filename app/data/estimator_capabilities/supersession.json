@@ -299,6 +299,18 @@
         "https://feature-engine.trainindata.com/en/latest/api_doc/transformation/PowerTransformer.html"
       ],
       "reviewed_on": "2026-10-24"
+    },
+    "skglm.ElasticNet": {
+      "method": "sklearn.linear_model.ElasticNet",
+      "relationship": "alternative_implementation",
+      "configuration": {},
+      "reason": "Alternative implementation of sklearn Elastic Net with the same statistical objective; retained for solver-performance comparisons.",
+      "caveats": "Match alpha, l1_ratio, intercept, constraints and input preparation. Solver convergence, numerical results, sample-weight support and other capabilities need not match. No automatic estimator substitution is performed.",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html",
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.ElasticNet.html"
+      ],
+      "reviewed_on": "2026-11-11"
     }
   },
   "retained_distinctions": [

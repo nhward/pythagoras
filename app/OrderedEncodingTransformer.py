@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import numpy as np
 import pandas as pd
+from bundled_parameters import BundledParametersMixin
 from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OrdinalEncoder
@@ -37,7 +38,7 @@ def polynomial_contrasts(levels, degree=None):
 
 
 @recordable
-class OrderedEncodingTransformer(TransformerMixin, BaseEstimator):
+class OrderedEncodingTransformer(BundledParametersMixin, TransformerMixin, BaseEstimator):
     """Preserve the declared order, including levels absent in a training fold.
 
     Category order is schema supplied upstream, not inferred from outcomes or
@@ -52,13 +53,19 @@ class OrderedEncodingTransformer(TransformerMixin, BaseEstimator):
                 'bounds': [0, 10000],
                 'suggested': {'values': [0, 1, 2, 3]}}}
 
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {'polynomial': {'selector': 'method',
+                    'values': ['polynomial'],
+                    'parameters': {'degree': 'degree'}}}
+
     def __init__(self, columns, *, method='ordinal', degree=0,
-                 remove_original=True, handle_unknown='missing'):
+                 remove_original=True, handle_unknown='missing', polynomial=None):
         self.columns = columns
         self.method = method
         self.degree = degree
         self.remove_original = remove_original
         self.handle_unknown = handle_unknown
+        self._init_parameter_groups(polynomial=polynomial)
+
 
     def _validate(self,X):
         if not isinstance(X,pd.DataFrame) or not X.columns.is_unique:
@@ -78,7 +85,7 @@ class OrderedEncodingTransformer(TransformerMixin, BaseEstimator):
         self._validate(X)
         if self.method not in METHODS or self.handle_unknown not in ('missing','error'):
             raise ValueError('Unsupported Ordered encoding method or unseen-level behavior.')
-        if not isinstance(self.degree,(int,np.integer)) or self.degree < 0:
+        if not isinstance(self.parameter_value('degree'),(int,np.integer)) or self.parameter_value('degree') < 0:
             raise ValueError('Polynomial degree must be a nonnegative integer; zero means all contrasts.')
         if not len(X):
             raise ValueError('Ordered encoding needs at least one observation.')
@@ -110,7 +117,7 @@ class OrderedEncodingTransformer(TransformerMixin, BaseEstimator):
                 row['Status'] = 'Fewer than two declared levels; original retained.'
                 self.summary_.append(row)
                 continue
-            degree = min(self.degree or d-1,d-1)
+            degree = min(self.parameter_value('degree') or d-1,d-1)
             if self.method == 'polynomial' and degree > 64:
                 raise ValueError('Polynomial encoding supports at most 64 degrees. Limit the degree or use ordinal ranks.')
             codes,_ = self._tokens(series,levels)

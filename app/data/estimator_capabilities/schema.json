@@ -564,7 +564,8 @@
           "enum": [
             "configured_special_case",
             "objective_family",
-            "upstream_replacement"
+            "upstream_replacement",
+            "alternative_implementation"
           ]
         },
         "configuration": {

@@ -19,6 +19,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
 from card import Card
+from ClusterMembershipsTransformer import ClusterMembershipsTransformer
 from ClusterMembershipTransformer import ClusterMembershipTransformer
 from code_recording import recordable
 from module import Module
@@ -255,27 +256,37 @@ def _export(result, method, name):
         raise ValueError("Learned membership is available only for Partition, Mixture and DBSCAN")
     transformer = deepcopy(result.transformers[method])
     transformer.set_params(output_column=name)
-    preview = transformer.transform(result.source.frame)
-    roles = RoleMap()
-    roles.set_roles(name, [Role.STRATIFIER])
-    return result.source.with_pipeline_step(transformer, name="obs_clusters",
-        operation="Add cluster membership", preview_frame=preview, added_roles=roles)
+    return _export_memberships(result.source, {method: transformer})
 
 
 @recordable
 def _export_memberships(source, transformers):
-    """Rebuild only this card's selected steps, preserving earlier pipeline steps."""
-    result = source
-    for method in ("Partition", "Mixture", "Density"):
-        if method not in transformers:
-            continue
-        transformer = transformers[method]
-        preview = transformer.transform(result.frame)
-        roles = RoleMap()
-        roles.set_roles(transformer.output_column, [Role.STRATIFIER])
-        result = result.with_pipeline_step(transformer, name="obs_clusters",
-            operation="Add cluster membership", preview_frame=preview, added_roles=roles)
-    return result
+    """Commit one coordinated step, with unfitted children rebuilt inside folds."""
+    if not transformers: return source
+    methods = tuple(m for m in ('Partition', 'Mixture', 'Density') if m in transformers)
+    first = transformers[methods[0]]
+    shared = ('columns', 'n_clusters', 'standardize', 'weighting', 'random_state')
+    if any(any(getattr(t, key) != getattr(first, key) for key in shared) for t in transformers.values()):
+        raise ValueError('Selected memberships must share predictors, K, scaling, weighting and seed. Recommit them together.')
+    partition = transformers.get('Partition', first)
+    density = transformers.get('Density', first)
+    composite = ClusterMembershipsTransformer(
+        first.columns, methods=methods, n_clusters=first.n_clusters,
+        output_columns=tuple((m, transformers[m].output_column) for m in methods),
+        standardize=first.standardize, weighting=first.weighting, random_state=first.random_state,
+        centre=partition.centre, metric=density.metric if 'Density' in methods else partition.metric,
+        density_min_points=density.min_points, density_border=density.border)
+    if 'Partition' in methods and partition.centre == 'medoids' and 'Density' in methods and partition.metric != density.metric:
+        raise ValueError('Partition and Density must share the committed distance metric.')
+    composite._outputs(source.frame)
+    composite.models_ = {m: transformers[m] for m in methods}
+    composite.feature_names_in_ = np.asarray(source.columns, dtype=object)
+    composite.n_features_in_ = len(source.columns)
+    preview = composite.transform(source.frame)
+    roles = RoleMap()
+    for method in methods: roles.set_roles(transformers[method].output_column, [Role.STRATIFIER])
+    return source.with_pipeline_step(composite, name='obs_clusters',
+        operation='Add cluster membership', preview_frame=preview, added_roles=roles)
 
 
 @recordable
@@ -430,7 +441,7 @@ def instance():
                 return set()
             requested = set(input.IncludeMembership() or []) & {'Partition','Mixture','Density'}
             saved = committed.get()
-            return requested - (set(saved[1]) if saved and saved[0].equals(incomingproxy_data()) else set())
+            return requested if not saved or not saved[0].equals(incomingproxy_data()) or requested != set(saved[1]) else set()
 
         def MembershipSettings():
             from export_readiness import read_active_inputs
@@ -528,17 +539,17 @@ def instance():
             with reactive.isolate():
                 saved = committed.get()
             disabled = (incomingproxy_data().cluster_count or 1) == 1
-            control = ui.input_checkbox_group("IncludeMembership", label=None,
-                choices={"Partition": "Add Partition members", "Mixture": "Add Mixture members", "Density": "Add DBSCAN members"},
+            control = ui.input_checkbox_group("IncludeMembership", label="Add Membership",
+                choices={"Partition": "Partition", "Mixture": "Mixture", "Density": "Density"},
                 selected=list(saved[1]) if saved is not None else [], inline=True,
-                guide=this, title="Learned membership stratifiers", position="top",
+                guide=this, position="top",
                 text="""
-                All membership controls are disabled when incoming K is 1, including DBSCAN, to avoid constant membership columns.
+                All membership controls are disabled when incoming K is 1, including Density, to avoid constant membership columns.
                 Select any combination of methods, independently of the active chart tab. 
-                Membership levels are c1, c2, and so on, with unallocated also available for DBSCAN.
-                Each adds a learned nominal Stratifier named cluster_partition, cluster_mixture or cluster_density;
+                Membership levels are c1, c2, and so on, with unallocated also available for Density.
+                Each adds a learned nominal Stratifier named cluster__partition, cluster__mixture or cluster__density;
                 a numeric suffix avoids existing names. Uncheck a method to remove its column and pipeline step. 
-                Each selected recipe stays fixed until unchecked and checked again; incoming data changes clear all selections. 
+                Selected methods form one pipeline step with shared K. Changing the selected methods recommits the whole group with the current settings; incoming data changes clear all selections.
                 Training fits learn their own preprocessing and clusters, then assign all complete rows. 
                 Mixture is unavailable with unequal importance weights. DBSCAN assigns the nearest learned core cluster within its 
                 fitted radius, otherwise unallocated; missing predictors stay missing. With border assignment disabled, a row must 
@@ -575,32 +586,33 @@ def instance():
                 return
             if reset_pending or requested == set(plans):
                 return
-            additions = requested - set(plans)
-            result = CurrentMembership() if additions else None
-            if additions:
+            result = CurrentMembership()
+            if requested:
                 this.require_settled(MembershipOptions)
                 # Effects understand ordinary silent validation, whereas the
                 # output-only cancellation exception would close the session.
                 req(result is not None)
             with reactive.isolate():
                 source = incomingproxy_data()
-                plans = {method: model for method, model in plans.items() if method in requested}
+                previous_plans = plans
+                plans = {}
                 errors = []
                 for method in ("Partition", "Mixture", "Density"):
-                    if method not in additions:
+                    if method not in requested:
                         continue
                     if result.error or method not in result.transformers:
                         errors.append(f"{method}: {result.error or result.notes.get(method, 'Membership unavailable.')}")
                         continue
                     model = deepcopy(result.transformers[method])
                     used = [*source.columns, *(t.output_column for t in plans.values())]
-                    model.set_params(output_column=_membership_name(used, f"cluster__{method.lower()}"))
+                    name = previous_plans[method].output_column if method in previous_plans else _membership_name(used, f"cluster__{method.lower()}")
+                    model.set_params(output_column=name)
                     plans[method] = model
-                if set(plans) == (set(saved[1]) if saved else set()):
+                if errors:
                     # A rejected addition must not rebuild the unchanged control:
                     # rerendering races with the checkbox reset and status message.
                     message.set(" ".join(errors))
-                    ui.update_checkbox_group("IncludeMembership", selected=list(plans))
+                    ui.update_checkbox_group("IncludeMembership", selected=list(previous_plans))
                     return
                 try:
                     exported = _export_memberships(source, plans)

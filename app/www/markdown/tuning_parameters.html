@@ -34,6 +34,42 @@ margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
 --py-table-row-hover: #f0f1cc;
 --py-table-cell-hover: #d4d4b8;
 }
+.pipeline-tune-actions {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: .35rem;
+}
+.pipeline-tune-best {
+flex: 0 0 auto;
+max-height: 6rem;
+overflow: auto;
+font-size: .85rem;
+overflow-wrap: anywhere;
+}
+.pipeline-tune-table {
+flex: 1 1 0;
+min-height: 0;
+overflow: hidden;
+}
+.flip-container:has(.pipeline-tune-table).flipped > .flippable > .front,
+.flip-container:has(.pipeline-tune-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.pipeline-tune-table > .shiny-data-frame-output {
+flex: 1 1 0;
+min-height: 0;
+}
+.pipeline-tune-details {
+flex: 0 0 auto;
+max-height: 12rem;
+overflow: auto;
+}
+.card [id$="-Specification"] {
+max-height: 16rem;
+overflow: auto;
+}
 
 body.bslib-gap-spacing {
 gap: 0.25rem;
@@ -72,6 +108,13 @@ transform: rotateY(0);
 .back {
 z-index: 1;
 transform: rotateY(180deg);
+}
+
+.card .html-fill-container:has(> span + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> span + .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + .shiny-ipywidget-output) {
+row-gap: 0 !important;
 }
 
 .bslib-card,
@@ -1020,6 +1063,48 @@ min-height: 0; height: 100%; max-height: none; flex: 1 1 0 !important;
 .tuning-parameters-table .shiny-data-grid {
 min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
 }
+
+.flip-container:has(.var-select-evidence).flipped > .flippable > .front,
+.flip-container:has(.var-select-evidence):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.var-select-evidence > .shiny-data-grid-output {
+flex: 1 1 0;
+min-height: 0;
+}
+
+.data-tabulation-structure {
+min-height: 0;
+min-width: 0;
+overflow: hidden;
+}
+.data-tabulation-structure > shiny-data-frame,
+.data-tabulation-structure > shiny-data-frame > .html-fill-container {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+}
+.data-tabulation-structure .shiny-data-grid {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+overflow: auto;
+}
+.data-tabulation-structure .shiny-data-grid > table {
+min-width: 70rem;
+}
+.data-tabulation-structure .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+.flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
+.flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
 </style>
 </head>
 
@@ -1035,11 +1120,20 @@ min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
 
 
 <h4 id="purpose">Purpose</h4>
-<p>Define a finite search space for the transformations and model already present in the incoming pipeline. This card does not switch estimator classes, create conditional branches, run a search, or fit models.</p>
+<p>Define a finite search space for the transformations and model already present in the incoming pipeline. This card does not choose methods, run a search, or fit models. Multiple methods committed upstream contribute separate conditional parameter branches.</p>
 <h4 id="front">Front</h4>
-<p>The table shows each published parameter’s readable name, originating pipeline step, current value, constructor default, and proposed search values. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.</p>
-<p>Use <strong>Find parameter or source</strong> to narrow the table, then select a row to edit it. The technical parameter path and implementation class appear in the editor. Fixed schema, column selections, approved mappings, random seeds, weighting configuration, and infrastructure settings are hidden by default. Enable <strong>Show everything</strong> in the card settings to include these rows; they still cannot be enabled for tuning.</p>
-<p><strong>Current value</strong> is the actual pipeline setting. <strong>Default</strong> is obtained from the constructor signature where available. <code>None</code> is a real value, not a missing definition. A required constructor argument may have no default; its configured current value is still shown. The card does not invent an undocumented default.</p>
+<p>The columns are <strong>Tune</strong>, <strong>Parameter</strong>, <strong>Source</strong>, <strong>Search values</strong>, <strong>Current value</strong>, <strong>Reason</strong>, and <strong>Purpose</strong>, in that order. The default sort is by Tune, with enabled parameters first; you can sort another column yourself. Source uses the card’s long name, with numbered instances shown as <code>(1)</code>, <code>(2)</code>, and so on. Nested components remain visible after <code>›</code>; the underlying sklearn parameter paths are unchanged. Search accepts both long names and technical source names. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.</p>
+<p>Use <strong>Find parameter or source</strong> to narrow the table, then select a row to edit it. The technical parameter path, implementation class, purpose, reason and available documentation link appear in the editor.</p>
+<p>The <strong>Show parameters</strong> radio buttons offer progressively broader views:</p>
+<ul>
+<li><strong>Recommended</strong> (default): reviewed modeling and preprocessing choices worth considering for tuning.</li>
+<li><strong>Recommended + advanced</strong>: adds conditional, specialized or numerical-convergence choices.</li>
+<li><strong>All tunable (including unreviewed)</strong>: also includes parameters that have not yet been classified.</li>
+<li><strong>Everything (including operational and recipe)</strong>: includes fixed input handling, copying, validation, naming, seeds, weighting, execution settings and internal model-recipe preparation. These cannot be enabled for tuning.</li>
+</ul>
+<p>Already-enabled parameters remain visible when narrowing the purpose filter. Search text still narrows the displayed rows. A recommended parameter is not guaranteed to improve every dataset. Missing search values mean that a definition is needed, not that the parameter is unimportant; an unreviewed Boolean is not recommended merely because it has two possible values.</p>
+<p>Reviewed metadata is stored in <code>app/data/tuning_parameters.json</code> by estimator class, with purpose, reason and documentation reference. For example, <code>FunctionTransformer.accept_sparse</code> is operational; <code>Ridge.max_iter</code> is an advanced convergence setting, while histogram boosting’s <code>max_iter</code> is a recommended model-capacity parameter. Transformer-published tuning metadata remains supported. Old saved <strong>Show everything</strong> settings migrate to the corresponding radio view. Saved operational tuning choices are disabled and old commitments are revalidated before export; review and recommit when prompted.</p>
+<p><strong>Current value</strong> is the actual pipeline setting. <code>None</code> is a real value, not a missing definition. Search values describe the candidates to evaluate; editing them does not change the current pipeline setting.</p>
 <h4 id="defining-values">Defining values</h4>
 <p><strong>Select row to supply search values</strong> means the parameter has no published suggested search space. Select that row in the table to open its editor below the grid. Choose a type if needed, then enter explicit choices such as <code>[1, 2, 5]</code> or select <strong>Numeric range</strong> and supply minimum, maximum and step. Save the definition, enable Auto-tune, and Commit. The current value and constructor default do not establish a useful tuning range by themselves.</p>
 <p>All parameters start with tuning off. Metadata supplies suggestions where available; suggestions are not automatically activated.</p>
@@ -1058,8 +1152,16 @@ min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
 <h4 id="pipeline-changes-and-limitations">Pipeline changes and limitations</h4>
 <p>Compatible draft definitions are retained when the pipeline changes. Removed parameters or changes in implementation discard the affected drafts with a notice. A changed pipeline invalidates the committed specification until recommitment. No estimator is required: preprocessing parameters can be tuned alone. With no pipeline, the card shows zero parameters.</p>
 <p>Metadata lives alongside Pythagoras transformer classes and in a shared registry for standard estimators. Coverage is deliberately partial. Constructor defaults are commonly available, but useful search ranges do not follow from those defaults. Unknown ranges remain for the user to define.</p>
-<p>Only independent finite choices are supported. Individually valid settings can still form an invalid combination, depend on fold size, or have no effect under another fixed setting. The card does not claim that every combination will fit successfully. Verify estimator requirements before running a search.</p>
+<p>Finite choices are combined within each declared active method branch. Bundled transformers declare which nested settings apply to each method; inactive settings do not multiply the combination count. Individually valid settings can still form an invalid combination, depend on fold size, or have no effect under another fixed setting. The card does not claim that every combination will fit successfully. Verify estimator requirements before running a search.</p>
 <p>Display-only random sample limits are not transformer parameters. Variable transformations expose independent Deskew, Scale and Center Boolean parameters. Imputation uses a custom transformer supporting simple, KNN and iterative styles, so its method is a categorical parameter within that transformer.</p>
+<h4 id="parameters-for-alternative-methods">Parameters for alternative methods</h4>
+<p>When multiple methods are committed upstream, shared preprocessing appears once. Each method’s parameters have their own source name, such as <strong>Gaussian Process Regressor</strong>, with nested components after <code>›</code>. Internal recipe preparation remains visible only under Everything and cannot be tuned. Duplicate method names are qualified by package. Technical paths remain searchable.</p>
+<p>A model parameter belongs to a stable recipe ID as well as its implementation. Choices for one method never apply to another merely because their parameter names match. The search space is shared choices multiplied by the <strong>sum</strong> of the method-specific configuration counts, not their product. A method without enabled parameters still contributes its committed configuration. Choosing methods happens in Model candidates; the parameter editor does not substitute estimator objects.</p>
+<h4 id="conditional-parameters-in-bundled-transformers">Conditional parameters in bundled transformers</h4>
+<p>A nested parameter belongs to a particular method inside a bundled transformer. For example, <code>miss_impute__knn__n_neighbors</code> belongs to KNN imputation; <code>miss_impute__iterative__max_iter</code> belongs to iterative imputation. The table and editor explain when each parameter applies. Their definitions remain available when another method is selected, but inactive parameters are omitted from trial choices and contribute no extra combinations.</p>
+<p>Selecting all three imputation methods and neighbor values <code>[3, 4, 5, 6]</code> therefore produces <strong>six</strong> configurations: four KNN, one simple and one iterative. With Method fixed to KNN there are four; with Method fixed to simple there is one.</p>
+<p>The same ownership rules cover ordered polynomial contrasts, fixed-strength target smoothing, text vectorization/LSA/embeddings, partition and density clustering, Boruta/GrootCV selection, and robust location/scale transformations. Text settings shared by selected encodings are counted once. Clustering retains one shared K. All four search methods use the same conditional spaces. Unknown estimator-specific constraints still require review; nested paths alone do not establish applicability.</p>
+<p>Compatible saved flat definitions are moved to their nested paths; review and recommit the updated search space. Previous checkpoints must be restarted.</p>
 
 
 

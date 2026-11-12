@@ -127,9 +127,9 @@ def test_knn_imputes_continuous_and_falls_back_to_mode(card_module):
         frame, list(frame.columns), list(frame.columns), neighbours=3,
     )
     assert result.isna().sum().sum() == 0
-    assert methods["numeric"] == "Nearest neighbours (3)"
-    assert methods["ordered"] == "Nearest neighbours (3)"
-    assert methods["date"] == "Nearest neighbours (3)"
+    assert methods["numeric"] == "Nearest neighbors (3)"
+    assert methods["ordered"] == "Nearest neighbors (3)"
+    assert methods["date"] == "Nearest neighbors (3)"
     assert methods["nominal"] == "Mode"
 
 

@@ -4,15 +4,26 @@ title: Tuning parameters
 
 #### Purpose
 
-Define a finite search space for the transformations and model already present in the incoming pipeline. This card does not switch estimator classes, create conditional branches, run a search, or fit models.
+Define a finite search space for the transformations and model already present in the incoming pipeline. This card does not choose methods, run a search, or fit models. Multiple methods committed upstream contribute separate conditional parameter branches.
 
 #### Front
 
-The table shows each published parameter's readable name, originating pipeline step, current value, constructor default, and proposed search values. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.
+The columns are **Tune**, **Parameter**, **Source**, **Search values**, **Current value**, **Reason**, and **Purpose**, in that order. The default sort is by Tune, with enabled parameters first; you can sort another column yourself. Source uses the card's long name, with numbered instances shown as `(1)`, `(2)`, and so on. Nested components remain visible after `›`; the underlying sklearn parameter paths are unchanged. Search accepts both long names and technical source names. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.
 
-Use **Find parameter or source** to narrow the table, then select a row to edit it. The technical parameter path and implementation class appear in the editor. Fixed schema, column selections, approved mappings, random seeds, weighting configuration, and infrastructure settings are hidden by default. Enable **Show everything** in the card settings to include these rows; they still cannot be enabled for tuning.
+Use **Find parameter or source** to narrow the table, then select a row to edit it. The technical parameter path, implementation class, purpose, reason and available documentation link appear in the editor.
 
-**Current value** is the actual pipeline setting. **Default** is obtained from the constructor signature where available. `None` is a real value, not a missing definition. A required constructor argument may have no default; its configured current value is still shown. The card does not invent an undocumented default.
+The **Show parameters** radio buttons offer progressively broader views:
+
+* **Recommended** (default): reviewed modeling and preprocessing choices worth considering for tuning.
+* **Recommended + advanced**: adds conditional, specialized or numerical-convergence choices.
+* **All tunable (including unreviewed)**: also includes parameters that have not yet been classified.
+* **Everything (including operational and recipe)**: includes fixed input handling, copying, validation, naming, seeds, weighting, execution settings and internal model-recipe preparation. These cannot be enabled for tuning.
+
+Already-enabled parameters remain visible when narrowing the purpose filter. Search text still narrows the displayed rows. A recommended parameter is not guaranteed to improve every dataset. Missing search values mean that a definition is needed, not that the parameter is unimportant; an unreviewed Boolean is not recommended merely because it has two possible values.
+
+Reviewed metadata is stored in `app/data/tuning_parameters.json` by estimator class, with purpose, reason and documentation reference. For example, `FunctionTransformer.accept_sparse` is operational; `Ridge.max_iter` is an advanced convergence setting, while histogram boosting's `max_iter` is a recommended model-capacity parameter. Transformer-published tuning metadata remains supported. Old saved **Show everything** settings migrate to the corresponding radio view. Saved operational tuning choices are disabled and old commitments are revalidated before export; review and recommit when prompted.
+
+**Current value** is the actual pipeline setting. `None` is a real value, not a missing definition. Search values describe the candidates to evaluate; editing them does not change the current pipeline setting.
 
 #### Defining values
 
@@ -42,6 +53,45 @@ Compatible draft definitions are retained when the pipeline changes. Removed par
 
 Metadata lives alongside Pythagoras transformer classes and in a shared registry for standard estimators. Coverage is deliberately partial. Constructor defaults are commonly available, but useful search ranges do not follow from those defaults. Unknown ranges remain for the user to define.
 
-Only independent finite choices are supported. Individually valid settings can still form an invalid combination, depend on fold size, or have no effect under another fixed setting. The card does not claim that every combination will fit successfully. Verify estimator requirements before running a search.
+Finite choices are combined within each declared active method branch. Bundled transformers declare which nested settings apply to each method; inactive settings do not multiply the combination count. Individually valid settings can still form an invalid combination, depend on fold size, or have no effect under another fixed setting. The card does not claim that every combination will fit successfully. Verify estimator requirements before running a search.
 
 Display-only random sample limits are not transformer parameters. Variable transformations expose independent Deskew, Scale and Center Boolean parameters. Imputation uses a custom transformer supporting simple, KNN and iterative styles, so its method is a categorical parameter within that transformer.
+
+
+#### Parameters for alternative methods
+
+When multiple methods are committed upstream, shared preprocessing appears once.
+Each method's parameters have their own source name, such as **Gaussian Process
+Regressor**, with nested components after `›`. Internal recipe preparation remains visible only under Everything and cannot be tuned. Duplicate method
+names are qualified by package. Technical paths remain searchable.
+
+A model parameter belongs to a stable recipe ID as well as its implementation.
+Choices for one method never apply to another merely because their parameter names
+match. The search space is shared choices multiplied by the **sum** of the
+method-specific configuration counts, not their product. A method without enabled
+parameters still contributes its committed configuration. Choosing methods happens
+in Model candidates; the parameter editor does not substitute estimator objects.
+
+
+#### Conditional parameters in bundled transformers
+
+A nested parameter belongs to a particular method inside a bundled transformer.
+For example, `miss_impute__knn__n_neighbors` belongs to KNN imputation;
+`miss_impute__iterative__max_iter` belongs to iterative imputation. The table and
+editor explain when each parameter applies. Their definitions remain available
+when another method is selected, but inactive parameters are omitted from trial
+choices and contribute no extra combinations.
+
+Selecting all three imputation methods and neighbor values `[3, 4, 5, 6]`
+therefore produces **six** configurations: four KNN, one simple and one iterative.
+With Method fixed to KNN there are four; with Method fixed to simple there is one.
+
+The same ownership rules cover ordered polynomial contrasts, fixed-strength target
+smoothing, text vectorization/LSA/embeddings, partition and density clustering,
+Boruta/GrootCV selection, and robust location/scale transformations. Text settings
+shared by selected encodings are counted once. Clustering retains one shared K.
+All four search methods use the same conditional spaces. Unknown estimator-specific
+constraints still require review; nested paths alone do not establish applicability.
+
+Compatible saved flat definitions are moved to their nested paths; review and
+recommit the updated search space. Previous checkpoints must be restarted.

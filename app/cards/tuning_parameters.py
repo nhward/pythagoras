@@ -1,5 +1,6 @@
 """Review and commit finite search spaces for the current pipeline."""
 import json
+import re
 from copy import deepcopy
 
 import numpy as np
@@ -10,7 +11,27 @@ from module import Module
 from proxy_data import proxy_data
 from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
-from tuning import compile_spec, discover, fingerprint, search_values
+from tuning import (
+    PURPOSES,
+    VISIBILITY,
+    compile_spec,
+    discover_source,
+    migrate_drafts,
+    search_values,
+    visible,
+)
+
+
+def source_label(source, cards):
+    """Display card titles without changing sklearn paths or nested steps."""
+    root, *children = source.split(' › ')
+    name, suffix = root, ''
+    if root not in cards:
+        match = re.fullmatch(r'(.+)_(\d+)', root)
+        if match and match[1] in cards:
+            name, suffix = match[1], f' ({match[2]})'
+    title = cards.get(name, {}).get('long_name') or name
+    return ' › '.join([title + suffix, *children])
 
 
 def instance():
@@ -55,10 +76,21 @@ def instance():
         )
     )
 
-    this.settings = lambda: ui.input_checkbox(
-        id='ShowEverything', label='Show everything', value=False,
-        guide=this, position='left',
-        text='Include fixed-configuration parameters in the table. These cannot be enabled for automatic tuning.')
+    this.exclude_configuration_input('ShowEverything')
+
+    def settings():
+        # Preserve the meaning of older saved checkbox settings.
+        legacy = this.restored_configuration_input('ShowEverything', False)
+        return ui.input_radio_buttons(
+            id='Visibility', label='Show parameters', choices=VISIBILITY,
+            selected='everything' if legacy else 'recommended',
+            guide=this, title='Parameter visibility', position='left',
+            text='Recommended shows reviewed modeling choices. Add advanced choices or all tunable parameters, including unreviewed ones. '
+                 'Everything also shows operational settings and recipe parameters, which cannot be tuned. '
+                 'Recipe parameters prepare model inputs; the upstream pipeline is expected to manage this preparation. '
+                 'Already-enabled parameters remain visible. '
+                 'Missing search values do not establish that a parameter is unimportant.')
+    this.settings = settings
 
     def server(input, output, session):
         restored = this.restored_configuration_field('tuning', {})
@@ -79,18 +111,20 @@ def instance():
 
         @this.reactable(calc=True)
         def Rows():
-            return discover(Incoming().pipeline)
+            return discover_source(Incoming())
 
-        @this.reactable()
+        @this.reactable(triggers=[Rows, drafts])
         def Reconcile():
-            known = {row['path']:row['owner'] for row in Rows()}
+            known = {row['path']:row for row in Rows()}
             with reactive.isolate():
                 previous = drafts()
-            retained = {path:draft for path,draft in previous.items()
-                        if known.get(path) == draft.get('owner')}
+            migrated = migrate_drafts(Rows(), previous)
+            retained = {path:dict(draft, active=False) if known[path]['fixed'] else draft
+                        for path,draft in migrated.items()
+                        if path in known and known[path]['owner'] == draft.get('owner')}
             if retained != previous:
                 drafts.set(retained)
-                message.set('Pipeline changed: unavailable parameter definitions were removed. Review and commit again.')
+                message.set('Parameter definitions changed: unavailable definitions were removed and tuning of excluded parameters was disabled. Review and commit again.')
 
         def definition(row):
             draft = drafts().get(row['path'])
@@ -100,21 +134,24 @@ def instance():
 
         def DisplayFrame():
             query = (input.Search() or '').casefold()
+            cards = Module.card_catalogue.snapshot()['cards']
             records = []
             for row in Rows():
-                if row['fixed'] and not input.ShowEverything():
-                    continue
-                if query not in f'{row["name"]} {row["source"]} {row["path"]}'.casefold(): continue
                 draft = definition(row)
+                if not visible(row, input.Visibility(), active=bool(draft.get('active'))):
+                    continue
+                source = row.get('display_source') or source_label(row['source'], cards)
+                if query not in f'{row["name"]} {source} {row["source"]} {row["path"]}'.casefold(): continue
                 try:
                     values = search_values(draft, row['metadata'])
                     summary = f'{len(values)} values: {values[:6]}' + (' …' if len(values) > 6 else '')
                 except ValueError:
                     summary = 'Select row to supply search values'
                 records.append({'ID':row['path'], 'Tune': '✅' if draft.get('active') else '❌',
-                    'Parameter':row['name'], 'Source':row['source'], 'Current value':row['current'],
-                    'Default':row['default'], 'Search values':'Fixed configuration' if row['fixed'] else summary})
-            frame = pd.DataFrame(records, columns=['ID','Tune','Parameter','Source','Current value','Default','Search values'])
+                    'Parameter':row['name'], 'Source':source, 'Current value':row['current'],
+                    'Purpose':PURPOSES[row['purpose']], 'Reason':row['reason'],
+                    'Search values':'Fixed configuration' if row['fixed'] else summary})
+            frame = pd.DataFrame(records, columns=['ID','Tune','Parameter','Source','Search values','Current value','Reason','Purpose'])
             return frame.set_index('ID')
 
         @output
@@ -129,9 +166,12 @@ def instance():
             req(Incoming())
             Rows()
             input.Search()
-            input.ShowEverything()
+            input.Visibility()
             with reactive.isolate():
                 frame = DisplayFrame()
+            async def default_sort():
+                await Table2.update_sort([{'col': 0, 'desc': False}])
+            session.on_flushed(default_sort, once=True)
             return render.DataGrid(frame, selection_mode='row', width="100%")
 
         @this.reactable(triggers=[drafts])
@@ -151,6 +191,10 @@ def instance():
             row = Selected()
             if row is None: return ui.p('Select a parameter to define its search values.')
             detail = ui.div(ui.strong(row['name']), title=f'{row["path"]} · {row["owner"]}', class_='tuning-editor-detail')
+            purpose = ui.div(ui.span(f"{PURPOSES[row['purpose']]}: {row['reason']} "),
+                ui.a('Documentation', href=row['reference'], target='_blank', rel='noopener') if row['reference'] else None,
+                class_='tuning-purpose')
+            detail = ui.TagList(detail, purpose)
             if row['fixed']: return ui.TagList(detail, ui.p('Fixed configuration; not offered for automatic tuning.'))
             draft = definition(row)
             try:
@@ -160,9 +204,9 @@ def instance():
                 ready = False
             choices = row['metadata'].get('choices')
             if row['definition']['kind'] == 'boolean':
-                return ui.div(ui.input_checkbox(
+                return ui.TagList(detail, ui.div(ui.input_checkbox(
                     id='Active', label='Auto-tune this parameter',
-                    value=bool(draft.get('active'))), class_='tuning-editor-controls')
+                    value=bool(draft.get('active'))), class_='tuning-editor-controls'))
             if choices:
                 values_editor = ui.input_selectize(id='ChoiceValues', label='Choices', multiple=True,
                     choices={json.dumps(v):str(v) for v in choices}, selected=[json.dumps(v) for v in draft.get('values',[])])
@@ -184,7 +228,8 @@ def instance():
         @this.reactable(triggers=[input.SaveDefinition])
         def SaveDefinition():
             row = Selected()
-            req(row is not None, not row['fixed'])
+            req(row is not None)
+            req(not row['fixed'])
             try:
                 draft = {'owner':row['owner'], 'kind':input.Kind(), 'mode':input.Mode(),
                          'active':definition(row).get('active',False)}
@@ -205,7 +250,8 @@ def instance():
         @this.reactable(triggers=[input.Active])
         def Active():
             row = Selected()
-            req(row is not None, not row['fixed'])
+            req(row is not None)
+            req(not row['fixed'])
             draft = definition(row)
             if row['definition']['kind'] == 'boolean':
                 draft.update(kind='boolean', mode='values', values=[False, True])
@@ -268,7 +314,11 @@ def instance():
         def Exported():
             source = Incoming()
             saved = committed()
-            if saved is None or saved['spec']['fingerprint'] != fingerprint(Rows()):
+            try:
+                valid = saved is not None and saved['spec'] == compile_spec(Rows(), saved['drafts'])
+            except (ValueError, TypeError, KeyError):
+                valid = False
+            if not valid:
                 return source.with_inactive_step(
                     stage='Learning', card='tuning_parameters',
                     operation='Define parameter tuning')

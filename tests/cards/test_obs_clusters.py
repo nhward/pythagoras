@@ -118,7 +118,7 @@ class TestClusters:
         np.testing.assert_array_equal(out.frame.membership.iloc[r.positions].astype(str), r.labels['Partition'])
         assert_frame_equal(out.frame.drop(columns='membership'), data.frame)
         assert 'membership' not in data.columns
-        assert out.processing_records[-1].parameters['method'] == 'Partition'
+        assert out.processing_records[-1].parameters['methods'] == ('Partition',)
 
     @pytest.mark.parametrize('name', ['', 'x', 'shadow__cluster'])
     def test_export_rejects_invalid_or_existing_name(self, name):
@@ -275,7 +275,7 @@ def test_density_border_rule_and_training_pipeline():
     assert not hasattr(recipe.steps[-1][1], 'core_points_')
     train = out.clean_frame.iloc[:20]
     recipe.fit(train)
-    fitted = recipe.steps[-1][1]
+    fitted = recipe.steps[-1][1].models_['Density']
     assert len(fitted.density_points_) == len(train)
     assert recipe.transform(out.clean_frame.iloc[20:]).density.notna().all()
     scaled = source(True)
@@ -329,11 +329,13 @@ class TestMembershipCoverage:
         exported = m._export_memberships(data, plans)
         assert list(exported.columns) == ['x', 'y', 'partition', 'mixture', 'density']
         training = exported.pipeline_for_training().fit(data.frame)
-        for _, transformer in training.steps:
+        assert exported.pipeline_steps == ('obs_clusters',)
+        assert len(training.steps) == 1
+        for transformer in training.steps[0][1].models_.values():
             assert transformer.predictors_ == ['x', 'y']
         assert list(training.transform(data.frame).columns) == list(exported.columns)
         assert not data.has_pipeline
-        assert len(exported.processing_records) == 3
+        assert len(exported.processing_records) == 1
 
     def test_identifier_hover_is_escaped_and_missing_identifier_falls_back_to_position(self):
         data = source()
@@ -431,6 +433,7 @@ class TestWeightedWeb:
         toggle(page, 'Mixture').check()
         expect(by_id(page, 'ExportProbe')).to_contain_text('methods=Partition,Mixture')
         assert payload(page)['recipes']['Mixture']['weighting'] is None
+        assert payload(page)['recipes']['Partition'] == {'centre': 'medoids', 'weighting': None}
         toggle(page, 'Partition').uncheck()
         expect(by_id(page, 'ExportProbe')).to_contain_text('methods=Mixture;')
         toggle(page, 'Partition').check()
@@ -478,7 +481,7 @@ def test_every_tab_has_comparable_plot_and_does_not_export_implicitly(page, app)
 @pytest.mark.parametrize('method', ['Partition', 'Mixture', 'Density'])
 def test_export_is_immediately_available_for_cluster_profiling(method):
     from cards.obs_cluster_profile import _targets
-    name = f'cluster_{method.lower()}'
+    name = f'cluster__{method.lower()}'
     exported = m._export(analyze(), method, name)
     assert _targets(exported) == [name]
     assert name not in exported.role_map.columns_with_role(Role.PREDICTOR)

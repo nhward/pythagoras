@@ -1,22 +1,35 @@
 """Fold-fitted original-variable selection; transform only removes columns."""
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
+from bundled_parameters import BundledParametersMixin
 from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 
 @recordable
-class FeatureSelectionTransformer(TransformerMixin, BaseEstimator):
+class FeatureSelectionTransformer(BundledParametersMixin, TransformerMixin, BaseEstimator):
     # Topology/decision policy stays fixed; optional tuning is numerical only.
-    tuning_metadata = {'method': {'fixed': True}, 'policy': {'fixed': True},
+    tuning_metadata: ClassVar[dict] = {'method': {'fixed': True}, 'policy': {'fixed': True},
                        'task': {'fixed': True}, 'structure': {'fixed': True}, 'resampling': {'fixed': True}}
     selection_step = True
+
+    parameter_groups: ClassVar[dict] = {'boruta': {'selector': 'method',
+                'values': ['Boruta'],
+                'parameters': {'iterations': 'iterations',
+                               'alpha': 'alpha',
+                               'percentile': 'percentile',
+                               'two_step': 'two_step'}},
+     'groot': {'selector': 'method',
+               'values': ['GrootCV'],
+               'parameters': {'folds': 'folds', 'repeats': 'repeats', 'cutoff': 'cutoff'}}}
 
     def __init__(self, columns, *, method='Boruta', task='regression', policy='confirmed',
                  trees=200, depth=5, iterations=100, alpha=.05, percentile=100,
                  two_step=True, folds=5, repeats=5, cutoff=1., random_state=2025,
-                 n_jobs=1, weighting=(), structure=(), predictors=(), resampling=None):
+                 n_jobs=1, weighting=(), structure=(), predictors=(), resampling=None, boruta=None, groot=None):
         self.columns = columns
         self.predictors = predictors
         self.method = method
@@ -36,6 +49,8 @@ class FeatureSelectionTransformer(TransformerMixin, BaseEstimator):
         self.weighting = weighting
         self.structure = structure
         self.resampling = resampling
+        self._init_parameter_groups(boruta=boruta, groot=groot)
+
 
     def fit(self, X, y=None, *, progress=None):
         from feature_selection import fit_boruta, fit_groot
@@ -47,12 +62,12 @@ class FeatureSelectionTransformer(TransformerMixin, BaseEstimator):
         if self.policy not in ('confirmed', 'tentative'):
             raise ValueError('Unknown Boruta inclusion policy')
         for name, minimum in [('trees', 2), ('depth', 1), ('iterations', 3), ('folds', 2), ('repeats', 1), ('n_jobs', 1)]:
-            value = getattr(self, name)
+            value = self.parameter_value(name)
             if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < minimum:
                 raise ValueError(f'{name} must be an integer >= {minimum}')
         if self.n_jobs > 32:
             raise ValueError('Use at most 32 selection worker threads')
-        if not 0 < self.alpha < 1 or not 0 < self.percentile <= 100 or not np.isfinite(self.cutoff) or self.cutoff <= 0:
+        if not 0 < self.parameter_value('alpha') < 1 or not 0 < self.parameter_value('percentile') <= 100 or not np.isfinite(self.parameter_value('cutoff')) or self.parameter_value('cutoff') <= 0:
             raise ValueError('Invalid significance, shadow percentile or cutoff')
         if y is None:
             raise ValueError('Feature selection needs a target y during fit')
@@ -85,20 +100,20 @@ class FeatureSelectionTransformer(TransformerMixin, BaseEstimator):
             counts = np.bincount(target)
             if len(counts) < 2:
                 raise ValueError('Classification selection needs at least two outcome classes')
-            if self.method == 'GrootCV' and self.resampling is None and counts.min() < self.folds:
+            if self.method == 'GrootCV' and self.resampling is None and counts.min() < self.parameter_value('folds'):
                 raise ValueError('Each outcome class needs at least the requested inner fold count')
         elif len(np.unique(target)) < 2:
             raise ValueError('Regression selection needs a varying outcome')
-        if self.method == 'GrootCV' and self.resampling is None and len(target) < self.folds * 2:
+        if self.method == 'GrootCV' and self.resampling is None and len(target) < self.parameter_value('folds') * 2:
             raise ValueError('Too few labelled observations for the requested inner folds')
         import sys
         # Browser fits and exported recipes must never request native threads.
         self.effective_n_jobs_ = 1 if sys.platform == 'emscripten' else self.n_jobs
-        common = dict(weights=weights, task=self.task, trees=self.trees, depth=self.depth,
-                      seed=self.random_state, jobs=self.effective_n_jobs_, progress=progress)
+        common = {'weights': weights, 'task': self.task, 'trees': self.trees, 'depth': self.depth,
+                      'seed': self.random_state, 'jobs': self.effective_n_jobs_, 'progress': progress}
         if self.method == 'Boruta':
-            details = fit_boruta(data[columns], target, iterations=self.iterations,
-                alpha=self.alpha, percentile=self.percentile, two_step=self.two_step, **common)
+            details = fit_boruta(data[columns], target, iterations=self.parameter_value('iterations'),
+                alpha=self.parameter_value('alpha'), percentile=self.parameter_value('percentile'), two_step=self.parameter_value('two_step'), **common)
         else:
             splits = None
             self.inner_resampling_ = {'strategy':'stratified' if self.task == 'classification' else 'kfold',
@@ -106,10 +121,10 @@ class FeatureSelectionTransformer(TransformerMixin, BaseEstimator):
             if self.resampling is not None:
                 from selection_resampling import selection_inner_splits
                 splits, self.inner_resampling_ = selection_inner_splits(data, target,
-                    task=self.task, design=self.resampling, folds=self.folds,
-                    repeats=self.repeats, seed=self.random_state)
-            details = fit_groot(data[columns], target, folds=self.folds,
-                repeats=self.repeats, cutoff=self.cutoff, splits=splits, **common)
+                    task=self.task, design=self.resampling, folds=self.parameter_value('folds'),
+                    repeats=self.parameter_value('repeats'), seed=self.random_state)
+            details = fit_groot(data[columns], target, folds=self.parameter_value('folds'),
+                repeats=self.parameter_value('repeats'), cutoff=self.parameter_value('cutoff'), splits=splits, **common)
             self.inner_splits_ = [(self.fit_positions_[a], self.fit_positions_[b]) for a,b in details['splits']]
         decisions = details['decisions']
         self.support_ = (decisions == 1) | ((decisions == 0) & (self.policy == 'tentative'))

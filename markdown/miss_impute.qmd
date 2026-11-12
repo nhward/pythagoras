@@ -68,3 +68,13 @@ The full-data preview is for interactive analysis. During formal validation, fit
   <summary>Click here for a fully expanded discussion of missing values.</summary>
   <iframe src="markdown/missing_values.html" title="Missing Values" data-external="1" loading="lazy"></iframe>
 </details>
+
+
+#### Tuning nested settings
+
+KNN neighbors are exposed as `miss_impute__knn__n_neighbors` (suggested values
+`[3, 4, 5, 6]`, default 5). Iterative iterations are exposed as
+`miss_impute__iterative__max_iter`. Only settings for the selected Method contribute
+to a trial. Tuning all three methods with those four neighbor values produces six
+configurations, rather than twelve. Existing saved flat settings remain compatible
+through migration; recommit tuning definitions before continuing a search.

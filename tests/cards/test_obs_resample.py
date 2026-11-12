@@ -203,3 +203,31 @@ def test_survival_restoration_and_invalid_event_code(page, survival_app):
     expect(by_id('ExportState')).to_have_text('survival;months;ready=False', timeout=30000)
     by_id('EventValue').fill('dead')
     expect(by_id('ExportState')).to_have_text('survival;months;ready=True', timeout=30000)
+
+
+@pytest.mark.ui
+def test_repeated_cv_exports_all_splits_but_charts_only_first_repeat(page, app):
+    page.goto(app.url)
+    by_id = lambda name: page.locator(f'[id$="-{name}"]')
+    expect(by_id('ExportState')).to_contain_text('ready=True', timeout=30000)
+    expect(by_id('Repeats')).to_be_hidden()  # Restored temporal plan.
+    by_id('GoalControl').locator('input[value="observations"]').check()
+    card = page.locator('.card').first
+    card.hover()
+    card.locator('button.collapse-toggle').click()
+    expect(by_id('Repeats')).to_have_value('1')
+    by_id('Folds').fill('4')
+    by_id('Folds').press('Tab')
+    expect(by_id('Summary')).to_contain_text('4 splits', timeout=30000)
+    plot = by_id('Chart').locator('.js-plotly-plot')
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.data?.[0]?.z?.length === 4")
+    values = plot.evaluate('el => JSON.stringify(el.data.map(t => ({z:t.z,x:t.x,y:t.y})))')
+    by_id('Repeats').fill('5')
+    by_id('Repeats').press('Tab')
+    expect(by_id('Summary')).to_contain_text('20 splits', timeout=30000)
+    expect(by_id('Summary')).to_contain_text('Showing repeat 1 of 5')
+    expect(by_id('ExportState')).to_contain_text('ready=True')
+    assert plot.evaluate('el => JSON.stringify(el.data.map(t => ({z:t.z,x:t.x,y:t.y})))') == values
+    by_id('GoalControl').locator('input[value="future"]').check()
+    expect(by_id('Repeats')).to_be_hidden()
+    expect(by_id('Summary')).to_contain_text('7 splits', timeout=30000)

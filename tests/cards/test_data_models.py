@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -6,6 +8,9 @@ from estimator_catalogue import load_catalogue
 from modelling_context import ModellingContext
 from proxy_data import proxy_data
 from roles import RoleMap
+from shiny.pytest import create_app_fixture
+
+restored_app = create_app_fixture(app='../scenarios/data_models_restore.py', scope='function')
 
 
 def source():
@@ -41,7 +46,7 @@ def test_mixed_missing_matching_and_passthrough():
     assert result['task'] == 'regression'
     assert result['summary']['predictors'] == 2
     table = _table(result)
-    assert not table.empty
+    assert table.empty  # Internal-CV recipes also require preparation for this input.
     assert not any('Ridge' in name for name in table.Model)
     assert any('Ridge' in name for name in _table(result, show_all=True).Model)
     assert all(table.Readiness == 'Meets requirements')
@@ -88,6 +93,7 @@ def test_models_table_filters_details_and_pass_through(page, app):
     by_id = lambda name: page.locator(f'[id$="-{name}"]')
     expect(by_id('Summary')).to_contain_text('Regression', timeout=30000)
     expect(by_id('Table')).to_contain_text('Meets requirements', timeout=30000)
+    expect(by_id('Table').get_by_text('Pred throughput', exact=True)).to_be_attached()
     card = page.locator('.card').first
     card.hover()
     card.locator('button.collapse-toggle').click()
@@ -264,8 +270,8 @@ def test_method_table_groups_recipes_without_merging_evidence():
     recipes = _method_groups(result, show_all=True)[method]
     assert list(table.columns) == [
         'Model', 'Core mechanism', 'Composition', 'Fitting criterion', 'Transparency',
-        'Learning strategy', 'Prediction outputs', 'Scale', 'Input requirements',
-        'Readiness', 'Evidence', 'Package', 'Installation', 'Recipes', 'ID']
+        'Learning strategy', 'Prediction outputs', 'Pred throughput', 'Scale', 'Input requirements',
+        'Implicit resampling', 'Readiness', 'Evidence', 'Package', 'Installation', 'Recipes', 'ID']
     assert row.Evidence == recipes[0]['evidence'].replace('_', ' ')
     assert row['Input requirements'] == recipes[0]['input_assessment']['requirements'].replace('_', ' ')
     assert result['rows'] == before
@@ -349,7 +355,7 @@ def test_characteristic_sort_preserves_selected_recipe_and_hides_front(page, app
     # The virtualized DOM contains only a subset of the methods.
     _ = len(_table(_analyze(source(), load_catalogue(), {}), show_all=True))
     expect(page.locator('[id$="-Status"]')).to_have_text(
-        'No estimator committed. Select a method and Commit.')
+        'No estimator committed. Select methods and Commit.')
     selected.click()
     card.hover()
     page.locator('[id$="-FlipButton"]').click()
@@ -441,10 +447,68 @@ def test_commit_selected_model_exports_pipeline_and_status(page, app):
     table.get_by_text('Hist Gradient Boosting Regressor', exact=True).click()
     expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=True;pipeline=False')
     page.locator('[id$="-Commit"]').click()
-    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed estimator: Hist Gradient Boosting Regressor')
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: Hist Gradient Boosting Regressor')
     expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=False;pipeline=True')
     page.locator('[id$="-Commit"]').click()
-    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed estimator: Hist Gradient Boosting Regressor')
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting Regressor')
+
+
+@pytest.mark.ui
+def test_method_choice_can_change_after_selection_and_commit(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    first = table.get_by_text('Hist Gradient Boosting Regressor', exact=True)
+    second = table.get_by_text('LGBM Regressor', exact=True)
+    expect(first).to_be_visible(timeout=30000)
+    first.click()
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting Regressor')
+    second.click()
+    expect(second.locator('..')).to_have_attribute('aria-selected', 'true')
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Selected method: LGBM Regressor; press Commit')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: LGBM Regressor')
+    first.click()
+    expect(first.locator('..')).to_have_attribute('aria-selected', 'true')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting Regressor')
+
+
+@pytest.mark.ui
+def test_json_restores_selected_row_separately_from_committed_model(page, app, request, monkeypatch, tmp_path):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    first = table.get_by_text('Hist Gradient Boosting Regressor', exact=True)
+    second = table.get_by_text('LGBM Regressor', exact=True)
+    expect(first).to_be_visible(timeout=30000)
+    first.click()
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting Regressor')
+    table.locator('thead').get_by_text('Model', exact=True).click()
+    second.click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Selected method: LGBM Regressor')
+    with page.expect_download() as download:
+        page.get_by_role('link', name='Configuration JSON', exact=True).click()
+    saved = tmp_path / 'model.json'
+    download.value.save_as(saved)
+    choice = json.loads(saved.read_text())['model_choice']
+    assert choice['selected_method'] == 'lightgbm.LGBMRegressor'
+    assert choice['selected_recipe'] != choice['committed_recipe']
+    monkeypatch.setenv('PYTHAGORAS_TEST_MODEL_CONFIG', str(saved))
+    resumed = request.getfixturevalue('restored_app')
+    page.goto(resumed.url)
+    restored_row = page.locator('[id$="-Table"]').get_by_text('LGBM Regressor', exact=True)
+    expect(restored_row.locator('..')).to_have_attribute('aria-selected', 'true', timeout=30000)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting Regressor')
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Selected method: LGBM Regressor')
+    expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=False;pipeline=True')
+    # Restoring a row must not keep forcing it after a subsequent user choice.
+    page.locator('[id$="-Table"]').get_by_text('Hist Gradient Boosting Regressor', exact=True).click()
+    expect(page.locator('[id$="-Table"]').get_by_text('Hist Gradient Boosting Regressor', exact=True).locator('..')).to_have_attribute('aria-selected', 'true')
+    restored_row.click()
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: LGBM Regressor')
+    expect(page.locator('[id$="-ExportState"]')).to_have_text('unchanged=False;pipeline=True')
 
 
 @pytest.mark.ui
@@ -463,3 +527,193 @@ def test_candidates_table_grows_to_fullscreen_height(page, app):
     assert after > before + 200
     grid = table.locator('shiny-data-frame')
     assert grid.bounding_box()['height'] > after * .9
+
+
+@pytest.mark.unit
+def test_implicit_resampling_visibility_commit_guard_and_upstream_switch():
+    from evaluation_plan import build_plan
+    from model_commit import build_model
+    catalogue = load_catalogue()
+    methods = {'sklearn.linear_model.ElasticNet', 'sklearn.linear_model.ElasticNetCV'}
+    for entry in catalogue['estimators']:
+        if entry['id'] in methods:
+            entry.pop('superseded_by', None)
+    data = proxy_data(pd.DataFrame({'x': np.arange(20.), 'y': np.arange(20.) * 2}),
+                      _roles=RoleMap.from_primitive({'predictor': ['x'], 'target': ['y']}))
+    profile = next(p for p in catalogue['profiles'] if p['estimator'] == 'sklearn.linear_model.ElasticNetCV')
+    versions = dict(profile['inspected_dependencies'])
+    upstream = data.with_evaluation_plan(build_plan(data, strategy='kfold', objective='independent', folds=3), card='obs_resample')
+    for value, allowed, excluded in (
+            (data, 'sklearn.linear_model.ElasticNetCV', 'sklearn.linear_model.ElasticNet'),
+            (upstream, 'sklearn.linear_model.ElasticNet', 'sklearn.linear_model.ElasticNetCV')):
+        result = _analyze(value, catalogue, versions)
+        visible = _table(result)
+        assert allowed in set(visible.ID)
+        assert excluded not in set(visible.ID)
+        assert excluded in set(_table(result, show_all=True).ID)
+        row = next(r for r in result['rows'] if r['estimator'] == excluded)
+        assert not row['selectable']
+        assert row['compatibility'] == 'compatible'  # Input capability evidence stays intact.
+        with pytest.raises(ValueError, match='resampling'):
+            build_model(row, value)
+        assert {label for cell in _table(result, show_all=True)['Implicit resampling']
+                for label in cell.split(', ')} <= {'Yes','No','Conditional','Unreviewed'}
+
+
+@pytest.mark.unit
+def test_non_suffix_internal_calibration_bootstrap_and_unknown():
+    from copy import deepcopy
+
+    from estimator_catalogue import implicit_resampling
+    catalogue = load_catalogue()
+    def profile(name): return next(p for p in catalogue['profiles'] if p['estimator'] == name)
+    assert implicit_resampling(profile('sklearn.svm.NuSVC'))['status'] == 'yes'
+    assert implicit_resampling(profile('sklearn.ensemble.RandomForestRegressor'))['status'] == 'no'
+    changed = deepcopy(profile('sklearn.svm.NuSVC'))
+    changed['construction']['parameters']['probability'] = False
+    assert implicit_resampling(changed)['status'] == 'unknown'
+    changed['id'] = 'new.Method:unreviewed'
+    assert implicit_resampling(changed)['status'] == 'unknown'
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('count,expected', [(10000, 'No'), (10001, 'Yes')])
+def test_automatic_validation_split_boundary(count, expected):
+    from evaluation_plan import build_plan
+    data = proxy_data(pd.DataFrame({'x': np.arange(count, dtype=float), 'y': np.arange(count, dtype=float)}),
+                      _roles=RoleMap.from_primitive({'predictor': ['x'], 'target': ['y']}))
+    catalogue = load_catalogue()
+    def histogram(result):
+        return next(r for r in result['rows'] if r['estimator'] == 'sklearn.ensemble.HistGradientBoostingRegressor')
+    row = histogram(_analyze(data, catalogue, {}))
+    assert row['resampling_label'] == expected
+    upstream = data.with_evaluation_plan(build_plan(data, strategy='kfold', objective='independent', folds=3), card='obs_resample')
+    row = histogram(_analyze(upstream, catalogue, {}))
+    assert row['resampling_label'] == ('No' if count == 10000 else 'Conditional')
+    assert bool(row.get('resampling_exclusion')) == (count > 10000)
+
+
+@pytest.mark.unit
+def test_prediction_throughput_is_ranked_recipe_guidance_and_preserves_eligibility():
+    result = _analyze(source(), load_catalogue(), {})
+    before = [(r['id'], r['compatibility'], r['evidence'], r['selectable']) for r in result['rows']]
+    table = _table(result, show_all=True)
+    assert set(table['Pred throughput']) <= {'Low', 'Medium', 'High'}
+    from cards.data_models import _method_groups
+    for method, recipes in _method_groups(result, show_all=True).items():
+        assert table.set_index('ID').loc[method, 'Pred throughput'] == recipes[0]['prediction_throughput']['rating']
+    assert [(r['id'], r['compatibility'], r['evidence'], r['selectable']) for r in result['rows']] == before
+
+
+@pytest.mark.ui
+def test_change_committed_method_after_restoring_same_selected_and_committed(page,app,request,monkeypatch,tmp_path):
+    page.goto(app.url)
+    table=page.locator('[id$="-Table"]')
+    status=page.locator('[id$="-Status"]')
+    expect(table).to_contain_text('Hist Gradient Boosting Regressor',timeout=30000)
+    table.get_by_text('Hist Gradient Boosting Regressor',exact=True).click()
+    page.locator('[id$="-Commit"]').click()
+    expect(status).to_have_text('Committed method: Hist Gradient Boosting Regressor')
+    with page.expect_download() as download:
+        page.get_by_role('link',name='Configuration JSON',exact=True).click()
+    saved=tmp_path/'same-choice.json'
+    download.value.save_as(saved)
+    choice=json.loads(saved.read_text())['model_choice']
+    assert choice['selected_recipe']==choice['committed_recipe']
+    monkeypatch.setenv('PYTHAGORAS_TEST_MODEL_CONFIG',str(saved))
+    resumed=request.getfixturevalue('restored_app')
+    page.goto(resumed.url)
+    table=page.locator('[id$="-Table"]')
+    status=page.locator('[id$="-Status"]')
+    expect(status).to_have_text('Committed method: Hist Gradient Boosting Regressor',timeout=30000)
+    table.get_by_text('LGBM Regressor',exact=True).click()
+    expect(status).to_contain_text('Selected method: LGBM Regressor; press Commit')
+    page.locator('[id$="-Commit"]').click()
+    expect(status).to_have_text('Committed method: LGBM Regressor')
+    with page.expect_download() as download:
+        page.get_by_role('link',name='Configuration JSON',exact=True).click()
+    changed=tmp_path/'changed-choice.json'
+    download.value.save_as(changed)
+    choice=json.loads(changed.read_text())['model_choice']
+    assert choice['selected_recipe']==choice['committed_recipe']
+    assert choice['committed_recipe'].startswith('lightgbm.LGBMRegressor:')
+
+
+@pytest.mark.ui
+def test_restored_gaussian_process_can_be_replaced_by_catboost(page,request,monkeypatch,tmp_path):
+    monkeypatch.setenv('PYTHAGORAS_TEST_MODEL_NUMERIC','1')
+    initial=request.getfixturevalue('app')
+    page.goto(initial.url)
+    table=page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Gaussian Process Regressor',timeout=30000)
+    table.get_by_text('Gaussian Process Regressor',exact=True).click()
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: Gaussian Process Regressor')
+    expect(page.locator('[id$="-ExportedMethod"]')).to_have_text('GaussianProcessRegressor')
+    with page.expect_download() as download:
+        page.get_by_role('link',name='Configuration JSON',exact=True).click()
+    saved=tmp_path/'gp-committed.json'
+    download.value.save_as(saved)
+    monkeypatch.setenv('PYTHAGORAS_TEST_MODEL_CONFIG',str(saved))
+    resumed=request.getfixturevalue('restored_app')
+    page.goto(resumed.url)
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: Gaussian Process Regressor',timeout=30000)
+    page.locator('[id$="-Table"]').get_by_text('Cat Boost Regressor',exact=True).click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Selected method: Cat Boost Regressor')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: Cat Boost Regressor')
+    expect(page.locator('[id$="-ExportedMethod"]')).to_contain_text('CatBoostRegressor')
+    with page.expect_download() as download:
+        page.get_by_role('link',name='Configuration JSON',exact=True).click()
+    changed=tmp_path/'catboost-committed.json'
+    download.value.save_as(changed)
+    choice=json.loads(changed.read_text())['model_choice']
+    assert choice['selected_recipe']==choice['committed_recipe']
+    assert choice['committed_recipe'].startswith('catboost.CatBoostRegressor:')
+
+
+@pytest.mark.unit
+def test_skglm_elastic_net_alternative_is_hidden_but_retained_with_reason():
+    from cards.data_models import _recipe_details
+    from estimator_catalogue import assess_profiles
+    catalogue = load_catalogue()
+    rows = assess_profiles(catalogue, task='regressor')
+    row = next(r for r in rows if r['estimator'] == 'skglm.ElasticNet')
+    reason = 'Alternative implementation of sklearn Elastic Net with the same statistical objective; retained for solver-performance comparisons.'
+    assert row['superseded_by']['relationship'] == 'alternative_implementation'
+    assert 'skglm.ElasticNet' not in set(_table({'rows': rows}).ID)
+    shown = _table({'rows': rows}, show_all=True).set_index('ID')
+    assert reason in shown.loc['skglm.ElasticNet', 'Readiness']
+    assert 'sklearn.linear_model.ElasticNet' in set(_table({'rows': rows}).ID)
+    details = str(_recipe_details(row, catalogue['catalogue_version']))
+    assert reason in details
+    assert 'Representative method: sklearn.linear_model.ElasticNet' in details
+
+
+@pytest.mark.ui
+def test_commit_multiple_methods_and_restore_candidate_set(page, app, request, monkeypatch, tmp_path):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    first = table.get_by_text('Hist Gradient Boosting Regressor', exact=True)
+    second = table.get_by_text('LGBM Regressor', exact=True)
+    expect(first).to_be_visible(timeout=30000)
+    first.click()
+    second.click(modifiers=['ControlOrMeta'])
+    expect(first.locator('..')).to_have_attribute('aria-selected', 'true')
+    expect(second.locator('..')).to_have_attribute('aria-selected', 'true')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed methods:')
+    expect(page.locator('[id$="-ExportedCandidates"]')).to_contain_text('Hist Gradient Boosting Regressor')
+    expect(page.locator('[id$="-ExportedCandidates"]')).to_contain_text('LGBM Regressor')
+    with page.expect_download() as download:
+        page.get_by_role('link', name='Configuration JSON', exact=True).click()
+    path = tmp_path / 'multiple-models.json'
+    download.value.save_as(path)
+    state = json.loads(path.read_text())['model_choice']
+    assert len(state['committed_recipes']) == 2
+    assert len(state['selected_methods']) == 2
+    monkeypatch.setenv('PYTHAGORAS_TEST_MODEL_CONFIG', str(path))
+    resumed = request.getfixturevalue('restored_app')
+    page.goto(resumed.url)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed methods:', timeout=30000)
+    expect(page.locator('[id$="-Table"] tbody tr[aria-selected="true"]')).to_have_count(2)

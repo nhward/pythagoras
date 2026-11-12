@@ -6,6 +6,7 @@ from typing import ClassVar
 
 import numpy as np
 import pandas as pd
+from bundled_parameters import BundledParametersMixin
 from code_recording import recordable
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import KFold, StratifiedKFold
@@ -20,7 +21,7 @@ METHODS = {
 
 
 @recordable
-class TargetEncodingTransformer(TransformerMixin, BaseEstimator):
+class TargetEncodingTransformer(BundledParametersMixin, TransformerMixin, BaseEstimator):
     """Learn only from fit-time outcomes; transform never reads the target.
 
     fit_transform uses sklearn's internal cross-fitting for training features.
@@ -38,8 +39,12 @@ class TargetEncodingTransformer(TransformerMixin, BaseEstimator):
                    'importance': 90},
      'cv': {'kind': 'integer', 'bounds': [2, 10000], 'suggested': {'values': [3, 5, 10]}}}
 
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {'smooth': {'selector': 'method',
+                'values': ['smooth'],
+                'parameters': {'smoothing': 'smoothing'}}}
+
     def __init__(self, columns, *, target, target_type='continuous', method='auto',
-                 smoothing=10., cv=5, remove_original=True, random_state=2025):
+                 smoothing=10., cv=5, remove_original=True, random_state=2025, smooth=None):
         self.columns = columns
         self.target = target
         self.target_type = target_type
@@ -48,6 +53,8 @@ class TargetEncodingTransformer(TransformerMixin, BaseEstimator):
         self.cv = cv
         self.remove_original = remove_original
         self.random_state = random_state
+        self._init_parameter_groups(smooth=smooth)
+
 
     def _features(self, X):
         if not isinstance(X, pd.DataFrame) or not X.columns.is_unique:
@@ -101,13 +108,13 @@ class TargetEncodingTransformer(TransformerMixin, BaseEstimator):
         features = self._features(X)
         if self.method not in METHODS:
             raise ValueError('Unknown target-encoding method.')
-        if not np.isfinite(self.smoothing) or self.smoothing < 0:
+        if not np.isfinite(self.parameter_value('smoothing')) or self.parameter_value('smoothing') < 0:
             raise ValueError('Smoothing strength must be nonnegative and finite.')
         outcomes = self._outcomes(X, y)
         width = len(self.classes_) if self.encoder_target_type_ == 'multiclass' else 1
         if len(self.columns) * width > 4096:
             raise ValueError('Target encoding exceeds 4096 output features; reduce the number of classes or predictors.')
-        smooth = 'auto' if self.method == 'auto' else float(self.smoothing) if self.method == 'smooth' else 0.
+        smooth = 'auto' if self.method == 'auto' else float(self.parameter_value('smoothing')) if self.method == 'smooth' else 0.
         # sklearn 1.9 moved shuffle/seed into a CV splitter. Keep support for
         # the project's >=1.4 baseline, including older Shinylive runtimes.
         shuffle_parameter = signature(TargetEncoder).parameters.get('shuffle')

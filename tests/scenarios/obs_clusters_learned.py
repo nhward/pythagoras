@@ -2,8 +2,10 @@
 import os
 import sys
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
 APP_ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(APP_ROOT)
 sys.path.insert(0, str(APP_ROOT))
@@ -17,6 +19,7 @@ frame = pd.DataFrame(np.vstack([rng.normal(-4, .2, (12, 2)), rng.normal(4, .2, (
 this = instance()
 this.restore_configuration_state({'inputs': {'Projection': 'pca', 'Neighbours': 3}})
 from sklearn.preprocessing import StandardScaler
+
 source = proxy_data(_df=frame, _cluster_count=2, _name='Two groups')
 scaler = StandardScaler().set_output(transform='pandas')
 this._imports.set(source.with_pipeline_step(scaler, name='scale', preview_frame=scaler.fit_transform(frame)))
@@ -40,7 +43,7 @@ def server(input, output, session):
             return 'added=none'
         nominal = all(isinstance(data.frame[name].dtype, pd.CategoricalDtype) and not data.frame[name].cat.ordered for name in added)
         stratifiers = all(Role.STRATIFIER in data.role_map.roles_for(name) for name in added)
-        methods = [record.parameters['method'] for record in data.processing_records if record.operation == 'Add cluster membership']
+        methods = [method for record in data.processing_records if record.operation == 'Add cluster membership' for method in record.parameters.get('methods', (record.parameters.get('method'),))]
         return f"added={','.join(added)}; methods={','.join(methods)}; nominal={nominal}; stratifiers={stratifiers}; pipeline={','.join(data.pipeline_steps)}; clean_columns={','.join(data.clean_frame.columns)}"
     return selected
 this.server = server

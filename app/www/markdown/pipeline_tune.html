@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Nick Ward">
+
+<title>Pipeline tuning</title>
+<style>
+
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+}
+pre.numberSource { margin-left: 3em; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+
+
+<style type="text/css">
+:root {
+--py-table-row-hover: #f0f1cc;
+--py-table-cell-hover: #d4d4b8;
+}
+.pipeline-tune-actions {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: .35rem;
+}
+.pipeline-tune-best {
+flex: 0 0 auto;
+max-height: 6rem;
+overflow: auto;
+font-size: .85rem;
+overflow-wrap: anywhere;
+}
+.pipeline-tune-table {
+flex: 1 1 0;
+min-height: 0;
+overflow: hidden;
+}
+.flip-container:has(.pipeline-tune-table).flipped > .flippable > .front,
+.flip-container:has(.pipeline-tune-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.pipeline-tune-table > .shiny-data-frame-output {
+flex: 1 1 0;
+min-height: 0;
+}
+.pipeline-tune-details {
+flex: 0 0 auto;
+max-height: 12rem;
+overflow: auto;
+}
+.card [id$="-Specification"] {
+max-height: 16rem;
+overflow: auto;
+}
+
+body.bslib-gap-spacing {
+gap: 0.25rem;
+}
+
+.hidden {
+display: none !important;
+}
+
+.flip-container {
+perspective: 1000px;
+}
+.flippable {
+position: relative;
+width: 100%;
+height: 100%;
+transform-style: preserve-3d;
+transition: transform 1.3s ease-in-out;
+}
+.flip-container.flipped .flippable {
+transform: rotateY(180deg);
+}
+.front,
+.back {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+backface-visibility: hidden;
+-webkit-backface-visibility: hidden;
+}
+.front {
+z-index: 2;
+transform: rotateY(0);
+}
+.back {
+z-index: 1;
+transform: rotateY(180deg);
+}
+
+.card .html-fill-container:has(> span + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> span + .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + .shiny-ipywidget-output) {
+row-gap: 0 !important;
+}
+
+.bslib-card,
+.card {
+position: relative;
+overflow: visible;
+}
+.card {
+outline: 1px solid grey;
+}
+.card.shadow {
+box-shadow: 0 4px 8px rgba(50, 50, 50, 0.8) !important;
+}
+.card.fullscreen-active {
+position: fixed;
+inset: 0;
+z-index: 1050;
+width: 100vw;
+height: 100vh !important;
+max-height: none !important;
+min-height: 0 !important;
+margin: 0 !important;
+border-radius: 0;
+transition: all 0.5s ease;
+}
+.card.fullscreen-active .card-body {
+flex: 1 1 auto;
+overflow-y: auto;
+padding: 2rem;
+}
+.card.fullscreen-active .card-footer {
+flex-shrink: 0;
+margin-top: 0;
+padding: 2rem 2rem calc(2rem + env(safe-area-inset-bottom));
+border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.card.fullscreen-active .drag-handle {
+display: none !important;
+}
+.journey-chart-scroll {
+width: 100%;
+min-height: 0;
+overflow-x: hidden;
+overflow-y: auto;
+}
+.journey-chart-scroll > .shiny-ipywidget-output {
+min-height: 100%;
+}
+
+#shiny-modal-wrapper {
+position: absolute;
+z-index: 1060 !important;
+}
+
+.hover-card {
+position: relative;
+}
+.hover-card.tour-running .hover-btn,
+.hover-card:not(.tour-running):hover .hover-btn {
+visibility: visible !important;
+}
+.hover-card:not(.tour-running) .hover-btn {
+visibility: hidden;
+}
+
+.cards-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+margin: 0 auto;
+gap: 0.5rem;
+}
+.drag-ghost {
+opacity: 0.5;
+}
+.drag-handle {
+display: inline-flex;
+align-items: center;
+padding: 0 0.4rem;
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-handle:active,
+.sortable-chosen .drag-handle,
+.sortable-drag .drag-handle {
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+.drag-handle * {
+cursor: inherit;
+}
+.drag-tab {
+position: absolute !important;
+top: 50%;
+left: 0;
+z-index: 2;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 28px;
+height: 48px;
+transform: translate(-50%, -50%);
+border: 1px solid rgba(0, 0, 0, 0.06);
+border-radius: 999px;
+outline: 1px solid grey;
+background: #f3f4f6;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+cursor: grab;
+cursor: -webkit-grab;
+user-select: none;
+touch-action: none;
+}
+.drag-tab::before {
+width: 10px;
+height: 20px;
+background:
+radial-gradient(currentColor 1.2px, transparent 1.2px) 0 0 / 6px 6px,
+radial-gradient(currentColor 1.2px, transparent 1.2px) 3px 3px / 6px 6px;
+opacity: 0.55;
+content: "";
+}
+.dragging .drag-tab,
+.drag-tab:active {
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+cursor: grabbing;
+cursor: -webkit-grabbing;
+}
+@media (max-width: 600px) {
+.drag-tab {
+display: none;
+}
+}
+
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > :is(thead, tbody) > tr > :is(th, td) {
+max-width: 180px;
+padding: 0.2rem 0.4rem;
+overflow: hidden;
+line-height: 1.2;
+text-align: left;
+text-overflow: ellipsis;
+vertical-align: middle;
+white-space: nowrap;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th {
+overflow: visible !important;
+white-space: normal !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > thead > tr > th > div {
+line-height: 1.2;
+white-space: pre-line !important;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) {
+border-top: 1px solid var(--bs-table-border-color) !important;
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+border-collapse: collapse;
+}
+
+:is(
+shiny-data-frame .shiny-data-grid table
+) > thead > tr:last-child > th {
+border-bottom: 1px solid var(--bs-table-border-color) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(odd) > * {
+background-color: color-mix(in srgb, var(--bs-body-bg, #fff) 82%, var(--bs-body-color, #212529)) !important;
+}
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:nth-of-type(even) > * {
+background-color: var(--bs-body-bg, #fff) !important;
+}
+
+.block-table shiny-data-frame .shiny-data-grid > table,
+.block-table shiny-data-frame .shiny-data-grid > table > thead > tr > th,
+.block-table shiny-data-frame .shiny-data-grid > table > tbody > tr:not(:hover) > td {
+background-color: #bbd6f8 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-informative-row {
+background-color: rgba(233, 36, 66, 0.22) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-strong-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-weak-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-impute-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-strong-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-moderate-row {
+background-color: #fff3cd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-weak-row {
+background-color: #cff4fc !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-stable-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .data-homogeneous-excluded-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-random-row {
+background-color: #d1e7dd !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-uncertain-row {
+background-color: #ddcfa7 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-patterned-row {
+background-color: #f8d7da !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > .miss-type-insufficient-row {
+background-color: #e2e3e5 !important;
+}
+
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-strong-review-row, .obs-dependence-flagged-row) {
+background-color: #d95f02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-review-row, .obs-dependence-exploratory-row) {
+background-color: #e6ab02 !important;
+color: #000 !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-expected-row, .obs-dependence-not-flagged-row) {
+background-color: #3978a8 !important;
+color: #fff !important;
+}
+shiny-data-frame .shiny-data-grid > table
+> tbody > tr:not(:hover) > :is(.var-cardinality-not-assessed-row, .obs-dependence-unavailable-row) {
+background-color: #9aa7b2 !important;
+color: #000 !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > * {
+background-color: var(--py-table-row-hover) !important;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr:hover
+> :is(
+.var-cardinality-strong-review-row,
+.var-cardinality-review-row,
+.var-cardinality-expected-row,
+.var-cardinality-not-assessed-row,
+.obs-dependence-flagged-row,
+.obs-dependence-exploratory-row,
+.obs-dependence-not-flagged-row,
+.obs-dependence-unavailable-row
+) {
+color: var(--bs-body-color, #212529) !important;
+}
+
+:is(
+table.table,
+table.dataframe,
+shiny-data-frame .shiny-data-grid > table
+) > tbody > tr:hover > td:hover {
+position: relative;
+z-index: 10;
+overflow: visible;
+background-color: var(--py-table-cell-hover) !important;
+white-space: normal;
+}
+
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > :is(td, th),
+shiny-data-frame .shiny-data-grid > table > tbody > tr[aria-selected="true"] > td:hover {
+background-color: var(--shiny-datagrid-grid-body-selected-bgcolor, #cfe2ff) !important;
+color: var(--shiny-datagrid-grid-body-selected-color, #052c65) !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-top: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid
+> table
+> thead
+> tr:last-child
+> :is(th, td) {
+border-bottom: 1px solid #000 !important;
+}
+
+shiny-data-frame
+.shiny-data-grid-grid
+> table {
+border-bottom: 1px solid #000 !important;
+}
+
+.across-row{
+display:flex;
+align-items:end;
+gap:.5rem
+}
+.across-row .shiny-input-container{
+flex:1
+}
+.across-row .btn{
+flex:none;
+margin-bottom:0
+}
+
+.roles-layout {
+display: grid;
+grid-template-columns: auto 1fr;
+gap: 1rem;
+align-items: start;
+width: 100%;
+min-width: 0;
+overflow-x: auto;
+}
+.roles-grid {
+display: grid;
+grid-template-columns: repeat(11, minmax(200px, 1fr));
+gap: 1rem;
+width: 100%;
+overflow-x: auto;
+min-width: 0;
+}
+.roles-grid > * {
+min-width: 0;
+}
+.role-box {
+border: 1px solid #d0d7de;
+border-radius: 10px;
+padding: 0.75rem;
+min-height: 315px;
+background: #d5e6f8;
+width: 100%;
+min-width: 0;
+}
+.role-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+width: 100%;
+min-width: 0;
+}
+.role-list {
+min-height: 220px;
+padding: 0.25rem;
+border: 1px dashed #c7ced6;
+border-radius: 8px;
+background: white;
+width: 100%;
+min-width: 0;
+overflow-y: auto;
+}
+.var-chip {
+border: 1px solid #c7ced6;
+border-radius: 999px;
+padding: 0.35rem 0.7rem;
+margin: 0.35rem 0;
+background: #d0ddf6;
+cursor: grab;
+user-select: none;
+width: 100%;
+min-width: 0;
+}
+.ghost {
+opacity: 0.4;
+}
+.chosen {
+background: #dce9ff;
+}
+
+.selectize-control.multi .selectize-input > .item {
+background-color: #dce6f2;
+color: #1f3b5c;
+border-radius: 999px;
+padding: 2px 10px;
+margin: 2px;
+border: 1px solid #83a0cd;
+}
+.selectize-dropdown .option {
+border-radius: 6px;
+padding: 6px 10px;
+}
+.selectize-dropdown .option.selected {
+background-color: #dce6f2;
+color: var(--bs-body-color);
+}
+.selectize-dropdown .option.active {
+background-color: var(--bs-primary);
+color: white;
+}
+ span.btn.btn-default.btn-file:has(.shiny-input-file) {
+background-color: var(--bs-primary);
+border-color: var(--bs-primary);
+color: white;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group {
+display: inline-flex;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox, label.checkbox-inline) {
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"] {
+position: absolute;
+opacity: 0;
+width: 0;
+height: 0;
+margin: 0;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline):hover > span,
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span {
+background-color: #0b5494;
+border-color: var(--bs-primary, #0d6efd);
+color: #fff;
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > span::before {
+content: "☐";
+display: inline-block;
+flex: 0 0 1em;
+width: 1em;
+font-size: 1em;
+line-height: 1;
+text-align: center;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) > input[type="checkbox"]:checked + span::before {
+content: "☑";
+color: currentColor;
+}
+.shiny-input-checkboxgroup .shiny-options-group
+:is(.checkbox label, label.checkbox-inline) {
+margin-bottom: 0;
+}
+
+.bslib-sidebar-layout.sidebar-collapsed>.main,
+.bslib-sidebar-layout.sidebar-right>.main {
+padding: 0px 0px 0px 0px !important;
+}
+.bslib-sidebar-layout.sidebar-right>.sidebar {
+padding-top: 20px;
+padding-left: 12px;
+}
+.bslib-card .card-header {
+padding-right: 40px !important;
+}
+body.fullscreen-mode { overflow: hidden; } 
+
+.section-empty-state[hidden],
+.delete-empty-section[hidden] {
+display: none !important;
+}
+.current-section-context {
+padding: .65rem .8rem;
+border-radius: var(--bs-border-radius, .375rem);
+background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.section-nav-item-with-delete,
+.section-accordion-header-with-delete {
+position: relative;
+}
+.section-nav-item-with-delete > .nav-link {
+padding-right: 1.75rem;
+}
+.delete-empty-section {
+position: absolute;
+z-index: 2;
+top: 50%;
+right: .35rem;
+width: 1.2rem;
+height: 1.2rem;
+padding: 0;
+border: 0;
+border-radius: 50%;
+background: transparent;
+color: var(--bs-secondary-color, #6c757d);
+font-size: 1.15rem;
+line-height: 1;
+transform: translateY(-50%);
+}
+.delete-empty-section:hover,
+.delete-empty-section:focus-visible {
+background: var(--bs-danger-bg-subtle, #f8d7da);
+color: var(--bs-danger, #dc3545);
+outline: none;
+}
+.section-accordion-header-with-delete > .accordion-button {
+padding-right: 4rem;
+}
+.section-accordion-header-with-delete > .delete-empty-section {
+right: 2.5rem;
+}
+
+.dragging, .dragging * {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+}
+
+@keyframes pulse-outline {
+0% { box-shadow: 0 0 0 0 rgba(80,140,255,.45); }
+70% { box-shadow: 0 0 0 10px rgba(80,140,255,0); }
+100% { box-shadow: 0 0 0 0 rgba(80,140,255,0); }
+}
+.card.animate-highlight {
+animation: pulse-outline 700ms ease-out;
+}
+
+@keyframes jello {
+0% { transform: scale3d(1, 1, 1); }
+30% { transform: scale3d(1.07, 0.93, 1); }
+45% { transform: scale3d(0.95, 1.05, 1); }
+60% { transform: scale3d(1.03, 0.97, 1); }
+75% { transform: scale3d(0.99, 1.01, 1); }
+100% { transform: scale3d(1, 1, 1); }
+}
+.card.animate-jello {
+animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
+will-change: transform; 
+}
+
+@media (prefers-reduced-motion: reduce) {
+.card.animate-jello { animation: none; }
+.card.animate-highlight { animation-duration: 300ms; }
+}
+
+.progress-bar {
+height: 1rem !important;
+}
+.vertically-scrollable-footer {
+max-height: 70px;
+overflow-y: auto;
+}
+
+.deep-dive {
+width: 100%;
+max-width: 100%;
+min-width: 0;
+}
+.deep-dive iframe {
+display: block;
+box-sizing: border-box;
+width: 100%;
+max-width: 100%;
+height: 80vh;
+margin-top: 1rem;
+border: 0;
+}
+.parallel-hover-host {
+position: relative;
+width: 100%;
+height: 100%;
+}
+.parallel-hover-tooltip {
+position: absolute;
+z-index: 20;
+max-width: min(28rem, calc(100% - 1rem));
+padding: 0.3rem 0.5rem;
+border: 1px solid rgba(21, 76, 121, 0.35);
+border-radius: 0.3rem;
+color: #212529;
+background: rgba(255, 255, 255, 0.94);
+box-shadow: 0 0.15rem 0.4rem rgba(0, 0, 0, 0.18);
+font-size: 0.82rem;
+line-height: 1.2;
+pointer-events: none;
+white-space: nowrap;
+}
+.parallel-chart-controls {
+position: absolute;
+top: 0.15rem;
+right: 0.25rem;
+z-index: 30;
+display: flex;
+gap: 0.25rem;
+}
+.parallel-chart-controls .btn {
+padding: 0.15rem 0.4rem;
+background-color: rgba(255, 255, 255, 0.92);
+font-size: 0.72rem;
+line-height: 1.2;
+}
+.parallel-comparison-overlay {
+position: absolute;
+inset: 0;
+z-index: 15;
+width: 100%;
+height: 100%;
+overflow: visible;
+pointer-events: none;
+}
+.parallel-comparison-overlay polyline {
+fill: none;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+.parallel-comparison-shadow {
+stroke: rgba(255, 255, 255, 0.95);
+stroke-width: 7;
+}
+.parallel-comparison-line {
+stroke: #7b3f00;
+stroke-width: 4;
+}
+.parallel-comparison-label {
+position: absolute;
+left: 0.35rem;
+bottom: 0.25rem;
+z-index: 25;
+padding: 0.2rem 0.4rem;
+border-radius: 0.25rem;
+color: #7b3f00;
+background: rgba(255, 255, 255, 0.9);
+font-size: 0.78rem;
+font-weight: 600;
+pointer-events: none;
+}
+.parallel-line-near .gl-canvas-pick {
+cursor: pointer;
+}
+
+.card .card-body.flip-container {
+overflow: hidden;
+}
+.flip-container > .flippable > :is(.front, .back) {
+overflow: auto;
+min-height: 0;
+}
+
+.flip-container shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 1 1 auto;
+min-height: 0;
+}
+
+.card-scroll-content {
+flex: 0 0 auto;
+min-width: 0;
+}
+.card-scroll-content shiny-data-frame,
+.card-scroll-content shiny-data-frame > .html-fill-container,
+.card-scroll-content shiny-data-frame > .html-fill-container > .shiny-data-grid {
+flex: 0 0 auto;
+height: auto;
+}
+
+.card-footer .shiny-input-radiogroup {
+margin-inline: auto;
+margin-bottom: 0;
+max-width: 100%;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup .shiny-options-group {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: .35rem;
+padding-top: .2rem;
+}
+.card-footer .shiny-input-radiogroup :is(.radio, label.radio-inline) {
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup :is(.radio label, label.radio-inline) {
+position: relative;
+padding-left: 0;
+margin-bottom: 0;
+}
+
+.card-footer .shiny-input-radiogroup input[type="radio"] {
+position: absolute;
+opacity: 0;
+width: 1px;
+height: 1px;
+margin: 0;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span {
+display: inline-flex;
+align-items: center;
+gap: .4rem;
+padding: .25rem .5rem;
+border: 1px solid var(--bs-primary, #0d6efd);
+border-radius: 50rem;
+background-color: var(--bs-primary, #0d6efd);
+color: #fff;
+cursor: pointer;
+font-size: .875rem;
+font-weight: 500;
+line-height: 1.5;
+user-select: none;
+transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.card-footer .shiny-input-radiogroup label:hover > input[type="radio"] + span,
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span {
+background-color: #0b5494;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:focus-visible + span {
+box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13,110,253), .35);
+}
+.card-footer .shiny-input-radiogroup input[type="radio"] + span::before {
+content: "○";
+flex: 0 0 1em;
+width: 1em;
+text-align: center;
+}
+.card-footer .shiny-input-radiogroup input[type="radio"]:checked + span::before {
+content: "●";
+}
+
+.js-plotly-plot .gtitle {
+fill: var(--bs-primary) !important;
+}
+
+.model-recipe-output { flex: 0 0 auto !important; min-width: 0; width: 100%; }
+.model-recipe {
+--recipe-accent: #176078;
+color: var(--bs-body-color, #24343e);
+background: var(--bs-tertiary-bg, #f3f7f9);
+border: 1px solid var(--bs-border-color, #d9e3e8);
+border-radius: .85rem;
+margin: .25rem; padding: 1.2rem;
+overflow-wrap: anywhere;
+}
+.model-recipe-header { padding-bottom: 1rem; border-bottom: 1px solid var(--bs-border-color, #d9e3e8); }
+.model-recipe-eyebrow { color: var(--recipe-accent); font-size: .78rem; font-weight: 600; letter-spacing: .04em; }
+.model-recipe .model-recipe-title { margin: .35rem 0; font-size: 1.4rem; line-height: 1.25; }
+.model-recipe-path { display: block; font-size: .78rem; color: var(--bs-secondary-color, #52636c); white-space: normal; }
+.model-recipe-badges { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }
+.model-recipe-badge { display: inline-flex; align-items: baseline; gap: .4rem; border-radius: .45rem; padding: .35rem .6rem; background: #e5edf5; color: #264860; font-size: .8rem; }
+.model-recipe-badge.is-ready { background: #dfefe7; color: #24583d; }
+.model-recipe-badge.is-review { background: #fff0d4; color: #704b13; }
+.model-recipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: .85rem; margin-top: 1rem; align-items: start; }
+.model-recipe-section { min-width: 0; padding: 1rem; background: var(--bs-body-bg, white); border: 1px solid var(--bs-border-color, #d9e3e8); border-radius: .6rem; }
+.model-recipe-section h6 { display: flex; align-items: center; gap: .5rem; color: var(--recipe-accent); margin: 0 0 .65rem; font-size: .9rem; font-weight: 650; }
+.model-recipe-section p, .model-recipe-section li { font-size: .88rem; line-height: 1.5; }
+.model-recipe-section p:last-child, .model-recipe-section ul, .model-recipe-section ol { margin-bottom: 0; }
+.model-recipe-section ul, .model-recipe-section ol { padding-left: 1.2rem; }
+.model-recipe-section li + li { margin-top: .4rem; }
+.model-recipe-section pre { margin: 0; padding: .7rem; background: var(--bs-tertiary-bg, #f3f7f9); border-radius: .4rem; font-size: .78rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.model-recipe-muted, .model-recipe-footer { color: var(--bs-secondary-color, #52636c); }
+.model-recipe-footer { margin-top: 1rem; font-size: .75rem; }
+.model-recipe-sources { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0 !important; }
+.model-recipe-sources li + li { margin-top: 0; }
+.model-recipe-empty { padding: 2rem; text-align: center; }
+.model-recipe-empty h5 { margin-top: .75rem; }
+.model-data-notice { font-size: .8rem; color: #704b13; padding: .35rem .5rem; }
+.card.fullscreen-active .model-recipe { padding: 1.5rem; width: 100%; max-width: none; margin: .25rem 0; box-sizing: border-box; }
+.model-recipe svg { margin: 0 !important; flex: 0 0 auto; }
+
+.flip-container:has(.model-recipe-output).flipped > .flippable > .front {
+pointer-events: none;
+
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.model-recipe-output) > .flippable > .back {
+overflow-y: auto;
+overflow-x: hidden;
+touch-action: pan-y;
+}
+.card.fullscreen-active .model-recipe-output { align-self: stretch; max-width: none; }
+
+.resample-details { flex: 0 0 auto !important; min-width: 0; }
+.resample-wide { grid-column: 1 / -1; }
+.resample-details .shiny-html-output { flex: 0 0 auto; }
+.resample-table-scroll { overflow-x: auto; max-width: 100%; }
+.resample-details .table { margin-top: .65rem; }
+.resample-details .shiny-input-container { min-width: 9rem; margin-bottom: .3rem; }
+.resample-message { margin-top: .65rem; padding: .65rem .8rem; border-radius: .4rem; font-size: .88rem; }
+.resample-message.is-warning { background: #fff0d4; color: #704b13; }
+.resample-message.is-error { background: #fbe4e6; color: #842029; }
+.resample-message.is-ready { background: #dfefe7; color: #24583d; }
+.flip-container:has(.resample-details).flipped > .flippable > .front { pointer-events: none; }
+.flip-container:has(.resample-details):not(.flipped) > .flippable > .back { pointer-events: none; }
+.flip-container:has(.resample-details) > .flippable > .back { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+.model-method-recipes { padding: .25rem; }
+.model-method-recipe { margin-bottom: .75rem; }
+.model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
+
+.var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.var-modify-table .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+
+.nominal-navbar {
+--bs-navbar-padding-y: 0.1rem;
+--bs-navbar-brand-padding-y: 0;
+--bs-navbar-toggler-padding-y: 0.1rem;
+--bs-navbar-toggler-padding-x: 0.3rem;
+--bs-navbar-toggler-font-size: 0.85rem;
+}
+.nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
+.nominal-navbar .navbar-brand:empty { display: none; }
+.nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
+.nominal-navbar.force-collapse {flex-wrap: wrap;}
+.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
+.nominal-navbar.force-collapse .navbar-toggler {display: block;}
+.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
+.nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
+.nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
+
+.tuning-search { display: none; }
+.card.fullscreen-active .tuning-search { display: block; }
+.tuning-editor-detail { margin: .25rem 0; }
+.tuning-editor-controls {
+display: flex; flex-wrap: wrap; align-items: flex-end; gap: .4rem .65rem;
+width: 100%;
+}
+.tuning-editor-controls > .shiny-input-container { flex: 1 1 9rem; width: auto; min-width: 0; }
+.tuning-editor-controls .shiny-input-container { margin-bottom: 0; }
+.tuning-editor-controls .control-label { font-size: .85rem; }
+.tuning-editor-controls .tuning-range { flex: 2 1 18rem; min-width: 0; }
+.tuning-range-fields { display: flex; gap: .5rem; }
+.tuning-range-fields > .shiny-input-container { flex: 1 1 0; width: auto; min-width: 0; }
+.tuning-editor-controls .tuning-values { flex: 2 1 18rem; min-width: 0; }
+.tuning-values > .shiny-input-container { width: 100%; }
+.tuning-editor-controls fieldset { flex: 0 0 auto; margin: 0; }
+.tuning-editor-controls fieldset .shiny-input-container { width: auto; }
+.tuning-editor-controls > .btn { flex: 0 0 auto; }
+
+.tuning-specification-scroll {
+max-height: 12rem;
+overflow: auto;
+white-space: pre-wrap;
+overflow-wrap: anywhere;
+margin-bottom: 0;
+}
+.card.fullscreen-active .tuning-specification-scroll { max-height: 45vh; }
+
+.flip-container:has(.tuning-review-output).flipped > .flippable > .front {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.tuning-review-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.tuning-specification-scroll { touch-action: pan-y; }
+
+.model-candidates-table { min-height: 0; min-width: 0; overflow: hidden; }
+.model-candidates-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.model-candidates-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.model-candidates-table.shiny-html-output { display: flex; flex-direction: column; }
+.front > div:has(> .model-candidates-summary) { flex: 0 0 auto; }
+.front > div:has(> .model-candidates-table) { min-height: 0; }
+.model-candidates-table > shiny-data-frame { height: 100%; max-height: none; flex: 1 1 0 !important; }
+.model-candidates-table .shiny-data-grid { flex: 1 1 0; height: 100%; max-height: none; }
+
+.tuning-parameters-table.shiny-html-output {
+display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+}
+.front > div:has(> .tuning-parameters-table) { min-height: 0; }
+.front > div:has(> .tuning-parameters-editor),
+.front > div:has(> .tuning-parameters-message),
+.front > .tuning-search,
+.front > .tuning-parameters-message { flex: 0 0 auto; }
+.tuning-parameters-table > shiny-data-frame {
+min-height: 0; height: 100%; max-height: none; flex: 1 1 0 !important;
+}
+.tuning-parameters-table .shiny-data-grid {
+min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
+}
+
+.flip-container:has(.var-select-evidence).flipped > .flippable > .front,
+.flip-container:has(.var-select-evidence):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.var-select-evidence > .shiny-data-grid-output {
+flex: 1 1 0;
+min-height: 0;
+}
+
+.data-tabulation-structure {
+min-height: 0;
+min-width: 0;
+overflow: hidden;
+}
+.data-tabulation-structure > shiny-data-frame,
+.data-tabulation-structure > shiny-data-frame > .html-fill-container {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+}
+.data-tabulation-structure .shiny-data-grid {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+overflow: auto;
+}
+.data-tabulation-structure .shiny-data-grid > table {
+min-width: 70rem;
+}
+.data-tabulation-structure .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+.flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
+.flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Pipeline tuning</h1>
+<p class="subtitle">A Pythagoras card</p>
+<p class="author">Nick Ward</p>
+
+</header>
+
+
+<p>Tune the committed preprocessing pipeline and one committed model together, using the evaluation splits from <strong>Observation resampling</strong> when available, or reproducible implicit cross-validation when no plan is defined. Place <strong>Pipeline tuning</strong> after <strong>Model method candidates</strong> and <strong>Tuning parameters</strong>. Commit model and search choices before starting.</p>
+<h4 id="search-and-objective">Search and objective</h4>
+<p>Choose one primary objective: classification supports balanced accuracy, accuracy, ROC AUC and log loss; regression supports RMSE, MAE and R². The objective label states whether it is minimized or maximized. All supported task metrics are recorded automatically without changing ranking. A secondary metric that cannot be evaluated is recorded as unavailable with a reason; its failure does not discard a successful primary evaluation. Scores for errors are displayed as positive errors; the internal sklearn scorer convention remains higher is better.</p>
+<p>The committed finite choices from Tuning parameters are used directly. <strong>Additional model choices</strong> accepts a JSON object of complete sklearn parameter paths and finite lists, for example:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;data_models__estimator__alpha&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="fl">0.1</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">10</span><span class="ot">]</span><span class="fu">}</span></span></code></pre></div>
+<p>These choices are combined with the committed grid. To change an already committed parameter’s choices, return to Tuning parameters. Constructor defaults are not search ranges. Fixed configuration, seeds, topology and weighting cannot be tuned.</p>
+<ul>
+<li><strong>Random</strong> samples unseen finite configurations.</li>
+<li><strong>Exhaustive</strong> evaluates each finite configuration.</li>
+<li><strong>Bayesian TPE</strong> adapts proposals using completed evaluations. Optuna is included in the native Python project dependencies; no separate extra is needed.</li>
+<li><strong>Bayesian GP (skopt)</strong> uses a Gaussian-process surrogate of the search objective. It proposes finite parameter choices through scikit-optimize; it does not restrict the type of predictive model being tuned. The surrogate minimizes the negative of the internal higher-is-better primary score. Failed trials are excluded from surrogate fitting, without fabricated penalties; an out-of-grid starting configuration is not included as surrogate evidence. Duplicate proposals use an unseen fallback configuration. All actual completed choices remain the recorded history.</li>
+</ul>
+<p>Each committed method is evaluated first as a starting configuration, even if its values are outside its search choices. Candidate budgets exclude these starting configuration evaluations. <strong>Maximum candidates</strong> applies to every search method. Zero means no candidate limit; a positive value caps candidate trials across resumes. Unlimited searches still stop when the finite search space is exhausted or the time limit is reached. There is no separate exhaustive-cap switch. Grid coverage counts the starting configuration when it matches a grid configuration, without fitting that configuration twice. Partial exhaustive searches report completed grid configurations and failures separately. “Finished” means all grid choices have been visited, not that all succeeded. All budgets are cumulative across resumes. A zero time budget means unlimited time; time budgets are checked between folds, so an individual fit can exceed the remaining time.</p>
+<h4 id="progress-and-comparison">Progress and comparison</h4>
+<p>The front states the best parameters found so far, their mean objective value and improvement over starting configuration. The chart shows only completed trial mean scores as points, without error bars, ranges, reference lines or connecting lines. When multiple model methods are selected, a consistent color and legend entry identify each method. Colors follow the committed candidate order and remain stable as trials complete. Hover text identifies the method and whether the trial is a starting configuration or candidate. Trial numbers are one-based. Parameters are only committed when you explicitly accept a completed row. All settings have guided explanations.</p>
+<p>The flip side lists configurations, states, scores, fold standard deviations, times, model identity and failures. Incomplete or failed evaluations are not ranked or eligible for acceptance. All secondary metrics and their failure reasons appear in the table and CSV. JSON checkpoints include fold results, parameters, search identity, versions and continuation state.</p>
+<h4 id="pause-cancel-and-resume">Pause, cancel and resume</h4>
+<p><strong>Pause</strong> stops scheduling new work and lets active fits finish. <strong>Cancel current tuning</strong> terminates outstanding fit processes. Completed fold results are retained; Resume retries only missing work. Estimator thread controls (<code>n_jobs</code>, <code>thread_count</code>, <code>nthread</code>, <code>num_threads</code>, where exposed) and supported BLAS/OpenMP pools are limited to one per fit to avoid nested oversubscription. Otherwise-unseeded estimators receive the search seed; the accepted configuration includes these fixed settings.</p>
+<p>Save a checkpoint before closing a session. Checkpoints are also included in the card’s bookmark configuration state, but running processes are not restored automatically. Checkpoints use schema version 4; earlier checkpoints must be replaced by a new search. Load the JSON with the same data, pipeline, choices, model, objective, seed, splits and software versions. Increase the candidate or total-time budget and press Resume. These budgets do not change the search identity. TPE proposals use the actual recorded history and a deterministic seed derived from the search seed and trial count; no optimizer pickle is loaded.</p>
+<p>Changing data, the pipeline or search settings makes old results stale. They remain visible for review, but cannot be resumed or accepted against the changed inputs. Restoring the original inputs makes a compatible checkpoint usable again.</p>
+<h4 id="accept-a-result">Accept a result</h4>
+<p>On the flip side, select a completed row and press <strong>Accept selected</strong>. This commits fixed parameter values to an unfitted outgoing pipeline and records a Learning step in Data journey. Searching alone never changes the exported parameters. <strong>Revert acceptance</strong> restores the incoming settings. Acceptance does not perform a final development-data fit or evaluate the final holdout.</p>
+<p>Every candidate is cloned and fitted on raw post-cleaning training-fold rows. Full-data previews are not used for training. Final holdout and prediction observations are excluded from all search fits and scores. The best search score is a model-selection result and can be optimistic; use a separate final evaluation for an assessment of generalization.</p>
+<p>This first version runs on the native Python server, supports committed regression or classification candidate methods, and rejects weighted data pending an explicit row-aligned fitting/scoring adapter. Successive halving and within-fit training curves are reserved for later versions. Invalid parameter combinations are reported as failed candidates without losing completed results.</p>
+<h4 id="upstream-or-implicit-resampling">Upstream or implicit resampling</h4>
+<p>Every search method reuses a defined upstream evaluation plan exactly, preserving its group/time restrictions and holdout/prediction exclusions. An invalid or stale plan must be corrected; it is never silently replaced by implicit CV.</p>
+<p>If no plan is defined, searches generate shuffled five-fold CV with the search seed. Classification stratifies by target; regression uses K-fold. The fold count is reduced to the available number of observed targets and, for classification, the smallest observed class count. At least two folds and two classes are required for classification. Missing-target rows are reserved for prediction and excluded from every fit and score. No final holdout is invented.</p>
+<p>This automatic fallback assumes independent rows. Assigned Partition, Sequence, Geometry or Stratifier roles, or repeated Identifiers, require an explicit upstream plan so their intended boundaries are not guessed. The implicit split strategy and origin are shown in progress and included in the search fingerprint and checkpoint specification. Splits remain fixed across candidates and resumes. Generating an implicit search plan does not modify the upstream source or commit an evaluation plan to it. A selected estimator that itself uses CV retains that internal behavior; search CV is an additional outer evaluation layer, not a switch disabling its CV.</p>
+<p>Bayesian GP uses <code>skopt.Optimizer</code> ask/tell rather than handing evaluation to <code>BayesSearchCV</code>. This preserves our fold checkpoints, cancellation and explicit acceptance. scikit-optimize is installed with the native project dependencies. Its state is reconstructed from actual completed in-grid trials; only JSON history is saved, not a serialized optimizer.</p>
+<p>The chart updates when a trial completes evaluation. Elapsed-time updates and progress status changes do not redraw already completed trial scores. The table and progress can continue updating independently while fits run.</p>
+<h4 id="parallel-execution">Parallel execution</h4>
+<p><strong>Auto</strong> (the card default) evaluates starting configuration folds concurrently, then runs concurrent candidate trials when more than one configuration remains. If only one configuration remains, it uses parallel folds. <strong>Trials</strong> runs several configurations concurrently with sequential folds inside each. <strong>Folds</strong> evaluates one configuration at a time with concurrent folds. <strong>Sequential</strong> runs one fit at a time. Exact upstream or implicit split memberships are unchanged by scheduling.</p>
+<p><strong>Maximum simultaneous fits</strong> is the worker-process limit. Zero chooses half the available CPUs, rounded down, with at least one worker. Requests are bounded by detected CPU availability and an estimated per-fit memory footprint, including dense GP covariances, against one quarter of physical RAM. This is a conservative heuristic, not a hard memory limit; large one-hot expansions and custom transformers may need a smaller manual limit. Progress and the specification show the effective count.</p>
+<p>Bayesian searches propose deterministic batches and wait for the batch to finish before proposing the next. Skopt uses batch ask with constant-liar proposals; TPE accounts for pending candidates. Temporary optimizer estimates are not persisted as real scores. Changing worker count or execution mode changes search identity and can change Bayesian proposals. Extending a candidate budget after a short batch can also change the subsequent Bayesian path compared with a search started with a larger budget. Resuming an unchanged recorded batch preserves its proposals.</p>
+<p>Checkpoints store completed fold IDs, so out-of-order results and multiple unfinished trials can resume without repeating reported fits. Charts update only for completed trial scores.</p>
+<p>The total time limit measures cumulative wall time, including pool startup and optimizer work. The candidate table’s Seconds sums work time across its fold tasks, so overlapping fits can total more than the overall wall time. Pause and time limits let active fits finish without launching replacements. Cancel terminates outstanding workers; worker crashes report an error and leave an indexed checkpoint that can retry missing work.</p>
+<p>Upstream repeated K-fold plans evaluate every repeat. Progress states the repeat/fold counts, and checkpoints retain a repeat/fold descriptor for each evaluated split. The chart plots the mean across all evaluated splits; uncertainty comparisons remain in the separate Bayesian comparison table.</p>
+<h4 id="bayesian-practical-equivalence-comparisons">Bayesian practical-equivalence comparisons</h4>
+<p>The flip side offers pairwise Bayesian comparisons following <a href="https://scikit-learn.org/stable/auto_examples/model_selection/plot_grid_search_stats.html#pairwise-comparison-of-all-models-bayesian-approach">sklearn’s worked example</a>. Supply a positive <strong>Practical-equivalence tolerance</strong> in absolute primary-metric units. For accuracy, 0.01 means one percentage point; for MAE it means 0.01 response units. This choice should reflect application needs, ideally set before inspecting results. No tolerance is assumed automatically.</p>
+<p>The comparison uses every pair among the top five completed trials by default; <strong>Top trials to compare</strong> permits 2–20. The starting configuration participates when ranked into that shortlist. Failed, incomplete or unaligned results are excluded. Positive <strong>Mean advantage A</strong> always favors trial A, including metrics minimized as errors. The table reports probabilities of A being better beyond the tolerance, the pair being within the tolerance, and A being worse beyond it, plus a 95% credible interval for mean advantage. The decision label defaults to a 0.95 posterior probability threshold; otherwise it is <strong>Inconclusive</strong>. Acceptance remains manual.</p>
+<p>These comparisons require an upstream repeated shuffled ordinary or stratified K-fold plan. They use aligned fold-level score differences, a Student-t posterior with <code>n - 1</code> degrees of freedom, and scale <code>sqrt((1/n + mean(n_validation/n_training)) * sample_variance(differences))</code>, where <code>n</code> counts all paired splits. The mean size ratio accommodates near-balanced folds and is an approximation. The dependence correction is retained: avoiding multiple-comparison p-value corrections does not make CV splits independent. Group-dependent and temporal plans are outside this implementation’s assumptions.</p>
+<p>Repeat/fold identities are retained. <strong>Repeat advantage SD</strong> is the sample SD of the mean paired differences for each repeat. It describes sensitivity to repartitioning, not a standard error or spread across independent datasets. The posterior calculation follows the fold-level corrected example; it does not treat repeat means as independent samples. Zero paired-score variability cannot support a nondegenerate posterior here and is reported as unavailable.</p>
+<p>Probabilities are exploratory, conditional on the approximation and observed search results; they do not remove tuning-selection bias and are not probabilities that a trial is globally best. No Bonferroni p-value correction, automatic acceptance, new fits or final-holdout access is introduced. Comparison controls do not change search identity, budgets or chart points. Comparisons can be downloaded as CSV.</p>
+<h4 id="searching-alternative-modeling-methods">Searching alternative modeling methods</h4>
+<p>With several committed candidates, each trial chooses a method and only that method’s parameter grid. Shared preprocessing choices apply to every method. Every method receives one starting configuration evaluation using its committed values; the <strong>Maximum candidates</strong> budget is global and excludes all method starting configurations. The progress display states how many starting configuration evaluations are required. Time limits cover the complete search. Matching in-grid starting configurations are counted once.</p>
+<p>Random and Exhaustive visit the union of valid branches. TPE and skopt use separate optimizers for each method with deterministic balanced allocation between non-exhausted methods. No inactive-method parameter values or fictitious objective scores are supplied. All methods reuse identical CV memberships, fit preparation inside each fold, and obey the same parallel-fit limit. Method/recipe IDs remain part of checkpoint identity, and resuming preserves reserved branches and results.</p>
+<p>The flip-side table and CSV include a <strong>Method</strong> column, with recipe identity in <strong>Model</strong>. Chart hover text and the best-result statement identify the method. Improvement over starting configuration uses that method’s own starting configuration. Accepting a completed trial publishes its method/preparation and parameter values together as an unfitted pipeline. Revert restores the incoming candidate set. Statistical comparisons can compare different methods because their metric and split identities match.</p>
+<p>After acceptance, downstream training and tuning use the accepted method and its fixed settings. The original candidate collection remains available as metadata; recommit a candidate set in Model candidates to search across alternatives again.</p>
+<p>The chart x-axis is labeled <strong>Trial</strong>. Diamond markers identify each method’s committed starting configuration; circles identify tuned candidates. Method colors are preserved for both shapes. Starting configurations use the same CV splits as candidates, remain eligible for acceptance, and provide the reference for the displayed improvement. They are not null models. The candidate budget excludes one starting-configuration evaluation per method.</p>
+
+
+
+
+
+</body></html>

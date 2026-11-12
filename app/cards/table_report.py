@@ -54,7 +54,7 @@ def instance():
             id = "Export", 
             label = 'Export', 
             icon = icon("file-arrow-down", title = "Export the data", a11y = "sem"),
-            width = "250px", 
+            width = "220px", 
             class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
             style = "border: 0px; box-shadow: none;",
             guide = this, 

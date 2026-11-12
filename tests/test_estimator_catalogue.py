@@ -375,7 +375,7 @@ def test_configured_categorical_support_overrides_default_tags():
 
 @pytest.mark.unit
 def test_taxonomy_refresh_preserves_evidence_and_is_reproducible(catalogue):
-    from model_taxonomy import annotate_catalogue, FIELDS
+    from model_taxonomy import FIELDS, annotate_catalogue
     refreshed = annotate_catalogue(deepcopy(catalogue))
     assert refreshed == catalogue
     for section in ('estimators', 'profiles', 'specialists'):
@@ -432,9 +432,9 @@ def test_default_margin_recipes_do_not_claim_probabilities(catalogue, identifier
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     construct = module.construct
-    from estimator_catalogue import assess_profiles
     import numpy as np
     import pandas as pd
+    from estimator_catalogue import assess_profiles
     profile = next(p for p in catalogue['profiles'] if p['estimator'] == identifier)
     assert profile['outputs'] == ['class_label', 'decision_score']
     X = pd.DataFrame({'x': np.arange(20, dtype=float), 'z': np.tile([0., 1.], 10)})
@@ -465,10 +465,11 @@ def test_taxonomy_schema_rejects_unsupported_claims(catalogue):
 ])
 def test_predictive_spread_recipe_contract(catalogue, identifier):
     import importlib.util
+
     import numpy as np
     import pandas as pd
-    from model_taxonomy import description_label
     from estimator_catalogue import assess_profiles
+    from model_taxonomy import description_label
     spec = importlib.util.spec_from_file_location('spread_probe', DEFAULT_PATH.parents[3] / 'scripts/probe_estimator_catalogue.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -529,3 +530,26 @@ def test_learning_strategy_is_predictor_specific_and_recipe_guarded(catalogue):
         if profile.get('construction', {}).get('parameters', {}).get('new_unreviewed_setting'):
             assert profile['taxonomy']['learning_strategy']['status'] == 'depends_on_configuration'
             assert profile['taxonomy']['learning_strategy']['values'] == []
+
+
+@pytest.mark.unit
+def test_prediction_throughput_coverage_evidence_and_configuration_drift(catalogue):
+    from estimator_catalogue import prediction_throughput
+    for profile in catalogue['profiles'] + catalogue.get('specialists', []):
+        if profile['task'] in {'transformer', 'sampler'}:
+            continue
+        assessment = prediction_throughput(profile)
+        assert assessment['rating'] in {'Low', 'Medium', 'High'}
+        assert assessment['evidence'] == 'documentation_informed_judgement_not_benchmark'
+        assert assessment['reason'] and assessment['sources']
+    profile = next(p for p in catalogue['profiles'] if p['estimator'] == 'sklearn.gaussian_process.GaussianProcessRegressor')
+    assert prediction_throughput(profile)['rating'] == 'Low'
+    changed = deepcopy(profile)
+    changed['construction']['parameters']['arbitrary_new_setting'] = True
+    assert prediction_throughput(changed) is None
+    changed = deepcopy(profile)
+    changed['reviewed_package_version'] = 'unreviewed'
+    assert prediction_throughput(changed) is None
+    changed = deepcopy(profile)
+    changed['id'] = 'new.recipe'
+    assert prediction_throughput(changed) is None

@@ -92,3 +92,27 @@ The flip side groups assigned roles, partition controls, diagnostic notices and 
 * **Input:** Stable `clean_frame`, assigned roles and the unfitted learning pipeline.
 * **Output:** Goal-derived evaluation metadata, exact memberships, source identity and diagnostics; observations and pipeline steps remain unchanged.
 * **Data journey:** An active selection records “Define evaluation resampling” as Learning metadata. **None** adds no entry.
+
+
+### Repeated cross-validation
+
+For generated ordinary, stratified and grouped K-fold evaluation, **Number of
+repeats** defaults to 1. Five repeats of ten folds create 50 training/validation
+splits per candidate. Every repeat re-randomizes development-fold assignments
+reproducibly from the seed; its first repeat is identical to single-pass CV.
+Whole groups remain together and holdout/prediction rows stay excluded from all
+splits. Repeats do not apply to predefined validation, temporal windows or
+leave-one-group-out. Unshuffled ordinary/stratified CV cannot be repeated.
+
+The chart remains a process illustration: it always displays the first repeat,
+with the same bars and memberships regardless of repeat count. A caption identifies
+“Showing repeat 1 of N; all repeats are included in evaluation.” Diagnostics and
+membership downloads include all splits, labeled by repeat and fold.
+
+The plan is lodged in proxy-data as evaluation metadata, without changing rows,
+roles or the fitted pipeline. Bookmarks retain repeats and seed and reconstruct
+the same memberships. Compatible legacy single-pass recipes restore with one
+repeat, preserving the final-holdout-used flag. Tuning evaluates all splits and
+retains repeat/fold descriptors in its specification and checkpoints. Fold-SD
+bars remain descriptive fold variability; repeated CV does not turn them into
+confidence intervals or establish practical equivalence.

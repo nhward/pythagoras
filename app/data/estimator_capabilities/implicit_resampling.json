@@ -1,0 +1,1112 @@
+{
+  "definition": "Internal validation/tuning splits only; excludes bootstrap training and subsampling.",
+  "sources": [
+    "https://scikit-learn.org/stable/modules/linear_model.html",
+    "https://scikit-learn.org/stable/modules/calibration.html",
+    "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html"
+  ],
+  "recipes": {
+    "sklearn.ensemble.HistGradientBoostingRegressor:native_mixed_missing": {
+      "status": "automatic_early_stopping",
+      "reason": "Automatic early stopping uses an internal validation split above 10,000 fitting rows.",
+      "parameters": {
+        "categorical_features": "from_dtype",
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestRegressor:numeric_missing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.ExtraTreesRegressor:numeric_missing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.DecisionTreeRegressor:numeric_missing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.Ridge:mixed_missing_via_preprocessing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 1.0
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestRegressor:mixed_missing_via_preprocessing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.SGDRegressor:incremental_numeric": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.HistGradientBoostingClassifier:native_mixed_missing": {
+      "status": "automatic_early_stopping",
+      "reason": "Automatic early stopping uses an internal validation split above 10,000 fitting rows.",
+      "parameters": {
+        "categorical_features": "from_dtype",
+        "random_state": 1729,
+        "class_weight": "balanced"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestClassifier:numeric_missing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "class_weight": "balanced"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.ExtraTreesClassifier:numeric_missing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "class_weight": "balanced"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.DecisionTreeClassifier:numeric_missing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LogisticRegression:mixed_missing_via_preprocessing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "class_weight": "balanced",
+        "max_iter": 1000,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.RandomForestClassifier:mixed_missing_via_preprocessing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.SGDClassifier:incremental_numeric": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.SVC:rbf_kernel": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "kernel": "rbf"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.LinearSVC:linear_solver": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "max_iter": 5000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.SVR:rbf_kernel": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "kernel": "rbf"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.LinearSVR:linear_solver": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "max_iter": 5000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.gaussian_process.GaussianProcessRegressor:exact_gp": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {},
+      "package_version": "1.9.1"
+    },
+    "imblearn.ensemble.BalancedRandomForestClassifier:internal_class_balancing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "0.14.2"
+    },
+    "imblearn.ensemble.BalancedBaggingClassifier:internal_class_balancing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "0.14.2"
+    },
+    "imblearn.ensemble.EasyEnsembleClassifier:internal_class_balancing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "0.14.2"
+    },
+    "imblearn.ensemble.RUSBoostClassifier:internal_class_balancing": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729
+      },
+      "package_version": "0.14.2"
+    },
+    "xgboost.XGBRegressor:mixed_missing_histogram": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "tree_method": "hist",
+        "enable_categorical": true,
+        "random_state": 1729,
+        "n_jobs": -1
+      },
+      "package_version": "3.2.0"
+    },
+    "xgboost.XGBClassifier:mixed_missing_histogram": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "tree_method": "hist",
+        "enable_categorical": true,
+        "random_state": 1729,
+        "n_jobs": -1
+      },
+      "package_version": "3.2.0"
+    },
+    "lightgbm.LGBMRegressor:mixed_missing_histogram": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "verbosity": -1
+      },
+      "package_version": "4.7.0"
+    },
+    "lightgbm.LGBMClassifier:mixed_missing_histogram": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_state": 1729,
+        "n_jobs": 1,
+        "verbosity": -1,
+        "class_weight": "balanced"
+      },
+      "package_version": "4.7.0"
+    },
+    "catboost.CatBoostRegressor:mixed_missing_with_category_token": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_seed": 1729,
+        "verbose": false,
+        "allow_writing_files": false,
+        "thread_count": -1
+      },
+      "package_version": "1.2.10"
+    },
+    "catboost.CatBoostClassifier:mixed_missing_with_category_token": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "random_seed": 1729,
+        "verbose": false,
+        "allow_writing_files": false,
+        "thread_count": -1,
+        "auto_class_weights": "Balanced"
+      },
+      "package_version": "1.2.10"
+    },
+    "feature_engine.imputation.AddMissingIndicator:mixed_table_transform": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "missing_only": false
+      },
+      "package_version": "1.9.4"
+    },
+    "feature_engine.imputation.MeanMedianImputer:numeric_transform": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {},
+      "package_version": "1.9.4"
+    },
+    "feature_engine.encoding.OneHotEncoder:mixed_table_transform": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {},
+      "package_version": "1.9.4"
+    },
+    "skrub.TableVectorizer:mixed_table_transform": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {},
+      "package_version": "0.11.0"
+    },
+    "mlxtend.regressor.LinearRegression:numeric_complete": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "method": "direct"
+      },
+      "package_version": "0.25.0"
+    },
+    "cubist.Cubist:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_rules": 50,
+        "n_committees": 1,
+        "neighbors": null,
+        "cv": null,
+        "random_state": 1729
+      },
+      "package_version": "1.2.2"
+    },
+    "gplearn.genetic.SymbolicRegressor:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "population_size": 50,
+        "generations": 2,
+        "tournament_size": 10,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "0.4.3"
+    },
+    "gplearn.genetic.SymbolicClassifier:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "population_size": 50,
+        "generations": 2,
+        "tournament_size": 10,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "0.4.3"
+    },
+    "skglm.ElasticNet:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 0.01,
+        "l1_ratio": 0.5
+      },
+      "package_version": "0.5"
+    },
+    "skglm.SparseLogisticRegression:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 0.01,
+        "l1_ratio": 0.5
+      },
+      "package_version": "0.5"
+    },
+    "sklego.linear_model.LADRegression:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {},
+      "package_version": "0.9.10"
+    },
+    "sklego.linear_model.QuantileRegression:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "quantile": 0.9
+      },
+      "package_version": "0.9.10"
+    },
+    "category_encoders.OrdinalEncoder:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "handle_unknown": "value",
+        "handle_missing": "value"
+      },
+      "package_version": "2.11.1"
+    },
+    "category_encoders.TargetEncoder:audited_tabular_recipe": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "handle_unknown": "value",
+        "handle_missing": "value"
+      },
+      "package_version": "2.11.1"
+    },
+    "sklearn.neural_network.MLPRegressor:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "hidden_layer_sizes": [
+          8
+        ],
+        "activation": "tanh",
+        "solver": "lbfgs",
+        "alpha": 0.1,
+        "max_iter": 3000,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neural_network.MLPClassifier:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "hidden_layer_sizes": [
+          8
+        ],
+        "activation": "tanh",
+        "solver": "lbfgs",
+        "alpha": 0.1,
+        "max_iter": 3000,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.ElasticNet:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 0.05,
+        "l1_ratio": 0.5,
+        "max_iter": 2000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.ElasticNetCV:priority_tabular": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "l1_ratio": [
+          0.2,
+          0.5,
+          1.0
+        ],
+        "alphas": [
+          0.001,
+          0.01,
+          0.1,
+          1.0
+        ],
+        "cv": 3,
+        "max_iter": 2000,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.TweedieRegressor:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "power": 0,
+        "link": "identity",
+        "alpha": 0.1,
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.QuantileRegressor:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "quantile": 0.5,
+        "alpha": 0.01,
+        "solver": "highs"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.BayesianRidge:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.HuberRegressor:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "epsilon": 1.35,
+        "alpha": 0.0001,
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neighbors.KNeighborsRegressor:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_neighbors": 5,
+        "weights": "distance",
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neighbors.KNeighborsClassifier:priority_tabular": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_neighbors": 5,
+        "weights": "distance",
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.GradientBoostingRegressor:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_estimators": 30,
+        "max_depth": 2,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.GradientBoostingClassifier:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_estimators": 30,
+        "max_depth": 2,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.AdaBoostRegressor:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_estimators": 30,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.AdaBoostClassifier:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_estimators": 30,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.discriminant_analysis.LinearDiscriminantAnalysis:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "solver": "lsqr",
+        "shrinkage": "auto"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "reg_param": 0.1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.naive_bayes.GaussianNB:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "var_smoothing": 1e-09
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.ARDRegression:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.TheilSenRegressor:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "max_subpopulation": 100,
+        "max_iter": 1000,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.RANSACRegressor:priority_tabular_2": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "max_trials": 100,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.BaggingRegressor:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_estimators": 20,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.ensemble.BaggingClassifier:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_estimators": 20,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.ExtraTreeRegressor:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "max_depth": 6,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.tree.ExtraTreeClassifier:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "max_depth": 6,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.NuSVR:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "nu": 0.5,
+        "C": 1.0,
+        "kernel": "rbf",
+        "max_iter": 10000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.svm.NuSVC:priority_tabular_3": {
+      "status": "yes",
+      "reason": "Internal cross-validation for probability calibration.",
+      "parameters": {
+        "nu": 0.3,
+        "kernel": "rbf",
+        "probability": true,
+        "max_iter": 10000,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.kernel_ridge.KernelRidge:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 1.0,
+        "kernel": "rbf",
+        "gamma": 0.2
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.gaussian_process.GaussianProcessClassifier:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "optimizer": null,
+        "max_iter_predict": 100,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neighbors.RadiusNeighborsRegressor:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "radius": 10.0,
+        "weights": "distance",
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neighbors.RadiusNeighborsClassifier:priority_tabular_3": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "radius": 10.0,
+        "weights": "distance",
+        "outlier_label": "most_frequent",
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.RidgeCV:priority_tabular_4": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "alphas": [
+          0.01,
+          0.1,
+          1.0,
+          10.0
+        ],
+        "cv": 3
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LogisticRegressionCV:priority_tabular_4": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "Cs": [
+          0.1,
+          1.0,
+          10.0
+        ],
+        "cv": 3,
+        "max_iter": 2000,
+        "solver": "lbfgs",
+        "l1_ratios": [
+          0.0
+        ],
+        "scoring": "accuracy",
+        "use_legacy_attributes": false,
+        "n_jobs": 1,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.RidgeClassifier:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 1.0,
+        "solver": "svd"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.RidgeClassifierCV:priority_tabular_4": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "alphas": [
+          0.01,
+          0.1,
+          1.0,
+          10.0
+        ],
+        "cv": 3
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.neighbors.NearestCentroid:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "metric": "euclidean",
+        "priors": "uniform"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.naive_bayes.BernoulliNB:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 1.0,
+        "binarize": 0.0
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.Lars:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_nonzero_coefs": 2
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LassoLars:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 0.05,
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LassoLarsIC:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "criterion": "bic",
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.OrthogonalMatchingPursuit:priority_tabular_4": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_nonzero_coefs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.PoissonRegressor:priority_tabular_5": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 0.1,
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.GammaRegressor:priority_tabular_5": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 0.1,
+        "max_iter": 1000
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.naive_bayes.MultinomialNB:priority_tabular_5": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 1.0
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.naive_bayes.ComplementNB:priority_tabular_5": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "alpha": 1.0,
+        "norm": false
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LarsCV:priority_tabular_5": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "cv": 3,
+        "max_iter": 500,
+        "max_n_alphas": 100,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.LassoLarsCV:priority_tabular_5": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "cv": 3,
+        "max_iter": 500,
+        "max_n_alphas": 100,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.linear_model.OrthogonalMatchingPursuitCV:priority_tabular_5": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "cv": 3,
+        "max_iter": 2,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.calibration.CalibratedClassifierCV:priority_tabular_5": {
+      "status": "yes",
+      "reason": "Internal cross-validation for parameter selection or calibration.",
+      "parameters": {
+        "method": "sigmoid",
+        "cv": 3,
+        "ensemble": true,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.dummy.DummyClassifier:priority_tabular_5": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "strategy": "prior",
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.dummy.DummyRegressor:priority_tabular_5": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "strategy": "mean"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.PCA:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "svd_solver": "full"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.IncrementalPCA:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "batch_size": 30
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.TruncatedSVD:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "algorithm": "randomized",
+        "n_iter": 7,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.FactorAnalysis:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "svd_method": "lapack",
+        "max_iter": 1000,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.FastICA:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 2,
+        "whiten": "unit-variance",
+        "max_iter": 2000,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.KernelPCA:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 2,
+        "kernel": "rbf",
+        "gamma": 0.5,
+        "eigen_solver": "dense",
+        "max_iter": 1000,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.decomposition.SparsePCA:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "alpha": 0.1,
+        "max_iter": 1000,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.random_projection.GaussianRandomProjection:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.random_projection.SparseRandomProjection:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_components": 1,
+        "density": 1.0,
+        "dense_output": true,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.kernel_approximation.Nystroem:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "kernel": "rbf",
+        "gamma": 0.5,
+        "n_components": 10,
+        "random_state": 1729,
+        "n_jobs": 1
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.kernel_approximation.RBFSampler:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "gamma": 0.5,
+        "n_components": 10,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.kernel_approximation.PolynomialCountSketch:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "degree": 2,
+        "n_components": 10,
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.SplineTransformer:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_knots": 4,
+        "degree": 3,
+        "knots": "quantile",
+        "include_bias": false,
+        "extrapolation": "constant"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.PolynomialFeatures:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "degree": 2,
+        "include_bias": false
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.PowerTransformer:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "method": "yeo-johnson",
+        "standardize": true
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.QuantileTransformer:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "n_quantiles": 20,
+        "output_distribution": "normal",
+        "random_state": 1729
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.RobustScaler:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {},
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.StandardScaler:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "with_mean": true,
+        "with_std": true
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.MinMaxScaler:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "clip": false
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.preprocessing.MaxAbsScaler:priority_transform_6": {
+      "status": "no",
+      "reason": "No internal validation/tuning split in this recorded configuration; bootstrap training and subsampling do not count.",
+      "parameters": {
+        "clip": false
+      },
+      "package_version": "1.9.1"
+    }
+  }
+}

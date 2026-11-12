@@ -161,8 +161,8 @@ def test_full_screen_margins_align_with_heatmap(card_module):
         variable_threshold=0.5, observation_threshold=0.5,
         show_thresholds=True, full_screen=True,
     )
-    assert [trace.type for trace in figure.data] == ["heatmap", "bar", "bar"]
-    assert tuple(figure.layout.yaxis.range) == tuple(figure.layout.yaxis2.range)
+    assert [trace.type for trace in figure.data] == ["bar", "bar", "heatmap"]
+    assert tuple(figure.layout.xaxis.range) == tuple(figure.layout.xaxis3.range)
     assert tuple(figure.layout.xaxis.range) == tuple(figure.layout.xaxis3.range)
     assert len(figure.layout.shapes) == 2
 
@@ -189,7 +189,7 @@ def test_observation_bars_use_all_variables_when_complete_ones_are_hidden(
 
     # The heatmap displays one variable, but the observation denominator is
     # all three variables: 1/3 missing, not 1/1 missing.
-    assert list(figure.data[2].y) == pytest.approx([1 / 3, 0])
+    assert list(figure.data[0].y) == pytest.approx([1 / 3, 0])
 
 
 def get_card(page: Page):

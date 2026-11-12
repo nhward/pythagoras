@@ -2,6 +2,8 @@
 from importlib import import_module
 
 import numpy as np
+import pandas as pd
+from evaluation_plan import level_key
 from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
@@ -16,7 +18,11 @@ def prepare_predictors(frame, *, columns, preparation, selected_schema=False):
     result = frame.loc[:, columns].copy()
     categorical = result.select_dtypes(include=['category', 'object', 'string', 'bool']).columns
     for column in categorical:
-        if preparation == 'pandas_categories':
+        if preparation == 'catboost_strings':
+            # All actual values get a typed prefix, so none can collide with the missing token.
+            result[column] = result[column].astype(object).map(
+                lambda value: '__pythagoras_missing__' if pd.isna(value) else level_key(value))
+        elif preparation == 'pandas_categories':
             result[column] = result[column].astype('category')
         elif preparation in ('categorical_complete', 'impute_onehot'):
             result[column] = result[column].astype(object).where(result[column].notna(), np.nan)
@@ -24,13 +30,18 @@ def prepare_predictors(frame, *, columns, preparation, selected_schema=False):
 
 
 def commit_problem(row):
+    if row.get('resampling_exclusion'):
+        return row['resampling_exclusion']
     if not row.get('selectable'):
         return 'This recipe is not validated and installed for the current requirements.'
     construction = row['profile']['construction']
     if construction.get('wrapper') not in (None, 'sklearn.pipeline.Pipeline') or construction.get('preparation') not in (
-        'none', 'numeric', 'numeric_complete', 'pandas_categories', 'categorical_complete', 'impute_onehot'
+        'none', 'numeric', 'numeric_complete', 'pandas_categories', 'categorical_complete', 'impute_onehot', 'catboost_strings'
     ):
         return 'This recipe needs a construction adapter before it can be committed.'
+    if construction.get('preparation') == 'catboost_strings' and row['estimator'] not in {
+            'catboost.CatBoostRegressor', 'catboost.CatBoostClassifier'}:
+        return 'Categorical CatBoost preparation requires a supported CatBoost estimator.'
     if row['profile'].get('recipe', {}).get('fit_parameters'):
         return 'This recipe needs a fit-parameter adapter before it can be committed.'
     return ''
@@ -51,8 +62,13 @@ def build_model(row, predictors):
         raise ValueError(problem)
     profile = row['profile']
     module, name = row['estimator'].rsplit('.', 1)
-    estimator = getattr(import_module(module), name)(**profile['construction']['parameters'])
     preparation = profile['construction']['preparation']
+    if preparation == 'catboost_strings':
+        from catboost_model import PreparedCatBoostClassifier, PreparedCatBoostRegressor
+        factory = PreparedCatBoostClassifier if name == 'CatBoostClassifier' else PreparedCatBoostRegressor
+    else:
+        factory = getattr(import_module(module), name)
+    estimator = factory(**profile['construction']['parameters'])
     steps = [('predictors', FunctionTransformer(prepare_predictors,
         kw_args={'columns': list(predictors), 'preparation': preparation, 'selected_schema': selected_schema}))]
     if preparation == 'impute_onehot':
@@ -63,6 +79,10 @@ def build_model(row, predictors):
                 ('encode', OneHotEncoder(handle_unknown='ignore', sparse_output=False))]),
                 make_column_selector(dtype_exclude=np.number)),
         ])))
+        if row['estimator'] == 'cubist.Cubist':
+            # Cubist assigns feature names even to array inputs during fit.
+            # Preserve names at prediction too, rather than suppressing validation.
+            steps[-1][1].set_output(transform='pandas')
     steps.append(('estimator', estimator))
     return Pipeline(steps)
 

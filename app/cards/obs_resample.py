@@ -31,6 +31,7 @@ from evaluation_plan import (
     goal_options,
     level_key,
     partition_levels,
+    restore_plan,
     role_columns,
     stratifier_choices,
 )
@@ -84,19 +85,19 @@ def _overview(source, plan, *, columns=600, rows=60):
             # Fold codes identify validation membership. Reserved rows follow CVn;
             # source position breaks ties without changing the evaluation splits.
             folds = np.asarray(plan.codes)
-            folds = np.where(folds >= 0, folds, plan.count)
+            folds = np.where(folds >= 0, folds, plan.splits_per_repeat)
             order = np.lexsort((np.arange(n), folds, codes))
             ordering = "Stratifier then validation fold order"
     elif r["strategy"] in {"grouped", "logo"}:
         codes, _ = pd.factorize(frame[r["group"]], sort=False)
         order = np.argsort(codes, kind="stable")
         ordering = "Group order"
-    nx, ny = min(columns, n), min(rows, plan.count)
+    nx, ny = min(columns, n), min(rows, plan.splits_per_repeat)
     xbin = np.arange(n) * nx // n
     counts = np.zeros((ny, nx, 5), dtype=np.int64)
-    for j, (train, validation) in enumerate(plan._splits()):
+    for j, (train, validation) in enumerate(plan._splits(first_repeat=True)):
         state = plan.membership(train, validation)[order]
-        np.add.at(counts[j * ny // plan.count], (xbin, state), 1)
+        np.add.at(counts[j * ny // plan.splits_per_repeat], (xbin, state), 1)
     strata = None
     if r.get("stratifier"):
         codes, levels = pd.factorize(frame[r["stratifier"]], sort=False)
@@ -105,7 +106,7 @@ def _overview(source, plan, *, columns=600, rows=60):
         strata = {"name": r["stratifier"], "labels": list(map(str, levels)), "counts": strata_counts}
     details = []
     xedges = np.ceil(np.arange(nx + 1) * n / nx).astype(int)
-    yedges = np.ceil(np.arange(ny + 1) * plan.count / ny).astype(int)
+    yedges = np.ceil(np.arange(ny + 1) * plan.splits_per_repeat / ny).astype(int)
     for x in range(nx):
         positions = order[xedges[x]:xedges[x + 1]]
         if len(positions) == 1:
@@ -117,7 +118,7 @@ def _overview(source, plan, *, columns=600, rows=60):
         else:
             detail = f"Display observations {xedges[x] + 1}–{xedges[x + 1]}"
         details.append(detail)
-    return {"counts": counts, "details": details, "order": ordering, "n": n, "splits": plan.count, "yedges": yedges, "strata": strata, "positions": order}
+    return {"counts": counts, "details": details, "order": ordering, "n": n, "splits": plan.splits_per_repeat, "yedges": yedges, "strata": strata, "positions": order}
 
 
 def _figure(overview, *, full=False):
@@ -253,6 +254,10 @@ def instance():
             text="Choose a single Stratifier to preserve proportions or withhold whole strata. Cluster memberships appear last. None disables stratification; New strata requires a selection."),
         number("Folds", "Number of folds (K)", 5, 2,
                "For generated New observations, New strata and New entities splits. For grouped goals, use the smaller of K and the available development groups; at least two groups are required."),
+        ui.div(ui.output_text('RepeatsAllowed'), style='display:none'),
+        ui.panel_conditional("output.RepeatsAllowed === 'yes'",
+            number('Repeats', 'Number of repeats', 1, 1,
+                'Re-randomize generated K-fold assignments using the seed. Each repeat validates every development row once. Only the first repeat is charted.')),
         number("Seed", "Random seed", 42, 0,
                "For generated observation and group folds. Randomly assign whole strata/entities to folds reproducibly. Not used by supplied validation or temporal windows."),
 
@@ -399,6 +404,12 @@ def instance():
             return ui.div(ui.tags.small(" · ".join(descriptions) or "No split roles assigned."),
                 *(ui.div(ui.tags.small(f"{GOALS[k]}: {v}")) for k, v in _unavailable(source, stratifier=input.Stratifier() or None).items()))
 
+        @output(suspend_when_hidden=False)
+        @render.text
+        def RepeatsAllowed():
+            return ('yes' if input.Goal() not in (None, 'none', 'future')
+                    and 'validation' not in Mapping().values() else 'no')
+
         @this.reactable(calc=True)
         def CurrentOptions():
             def integer(name):
@@ -416,7 +427,7 @@ def instance():
                     options.update(window=integer("Window"), horizon=integer("Horizon"), gap=integer("Gap"),
                         step=integer("Step") if input.Step() is not None else integer("Horizon"), expanding=bool(input.Expanding()))
                 else:
-                    options.update(folds=integer("Folds"), seed=integer("Seed"))
+                    options.update(folds=integer("Folds"), repeats=integer("Repeats"), seed=integer("Seed"))
             return options
 
         @this.reactable(calc=True)
@@ -431,7 +442,8 @@ def instance():
             def work():
                 plan = build_plan(source, **options)
                 if restored:
-                    if restored.get("fingerprint") == plan.fingerprint and restored.get("recipe") == plan.recipe:
+                    saved = restore_plan(source, restored) if restored.get("fingerprint") == plan.fingerprint else None
+                    if saved is not None and saved.ready and saved.recipe == plan.recipe:
                         plan = replace(plan, holdout_used=bool(restored.get("holdout_used", False)))
                     elif restored.get("fingerprint") != plan.fingerprint:
                         plan = replace(plan, warnings=(*plan.warnings, "Plan regenerated for current source."))
@@ -484,7 +496,11 @@ def instance():
                 return ui.div("Plan needs attention", class_="text-danger text-center small")
             r = plan.recipe
             text = f"{plan.count:,} {'split' if plan.count == 1 else 'splits'} · {len(plan.development):,} development"
+            if plan.repeats > 1:
+                text += f" · {plan.repeats} repeats × {plan.splits_per_repeat} folds"
             detail = STRATEGIES[r["strategy"]]
+            if plan.repeats > 1:
+                detail += f" · Showing repeat 1 of {plan.repeats}; all repeats are included in evaluation."
             if this.isFullScreen():
                 detail += " · " + OBJECTIVES[r["objective"]]
             return ui.div(ui.div(text), ui.tags.small(detail), class_="text-primary text-center")
@@ -566,7 +582,7 @@ def instance():
         session.on_ended(Calculate.cancel)
         this.export_inputs('Duration','Event','EventValue','CensoredValue','TimeUnit','TimeOrigin', when=lambda: input.Task() == 'survival')
         this.export_inputs('Stratifier', when=lambda: input.Goal() != 'none' and bool(stratifier_choices(Incoming())))
-        this.export_inputs('Folds','Seed', when=lambda: input.Goal() not in (None,'none','future') and 'validation' not in Mapping().values())
+        this.export_inputs('Folds','Seed','Repeats', when=lambda: input.Goal() not in (None,'none','future') and 'validation' not in Mapping().values())
         this.export_inputs('Gap','Expanding', when=lambda: input.Goal() == 'future' and 'validation' not in Mapping().values())
         this.export_inputs('Window','Horizon','Step', allow_none=True, when=lambda: input.Goal() == 'future' and 'validation' not in Mapping().values())
 

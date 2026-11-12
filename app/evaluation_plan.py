@@ -1,7 +1,7 @@
 """Reproducible evaluation membership, with source-aligned stratifier metadata.
 
-Membership is compact: one fold/time code per source row, rather than K copies
-of training indices. Public split access checks the source before yielding.
+Membership is compact: one fold code per source row per repeat (or one time
+code for temporal plans), rather than copies of training indices for every split. Public split access checks the source before yielding.
 """
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from roles import Role
 from sklearn.model_selection import KFold, StratifiedKFold
 from var_types import key_from_dtype
 
-VERSION = 2
-SPLITTER_VERSION = f"5/sklearn-{sklearn.__version__}"
+VERSION = 3
+SPLITTER_VERSION = f"6/sklearn-{sklearn.__version__}"
 STRATEGIES = {"none": "None", "predefined": "Predefined", "kfold": "K-fold",
               "stratified": "Stratified K-fold", "grouped": "Grouped K-fold",
               "logo": "Leave-one-group-out", "temporal": "Forward temporal"}
@@ -132,6 +132,7 @@ class EvaluationPlan:
     holdout: tuple[int, ...] = ()
     prediction: tuple[int, ...] = ()
     codes: tuple[int, ...] = ()
+    repeat_codes: tuple[tuple[int, ...], ...] = ()
     count: int = 0
     errors: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
@@ -168,11 +169,31 @@ class EvaluationPlan:
         if supervised and not self.supervised:
             raise ValueError("Assign one Target and regenerate the plan before supervised training.")
 
-    def _splits(self):
+    @property
+    def repeats(self):
+        return self.recipe.get('repeats', 1)
+
+    @property
+    def splits_per_repeat(self):
+        return self.count // self.repeats
+
+    @property
+    def split_descriptors(self):
+        return tuple({'split_id': f'CV{i + 1}', 'repeat': i // self.splits_per_repeat + 1,
+                      'fold': i % self.splits_per_repeat + 1} for i in range(self.count))
+
+    def _splits(self, *, first_repeat=False):
         """Internal generator; callers must first validate source compatibility."""
         r = self.recipe
         dev = np.asarray(self.development, dtype=int)
         codes = np.asarray(self.codes, dtype=int)
+        if self.repeat_codes:
+            assignments = self.repeat_codes[:1] if first_repeat else self.repeat_codes
+            for assignment in assignments:
+                codes = np.asarray(assignment, dtype=int)
+                for j in range(self.splits_per_repeat):
+                    yield dev[codes[dev] != j], dev[codes[dev] == j]
+            return
         for j in range(self.count):
             if r["strategy"] == "predefined":
                 yield dev.copy(), np.asarray(self.validation, dtype=int)
@@ -216,8 +237,9 @@ class EvaluationPlan:
         """Stream one split at a time for downloads; never build a wide table."""
         self.require(source)
         r = self.recipe
+        descriptors = self.split_descriptors
         for j, (train, validation) in enumerate(self._splits(), 1):
-            result = pd.DataFrame({"split_id": f"CV{j}", "source_position": np.arange(self.size),
+            result = pd.DataFrame({**descriptors[j - 1], "source_position": np.arange(self.size),
                 "membership": np.asarray(STATES)[self.membership(train, validation)],
                 "original_index": source.clean_frame.index.map(str)})
             for name in ("group", "sequence", "stratifier"):
@@ -438,6 +460,11 @@ def _build(source, r, o, base):
     elif strategy == "predefined":
         raise ValueError("Predefined validation requires an assigned Partition variable.")
 
+    repeats = r['repeats'] = _integer(o.get('repeats', 1), 'Repeat count', 1)
+    if repeats > 1 and strategy not in {'kfold', 'stratified', 'grouped'}:
+        raise ValueError('Repeats require generated ordinary, stratified or grouped K-fold validation.')
+    if repeats > 1 and strategy in {'kfold', 'stratified'} and not o.get('shuffle', True):
+        raise ValueError('Repeated cross-validation requires shuffled folds.')
     codes = np.full(n, -1, dtype=int)
     if strategy == "predefined":
         count = 1
@@ -530,19 +557,29 @@ def _build(source, r, o, base):
         notes.append("Spatial dependence is not controlled automatically; region grouping does not remove boundary dependence.")
     if strategy == "temporal":
         notes.append("Windows count distinct Sequence values, not elapsed time; verify a common clock and label availability.")
+    repeat_codes = ()
+    if repeats > 1:
+        assignments = [tuple(map(int, codes))]
+        for repeat in range(1, repeats):
+            seed = int(np.random.SeedSequence([r['seed'], repeat]).generate_state(1)[0])
+            extra = _build(source, dict(r), dict(o, repeats=1, seed=seed), base)
+            assignments.append(extra.codes)
+        repeat_codes = tuple(assignments)
     plan = replace(base, recipe_json=json.dumps(r, sort_keys=True),
                    fingerprint=source_fingerprint(source, _recipe_columns(r)), development=tuple(map(int, dev)),
                    reserved=tuple(map(int, reserved)), validation=tuple(map(int, validation)),
-                   holdout=tuple(map(int, holdout)), prediction=tuple(map(int, prediction)), codes=tuple(map(int, codes)), count=count, supervised=bool(target) or survival)
+                   holdout=tuple(map(int, holdout)), prediction=tuple(map(int, prediction)), codes=tuple(map(int, codes)), repeat_codes=repeat_codes, count=count * repeats, supervised=bool(target) or survival)
     diagnostics = []
     classes = set(frame[target].iloc[dev]) if target and r["task"] in {"classification", "ordinal"} else None
     coverage = np.zeros(n, dtype=bool)
+    descriptors = plan.split_descriptors
     for j, (train, validation) in enumerate(plan._splits(), 1):
         if not len(train) or not len(validation) or np.intersect1d(train, validation).size:
             raise ValueError(f"CV{j} has empty or overlapping training/validation subsets.")
         _boundary(source, r, train, validation)
         coverage[validation] = True
-        row = {"Split": f"CV{j}", "Training": len(train), "Validation": len(validation),
+        row = {"Split": f"CV{j}", "Repeat": descriptors[j - 1]["repeat"],
+               "Fold": descriptors[j - 1]["fold"], "Training": len(train), "Validation": len(validation),
                "Unused": n - len(train) - len(validation) - (len(holdout) + len(prediction))}
         warnings = []
         if survival:
@@ -583,7 +620,9 @@ def _build(source, r, o, base):
 def restore_plan(source, state):
     recipe = state.get("recipe", {})
     plan = build_plan(source, **recipe)
-    if recipe.get("version") != VERSION or recipe.get("splitter_version") != SPLITTER_VERSION:
+    legacy = (recipe.get('version') == 2 and recipe.get('repeats', 1) == 1
+              and recipe.get('splitter_version') == SPLITTER_VERSION.replace('6/', '5/', 1))
+    if not legacy and (recipe.get("version") != VERSION or recipe.get("splitter_version") != SPLITTER_VERSION):
         return plan.invalidate("Unsupported saved evaluation recipe/splitter version; explicitly configure a new plan.")
     if state.get("fingerprint") != plan.fingerprint:
         return plan.invalidate("Saved evaluation source differs from restored data; explicitly configure a new plan.")

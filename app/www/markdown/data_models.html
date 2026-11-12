@@ -34,6 +34,42 @@ margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
 --py-table-row-hover: #f0f1cc;
 --py-table-cell-hover: #d4d4b8;
 }
+.pipeline-tune-actions {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: .35rem;
+}
+.pipeline-tune-best {
+flex: 0 0 auto;
+max-height: 6rem;
+overflow: auto;
+font-size: .85rem;
+overflow-wrap: anywhere;
+}
+.pipeline-tune-table {
+flex: 1 1 0;
+min-height: 0;
+overflow: hidden;
+}
+.flip-container:has(.pipeline-tune-table).flipped > .flippable > .front,
+.flip-container:has(.pipeline-tune-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.pipeline-tune-table > .shiny-data-frame-output {
+flex: 1 1 0;
+min-height: 0;
+}
+.pipeline-tune-details {
+flex: 0 0 auto;
+max-height: 12rem;
+overflow: auto;
+}
+.card [id$="-Specification"] {
+max-height: 16rem;
+overflow: auto;
+}
 
 body.bslib-gap-spacing {
 gap: 0.25rem;
@@ -72,6 +108,13 @@ transform: rotateY(0);
 .back {
 z-index: 1;
 transform: rotateY(180deg);
+}
+
+.card .html-fill-container:has(> span + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + div > .shiny-ipywidget-output),
+.card .html-fill-container:has(> span + .shiny-ipywidget-output),
+.card .html-fill-container:has(> .shiny-html-output + .shiny-ipywidget-output) {
+row-gap: 0 !important;
 }
 
 .bslib-card,
@@ -957,7 +1000,112 @@ background: var(--bs-body-bg, white);
 .nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
 .nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
 .nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
-.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }</style>
+.nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
+
+.tuning-search { display: none; }
+.card.fullscreen-active .tuning-search { display: block; }
+.tuning-editor-detail { margin: .25rem 0; }
+.tuning-editor-controls {
+display: flex; flex-wrap: wrap; align-items: flex-end; gap: .4rem .65rem;
+width: 100%;
+}
+.tuning-editor-controls > .shiny-input-container { flex: 1 1 9rem; width: auto; min-width: 0; }
+.tuning-editor-controls .shiny-input-container { margin-bottom: 0; }
+.tuning-editor-controls .control-label { font-size: .85rem; }
+.tuning-editor-controls .tuning-range { flex: 2 1 18rem; min-width: 0; }
+.tuning-range-fields { display: flex; gap: .5rem; }
+.tuning-range-fields > .shiny-input-container { flex: 1 1 0; width: auto; min-width: 0; }
+.tuning-editor-controls .tuning-values { flex: 2 1 18rem; min-width: 0; }
+.tuning-values > .shiny-input-container { width: 100%; }
+.tuning-editor-controls fieldset { flex: 0 0 auto; margin: 0; }
+.tuning-editor-controls fieldset .shiny-input-container { width: auto; }
+.tuning-editor-controls > .btn { flex: 0 0 auto; }
+
+.tuning-specification-scroll {
+max-height: 12rem;
+overflow: auto;
+white-space: pre-wrap;
+overflow-wrap: anywhere;
+margin-bottom: 0;
+}
+.card.fullscreen-active .tuning-specification-scroll { max-height: 45vh; }
+
+.flip-container:has(.tuning-review-output).flipped > .flippable > .front {
+pointer-events: none;
+visibility: hidden;
+}
+.flip-container:has(.tuning-review-output):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.tuning-specification-scroll { touch-action: pan-y; }
+
+.model-candidates-table { min-height: 0; min-width: 0; overflow: hidden; }
+.model-candidates-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
+.model-candidates-table .shiny-data-grid { min-height: 0; overflow: auto; }
+.model-candidates-table.shiny-html-output { display: flex; flex-direction: column; }
+.front > div:has(> .model-candidates-summary) { flex: 0 0 auto; }
+.front > div:has(> .model-candidates-table) { min-height: 0; }
+.model-candidates-table > shiny-data-frame { height: 100%; max-height: none; flex: 1 1 0 !important; }
+.model-candidates-table .shiny-data-grid { flex: 1 1 0; height: 100%; max-height: none; }
+
+.tuning-parameters-table.shiny-html-output {
+display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+}
+.front > div:has(> .tuning-parameters-table) { min-height: 0; }
+.front > div:has(> .tuning-parameters-editor),
+.front > div:has(> .tuning-parameters-message),
+.front > .tuning-search,
+.front > .tuning-parameters-message { flex: 0 0 auto; }
+.tuning-parameters-table > shiny-data-frame {
+min-height: 0; height: 100%; max-height: none; flex: 1 1 0 !important;
+}
+.tuning-parameters-table .shiny-data-grid {
+min-height: 0; flex: 1 1 0; height: 100%; max-height: none; overflow: auto;
+}
+
+.flip-container:has(.var-select-evidence).flipped > .flippable > .front,
+.flip-container:has(.var-select-evidence):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.var-select-evidence > .shiny-data-grid-output {
+flex: 1 1 0;
+min-height: 0;
+}
+
+.data-tabulation-structure {
+min-height: 0;
+min-width: 0;
+overflow: hidden;
+}
+.data-tabulation-structure > shiny-data-frame,
+.data-tabulation-structure > shiny-data-frame > .html-fill-container {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+}
+.data-tabulation-structure .shiny-data-grid {
+flex: 1 1 0;
+min-height: 0;
+min-width: 0;
+overflow: auto;
+}
+.data-tabulation-structure .shiny-data-grid > table {
+min-width: 70rem;
+}
+.data-tabulation-structure .shiny-data-grid > table > thead {
+position: sticky;
+top: 0;
+z-index: 2;
+background: var(--bs-body-bg, white);
+}
+.flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
+.flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+</style>
 </head>
 
 <body>
@@ -972,7 +1120,7 @@ background: var(--bs-body-bg, white);
 
 
 <h4 id="purpose">🧭 Purpose</h4>
-<p><em>Compare documented model configurations with the current outcome, predictor types, missing values and observation structure. Use this diagnostic card after data preparation and Observation resampling, before choosing a model to train.</em></p>
+<p><em>Compare documented model configurations with the current outcome, predictor types, missing values and observation structure. Use this diagnostic card after data preparation, before choosing a model to train. The upstream Observation resampling plan, when present, determines which internal-resampling recipes are included.</em></p>
 <p>The card displays recipes from the versioned capability catalogue. It does not fit, benchmark, install or automatically select a model, and it leaves incoming data and pipeline metadata unchanged until Commit is pressed.</p>
 <h4 id="goals">🎯 Goals</h4>
 <ol type="1">
@@ -984,6 +1132,8 @@ background: var(--bs-body-bg, white);
 <p>The outcome task comes from the upstream modeling context. Automatic inference uses a numeric Target for regression, a nominal or Boolean Target for classification, and an ordered categorical Target for ordinal classification. Numeric class codes need an explicit classification choice upstream. Without a resolved outcome, the card asks for a Target or an explicit task.</p>
 <p>Only Predictor-role columns are inspected. Target and declared survival outcome components are excluded. Treatment, Identifier, Sequence, Geometry and Weighting columns are not silently added to the design matrix. Assign predictor roles intentionally when defining the analysis.</p>
 <p>The card distinguishes missing numeric and missing categorical values. Boolean and ordered categorical predictors request categorical support; preserving ordinal order is a recipe-specific consideration. Infinite numeric values and unsupported types, such as raw datetime predictors, prevent a compatible match until prepared upstream.</p>
+<p>The <strong>Implicit resampling</strong> column describes internal validation/tuning splits in the recorded recipe. Bootstrap training and subsampling do not count. With an upstream evaluation plan defined, recipes using internal splits are excluded. Without an upstream plan, recipes without internal splits are excluded. Enable <strong>Show excluded and unreviewed recipes</strong> to see both groups and their reasons; excluded recipes cannot be committed or restored as committed models.</p>
+<p>This is reviewed recipe information, not a name-suffix test. For example, <code>ElasticNetCV</code> performs internal tuning and <code>NuSVC(probability=True)</code> performs internal probability calibration. Automatic early stopping can depend on training size; conditional and unreviewed configurations remain excluded until their split behavior is established. A small histogram-boosting recipe with no internal split is marked No; with more than 10,000 rows and no upstream plan it is marked Yes. With an upstream plan on larger data its status is Conditional because fitting sizes may differ across folds and transformations. Upstream samplers that may expand the training data also make automatic early stopping Conditional. Internal validation does not by itself supply an independent assessment of the final selected model, nor does it guarantee suitable time/group restrictions. Other readiness and evidence rules continue to apply, so the included table may be empty.</p>
 <p>Each row describes one joint configuration. A model that handles categories only after encoding is shown with its input requirements; capabilities from separate recipes are never combined. Readiness combines input and broader requirements: Meets requirements, specific preprocessing actions, unsupported requirements, or Untested. With excluded models hidden, every displayed row meets requirements. Evidence remains separate. Requirements describe the needed result, such as numeric representations or no missing values, without prescribing imputation or one-hot encoding. The flip-side separately records the specific tested preparation. Alternative techniques may satisfy the requirements, but are not validated by that recorded probe. Compatibility and evidence continue to refer to the complete tested recipe, not the bare estimator. Identifier repetition, Sequence and Geometry roles introduce longitudinal, temporal and spatial requirements. Content that merely looks like a date or coordinate does not establish those roles.</p>
 <table class="caption-top">
 <colgroup>
@@ -1026,7 +1176,7 @@ background: var(--bs-body-bg, white);
 <p>Installation/version status is independent of these judgments. A missing optional package does not mean its model is analytically unsuitable. A matching package version does not validate an untested adapter.</p>
 <h4 id="front">🏞️ Front</h4>
 <p>The summary names the task, structural requirements and predictor count. The table shows model, input requirements, readiness, evidence, installation and scale guidance. Column filters help narrow the displayed rows. Fullscreen gives the table more vertical space.</p>
-<p>The table columns are ordered: Model, Core mechanism, Composition, Fitting criterion, Transparency, Learning strategy, Prediction outputs, Scale, Input requirements, Readiness, Evidence, Package, Installation, and Recipes.</p>
+<p>The table columns are ordered: Model, Core mechanism, Composition, Fitting criterion, Transparency, Learning strategy, Prediction outputs, Pred throughput, Scale, Input requirements, Implicit resampling, Readiness, Evidence, Package, Installation, and Recipes.</p>
 <p>Each table row represents one method. Recipes counts the recipes remaining after the display filters. A single ranked recipe supplies the row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.</p>
 <p>Select a row, then flip the card to inspect it. An empty table is explained in the footer. It may mean insufficient catalogue coverage rather than absence of suitable models in the wider ecosystem.</p>
 <h4 id="flip-side">🔄 Flip side</h4>
@@ -1071,8 +1221,20 @@ background: var(--bs-body-bg, white);
 </ul>
 <p><strong>Unreviewed</strong>, <strong>Not applicable</strong>, and <strong>Depends on configuration</strong> have distinct meanings. A method summary says <strong>Varies by recipe</strong> when its displayed recipes have different descriptions; inspect each recipe rather than pooling their capabilities. Readiness and evidence still describe the named summary recipe. The characteristics do not establish compatibility, installation, integration, or successful validation. <strong>Capacity growth</strong> is reserved for stage 2 and is not currently assessed or displayed as a filter.</p>
 <h3 id="committing-a-model">Committing a model</h3>
-<p>Select a method and press <strong>Commit</strong>. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. Browsing other rows does not change it. Recommit to replace the model; changing upstream data requires a fresh commitment.</p>
+<p>Select a method and press <strong>Commit</strong>. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. You can select a different row at any time; the status identifies this pending choice and asks you to Commit to replace the model. Browsing alone does not replace a committed model. Changing upstream data requires a fresh commitment.</p>
+<p>JSON configuration saves the selected method and recipe separately from the committed recipe. Loading it restores the selected row by stable method identity, independent of its numeric row position or sort order, and rebuilds the committed model without fitting it. Restoration rechecks compatibility and construction support; an unavailable or incompatible saved recipe is reported rather than replaced with another model. A restored row remains freely changeable. Older configurations that did not record a model choice still require a selection and commitment.</p>
 <p>Commit does not fit a model. The pipeline selects predictor-role columns before the estimator, excluding outcomes and other non-predictor roles. Supported preparation is fitted only when the pipeline is trained. Unvalidated, unavailable, or adapter-dependent recipes cannot be committed; the footer explains the reason and retains any previous commitment. Weighting requirements remain catalogue checks; training consumers must supply fit weights explicitly.</p>
+<h4 id="learning-strategy-and-prediction-speed">Learning strategy and prediction speed</h4>
+<p><strong>Eager</strong> means that fitting constructs reusable predictive quantities before queries arrive. <strong>Lazy</strong> means that local estimation or neighbor aggregation is deferred until a prediction query. <strong>Hybrid</strong> combines both predictive mechanisms. These labels describe when learning happens, not how much time each stage takes.</p>
+<p>Gaussian processes are Eager: training computes reusable posterior quantities, but prediction still involves the training observations. They can therefore be expensive both to fit and to predict. Building a neighbor-search index does not make a nearest-neighbor predictor Eager; its predictive aggregation still happens at query time.</p>
+<p>Documentation can support a broad <strong>expected prediction throughput</strong> assessment (Low, Medium or High), provided it is explicitly labelled documentation-based, conditional on model size and workload, and accompanied by its reason. High would mean more predictions per second, not higher computational cost. A reliable numerical rate or a defensible comparison for the chosen pipeline requires a performance benchmark. The <strong>Pred throughput</strong> column shows these qualitative model-only ratings for the representative recipe: <strong>High</strong> for compact prediction calculations, <strong>Medium</strong> for moderate or configuration-dependent inference work, and <strong>Low</strong> for methods whose query work commonly grows with retained training observations or support vectors. These are documentation-informed judgments, not categories assigned by the documentation or measured rates. Reasons, assumptions and source links are stored in <code>prediction_throughput.json</code>; they are omitted from the table. New or changed, unreviewed recipes show Unreviewed rather than a guessed rating. Ratings do not affect eligibility, search ranking or model acceptance.</p>
+<p>For example, a small linear predictor generally involves less prediction work than an ensemble with many deep trees. Exact Gaussian-process and kernel-model prediction costs depend on the retained training observations or support vectors. These observations describe scaling, not universal speed rankings. Hardware, thread settings, feature count, sparsity, requested output (such as probabilities or predictive uncertainty), preprocessing and batch size can change the result. See <a href="https://scikit-learn.org/stable/computing/computational_performance.html">scikit-learn’s computational-performance guidance</a>.</p>
+<p>A future downstream performance card could benchmark the fitted model and the complete inference pipeline separately, reporting both single-observation latency and batch throughput. Repeat warmed-up measurements and record batch size, requested output, model size, hardware and thread configuration. Generate any stochastic benchmark inputs before timing; preserve feature types, valid category levels, plausible ranges, missingness and relevant dependencies. Include representative held-out input rows where available: independent random values alone may exercise unrealistic prediction paths. This would measure inference performance, not predictive accuracy, and must not refit the model or execute training-only resampling while timing predictions.</p>
+<p>CatBoost recipes can be committed for entirely numeric data as well as mixed inputs. The recipe name <code>catboost_strings</code> describes its optional categorical preparation; it does not require string predictors. Numeric columns remain numeric, including numeric missing values. When categorical predictors are present, the pipeline deterministically converts their values to typed strings and uses a separate missing token that cannot collide with a real value. The CatBoost adapter identifies categorical columns from the actual training-fold design, including any upstream feature selection. Browsing or committing still performs no fit.</p>
+<h4 id="multiple-candidate-methods">Multiple candidate methods</h4>
+<p>Select one or more method rows (Ctrl/Command-click adds rows) and press <strong>Commit</strong>. All selected methods are validated before the candidate set is committed; an invalid recipe leaves the previous commitment intact. One applicable recipe is retained per selected method. Details describe the first selected method.</p>
+<p>Proxy-data stores stable recipe IDs, method names and independent unfitted model pipelines, including each method’s preparation. These are alternative endings, not an ensemble. Shared upstream transformations stay outside the alternatives. With one candidate, ordinary training behaves as before. With several candidates, a consumer must choose a candidate explicitly or use Pipeline tuning; the first candidate is never silently used for training. Configuration JSON preserves both the selected method list and the committed recipe list. Legacy single-method configuration fields remain readable. Changing upstream data requires recommitment.</p>
+<p>Accepted outputs expose the final method ID through <code>selected_model_candidate</code>; the stored alternatives remain available through <code>model_candidates</code>.</p>
 
 
 

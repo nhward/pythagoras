@@ -6,7 +6,8 @@ title: Model candidates
 
 *Compare documented model configurations with the current outcome, predictor types,
 missing values and observation structure. Use this diagnostic card after data
-preparation and Observation resampling, before choosing a model to train.*
+preparation, before choosing a model to train. The upstream Observation resampling
+plan, when present, determines which internal-resampling recipes are included.*
 
 The card displays recipes from the versioned capability catalogue. It does not fit,
 benchmark, install or automatically select a model, and it leaves incoming data and
@@ -35,6 +36,26 @@ The card distinguishes missing numeric and missing categorical values. Boolean a
 ordered categorical predictors request categorical support; preserving ordinal order
 is a recipe-specific consideration. Infinite numeric values and unsupported types,
 such as raw datetime predictors, prevent a compatible match until prepared upstream.
+
+The **Implicit resampling** column describes internal validation/tuning splits in
+the recorded recipe. Bootstrap training and subsampling do not count. With an
+upstream evaluation plan defined, recipes using internal splits are excluded.
+Without an upstream plan, recipes without internal splits are excluded. Enable
+**Show excluded and unreviewed recipes** to see both groups and their reasons;
+excluded recipes cannot be committed or restored as committed models.
+
+This is reviewed recipe information, not a name-suffix test. For example,
+`ElasticNetCV` performs internal tuning and `NuSVC(probability=True)` performs
+internal probability calibration. Automatic early stopping can depend on training
+size; conditional and unreviewed configurations remain excluded until their split
+behavior is established. A small histogram-boosting recipe with no internal split
+is marked No; with more than 10,000 rows and no upstream plan it is marked Yes.
+With an upstream plan on larger data its status is Conditional because fitting
+sizes may differ across folds and transformations. Upstream samplers that may
+expand the training data also make automatic early stopping Conditional. Internal validation does not
+by itself supply an independent assessment of the final selected model, nor does
+it guarantee suitable time/group restrictions. Other readiness and evidence rules
+continue to apply, so the included table may be empty.
 
 Each row describes one joint configuration. A model that handles categories only
 after encoding is shown with its input requirements; capabilities from separate recipes
@@ -68,7 +89,7 @@ The summary names the task, structural requirements and predictor count. The tab
 shows model, input requirements, readiness, evidence, installation and scale guidance. Column filters help narrow the displayed rows. Fullscreen gives
 the table more vertical space.
 
-The table columns are ordered: Model, Core mechanism, Composition, Fitting criterion, Transparency, Learning strategy, Prediction outputs, Scale, Input requirements, Readiness, Evidence, Package, Installation, and Recipes.
+The table columns are ordered: Model, Core mechanism, Composition, Fitting criterion, Transparency, Learning strategy, Prediction outputs, Pred throughput, Scale, Input requirements, Implicit resampling, Readiness, Evidence, Package, Installation, and Recipes.
 
 Each table row represents one method. Recipes counts the recipes remaining after the display filters. A single ranked recipe supplies the row’s readiness, evidence, requirements and installation status. Matching, validated recipes are preferred for the summary. Capabilities are never combined across recipes. On the flip side, expand each recipe to compare its own preparation, conditions and evidence. Enable Show excluded and unreviewed recipes to inspect alternatives hidden by the current requirements.
 
@@ -205,6 +226,85 @@ currently assessed or displayed as a filter.
 
 ### Committing a model
 
-Select a method and press **Commit**. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. Browsing other rows does not change it. Recommit to replace the model; changing upstream data requires a fresh commitment.
+Select a method and press **Commit**. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. You can select a different row at any time; the status identifies this pending choice and asks you to Commit to replace the model. Browsing alone does not replace a committed model. Changing upstream data requires a fresh commitment.
+
+JSON configuration saves the selected method and recipe separately from the committed recipe. Loading it restores the selected row by stable method identity, independent of its numeric row position or sort order, and rebuilds the committed model without fitting it. Restoration rechecks compatibility and construction support; an unavailable or incompatible saved recipe is reported rather than replaced with another model. A restored row remains freely changeable. Older configurations that did not record a model choice still require a selection and commitment.
 
 Commit does not fit a model. The pipeline selects predictor-role columns before the estimator, excluding outcomes and other non-predictor roles. Supported preparation is fitted only when the pipeline is trained. Unvalidated, unavailable, or adapter-dependent recipes cannot be committed; the footer explains the reason and retains any previous commitment. Weighting requirements remain catalogue checks; training consumers must supply fit weights explicitly.
+
+
+#### Learning strategy and prediction speed
+
+**Eager** means that fitting constructs reusable predictive quantities before
+queries arrive. **Lazy** means that local estimation or neighbor aggregation is
+deferred until a prediction query. **Hybrid** combines both predictive mechanisms.
+These labels describe when learning happens, not how much time each stage takes.
+
+Gaussian processes are Eager: training computes reusable posterior quantities,
+but prediction still involves the training observations. They can therefore be
+expensive both to fit and to predict. Building a neighbor-search index does not
+make a nearest-neighbor predictor Eager; its predictive aggregation still happens
+at query time.
+
+Documentation can support a broad **expected prediction throughput** assessment
+(Low, Medium or High), provided it is explicitly labelled documentation-based,
+conditional on model size and workload, and accompanied by its reason. High
+would mean more predictions per second, not higher computational cost. A reliable
+numerical rate or a defensible comparison for the chosen pipeline requires a
+performance benchmark. The **Pred throughput** column shows these qualitative model-only ratings for the
+representative recipe: **High** for compact prediction calculations, **Medium**
+for moderate or configuration-dependent inference work, and **Low** for methods
+whose query work commonly grows with retained training observations or support
+vectors. These are documentation-informed judgments, not categories assigned by
+the documentation or measured rates. Reasons, assumptions and source links are
+stored in `prediction_throughput.json`; they are omitted from the table. New or
+changed, unreviewed recipes show Unreviewed rather than a guessed rating. Ratings
+do not affect eligibility, search ranking or model acceptance.
+
+For example, a small linear predictor generally involves less prediction work
+than an ensemble with many deep trees. Exact Gaussian-process and kernel-model
+prediction costs depend on the retained training observations or support vectors.
+These observations describe scaling, not universal speed rankings. Hardware,
+thread settings, feature count, sparsity, requested output (such as probabilities
+or predictive uncertainty), preprocessing and batch size can change the result.
+See [scikit-learn's computational-performance guidance](https://scikit-learn.org/stable/computing/computational_performance.html).
+
+A future downstream performance card could benchmark the fitted model and the
+complete inference pipeline separately, reporting both single-observation latency
+and batch throughput. Repeat warmed-up measurements and record batch size,
+requested output, model size, hardware and thread configuration. Generate any
+stochastic benchmark inputs before timing; preserve feature types, valid category
+levels, plausible ranges, missingness and relevant dependencies. Include
+representative held-out input rows where available: independent random values
+alone may exercise unrealistic prediction paths. This would measure inference
+performance, not predictive accuracy, and must not refit the model or execute
+training-only resampling while timing predictions.
+
+
+CatBoost recipes can be committed for entirely numeric data as well as mixed
+inputs. The recipe name `catboost_strings` describes its optional categorical
+preparation; it does not require string predictors. Numeric columns remain
+numeric, including numeric missing values. When categorical predictors are present,
+the pipeline deterministically converts their values to typed strings and uses a
+separate missing token that cannot collide with a real value. The CatBoost adapter
+identifies categorical columns from the actual training-fold design, including
+any upstream feature selection. Browsing or committing still performs no fit.
+
+
+#### Multiple candidate methods
+
+Select one or more method rows (Ctrl/Command-click adds rows) and press **Commit**.
+All selected methods are validated before the candidate set is committed; an
+invalid recipe leaves the previous commitment intact. One applicable recipe is
+retained per selected method. Details describe the first selected method.
+
+Proxy-data stores stable recipe IDs, method names and independent unfitted model
+pipelines, including each method's preparation. These are alternative endings,
+not an ensemble. Shared upstream transformations stay outside the alternatives.
+With one candidate, ordinary training behaves as before. With several candidates,
+a consumer must choose a candidate explicitly or use Pipeline tuning; the first
+candidate is never silently used for training. Configuration JSON preserves both
+the selected method list and the committed recipe list. Legacy single-method
+configuration fields remain readable. Changing upstream data requires recommitment.
+
+Accepted outputs expose the final method ID through `selected_model_candidate`; the stored alternatives remain available through `model_candidates`.

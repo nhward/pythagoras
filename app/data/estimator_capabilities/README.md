@@ -304,6 +304,12 @@ executing arbitrary Python strings from the JSON.
   a per-feature cardinality limit. Explicit ordered-to-nominal conversion must
   be a deliberate application choice. LightGBM auto-detection is for unordered
   categories; specify categorical feature names when necessary.
+CatBoost classifier and regressor recipes use `thread_count=-1`, letting CatBoost
+choose the number of threads from the detected CPU cores. This is an execution
+setting, not a tuning dimension. Historical validation probes used one thread;
+no new performance benchmark is implied by this default change. See the
+[CatBoost thread settings](https://catboost.ai/docs/en/references/training-parameters/performance).
+
 - `catboost_strings`: convert designated categorical features to strings, fill
   categorical missing values with a collision-free reserved token, and pass their
   names through `cat_features`. Persist the token chosen during training for later
@@ -498,3 +504,9 @@ components. Cubist without neighbor correction is eager; its method-level descri
 explains the optional hybrid configuration. Strategy remains unreviewed for unmapped
 methods and not applicable to standalone preparation steps. Sources and qualifications
 stay separate from runtime validation and scalability guidance.
+
+XGBoost classifier and regressor recipes use `n_jobs=-1` for hardware-aware CPU
+parallelism with histogram training. GPU execution remains an explicit separate
+choice. The pipeline tuning evaluator currently overrides nested `n_jobs` to one.
+Historical compatibility probes used one thread; this change is not a speed
+benchmark.

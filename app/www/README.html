@@ -69,6 +69,42 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 --py-table-row-hover: #f0f1cc;
 --py-table-cell-hover: #d4d4b8;
 }
+.pipeline-tune-actions {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: .35rem;
+}
+.pipeline-tune-best {
+flex: 0 0 auto;
+max-height: 6rem;
+overflow: auto;
+font-size: .85rem;
+overflow-wrap: anywhere;
+}
+.pipeline-tune-table {
+flex: 1 1 0;
+min-height: 0;
+overflow: hidden;
+}
+.flip-container:has(.pipeline-tune-table).flipped > .flippable > .front,
+.flip-container:has(.pipeline-tune-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+visibility: hidden;
+}
+.pipeline-tune-table > .shiny-data-frame-output {
+flex: 1 1 0;
+min-height: 0;
+}
+.pipeline-tune-details {
+flex: 0 0 auto;
+max-height: 12rem;
+overflow: auto;
+}
+.card [id$="-Specification"] {
+max-height: 16rem;
+overflow: auto;
+}
 
 body.bslib-gap-spacing {
 gap: 0.25rem;

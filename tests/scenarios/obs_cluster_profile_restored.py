@@ -2,8 +2,10 @@
 import os
 import sys
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
@@ -14,19 +16,19 @@ from shiny import reactive, render, ui
 
 rng = np.random.default_rng(2025)
 frame = pd.DataFrame({'x': np.r_[rng.normal(-3,.2,30),rng.normal(3,.2,30)], 'extra':rng.normal(size=60)})
-frame['cluster_partition'] = pd.Categorical(['c1']*30 + ['c2']*30)
-frame['cluster_density_2'] = pd.Categorical(['unallocated']*10 + ['c1']*20 + ['c2']*30)
+frame['cluster__partition'] = pd.Categorical(['c1']*30 + ['c2']*30)
+frame['cluster__density_2'] = pd.Categorical(['unallocated']*10 + ['c1']*20 + ['c2']*30)
 frame['importance'] = np.resize([.5,1.,2.],60)
 frame.loc[0,'importance'] = 0
 frame['identifier'] = np.arange(60)
 roles = RoleMap()
 for col in ['x','extra']: roles.set_roles(col,[Role.PREDICTOR])
-for col in ['cluster_partition','cluster_density_2']: roles.set_roles(col,[Role.STRATIFIER])
+for col in ['cluster__partition','cluster__density_2']: roles.set_roles(col,[Role.STRATIFIER])
 roles.set_roles('importance',[Role.WEIGHTING])
 roles.set_roles('identifier',[Role.IDENTIFIER])
 source = proxy_data(_df=frame, _roles=roles, _cluster_count=2)
 this = instance()
-this.restore_configuration_state({'inputs':{'Membership':'cluster_density_2'}})
+this.restore_configuration_state({'inputs':{'Membership':'cluster__density_2'}})
 this._imports.set(source)
 original_server, original_footer = this.server, this._footer
 this.footer = lambda: ui.TagList(original_footer(),ui.output_text('PassThrough'), ui.input_action_button('RemoveMemberships',label='Remove membership roles'), ui.input_action_button('RestoreMemberships',label='Restore membership roles'))
@@ -36,7 +38,7 @@ def server(input,output,session):
     @reactive.event(input.RemoveMemberships)
     def remove():
         changed = source.clone()
-        for name in ['cluster_partition','cluster_density_2']:
+        for name in ['cluster__partition','cluster__density_2']:
             changed.role_map.set_roles(name,[Role.NONE])
         this._imports.set(changed)
     @reactive.effect

@@ -29,6 +29,7 @@ from proxy_data import proxy_data
 from roles import Role
 from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
+from shiny.ui.fill import as_fill_item, as_fillable_container
 from shinywidgets import render_widget
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
@@ -41,7 +42,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from cards.miss_informative import _feature_frame
 
-MEMBERSHIP = re.compile(r"^cluster_(?:partition|mixture|density)(?:_\d+)?$")
+MEMBERSHIP = re.compile(r"^cluster__(?:partition|mixture|density)(?:_\d+)?$")
 
 
 @recordable
@@ -94,7 +95,7 @@ def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
     result = Profile(target)
     try:
         if target not in _targets(data):
-            raise ValueError('Assign a cluster_partition, cluster_mixture or cluster_density column (optional numeric suffix) the Stratifier role, then select it.')
+            raise ValueError('Assign a cluster__partition, cluster__mixture or cluster__density column (optional numeric suffix) the Stratifier role, then select it.')
         frame = data.frame.reset_index(drop=True)
         weights = np.ones(len(frame))
         weighting = data.role_map.columns_with_role(Role.WEIGHTING)
@@ -234,7 +235,7 @@ def _figure(result):
         plot_bgcolor="#bbd6f8",
         showlegend=False, 
         modebar={"orientation": "v"},
-        margin={'l':25,'r':25,'t':30,'b':25},
+        margin={'l':0,'r':0,'t':0,'b':0},
         xaxis={'visible':False,'range':[-1, max(leaves, 1)]},
         yaxis={'visible':False,'range':[-result.model.get_depth()-.6,.6]},
         # font={"size": 13 if full_screen else 10},
@@ -317,7 +318,7 @@ def instance():
                 results = Profiles()
                 req(target in results, cancel_output=True)
                 widget = go.FigureWidget(_figure(results[target]))
-                widget._config = {'displayModeBar':bool(this.isFullScreen()), 'displaylogo':False}
+                widget._config = {'displayModeBar':bool(this.isFullScreen()), 'displaylogo':False, 'responsive':True}
                 return widget
 
         @this.reactable()
@@ -341,7 +342,7 @@ def instance():
                     if target not in registered:
                         register_tree(target)
                         registered.add(target)
-                    panel = ui.nav_panel(target.removeprefix("cluster_").title(),
+                    panel = ui.nav_panel(target.removeprefix("cluster__").title(),
                         shinywidgets.output_widget(
                             id='Tree_' + target, fill=True, 
                             guide=this, title=f'{target} decision tree', position='left',
@@ -349,6 +350,10 @@ def instance():
                         ),
                         value=target
                     )
+                # Inserted panels bypass navset_bar's initial fill/spacing setup.
+                panel.content = as_fillable_container(as_fill_item(panel.content))
+                panel.content.add_class('bslib-gap-spacing')
+                panel.content.add_style('padding: 0; gap: 0; --bslib-navbar-margin: 0;')
                 ui.insert_nav_panel('Membership', panel, select=(target == selected))
             ui.update_navset('Membership', selected=selected)
             for target in current_tabs:
@@ -410,7 +415,7 @@ def instance():
         @render.data_frame
         @this.record_context
         def Comparison():
-            rows = [{'Membership':target.removeprefix("cluster_").title(), 'CV Accuracy':r.accuracy, 'CV Balanced Accuracy':r.balanced,
+            rows = [{'Membership':target.removeprefix("cluster__").title(), 'CV Accuracy':r.accuracy, 'CV Balanced Accuracy':r.balanced,
                      'Majority baseline':r.baseline, 'Balanced baseline':r.baseline_balanced,
                      'Fold SD':r.fold_sd, 'Folds':r.folds, 'Rows':r.observations,
                      'Leaves':r.model.get_n_leaves() if r.model is not None else 0,
@@ -433,7 +438,7 @@ def instance():
             r = Analysis()
             if r.message:
                 return r.message
-            return (f'{r.target.removeprefix("cluster_").title()}: CV accuracy {r.accuracy:.1%}; balanced accuracy {r.balanced:.1%} '
+            return (f'{r.target.removeprefix("cluster__").title()}: CV accuracy {r.accuracy:.1%}; balanced accuracy {r.balanced:.1%} '
                 f'(fold SD {r.fold_sd:.1%}). Majority baseline {r.baseline:.1%}; balanced {r.baseline_balanced:.1%}. '
                 f'{r.folds} folds; {r.observations} of {r.eligible} rows; {len(r.predictors)} predictors. '
                 f'{"Observation importance applied. " if r.weighted else "Equal observation importance. "}'

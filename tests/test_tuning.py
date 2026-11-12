@@ -9,15 +9,79 @@ from tuning import compile_spec, discover, search_values
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize('source,expected', [
+    ('miss_impute', 'Learned Imputation'),
+    ('miss_impute_1', 'Learned Imputation (1)'),
+    ('miss_impute_2', 'Learned Imputation (2)'),
+    ('data_models_2 › estimator', 'Model method candidates (2) › estimator'),
+    ('other_step_1 › nested', 'other_step_1 › nested'),
+])
+def test_source_titles_preserve_instance_suffix_and_nested_step(source, expected):
+    from cards.tuning_parameters import source_label
+    cards = {'miss_impute': {'long_name': 'Learned Imputation'},
+             'data_models': {'long_name': 'Model method candidates'}}
+    assert source_label(source, cards) == expected
+
+
 def test_discovers_estimator_defaults_and_custom_metadata():
     rows = discover(Pipeline([('miss',MissingnessTransformer()),('model',RandomForestRegressor())]))
     by_path = {r['path']:r for r in rows}
     assert by_path['miss__observation_threshold']['name'] == 'Observation missingness proportion'
     assert by_path['model__n_estimators']['default'] == '100'
     assert by_path['model__max_depth']['current'] == 'None'
-    assert by_path['model__max_samples']['definition']['kind'] == ''
+    assert by_path['model__max_samples']['definition']['kind'] == 'float'
+    assert search_values(by_path['model__max_samples']['definition']) == [0.5, 0.8, 1.0]
     assert by_path['model__random_state']['fixed']
     assert search_values(by_path['miss__observation_threshold']['definition']) == [.3,.4,.5,.6]
+
+
+def test_reviewed_parameter_purposes_are_class_specific_and_not_based_on_values():
+    from sklearn.ensemble import HistGradientBoostingRegressor
+    from sklearn.linear_model import LogisticRegression, Ridge
+    from sklearn.preprocessing import FunctionTransformer
+    rows = {r['path']: r for r in discover(Pipeline([
+        ('select', FunctionTransformer()), ('ridge', Ridge()),
+        ('logistic', LogisticRegression()), ('boost', HistGradientBoostingRegressor())]))}
+    for name in ('accept_sparse', 'validate', 'check_inverse', 'feature_names_out'):
+        row = rows[f'select__{name}']
+        assert row['purpose'] == 'operational' and row['fixed']
+        assert row['reason'] and row['reference']
+        with pytest.raises(ValueError, match='fixed configuration'):
+            compile_spec(list(rows.values()), {row['path']:dict(row['definition'], active=True, owner=row['owner'])})
+    assert rows['ridge__max_iter']['purpose'] == 'advanced'
+    assert rows['boost__max_iter']['purpose'] == 'recommended'
+    assert rows['logistic__C']['purpose'] == 'recommended'
+    assert rows['logistic__C']['definition']['values'] == [0.01, 0.1, 1.0, 10.0, 100.0]
+
+
+def test_visibility_levels_keep_enabled_parameters_and_separate_unknown_booleans():
+    from tuning import visible
+    rows = {r['path']:r for r in discover(Pipeline([('forest', RandomForestRegressor())]))}
+    from sklearn.base import BaseEstimator
+    class Unreviewed(BaseEstimator):
+        def __init__(self, flag=False):
+            self.flag = flag
+    recommended, advanced, fixed = [rows[f'forest__{name}'] for name in (
+        'max_depth', 'max_samples', 'random_state')]
+    assert rows['forest__bootstrap']['purpose'] == 'advanced'
+    unknown = discover(Pipeline([('unknown', Unreviewed())]))[0]
+    assert unknown['purpose'] == 'unreviewed'
+    assert unknown['definition']['values'] == [False, True]
+    assert visible(recommended, 'recommended')
+    assert not visible(advanced, 'recommended') and visible(advanced, 'advanced')
+    assert not visible(unknown, 'advanced') and visible(unknown, 'unreviewed')
+    assert visible(unknown, 'recommended', active=True)
+    assert not visible(fixed, 'unreviewed') and visible(fixed, 'everything')
+
+
+def test_old_visibility_checkbox_migrates_to_everything_radio():
+    from cards.tuning_parameters import instance
+    card = instance()
+    card.restore_configuration_state({'inputs': {'ShowEverything': True}})
+    with card.configuration_ui_context():
+        settings = str(card.settings)
+    assert 'value="everything" checked="checked"' in settings
+    assert 'ShowEverything' in card._configuration_excluded_input_ids
 
 
 @pytest.mark.parametrize('definition', [
@@ -105,6 +169,9 @@ def test_custom_imputation_styles_and_independent_transform_switches():
     ])
     rows = {r['path']: r for r in discover(pipeline)}
     assert search_values(rows['impute__method']['definition']) == ['simple', 'knn', 'iterative']
+    assert search_values(rows['impute__knn__n_neighbors']['definition']) == [3, 4, 5, 6]
+    assert rows['impute__knn__n_neighbors']['metadata']['default'] == 5
+    assert rows['impute__knn__n_neighbors']['default'] == '5'
     assert 'transform__transforms' not in rows
     for name in ('deskew', 'scale', 'center'):
         row = rows[f'transform__{name}']
@@ -150,3 +217,99 @@ def test_unknown_handling_is_fixed(encoder):
     with pytest.raises(ValueError, match='fixed configuration'):
         compile_spec(rows, {row['path']: dict(
             row['definition'], owner=row['owner'], active=True)})
+
+
+@pytest.mark.parametrize('classifier', [False, True])
+def test_catboost_reviewed_parameters_include_unset_defaults_and_filter(classifier):
+    from catboost_model import PreparedCatBoostClassifier, PreparedCatBoostRegressor
+    from tuning import visible
+    cls = PreparedCatBoostClassifier if classifier else PreparedCatBoostRegressor
+    model = cls(iterations=3, verbose=False, thread_count=1)
+    pipeline = Pipeline([('model', model)])
+    before = model.get_params().copy()
+    rows = {row['path'].split('__')[-1]: row for row in discover(pipeline)}
+    recommended = {'iterations', 'depth', 'learning_rate', 'l2_leaf_reg'}
+    advanced = {'random_strength', 'bagging_temperature', 'bootstrap_type', 'subsample',
+                'rsm', 'border_count', 'grow_policy', 'min_data_in_leaf', 'max_leaves'}
+    operational = {'thread_count', 'task_type', 'random_seed', 'early_stopping_rounds'}
+    for names, purpose in [(recommended, 'recommended'), (advanced, 'advanced'), (operational, 'operational')]:
+        for name in names:
+            row = rows[name]
+            assert row['purpose'] == purpose
+            assert row['reason'] and row['reference']
+            assert search_values(row['definition'], row['metadata'])
+            assert visible(row, 'recommended') == (purpose == 'recommended')
+            assert visible(row, 'advanced') == (purpose != 'operational')
+            assert visible(row, 'everything')
+            assert row['fixed'] == (purpose == 'operational')
+    row = rows['depth']
+    spec = compile_spec(list(rows.values()), {row['path']: dict(row['definition'], active=True, owner=row['owner'])})
+    assert spec['grid'] == {'model__depth': [4, 6, 8]}
+    assert model.get_params() == before  # Discovery must not change native defaults.
+    pipeline.set_params(model__depth=4)
+    assert model.get_params()['depth'] == 4
+
+
+def test_gaussian_process_reviewed_defaults_and_explicit_kernel_parameters():
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from sklearn.gaussian_process.kernels import (
+        RBF,
+        ConstantKernel,
+        Matern,
+        WhiteKernel,
+    )
+    from tuning import visible
+    model = GaussianProcessRegressor()
+    rows = {r['path']: r for r in discover(Pipeline([('gp', model)]))}
+    assert {r['path'] for r in rows.values() if visible(r, 'recommended')} == {'gp__alpha', 'gp__normalize_y'}
+    for row in rows.values():
+        assert row['purpose'] != 'unreviewed'
+        assert row['reason'] and row['reference']
+        if row['definition']['values']:
+            search_values(row['definition'], row['metadata'])
+    assert rows['gp__kernel']['fixed']
+    assert rows['gp__random_state']['fixed']
+    assert rows['gp__n_restarts_optimizer']['purpose'] == 'advanced'
+    assert model.kernel is None  # Discovery preserves the default fixed kernel.
+    model.kernel = ConstantKernel() * RBF() + WhiteKernel()
+    rows = {r['path']: r for r in discover(Pipeline([('gp', model)]))}
+    paths = ['gp__kernel__k1__k1__constant_value', 'gp__kernel__k1__k2__length_scale',
+             'gp__kernel__k2__noise_level']
+    for path in paths:
+        row = rows[path]
+        assert row['purpose'] == 'advanced'
+        assert visible(row, 'advanced')
+        assert not visible(row, 'recommended')
+        spec = compile_spec(list(rows.values()), {path: dict(row['definition'], active=True, owner=row['owner'])})
+        assert spec['grid'][path] == row['definition']['values']
+        assert rows[path+'_bounds']['fixed']
+    model.kernel = Matern()
+    rows = {r['path']: r for r in discover(Pipeline([('gp', model)]))}
+    assert search_values(rows['gp__kernel__nu']['definition']) == [0.5, 1.5, 2.5]
+
+
+def test_model_recipe_preparation_is_visible_only_under_everything_and_not_tunable():
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import Ridge
+    from sklearn.preprocessing import StandardScaler
+    from tuning import visible
+
+    pipeline = Pipeline([
+        ('upstream', SimpleImputer()),
+        ('data_models', Pipeline([
+            ('prepare', Pipeline([('impute', SimpleImputer()), ('scale', StandardScaler())])),
+            ('estimator', Ridge()),
+        ])),
+    ])
+    rows = discover(pipeline)
+    paths = {row['path'] for row in rows}
+    assert 'upstream__strategy' in paths
+    assert 'data_models__estimator__alpha' in paths
+    recipe = next(row for row in rows if row['path'] == 'data_models__prepare__impute__strategy')
+    assert recipe['purpose'] == 'recipe'
+    assert recipe['fixed']
+    assert visible(recipe, 'everything')
+    for level in ('recommended', 'advanced', 'unreviewed'):
+        assert not visible(recipe, level)
+    with pytest.raises(ValueError, match='fixed configuration'):
+        compile_spec(rows, {recipe['path']: dict(recipe['definition'], active=True, owner=recipe['owner'])})

@@ -2099,7 +2099,7 @@
         "tree_method": "hist",
         "enable_categorical": true,
         "random_state": 1729,
-        "n_jobs": 1
+        "n_jobs": -1
       },
       "preparation": "pandas_categories",
       "wrapper": null
@@ -2196,7 +2196,7 @@
         "tree_method": "hist",
         "enable_categorical": true,
         "random_state": 1729,
-        "n_jobs": 1
+        "n_jobs": -1
       },
       "preparation": "pandas_categories",
       "wrapper": null
@@ -2488,7 +2488,7 @@
         "random_seed": 1729,
         "verbose": false,
         "allow_writing_files": false,
-        "thread_count": 1
+        "thread_count": -1
       },
       "preparation": "catboost_strings",
       "wrapper": null
@@ -2585,7 +2585,7 @@
         "random_seed": 1729,
         "verbose": false,
         "allow_writing_files": false,
-        "thread_count": 1,
+        "thread_count": -1,
         "auto_class_weights": "Balanced"
       },
       "preparation": "catboost_strings",

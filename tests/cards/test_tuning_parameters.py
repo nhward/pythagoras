@@ -14,6 +14,13 @@ def test_enable_commit_and_revert_preserves_current_pipeline(page, app):
     expect(active).to_be_enabled()
     active.check()
     expect(page.locator('[id$="-Status"]')).to_contain_text('4 possible combinations')
+    headings = table.locator('thead tr').first.locator('th')
+    expect(headings).to_have_text(['Tune', 'Parameter', 'Source', 'Search values', 'Current value', 'Reason', 'Purpose'])
+    first_row = table.locator('tbody tr').first
+    expect(first_row.locator('td').nth(0)).to_have_text('✅')
+    expect(first_row.locator('td').nth(1)).to_have_text('Observation missingness proportion')
+    expect(first_row.locator('td').nth(2)).to_have_text('Excessive missingness')
+    expect(active).to_be_checked()
     page.locator('[id$="-Commit"]').click()
     expect(page.locator('[id$="-ExportState"]')).to_have_text('Committed combinations: 4')
     active.uncheck()
@@ -27,9 +34,13 @@ def test_missing_definition_must_be_completed_before_enabling(page, app):
     page.goto(app.url)
     expect(page.locator('[id$="-Table"]')).to_contain_text('Observation missingness proportion', timeout=30000)
     page.locator('.card').first.hover()
+    card = page.locator('.card').first
+    card.locator('button.collapse-toggle').click()
+    page.locator('[id$="-Visibility"]').get_by_label('All tunable (including unreviewed)', exact=True).check()
+    card.locator('button.collapse-toggle').click()
     page.locator('[id$="-ExpandButton"]').click()
-    page.locator('[id$="-Search"]').fill('max_samples')
-    page.locator('[id$="-Table"]').get_by_text('Max samples', exact=True).click()
+    page.locator('[id$="-Search"]').fill('unknown_count')
+    page.locator('[id$="-Table"]').get_by_text('Unknown count', exact=True).click()
     expect(page.locator('[id$="-Active"]')).to_be_disabled()
     page.locator('[id$="-Kind"]').select_option('integer')
     page.locator('[id$="-Values"]').fill('[2, 3, 4, null]')
@@ -79,7 +90,7 @@ def test_fullscreen_search_and_horizontal_editor(page, app):
 
 
 @pytest.mark.ui
-def test_fixed_configuration_hidden_unless_show_everything(page, app):
+def test_parameter_visibility_radio_levels(page, app):
     page.goto(app.url)
     table = page.locator('[id$="-Table"]')
     expect(table).to_contain_text('Observation missingness proportion', timeout=30000)
@@ -87,13 +98,42 @@ def test_fixed_configuration_hidden_unless_show_everything(page, app):
     card = page.locator('.card').first
     card.hover()
     card.locator('button.collapse-toggle').click()
-    setting = page.locator('[id$="-ShowEverything"]')
-    expect(setting).not_to_be_checked()
-    setting.check()
+    setting = page.locator('[id$="-Visibility"]')
+    expect(setting.get_by_label('Recommended', exact=True)).to_be_checked()
+    expect(table.get_by_text('Bootstrap', exact=True)).to_have_count(0)
+    expect(table.get_by_text('Max samples', exact=True)).to_have_count(0)
+    setting.get_by_label('Recommended + advanced', exact=True).check()
+    expect(table.get_by_text('Max samples', exact=True)).to_be_visible()
+    expect(table.get_by_text('Bootstrap', exact=True)).to_be_visible()
+    expect(table.get_by_text('Unknown flag', exact=True)).to_have_count(0)
+    setting.get_by_label('All tunable (including unreviewed)', exact=True).check()
+    expect(table.get_by_text('Bootstrap', exact=True)).to_be_visible()
+    expect(table.get_by_text('Unknown flag', exact=True)).to_be_visible()
+    expect(table).not_to_contain_text('Fixed configuration')
+    setting.get_by_label('Everything (including operational and recipe)', exact=True).check()
     expect(table).to_contain_text('Fixed configuration')
-    setting.uncheck()
+    setting.get_by_label('Recommended', exact=True).check()
     expect(table).not_to_contain_text('Fixed configuration')
     expect(table).to_contain_text('Observation missingness proportion')
+
+
+@pytest.mark.ui
+def test_enabled_advanced_parameter_stays_visible_in_recommended_view(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Observation missingness proportion', timeout=30000)
+    card = page.locator('.card').first
+    card.hover(); card.locator('button.collapse-toggle').click()
+    visibility = page.locator('[id$="-Visibility"]')
+    visibility.get_by_label('Recommended + advanced', exact=True).check()
+    card.locator('button.collapse-toggle').click()
+    table.get_by_text('Remove observations', exact=True).click()
+    page.locator('[id$="-Active"]').check()
+    card.hover(); card.locator('button.collapse-toggle').click()
+    visibility.get_by_label('Recommended', exact=True).check()
+    card.locator('button.collapse-toggle').click()
+    expect(table).to_contain_text('Remove observations')
+    expect(page.locator('[id$="-Status"]')).to_contain_text('1 selected for auto-tuning')
 
 
 @pytest.mark.ui
@@ -138,6 +178,10 @@ def test_tuning_grid_fills_fullscreen_space_beside_editor(page, app):
 @pytest.mark.ui
 def test_boolean_editor_only_requires_auto_tune_checkbox(page, app):
     page.goto(app.url)
+    page.locator('.card').first.hover()
+    page.locator('.card').first.locator('button.collapse-toggle').click()
+    page.locator('[id$="-Visibility"]').get_by_label('Recommended + advanced', exact=True).check()
+    page.locator('.card').first.locator('button.collapse-toggle').click()
     table = page.locator('[id$="-Table"]')
     expect(table).to_contain_text('Remove observations', timeout=30000)
     table.get_by_text('Remove observations', exact=True).click()
@@ -167,3 +211,54 @@ def test_explicit_choices_hide_numeric_range_fields(page, app):
     for name in ('Minimum', 'Maximum', 'Increment'):
         expect(page.locator(f'[id$="-{name}"]')).to_be_visible()
     expect(page.locator('[id$="-Values"]')).to_be_hidden()
+
+
+multiple_app = create_app_fixture(app='../scenarios/tuning_parameters_multiple.py', scope='function')
+
+
+@pytest.mark.ui
+def test_method_sources_and_conditional_combination_count(page, multiple_app):
+    page.set_viewport_size({'width':1600, 'height':1100})
+    page.goto(multiple_app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Ridge Regression', timeout=30000)
+    expect(table).to_contain_text('Decision Tree Regression')
+    page.locator('.card').first.hover()
+    page.locator('[id$="-ExpandButton"]').click()
+    page.locator('[id$="-Search"]').fill('alpha')
+    table.get_by_text('Alpha', exact=True).click()
+    page.locator('[id$="-Active"]').check()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('6 possible combinations')
+    page.locator('[id$="-Search"]').fill('max_depth')
+    table.get_by_text('Max depth', exact=True).click()
+    expect(page.locator('[id$="-Editor"]')).to_contain_text('Max depth')
+    expect(page.locator('[id$="-Active"]')).not_to_be_checked()
+    page.locator('[id$="-Active"]').check()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('9 possible combinations')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-MultiSpec"]')).to_have_text('9')
+
+
+bundled_app = create_app_fixture(app='../scenarios/tuning_parameters_bundled.py', scope='function')
+
+
+@pytest.mark.ui
+def test_bundled_method_settings_count_only_active_branches(page, bundled_app):
+    page.set_viewport_size({'width': 1600, 'height': 1100})
+    page.goto(bundled_app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Neighbors', timeout=30000)
+    page.locator('.card').first.hover()
+    page.locator('[id$="-ExpandButton"]').click()
+    page.locator('[id$="-Search"]').fill('miss_impute__method')
+    table.get_by_text('Method', exact=True).click()
+    page.locator('[id$="-Active"]').check()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('3 possible combinations')
+    page.locator('[id$="-Search"]').fill('miss_impute__knn__n_neighbors')
+    table.get_by_text('Neighbors', exact=True).click()
+    expect(page.locator('[id$="-Editor"]')).to_contain_text('Applies when method includes knn')
+    expect(page.locator('[id$="-Active"]')).not_to_be_checked()
+    page.locator('[id$="-Active"]').check()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('6 possible combinations')
+    page.locator('[id$="-Commit"]').click()
+    expect(page.locator('[id$="-ExportState"]')).to_have_text('Committed combinations: 6')

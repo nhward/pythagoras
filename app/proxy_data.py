@@ -16,8 +16,8 @@ from typing import Literal
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from cleaning_record import CleaningRecord
 from card_position import CardPositionError
+from cleaning_record import CleaningRecord
 from evaluation_plan import EvaluationPlan
 from modelling_context import ModellingContext
 from pipeline import Pipeline
@@ -49,6 +49,8 @@ class proxy_data:
     _cleaning_records: tuple[CleaningRecord, ...] = field(default_factory=tuple)
     _pipeline: Pipeline | None = None
     _tuning_spec: dict | None = None
+    _model_candidates: tuple = ()
+    _selected_candidate: str | None = None
     _clean_df: pd.DataFrame | None = None
     _processing_records: tuple[ProcessingRecord, ...] = field(default_factory=tuple)
 
@@ -289,7 +291,7 @@ class proxy_data:
             raise ValueError("Select a valid evaluation plan before training.")
         plan.require(self, supervised=True)
         for train, validation in plan.splits(self):
-            pipeline = self.pipeline_for_training() if self.has_pipeline else Pipeline([])
+            pipeline = self.pipeline_for_training() if self.has_pipeline or self._model_candidates else Pipeline([])
             yield pipeline, self.clean_frame.iloc[train].copy(), self.clean_frame.iloc[validation].copy()
 
     def final_training_partition(self, *, purpose=None):
@@ -309,7 +311,7 @@ class proxy_data:
             purpose = next(iter(available))
         if purpose not in available:
             raise ValueError("Select an available final subset: purpose='holdout' or purpose='prediction'.")
-        return (self.pipeline_for_training() if self.has_pipeline else Pipeline([]),
+        return (self.pipeline_for_training() if self.has_pipeline or self._model_candidates else Pipeline([]),
                 self.clean_frame.iloc[list(plan.refit_positions)].copy(),
                 self.clean_frame.iloc[list(available[purpose])].copy())
 
@@ -355,8 +357,18 @@ class proxy_data:
             return ()
         return tuple(name for name, _ in self._pipeline.steps)
 
-    def pipeline_for_training(self) -> Pipeline:
+    def pipeline_for_training(self, candidate_id=None) -> Pipeline:
         """Return a fresh pipeline for fitting inside a training partition."""
+        if candidate_id is not None and candidate_id == self._selected_candidate:
+            return clone(self._pipeline)
+        if candidate_id is not None:
+            candidate = next((c for c in self._model_candidates if c['id'] == candidate_id), None)
+            if candidate is None:
+                raise ValueError('Unknown model candidate')
+            return self.with_estimator(candidate['estimator'], label=candidate['label'],
+                                       recipe_id=candidate['id']).pipeline_for_training()
+        if len(self._model_candidates) > 1 and self._selected_candidate is None:
+            raise ValueError('Choose a model candidate explicitly before training or tune the candidate set.')
         if not self.has_pipeline:
             raise ValueError("No learning pipeline has been registered")
         return clone(self._pipeline)
@@ -365,18 +377,20 @@ class proxy_data:
     def tuning_spec(self):
         """Return a defensive copy only while the committed pipeline still matches."""
         from copy import deepcopy
-        from tuning import discover, fingerprint
+
+        from tuning import discover_source, fingerprint
         if self._tuning_spec is None:
             return None
-        if self._tuning_spec.get("fingerprint") != fingerprint(discover(self._pipeline)):
+        if self._tuning_spec.get("fingerprint") != fingerprint(discover_source(self)):
             return None
         return deepcopy(self._tuning_spec)
 
     def with_tuning_spec(self, specification):
         from copy import deepcopy
         from dataclasses import replace
-        from tuning import discover, fingerprint
-        if specification.get("fingerprint") != fingerprint(discover(self._pipeline)):
+
+        from tuning import discover_source, fingerprint
+        if specification.get("fingerprint") != fingerprint(discover_source(self)):
             raise ValueError("The tuning specification does not match this pipeline")
         record = ProcessingRecord(
             stage="Learning", card="tuning_parameters", operation="Define parameter tuning",
@@ -389,12 +403,28 @@ class proxy_data:
         return replace(self, _tuning_spec=deepcopy(specification),
                        _processing_records=(*records, record))
 
+    def with_tuned_parameters(self, parameters, *, fingerprint, trial, metric, score, candidate_id=None):
+        """Commit selected settings, without fitting or replacing display data."""
+        from dataclasses import replace
+        if not self.has_pipeline and not self._model_candidates:
+            raise ValueError("Commit a model before accepting tuned parameters")
+        pipeline = self.pipeline_for_training(candidate_id).set_params(**parameters)
+        record = ProcessingRecord(stage="Learning", card="pipeline_tune",
+            operation="Accept tuned pipeline parameters", attempted=True,
+            parameters={"parameters": parameters, "search_fingerprint": fingerprint,
+                        "trial": trial, "metric": metric, "cv_score": score, "candidate_id": candidate_id},
+            input_shape=self.shape, output_shape=self.shape, method="Fixed selected configuration")
+        records = tuple(r for r in self.processing_records if r.card != "pipeline_tune")
+        return replace(self, _pipeline=pipeline, _tuning_spec=None,
+                       _selected_candidate=candidate_id or self._selected_candidate,
+                       _processing_records=(*records, record))
+
     def with_estimator(self, estimator, *, label, recipe_id):
         """Commit an unfitted terminal model while preserving data and preprocessing."""
         from dataclasses import replace
 
         if not isinstance(estimator, BaseEstimator) or not callable(getattr(estimator, "predict", None)):
-            raise TypeError("The committed estimator must implement fit and predict")
+            raise TypeError("The committed method must implement 'fit' and 'predict'")
         steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else [])
                  if name != "data_models"]
         model = clone(estimator)
@@ -404,11 +434,50 @@ class proxy_data:
                 model = with_selection_schema(model, step.predictors)
         steps.append(("data_models", model))
         record = ProcessingRecord(stage="Learning", card="data_models",
-            operation=f"Committed estimator: {label}", attempted=True,
+            operation=f"Committed method: {label}", attempted=True,
             parameters={"recipe_id": recipe_id}, input_shape=self.shape,
             output_shape=self.shape, method=label)
         records = tuple(record for record in self.processing_records if record.card != "data_models")
-        return replace(self, _pipeline=Pipeline(steps), _processing_records=(*records, record))
+        return replace(self, _pipeline=Pipeline(steps), _model_candidates=(), _selected_candidate=None,
+                       _processing_records=(*records, record))
+
+    @property
+    def model_candidates(self):
+        return tuple({**c, 'estimator': clone(c['estimator'])} for c in self._model_candidates)
+
+    @property
+    def selected_model_candidate(self):
+        """Accepted final method ID, or None while the candidate set is unresolved."""
+        return self._selected_candidate
+
+    def with_model_candidates(self, candidates):
+        """Commit alternatives atomically; no candidate is fitted or chosen implicitly."""
+        from dataclasses import replace
+        candidates = tuple(candidates)
+        if not candidates or len({c['id'] for c in candidates}) != len(candidates):
+            raise ValueError('Supply a nonempty set of uniquely identified model candidates.')
+        from collections import Counter
+        labels = Counter(c['label'] for c in candidates)
+        validated = []
+        for original in candidates:
+            c = dict(original)
+            if labels[c['label']] > 1:
+                qualifier = c.get('method_id', c['id']).split('.')[0]
+                c['label'] += f' ({qualifier})'
+            if not c['id'] or not c['label']:
+                raise ValueError('Each candidate needs a recipe ID and method label.')
+            prepared = self.with_estimator(c['estimator'], label=c['label'], recipe_id=c['id'])
+            validated.append({**c, 'estimator': prepared.pipeline.named_steps['data_models']})
+        if len(validated) == 1:
+            result = self.with_estimator(validated[0]['estimator'], label=validated[0]['label'], recipe_id=validated[0]['id'])
+        else:
+            steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else []) if name != 'data_models']
+            record = ProcessingRecord(stage='Learning', card='data_models', operation='Committed candidate methods',
+                attempted=True, parameters={'recipe_ids': [c['id'] for c in validated]},
+                input_shape=self.shape, output_shape=self.shape, method=', '.join(c['label'] for c in validated))
+            result = replace(self, _pipeline=Pipeline(steps) if steps else None,
+                _processing_records=(*(r for r in self.processing_records if r.card != 'data_models'), record))
+        return replace(result, _model_candidates=tuple(validated), _selected_candidate=None, _tuning_spec=None)
 
     def with_pipeline_step(
         self,
@@ -553,6 +622,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _pipeline=Pipeline(steps),
             _clean_df=self.clean_frame.copy(),
@@ -586,6 +657,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -649,6 +722,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=(*self.cleaning_records, record),
             _clean_df=frame.copy(),
             _processing_records=(*self.processing_records, processing),
@@ -677,6 +752,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -751,6 +828,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -812,6 +891,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _processing_records=self.processing_records,
         )
@@ -830,6 +911,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -853,6 +936,8 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _model_candidates=self.model_candidates,
+            _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
             _pipeline=self.pipeline,
             _clean_df=self.clean_frame.copy(),
@@ -1063,6 +1148,15 @@ class proxy_data:
         if check_processing_records and self.processing_records != other.processing_records:
             return False
         if check_pipeline:
+            if self._selected_candidate != other._selected_candidate or len(self._model_candidates) != len(other._model_candidates):
+                return False
+            for own, candidate in zip(self._model_candidates, other._model_candidates):
+                if any(own.get(key) != candidate.get(key) for key in ('id', 'label', 'method_id')):
+                    return False
+                if type(own['estimator']) is not type(candidate['estimator']):
+                    return False
+                if repr(own['estimator'].get_params(deep=True)) != repr(candidate['estimator'].get_params(deep=True)):
+                    return False
             if self.tuning_spec != other.tuning_spec:
                 return False
             if self.pipeline_steps != other.pipeline_steps:

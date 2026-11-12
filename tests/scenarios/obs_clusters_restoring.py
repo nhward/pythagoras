@@ -2,14 +2,17 @@
 import os
 import sys
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
 APP_ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(APP_ROOT)
 sys.path.insert(0, str(APP_ROOT))
-from cards.obs_clusters import instance
-from cards import obs_clusters as cluster_module
 import threading
+
+from cards import obs_clusters as cluster_module
+from cards.obs_clusters import instance
 from proxy_data import proxy_data
 from roles import Role
 from shiny import reactive, render, ui
@@ -62,7 +65,7 @@ def server(input, output, session):
             return 'added=none'
         nominal = all(isinstance(data.frame[name].dtype, pd.CategoricalDtype) and not data.frame[name].cat.ordered for name in added)
         stratifiers = all(Role.STRATIFIER in data.role_map.roles_for(name) for name in added)
-        methods = [record.parameters['method'] for record in data.processing_records if record.operation == 'Add cluster membership']
+        methods = [method for record in data.processing_records if record.operation == 'Add cluster membership' for method in record.parameters.get('methods', (record.parameters.get('method'),))]
         return f"added={','.join(added)}; methods={','.join(methods)}; nominal={nominal}; stratifiers={stratifiers}; pipeline={','.join(data.pipeline_steps)}; clean_columns={','.join(data.clean_frame.columns)}"
     return selected
 this.server = server

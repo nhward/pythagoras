@@ -51,6 +51,15 @@ dependencies = [
   "rich==15.0.0",
   "inflect==7.5.0",
   "skrub==0.11.0",
+  "catboost==1.2.10",
+  "cubist==1.2.2",
+  "gplearn==0.4.3",
+  "xgboost==3.2.0",
+  "optuna>=4.2,<6; sys_platform != 'emscripten'",
+  "psutil>=5.9; sys_platform != 'emscripten'",
+  "scikit-optimize>=0.10.2,<0.11; sys_platform != 'emscripten'",
+  "scikit-lego==0.9.10",
+  "skglm==0.5",
 ]
 
 # card, module, cards and roles are local source modules, not PyPI dependencies.

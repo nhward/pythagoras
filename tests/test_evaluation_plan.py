@@ -547,3 +547,94 @@ def test_index_mismatch_without_sampling_is_not_reported_as_sampling():
     assert "index labels or row order differ" in invalid.errors[0]
     assert "sampling step(s)" not in invalid.errors[0]
     assert build_plan(data, goal="observations", stratifier=None, folds=2).ready
+
+
+@pytest.mark.parametrize('strategy', ['kfold', 'stratified', 'grouped'])
+def test_repeated_cv_coverage_boundaries_chart_and_restore(strategy):
+    data = source(partition=True)
+    options = {"strategy": strategy, "folds": 3, "seed": 12,
+        "partition_map": {level_key('dev-a'): 'development', level_key('dev-b'): 'development',
+                       level_key('held'): 'holdout'}}
+    if strategy == 'stratified':
+        options['stratify'] = 'group'
+        options['folds'] = 2
+    if strategy == 'grouped':
+        # Partition entire groups so the reserved boundary respects the objective.
+        data = source()
+        options.pop('partition_map')
+        options.update(group='group', objective='unseen_strata')
+    single = plan(data, **options)
+    repeated = plan(data, repeats=5, **options)
+    assert repeated.ready, repeated.errors
+    assert repeated.count == 5 * single.count
+    assert repeated.splits_per_repeat == single.count
+    assert repeated.codes == single.codes
+    assert len(set(repeated.repeat_codes)) > 1
+    assert plan(data, repeats=2, **options).repeat_codes == repeated.repeat_codes[:2]
+    descriptors = repeated.split_descriptors
+    assert [(d['repeat'], d['fold']) for d in descriptors] == [
+        (r, f) for r in range(1, 6) for f in range(1, single.count + 1)]
+    splits = list(repeated.splits(data))
+    for repeat in range(5):
+        validation = []
+        for train, valid in splits[repeat * single.count:(repeat + 1) * single.count]:
+            assert not set(train) & set(valid)
+            assert not (set(train) | set(valid)) & (set(repeated.holdout) | set(repeated.prediction))
+            validation.extend(valid)
+            if strategy == 'grouped':
+                assert not set(data.clean_frame.group.iloc[train]) & set(data.clean_frame.group.iloc[valid])
+        assert sorted(validation) == sorted(repeated.development)
+    for small in (False, True):
+        a = _figure(_overview(data, single), full=small).to_json()
+        b = _figure(_overview(data, repeated), full=small).to_json()
+        assert a == b
+    frames = list(repeated.membership_frames(data))
+    assert len(frames) == repeated.count
+    assert frames[-1]['repeat'].unique().tolist() == [5]
+    assert frames[-1]['fold'].unique().tolist() == [single.count]
+    assert len(repeated.diagnostics) == repeated.count
+    lodged = data.with_evaluation_plan(repeated, card='obs_resample')
+    assert lodged.evaluation_plan.repeat_codes == repeated.repeat_codes
+    assert lodged.processing_records[-1].parameters['repeats'] == 5
+    saved = json.loads(json.dumps(repeated.bookmark()))
+    restored = restore_plan(data, saved)
+    assert restored.ready
+    assert restored.repeat_codes == repeated.repeat_codes
+    assert restored.split_descriptors == repeated.split_descriptors
+    for actual, expected in zip(repeated.splits(data, development_only=True), splits):
+        for subset, original in zip(actual, expected):
+            np.testing.assert_array_equal(np.asarray(repeated.development)[subset], original)
+
+
+def test_repeat_validation_and_legacy_single_pass_bookmark():
+    data = source()
+    for repeats in (0, -1, True, 1.5):
+        assert not plan(data, repeats=repeats).ready
+    assert not plan(data, repeats=2, shuffle=False).ready
+    assert not plan(data, strategy='logo', objective='unseen_strata', group='group', repeats=2).ready
+    assert not build_plan(data, goal='future', window=2, horizon=1, repeats=2).ready
+    single = plan(data, seed=43)
+    saved = single.bookmark()
+    saved['recipe']['version'] = 2
+    saved['recipe']['splitter_version'] = saved['recipe']['splitter_version'].replace('6/', '5/', 1)
+    saved['recipe'].pop('repeats')
+    saved['holdout_used'] = True
+    restored = restore_plan(data, saved)
+    assert restored.ready and restored.holdout_used
+    assert restored.codes == single.codes
+    assert restored.repeats == 1
+
+
+def test_repeated_cv_excludes_prediction_and_holdout_and_rejects_fixed_validation():
+    data, mapping = four_way_source()
+    assert not build_plan(data, goal='observations', partition_map=mapping, repeats=2).ready
+    mapping[level_key('valid')] = 'development'
+    repeated = build_plan(data, goal='observations', partition_map=mapping, folds=5, repeats=3)
+    assert repeated.ready, repeated.errors
+    assert repeated.count == 15
+    for train, valid in repeated.splits(data):
+        assert max(train) < 20 and max(valid) < 20
+        assert not set(train) & set(valid)
+    assert repeated.holdout == tuple(range(20, 30))
+    assert repeated.prediction == tuple(range(30, 40))
+    assert repeated.refit_positions == tuple(range(20))

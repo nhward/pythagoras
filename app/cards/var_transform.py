@@ -5,6 +5,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 if __name__ == "__main__":
     ROOT = Path(__file__).resolve().parent.parent
@@ -17,6 +18,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
+from bundled_parameters import BundledParametersMixin
 from card import Card
 from code_recording import recordable
 from cyclic_pandas import is_cyclic
@@ -74,23 +76,29 @@ class CommonSpreadScaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
 
 @recordable
-class VariableTransformStep(TransformerMixin, BaseEstimator):
+class VariableTransformStep(BundledParametersMixin, TransformerMixin, BaseEstimator):
     """DataFrame-preserving learned transformations for selected variables."""
+
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {
+        'location_scale': {'selectors': {'scale': [True], 'center': [True]},
+                           'parameters': {'robust': 'robust'}},
+    }
 
     def __init__(self, columns: tuple[str, ...],
                  weight_column: str | tuple[str, ...] | None = None, robust: bool = False,
-                 deskew: bool = False, scale: bool = False, center: bool = False):
+                 deskew: bool = False, scale: bool = False, center: bool = False, location_scale=None):
         self.columns = columns
         self.deskew = deskew
         self.scale = scale
         self.center = center
         self.weight_column = weight_column
         self.robust = robust
+        self._init_parameter_groups(location_scale=location_scale)
 
     def fit(self, X: pd.DataFrame, y=None):
         if not isinstance(X, pd.DataFrame):
             raise TypeError("VariableTransformStep requires a pandas DataFrame")
-        weights = None if self.robust else _observation_weights(X, self.weight_column)
+        weights = None if self.parameter_value('robust') else _observation_weights(X, self.weight_column)
         self.pipelines_ = {}
         self.failures_ = {}
         for column in self.columns:
@@ -100,7 +108,7 @@ class VariableTransformStep(TransformerMixin, BaseEstimator):
             pipeline = _build_pipeline(
                 [name for name, enabled in (("Deskew", self.deskew),
                  ("Scale", self.scale), ("Center", self.center)) if enabled],
-                robust=self.robust)
+                robust=self.parameter_value('robust'))
             if pipeline is None:
                 continue
             try:

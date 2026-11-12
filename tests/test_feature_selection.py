@@ -5,9 +5,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import pytest
-from FeatureSelectionTransformer import FeatureSelectionTransformer
 from feature_selection import encode_selection_frame
-from model_commit import build_model
+from FeatureSelectionTransformer import FeatureSelectionTransformer
 from proxy_data import proxy_data
 from roles import RoleMap
 from selection_analysis import analyze_selection, export_selection, selection_identity
@@ -31,9 +30,9 @@ def example(n=240):
 
 
 def options(**kwargs):
-    o = dict(trees=40, depth=4, iterations=18, alpha=.05, percentile=100,
-        two_step=True, folds=3, repeats=1, cutoff=1., policy='confirmed',
-        random_state=2025, n_jobs=1, use_weights=True)
+    o = {'trees': 40, 'depth': 4, 'iterations': 18, 'alpha': .05, 'percentile': 100,
+        'two_step': True, 'folds': 3, 'repeats': 1, 'cutoff': 1., 'policy': 'confirmed',
+        'random_state': 2025, 'n_jobs': 1, 'use_weights': True}
     o.update(kwargs)
     return o
 
@@ -314,10 +313,10 @@ def test_all_tentative_policy_and_empty_export_status():
 def test_downstream_model_uses_fitted_subset_not_preview_columns(model_first):
     # A model built using a preview containing signal alone must still accept
     # noise when a fresh training fit selects it instead (and vice versa).
+    from model_commit import prepare_predictors
     from sklearn.linear_model import Ridge
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import FunctionTransformer
-    from model_commit import prepare_predictors
     source=example()
     result=fit(source)
     estimator=Pipeline([('predictors',FunctionTransformer(prepare_predictors,
@@ -337,17 +336,19 @@ def test_downstream_model_uses_fitted_subset_not_preview_columns(model_first):
 
 
 def test_recorded_transformer_source_replays_with_explicit_namespace():
+    from bundled_parameters import BundledParametersMixin
     from code_recording import recording_context
     from module import Module
-    from sklearn.base import BaseEstimator,TransformerMixin
+    from sklearn.base import BaseEstimator, TransformerMixin
     from sklearn.utils.validation import check_is_fitted
     registry={}
     source=example(120)
     model=FeatureSelectionTransformer(('signal','noise'),trees=25,iterations=15)
     recording_context(registry,model.fit)(source.frame,source.frame.y)
-    namespace=dict(np=np,pd=pd,BaseEstimator=BaseEstimator,TransformerMixin=TransformerMixin,
-                   check_is_fitted=check_is_fitted)
-    exec(Module.clean_code(registry['FeatureSelectionTransformer']),namespace)
+    namespace={'np': np,'pd': pd,'BaseEstimator': BaseEstimator,'TransformerMixin': TransformerMixin,
+                   'BundledParametersMixin': BundledParametersMixin,
+                   'check_is_fitted': check_is_fitted}
+    exec(Module.clean_code(registry['FeatureSelectionTransformer']),namespace)  # noqa: S102
     replay=namespace['FeatureSelectionTransformer'](('signal','noise'),trees=25,iterations=15)
     replay.fit(source.frame,source.frame.y)
     assert replay.selected_columns_==model.selected_columns_
@@ -355,8 +356,8 @@ def test_recorded_transformer_source_replays_with_explicit_namespace():
 
 def test_native_numeric_adapter_preserves_borutapy_decisions():
     from boruta import BorutaPy
-    from lightgbm import LGBMRegressor
     from feature_selection import fit_boruta
+    from lightgbm import LGBMRegressor
     source=example()
     frame=source.frame[['signal','noise']]
     y=source.frame.y.to_numpy()
@@ -381,6 +382,7 @@ def test_native_numeric_adapter_preserves_borutapy_decisions():
 @pytest.mark.asyncio
 async def test_identity_and_worker_accept_upstream_provenance_and_preserve_it():
     from dataclasses import replace
+
     from sklearn.preprocessing import FunctionTransformer
     source=example()
     source=source.with_cleaned_data(source.frame.copy(),card='clean',operation='Record cleaning',

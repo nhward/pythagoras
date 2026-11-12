@@ -90,7 +90,7 @@ def _analyze(source, catalogue, versions, *, use_weights=False, forecasting=Fals
     if not structure:
         structure = ['cross_sectional']
     if not summary['evaluation_ready']:
-        notes.append('Evaluation not ready: configure a valid upstream resampling plan. Catalogue remains browsable.')
+        notes.append('Evaluation not ready: no valid upstream resampling plan. Without a plan, only recipes with internal validation/tuning splits are included.')
     if task == 'unresolved':
         notes.append('Assign a Target or configure the outcome task in Observation resampling.')
     blockers = []
@@ -105,7 +105,25 @@ def _analyze(source, catalogue, versions, *, use_weights=False, forecasting=Fals
     rows = assess_profiles(catalogue, task=task, required=summary['required'], structure=structure,
                            outputs=[output] if output else [], available_requirements=available,
                            package_versions=versions)
+    upstream_resampling = source.evaluation_plan is not None
     for row in rows:
+        resampling = dict(row['implicit_resampling'])
+        if resampling['status'] == 'automatic_early_stopping':
+            # With an upstream plan, fold training sizes may cross the threshold.
+            pipeline = source.pipeline
+            may_expand = pipeline is not None and any(hasattr(step, 'fit_resample')
+                and not hasattr(step, 'steps') for step in pipeline.get_params(deep=True).values())
+            resampling['status'] = ('conditional' if may_expand else 'no' if len(source.clean_frame) <= 10000
+                                    else 'conditional' if upstream_resampling else 'yes')
+        row['implicit_resampling'] = resampling
+        status = resampling['status']
+        row['resampling_label'] = {'yes': 'Yes', 'no': 'No', 'conditional': 'Conditional', 'unknown': 'Unreviewed'}[status]
+        mismatch = (status != 'no') if upstream_resampling else (status != 'yes')
+        if mismatch:
+            reason = ('Upstream resampling is defined; requires a recipe without internal validation/tuning splits'
+                      if upstream_resampling else 'No upstream resampling; requires a recipe with internal validation/tuning splits')
+            row['resampling_exclusion'] = reason + '. ' + resampling['reason']
+            row['selectable'] = False
         assessment = row['input_assessment']
         if row['profile'].get('construction', {}).get('preparation') == 'pandas_categories':
             categorical = [source.frame[c] for c in source.model_predictors
@@ -132,9 +150,11 @@ def _display_label(value):
 
 
 def _readiness(row):
-    messages = []
+    messages = [row['resampling_exclusion']] if row.get('resampling_exclusion') else []
     if row.get('superseded_by'):
-        messages.append('Superseded in catalogue by ' + row['superseded_by']['method'])
+        relation = row['superseded_by']
+        messages.append(relation['reason'] if relation['relationship'] == 'alternative_implementation'
+                        else 'Superseded in catalogue by ' + relation['method'])
     preprocessing = list(row['input_assessment']['actions'])
     for reason in row['reasons']:
         key, _, status = reason.partition(': ')
@@ -194,15 +214,18 @@ def _table(result, *, show_all=False, installed_only=False):
         profile = row['profile']
         records.append({**_model_labels(method), 'Recipes': len(rows),
             **{label: group_description(rows, field) for field, label in LABELS.items()},
+            'Pred throughput': (row.get('prediction_throughput') or {}).get('rating', 'Unreviewed'),
             'Input requirements': row['input_assessment']['requirements'],
+            'Implicit resampling': ', '.join(dict.fromkeys(r.get('resampling_label',
+                {'yes': 'Yes', 'no': 'No'}.get(r.get('implicit_resampling', {}).get('status'), 'Unreviewed')) for r in rows)),
             'Readiness': _readiness(row), 'Evidence': row['evidence'],
             'Installation': row['availability'],
             'Scale': profile.get('scalability', {}).get('many_rows', 'See assessment'),
             'ID': method})
     table = pd.DataFrame(records, columns=[
         'Model', 'Core mechanism', 'Composition', 'Fitting criterion', 'Transparency',
-        'Learning strategy', 'Prediction outputs', 'Scale', 'Input requirements',
-        'Readiness', 'Evidence', 'Package', 'Installation', 'Recipes', 'ID'])
+        'Learning strategy', 'Prediction outputs', 'Pred throughput', 'Scale', 'Input requirements',
+        'Implicit resampling', 'Readiness', 'Evidence', 'Package', 'Installation', 'Recipes', 'ID'])
     for column in ('Input requirements', 'Readiness', 'Evidence', 'Installation', 'Scale'):
         table[column] = table[column].map(_display_label)
     return table
@@ -226,8 +249,9 @@ def _recipe_details(row, catalogue_version):
     relation = row.get('superseded_by')
     supersession = None
     if relation:
-        supersession = section('Related broader method', 'code-branch',
-            ui.p('Broader method: ' + relation['method']), ui.p(relation['reason']),
+        alternative = relation['relationship'] == 'alternative_implementation'
+        supersession = section('Alternative implementation' if alternative else 'Related broader method', 'code-branch',
+            ui.p(('Representative method: ' if alternative else 'Broader method: ') + relation['method']), ui.p(relation['reason']),
             ui.p(relation['caveats']),
             ui.tags.details(ui.tags.summary('Parameter mapping'),
                             ui.tags.pre(json.dumps(relation['configuration'], indent=2))),
@@ -256,6 +280,9 @@ def _recipe_details(row, catalogue_version):
                               class_='model-recipe-badge'), class_='model-recipe-badges'),
                class_='model-recipe-header'),
         ui.div(
+            section('Implicit resampling', 'shuffle',
+                    ui.p(row.get('resampling_label', 'Unreviewed')),
+                    ui.p(row.get('implicit_resampling', {}).get('reason', 'Not reviewed.'))),
             section('Model characteristics', 'list', ui.tags.dl(*descriptions),
                     ui.p('Descriptions apply to this recipe. Transparency is expert guidance; '
                          'these labels do not establish compatibility or runtime validation. '
@@ -286,6 +313,8 @@ def instance():
     this = Card(file=__file__, mutable=True)
     this.long_name = 'Model method candidates'
     this.description = 'Identify modeling methods compatible with the current outcome, predictors and observation structure.'
+    this.register_configuration_state_field('model_choice')
+    this.export_inputs('ShowAll', 'InstalledOnly', 'UseWeights', 'Forecasting', 'Output')
 
     this.front = lambda: ui.TagList(
         ui.output_ui(
@@ -301,7 +330,7 @@ def instance():
     this.back = lambda: ui.TagList(
         ui.output_ui(
             id='RecipeDetails', class_="model-recipe-output",
-            guide=this, title="Recipe", position = "bottom", text="Details of the currently selected method recipe"
+            guide=this, title="Recipe", position = "bottom", text="Details for the first selected method; every selected method is committed as an alternative."
         )
     )
 
@@ -309,7 +338,7 @@ def instance():
         ui.input_action_button(
             id='Commit', label='Commit', icon=icon("gavel", title="Commit", a11y="sem"), 
             width="220px", class_="btn rounded-pill btn-sm d-block mx-auto btn-primary", style="border: 0px; box-shadow: none;",
-            guide=this, position = "top", text="Whether to model the data with the current row's model"
+            guide=this, position = "top", text="Commit all selected methods as alternative pipeline endings. Use Ctrl/Command-click to select more than one method. No model is fitted here."
         ), 
         ui.output_text(
             id='Status',
@@ -321,7 +350,7 @@ def instance():
         ui.input_checkbox(
             id='ShowAll', label='Show excluded and unreviewed recipes', value=False,
             guide=this, position='left',
-            text='Include superseded methods, methods needing preprocessing, and unsupported or untested recipes. Readiness names the broader method; details explain the configuration and limitations. Unchecked hides these entries. Supersession groups methods for display and does not substitute fitted models.'
+            text='Include recipes excluded by the upstream/internal resampling rule, superseded methods, methods needing preprocessing, and unsupported or untested recipes. Readiness names the broader method; details explain the configuration and limitations. Unchecked hides these entries. Supersession groups methods for display and does not substitute fitted models.'
         ),
         ui.input_checkbox(
             id='InstalledOnly', label='Show installed packages only', value=False,
@@ -350,6 +379,22 @@ def instance():
         versions = installed_versions()
         Committed = reactive.Value(None)
         CommitError = reactive.Value('')
+        saved = this.restored_configuration_field('model_choice', {})
+        saved = saved if isinstance(saved, dict) else {}
+        SelectedMethod = reactive.Value(saved.get('selected_methods') or ([saved['selected_method']] if saved.get('selected_method') else []))
+        SelectedRecipeID = reactive.Value(saved.get('selected_recipe'))
+        pending_commit = saved.get('committed_recipes') or ([saved['committed_recipe']] if saved.get('committed_recipe') else [])
+        restoring_selection = bool(saved.get('selected_methods') or saved.get('selected_method'))
+
+        def choice_state():
+            committed = Committed()
+            methods = SelectedMethod()
+            identities = [c['id'] for c in committed[1]] if committed else pending_commit
+            return {'selected_methods': methods, 'selected_method': methods[0] if len(methods) == 1 else None,
+                    'selected_recipe': SelectedRecipeID(), 'committed_recipes': identities,
+                    'committed_recipe': identities[0] if len(identities) == 1 else None}
+
+        this.register_configuration_state_provider('model_choice', choice_state)
 
         @this.reactable(calc=True)
         def Incoming():
@@ -387,6 +432,10 @@ def instance():
             return ui.TagList(
                 ui.span(f"{result['task'].title()} · {', '.join(result['structure'])} · {predictors}",
                         class_="text-primary text-center d-block"),
+                ui.div('Upstream resampling defined · internal validation/tuning splits excluded'
+                       if Incoming().evaluation_plan is not None else
+                       'No upstream resampling · internal validation/tuning splits required',
+                       class_='text-center small'),
                 *(ui.div(icon('circle-info'), ' ', note, class_='model-data-notice') for note in alerts))
 
         @output
@@ -399,7 +448,39 @@ def instance():
         @output
         @render.data_frame
         def Table2():
-            return render.DataGrid(Display().set_index('ID'), selection_mode='row', filters=False, width='100%')
+            nonlocal restoring_selection
+            with reactive.isolate():
+                restoring_selection = bool(SelectedMethod())
+            return render.DataGrid(Display().set_index('ID'), selection_mode='rows', filters=False, width='100%')
+
+        @this.reactable()
+        async def RestoreSelectedRow():
+            # Wait for the browser's view binding; on_flushed is too early on
+            # initial load. View changes, not cell selection, trigger replay.
+            rows = list(Table2.data().index)
+            Table2.data_view_rows()
+            with reactive.isolate(): method = SelectedMethod()
+            if restoring_selection and method:
+                indices = [rows.index(m) for m in method if m in rows]
+                if indices:
+                    await Table2.update_cell_selection({'type': 'row', 'rows': indices})
+
+        @this.reactable()
+        def RememberSelection():
+            nonlocal restoring_selection
+            selected = Table2.data_view(selected=True)
+            if selected.empty:
+                if not restoring_selection:
+                    SelectedMethod.set([]); SelectedRecipeID.set(None)
+                return
+            method = selected.index[0]
+            rows = _method_groups(Results(), show_all=bool(input.ShowAll()),
+                                  installed_only=bool(input.InstalledOnly())).get(method, [])
+            with reactive.isolate():
+                recipe_id = SelectedRecipeID() if SelectedMethod() == list(selected.index) else None
+            restoring_selection = False
+            SelectedMethod.set(list(selected.index))
+            SelectedRecipeID.set(next((r['id'] for r in rows if r['id'] == recipe_id), rows[0]['id'] if rows else None))
 
         @this.reactable(calc=True)
         def SelectedRecipe():
@@ -408,22 +489,56 @@ def instance():
                 return None
             groups = _method_groups(Results(), show_all=bool(input.ShowAll()), installed_only=bool(input.InstalledOnly()))
             rows = groups.get(selected.index[0], [])
-            return rows[0] if rows else None
+            recipe_id = SelectedRecipeID()
+            return next((r for r in rows if r['id'] == recipe_id), rows[0] if rows else None)
+
+        def build_candidates(rows):
+            candidates = [{'id': row['id'], 'label': _model_labels(row['estimator'])['Model'],
+                           'method_id': row['estimator'], 'estimator': build_model(row, Incoming())} for row in rows]
+            return Incoming().with_model_candidates(candidates).model_candidates
+
+        @this.reactable()
+        def RestoreCommittedModel():
+            nonlocal pending_commit
+            result = Results()
+            if not pending_commit:
+                return
+            try:
+                rows = [next((r for r in result['rows'] if r['id'] == identity), None) for identity in pending_commit]
+                if any(row is None for row in rows):
+                    raise ValueError('A saved recipe is unavailable for the current outcome.')
+                candidates = build_candidates(rows)
+                Incoming().with_model_candidates(candidates)
+                Committed.set((Incoming(), candidates))
+                pending_commit = []
+                CommitError.set('')
+            except Exception as exc:  # noqa: BLE001
+                CommitError.set(f'Cannot restore saved model: {exc}')
 
         @this.reactable(triggers=[input.Commit])
         def CommitModel():
-            row = SelectedRecipe()
-            if row is None:
-                CommitError.set('Select a method first.')
+            nonlocal pending_commit
+            selected = Table2.data_view(selected=True)
+            if selected.empty:
+                CommitError.set('Select at least one method first.')
                 return
             try:
-                model = build_model(row, Incoming())
-                Incoming().with_estimator(model, label=_model_labels(row['estimator'])['Model'],
-                                          recipe_id=row['id'])
+                groups = _method_groups(Results(), show_all=bool(input.ShowAll()),
+                                        installed_only=bool(input.InstalledOnly()))
+                rows = []
+                for method in selected.index:
+                    recipes = groups.get(method, [])
+                    if not recipes:
+                        raise ValueError('A selected method is unavailable.')
+                    recipe = (SelectedRecipe() if method == selected.index[0] else None)
+                    rows.append(recipe or recipes[0])
+                candidates = build_candidates(rows)
+                Incoming().with_model_candidates(candidates)
             except Exception as exc:  # noqa: BLE001
                 CommitError.set(str(exc))
                 return
-            Committed.set((Incoming(), model, _model_labels(row['estimator'])['Model'], row['id']))
+            Committed.set((Incoming(), candidates))
+            pending_commit = []
             CommitError.set('')
 
         @this.reactable(calc=True)
@@ -432,17 +547,22 @@ def instance():
             committed = Committed()
             if committed is None or committed[0] is not source:
                 return source
-            return source.with_estimator(committed[1], label=committed[2], recipe_id=committed[3])
+            return source.with_model_candidates(committed[1])
 
         @output
         @render.text
         def Status():
             committed = Committed()
-            message = (f'Committed estimator: {committed[2]} · {committed[3]}'
-                       if committed is not None and committed[0] is Incoming()
-                       else 'No estimator committed. Select a method and Commit.')
-            if committed is not None and committed[0] is not Incoming():
+            valid = committed is not None and committed[0] is Incoming()
+            message = ('Committed method' + ('s' if len(committed[1]) > 1 else '') + ': '
+                       + ', '.join(c['label'] for c in committed[1]) if valid
+                       else 'No estimator committed. Select methods and Commit.')
+            if committed is not None and not valid:
                 message += ' Upstream data changed; commit again.'
+            selected = SelectedMethod()
+            committed_methods = [c.get('method_id') for c in committed[1]] if committed else []
+            if selected and selected != committed_methods:
+                message += (' Selected method: ' if len(selected) == 1 else ' Selected methods: ') + ', '.join(_model_labels(m)['Model'] for m in selected) + '; press Commit to apply ' + ('this choice.' if len(selected) == 1 else 'these choices.')
             error = CommitError()
             return f'{message} {error}' if error else message
 
@@ -469,7 +589,7 @@ def instance():
                     ui.tags.summary(_display_label(row['profile'].get('label', row['id'].split(':')[-1])),
                                     ' · ', _readiness(row)),
                     _recipe_details(row, catalogue['catalogue_version']),
-                    open=(index == 0), class_='model-method-recipe')
+                    open=(row['id'] == SelectedRecipeID()), class_='model-method-recipe')
                   for index, row in enumerate(rows)), class_='model-method-recipes')
 
         return Exported

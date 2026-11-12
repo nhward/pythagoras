@@ -62,7 +62,7 @@ def instance():
             id = "Refresh", 
             label = 'Refresh', 
             icon = icon("arrows-rotate", title = "Refresh the information", a11y = "sem"),
-            width = "250px", 
+            width = "220px", 
             class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
             style = "border: 0px; box-shadow: none;",
             guide = this, 

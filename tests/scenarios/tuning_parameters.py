@@ -11,12 +11,27 @@ from cards.tuning_parameters import instance
 from MissingnessTransformer import MissingnessTransformer
 from proxy_data import proxy_data
 from shiny import render, ui
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestRegressor
+
+
+class UnreviewedStep(TransformerMixin, BaseEstimator):
+    def __init__(self, unknown_count=None, unknown_flag=False):
+        self.unknown_count = unknown_count
+        self.unknown_flag = unknown_flag
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        return X
+
 
 this = instance()
 frame = pd.DataFrame({'x':[1.,2.,3.]})
 step = MissingnessTransformer(remove_observations=True)
 source = proxy_data(frame).with_pipeline_step(step, name='miss_map', preview_frame=step.fit_transform(frame))
+source = source.with_pipeline_step(UnreviewedStep(), name='unreviewed', preview_frame=frame)
 source = source.with_estimator(RandomForestRegressor(), label='Random forest', recipe_id='test')
 this._imports.set(source)
 original_server, original_footer = this.server, this._footer

@@ -2,7 +2,7 @@
 title: Model candidates specification
 ---
 
-`data_models` is a mutable model-selection card after preparation and `obs_resample`.
+`data_models` is a mutable model-selection card after preparation, with or without an upstream `obs_resample` plan.
 It reads the JSON catalogue through `estimator_catalogue`. Explicit Commit constructs an unfitted recipe; browsing performs no fitting, installation or automatic model selection. Pure `_analyze`
 and `_table` helpers separate requirements from display filters.
 
@@ -85,4 +85,44 @@ recipe strategies show `Varies by recipe` without pooling capabilities.
 
 ## Estimator commitment
 
-Commit applies the selected method's ranked summary recipe. Construction requires selectable catalogue evidence and a supported preparation adapter. Errors retain the previous commitment. The exported proxy preserves frame, clean_frame, roles and preprocessing and replaces its terminal data_models step. A Learning processing record names the committed model and recipe. No fit occurs. A change to upstream proxy identity invalidates this session commitment. The footer shows the committed estimator independently of row browsing. Predictors are selected before model fitting, preventing target leakage. Commit state is session-local; restoring configuration requires recommitment.
+Commit applies the selected method's ranked summary recipe, or its saved recipe identity when restoring that same method. Construction requires selectable catalogue evidence and a supported preparation adapter. Errors retain the previous commitment. The exported proxy preserves frame, clean_frame, roles and preprocessing and replaces its terminal data_models step. A Learning processing record names the committed model and recipe. No fit occurs. A change to upstream proxy identity invalidates this session commitment. The footer distinguishes the committed estimator from a different pending row choice. Predictors are selected before model fitting, preventing target leakage.
+
+The card-owned JSON `model_choice` field records `selected_method`, `selected_recipe`, and `committed_recipe` as stable catalogue identities. Table rebuilds restore a saved row after the browser's view binding is ready, without subscribing selection writes to user clicks; subsequent user selection remains authoritative. Sorting does not change identities. The committed recipe is rebuilt separately on restoration and validated against current outcome, requirements, runtime and construction support. Unavailable saved commitments produce a footer explanation without substitution. Configurations without this field retain the uncommitted default. Browser tests round-trip an actual downloaded configuration into a fresh app, with a selected row different from the committed recipe, and verify that subsequent changes can be committed.
+
+
+Implicit resampling means internal validation/tuning splits, excluding bootstrap training and subsampling. The versioned-recipe registry `implicit_resampling.json` records reviewed construction parameters, package versions, statuses and reasons. Parameter/version drift and unlisted recipes produce Unreviewed, never an inferred No. `assess_profiles` adds this evidence without importing model libraries or changing capability/probe evidence. `_analyze` resolves automatic histogram early stopping conservatively from current cleaned-row counts, then adds a separate resampling exclusion: an existing upstream EvaluationPlan (including an invalid/stale plan) permits only No; no plan permits only Yes. Conditional/Unreviewed recipes are excluded in both cases. Presence is distinct from plan readiness.
+
+The table includes Implicit resampling (Yes/No/Conditional/Unreviewed), preserving all statuses when grouping visible recipes. ShowAll reveals excluded rows without making them selectable. Reasons appear in readiness and recipe details. `model_commit.commit_problem` blocks excluded rows with the resampling reason, covering direct commit and restored committed recipes. No estimator is silently substituted or reconfigured, and no fit is performed to determine this indicator.
+
+
+`Pred throughput` displays Low/Medium/High documentation-informed model-only guidance from `prediction_throughput.json`. Each predictive recipe has a rating, interpretation, evidence category, sources, exact construction and reviewed package version; registry-level policy defines direction and assumptions. High means greater expected throughput. These are qualitative expert judgments of documented inference mechanisms, not measured rates or documentation-prescribed labels. Unknown or configuration/version-drifted recipes show Unreviewed. The method table takes the rating from its ranked representative recipe, preserving the existing per-recipe filtering contract; no pooling or best-case rating across recipes. Reasons and evidence remain in JSON, not additional table columns. Capability/probe evidence, eligibility and commits are unchanged.
+
+
+CatBoost's `catboost_strings` construction is supported through lazy-imported, top-level PreparedCatBoostRegressor/Classifier subclasses. They retain the native constructor, parameter paths, tags and cloning/pickling behavior. prepare_predictors preserves numeric NaNs and converts categorical/object/string/bool columns with typed nonmissing tokens and a disjoint missing marker. At fit, categorical names are inferred from the actual prepared DataFrame, so selected-away categorical columns do not leave stale cat_features indices. Native fit kwargs (including sample_weight) are forwarded. Numerical-only input uses an empty categorical list. Configuration still records the original catalogue recipe identity; committing/restoring creates an unfitted adapter. External package fingerprints include estimator base classes so local adapters retain their CatBoost version dependency. Regression covers a numeric-only saved Gaussian Process choice replaced by CatBoost, exported estimator identity and saved commitment, plus mixed-input regression/classification and spawned fold evaluation.
+
+
+#### Multiple candidate methods
+
+Select one or more method rows (Ctrl/Command-click adds rows) and press **Commit**.
+All selected methods are validated before the candidate set is committed; an
+invalid recipe leaves the previous commitment intact. One applicable recipe is
+retained per selected method. Details describe the first selected method.
+
+Proxy-data stores stable recipe IDs, method names and independent unfitted model
+pipelines, including each method's preparation. These are alternative endings,
+not an ensemble. Shared upstream transformations stay outside the alternatives.
+With one candidate, ordinary training behaves as before. With several candidates,
+a consumer must choose a candidate explicitly or use Pipeline tuning; the first
+candidate is never silently used for training. Configuration JSON preserves both
+the selected method list and the committed recipe list. Legacy single-method
+configuration fields remain readable. Changing upstream data requires recommitment.
+
+Candidate objects are stored in proxy_data._model_candidates and exposed through
+model_candidates as cloned estimators. with_model_candidates validates the complete
+set before returning a successor, preserving data, evaluation metadata and shared
+preprocessing. pipeline_for_training(candidate_id) resolves a branch explicitly;
+without an ID an unresolved multi-candidate set raises. The accepted final pipeline
+stores its selected candidate ID and retains the original alternatives. Candidate
+identity/settings participate in equality and tuning identity; no fitted state is
+published. Committed UI state is a source/candidate-list tuple. selected_methods and
+committed_recipes coexist with compatibility singleton fields in bookmark output.

@@ -4,16 +4,85 @@ title: Tuning parameters specification
 
 `tuning_parameters` is a mutable card discovered through the normal card picker. Place it after preprocessing and optionally after `data_models`. It records an inactive Learning journey entry until a valid commitment, then a successor carrying a defensive-copy tuning specification and a journey entry with the grid and combination count. It never fits an estimator or modifies parameter values.
 
-`app/tuning.py` discovers nested constructor parameters from `get_params(deep=True)`. Actual estimator objects and composite topology lists are represented through their children, not exposed as method alternatives. Class-local `tuning_metadata` overrides the application registry. Constructor signatures provide defaults; absent defaults are distinguished from None. Runtime scalar values provide conservative type inference; missing choices/ranges are not guessed. Fixed configuration is listed but cannot be activated.
+`app/tuning.py` discovers nested constructor parameters from `get_params(deep=True)`. Actual estimator objects and composite topology lists are represented through their children, not exposed as method alternatives. Versioned `app/data/tuning_parameters.json` stores reviewed class-specific metadata and global fixed parameter names. Reviewed records require purpose, reason and reference. Class-local `tuning_metadata` augments the registry, but cannot make globally fixed or operational parameters tunable. Published local options default to recommended; otherwise unknown parameters are unreviewed. Constructor signatures provide defaults; absent defaults are distinguished from None. Runtime scalar values provide conservative type inference; missing choices/ranges are not guessed. Neither search-value availability nor Boolean type establishes tuning importance. Fixed configuration is listed but cannot be activated.
 
 Each draft is keyed by full sklearn parameter path and implementation class. Finite numeric ranges use decimal arithmetic and require positive increments; integer ranges require integral endpoints and increments. Explicit choices use JSON scalars, including null. Known bounds and choices are validated, nonfinite numbers rejected, duplicates removed, and per-parameter counts capped at 10,000. Independent cardinalities are multiplied, with one configuration for an empty grid.
 
-The front table is searchable and sortable. A non-Boolean row editor contains the type, range or values, Save search definition, and a gated Auto-tune checkbox. Boolean rows contain only the Auto-tune checkbox and search both False and True. Updating drafts uses DataGrid.update_data rather than reexecuting the table renderer. Commit and Revert changes are in the footer above a status line. The flip side contains counts, active choices and the technical specification.
+The front table is searchable and sortable. Columns are Tune, Parameter, Source, Search values, Current value, Reason and Purpose. The default browser sort is Tune ascending (enabled first), retaining stable underlying parameter IDs for selection; constructor defaults remain discovery metadata but are not displayed as a column. The row editor includes purpose, rationale and a documentation link where reviewed. A non-Boolean editor contains type, range or values, Save search definition, and a gated Auto-tune checkbox. Tunable Boolean rows need only the Auto-tune checkbox and search both False and True. The guided Visibility radio provides cumulative recommended, recommended plus advanced, all tunable (including unreviewed), and everything (including operational) views. Active drafts remain visible irrespective of purpose filtering. The legacy ShowEverything Boolean migrates into the radio default and is excluded from newly saved configuration. Restored active fixed drafts are deactivated, and commitments are recompiled against current metadata before export. Updating drafts uses DataGrid.update_data rather than reexecuting the table renderer. Commit and Revert changes are in the footer above a status line. The flip side contains counts, active choices and the technical specification.
 
 The exported specification contains pipeline fingerprint, sklearn-compatible parameter grid, and combination count. `proxy_data.tuning_spec` returns a defensive copy only when the current pipeline fingerprint matches. Pipeline changes invalidate old commitments. Standard proxy cloning and derivation preserve the stored specification, subject to fingerprint validation. Draft and committed states participate in card configuration restoration. Removed paths or changed classes reconcile with an explicit notice.
 
-Tests cover discovery with and without models, required defaults, count/validation semantics, cloning and invalidation, unchanged pipeline values, checkbox gating, numeric editing, commit/revert and exported specification. This card does not run search, implement branches, infer all dependency constraints, or promise that every independently valid combination can fit.
+Tests cover discovery with and without models, required defaults, count/validation semantics, cloning and invalidation, unchanged pipeline values, checkbox gating, numeric editing, commit/revert and exported specification. This card does not run search, infer undeclared dependency constraints, or promise that every independently valid combination can fit.
 
 Card preview sample limits are excluded from transformer constructors; clustering previews sample before fitting while training fits all eligible fold rows. VariableTransformStep exposes deskew, scale and center Boolean constructor parameters, replacing the transforms tuple. ImputationStep supports all three styles internally and publishes method choices simple, knn and iterative.
 
 Random seeds and weighting configuration (including weight-column selections and weighting switches) are fixed, hidden by default, and cannot be activated. Range fields are hidden for explicit choices. Rows without suggested search spaces direct users to select the row and supply values in its editor.
+
+
+The tuning metadata review scope records the union of potentially non-excluded
+regression/classification methods across upstream and implicit-resampling contexts.
+Superseded and benchmark-only methods are outside this expansion; current data or
+package availability can further restrict the visible table. Constructor parameters
+(including inherited XGBoost wrapper parameters and reviewed booster kwargs) have
+explicit purpose and documentation references. Optional-package API signatures are
+checked when installed; absence does not remove their reviewed metadata.
+
+Suggested grids are finite starting choices, not automatic activation or a promise
+that their Cartesian product is valid. Descriptions identify scale, fold-size,
+solver/penalty, bootstrap, device and objective dependencies. Internal validation,
+early stopping, seeds and execution settings preserve recipe/evaluation contracts.
+Structured estimator objects, vectors, dictionaries and architecture definitions
+remain operational configuration outside the scalar JSON search editor. CatBoost
+aliases are operational redirections to canonical names. Discovery exposes reviewed
+unset CatBoost parameters and XGBoost kwargs without changing estimator defaults.
+
+
+#### Parameters for alternative methods
+
+When multiple methods are committed upstream, shared preprocessing appears once.
+Each method's parameters have their own source name, such as **Gaussian Process
+Regressor**, with nested kernel/preparation components after `›`. Duplicate method
+names are qualified by package. Technical paths remain searchable.
+
+A model parameter belongs to a stable recipe ID as well as its implementation.
+Choices for one method never apply to another merely because their parameter names
+match. The search space is shared choices multiplied by the **sum** of the
+method-specific configuration counts, not their product. A method without enabled
+parameters still contributes its committed configuration. Choosing methods happens
+in Model candidates; the parameter editor does not substitute estimator objects.
+
+discover_source binds candidate parameters to a recipe-derived namespace and
+records their real sklearn path separately. Display names do not change technical
+identity. compile_spec multiplies shared cardinalities by the sum of branch
+cardinalities; fingerprinting includes all candidate namespaces/defaults. Single
+candidate parameter paths remain compatible with existing grids.
+
+
+## Bundled transformer parameter ownership
+
+`BundledParametersMixin` owns unfitted sklearn-compatible child configurations.
+Native KNN and iterative imputers are cloned before fit; wrapper-specific algorithms
+use cloneable `ParameterGroup` configuration. Legacy constructor parameters remain
+accepted while discovery exposes only canonical nested paths. Parent reviewed
+metadata and constructor defaults follow the corresponding nested parameter.
+
+Each group declares its selector and applicable values. A sequence selector uses
+membership; multiple selectors can declare an OR condition (robust location/scale
+applies when either Center or Scale is enabled). Conditions appear in row reasons
+and fingerprints. `conditional_grids` expands selector choices into a list of
+compact grids, omitting inactive children. Counts sum branch products, with shared
+preprocessing combined with each alternative terminal-model branch.
+
+Search preparation records conditions and grids in its fingerprinted specification.
+Baselines, checkpoint validation, coverage, random sampling and exhaustive iteration
+use active parameter dictionaries. TPE uses conditional dimensions and truthful
+partial trial histories. GP optimization uses separate fixed-dimensional branch
+surrogates, balanced by recorded/reserved branch evaluations. No inactive sentinel
+values enter the surrogate or accepted parameters. Existing immutable source and
+fold-fitting contracts remain unchanged.
+
+Saved drafts migrate from legacy flat names before reconciliation. Incompatible
+commitments require review and recommitment; old checkpoint fingerprints invalidate.
+Tests cover all declared bundles, cloning and legacy aliases, six imputation
+configurations, fixed selectors, multiple instances, alternative models, inference,
+all search methods, continuation, and browser editing/commit counts.

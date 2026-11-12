@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import numpy as np
 import pandas as pd
+from bundled_parameters import BundledParametersMixin
 from code_recording import recordable
 from scipy.spatial.distance import cdist, pdist, squareform
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -14,7 +15,7 @@ from sklearn.utils.validation import check_is_fitted
 
 
 @recordable
-class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
+class ClusterMembershipTransformer(BundledParametersMixin, TransformerMixin, BaseEstimator):
     """Append an unordered categorical feature without refitting in transform.
 
     ``columns`` names eligible predictors, not targets or observation weights.
@@ -31,9 +32,20 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
      'metric': {'fixed': True},
      'weighting': {'fixed': True}}
 
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {'partition': {'selector': 'method',
+                   'values': ['Partition'],
+                   'parameters': {'centre': 'center'}},
+     'distance': {'selector': 'method',
+                  'values': ['Partition', 'Density'],
+                  'parameters': {'metric': 'metric'}},
+     'density': {'selector': 'method',
+                 'values': ['Density'],
+                 'parameters': {'min_points': 'min_points', 'border': 'border'}}}
+
     def __init__(self, columns, *, n_clusters=2, method="Partition", centre="centroids",
                  metric="euclidean", standardize=True, weighting=None,
-                 output_column="cluster", random_state=2025, min_points=5, border=True):
+                 output_column="cluster", random_state=2025, min_points=5, border=True,
+                 partition=None, distance=None, density=None):
         self.min_points = min_points
         self.border = border
         self.columns = columns
@@ -45,6 +57,8 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
         self.weighting = weighting
         self.output_column = output_column
         self.random_state = random_state
+        self._init_parameter_groups(partition=partition, distance=distance, density=density)
+
 
     def _frame(self, X):
         if not isinstance(X, pd.DataFrame):
@@ -60,7 +74,7 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
         self._frame(X)
         if self.method not in ("Partition", "Mixture", "Density"):
             raise ValueError("Only Partition, Mixture and Density support learned membership")
-        if self.centre not in ("centroids", "medoids") or self.metric not in ("euclidean", "manhattan"):
+        if self.parameter_value('centre') not in ("centroids", "medoids") or self.parameter_value('metric') not in ("euclidean", "manhattan"):
             raise ValueError("Unsupported partition center or distance metric")
         if isinstance(self.n_clusters, bool) or not isinstance(self.n_clusters, (int, np.integer)) or self.n_clusters < 1:
             raise ValueError("n_clusters must be a positive integer")
@@ -101,16 +115,16 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
         x = (safe[:, keep] - self.mean_) / self.spread_ if self.standardize else x[:, keep]
         if not x.shape[1] or len(np.unique(x, axis=0)) < self.n_clusters:
             raise ValueError("Fewer distinct fitting rows than the requested number of clusters")
-        if isinstance(self.min_points, bool) or not isinstance(self.min_points, (int, np.integer)) or self.min_points < 1:
+        if isinstance(self.parameter_value('min_points'), bool) or not isinstance(self.parameter_value('min_points'), (int, np.integer)) or self.parameter_value('min_points') < 1:
             raise ValueError("min_points must be a positive integer")
         self.model_ = None
         self.medoids_ = None
         if self.method == "Density":
             from cards.obs_clusters import _density
-            distance = squareform(pdist(x, metric="cityblock" if self.metric == "manhattan" else "euclidean"))
+            distance = squareform(pdist(x, metric="cityblock" if self.parameter_value('metric') == "manhattan" else "euclidean"))
             if not np.isfinite(distance).all():
                 raise ValueError("Distances overflowed; enable standardization")
-            _, self.density_note_, model = _density(distance, self.n_clusters, self.min_points, weights, self.border, return_model=True)
+            _, self.density_note_, model = _density(distance, self.n_clusters, self.parameter_value('min_points'), weights, self.parameter_value('border'), return_model=True)
             self.radius_ = model.eps
             self.core_points_ = x[model.core_sample_indices_].copy()
             self.core_labels_ = model.labels_[model.core_sample_indices_].copy()
@@ -133,8 +147,8 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
                 raise ValueError("No Gaussian mixture converged")
             self.model_ = min(candidates, key=lambda model: model.bic(x))
             labels = self.model_.predict(x)
-        elif self.centre == "medoids":
-            distance = squareform(pdist(x, metric="cityblock" if self.metric == "manhattan" else "euclidean"))
+        elif self.parameter_value('centre') == "medoids":
+            distance = squareform(pdist(x, metric="cityblock" if self.parameter_value('metric') == "manhattan" else "euclidean"))
             labels, medoids = _pam(distance, self.n_clusters, weights, return_medoids=True)
             self.medoids_ = x[medoids].copy()
         else:
@@ -167,7 +181,7 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
                 raise ValueError("Transformed predictor values overflowed")
             if self.method == "Density":
                 labels = np.full(len(x), -1, dtype=int)
-                metric = "cityblock" if self.metric == "manhattan" else "euclidean"
+                metric = "cityblock" if self.parameter_value('metric') == "manhattan" else "euclidean"
                 # Bound temporary distance memory for large prediction batches.
                 for start in range(0, len(x), 512):
                     batch = x[start:start + 512]
@@ -176,16 +190,16 @@ class ClusterMembershipTransformer(TransformerMixin, BaseEstimator):
                     distances = cdist(batch, self.core_points_, metric=metric)
                     nearest = distances.argmin(axis=1)
                     allocated = distances[np.arange(len(batch)), nearest] <= self.radius_
-                    if not self.border:
+                    if not self.parameter_value('border'):
                         training_distances = cdist(batch, self.density_points_, metric=metric)
                         mass = (training_distances <= self.radius_) @ self.density_weights_
                         # Assess density against the fixed training reference only.
-                        allocated &= mass >= self.min_points
+                        allocated &= mass >= self.parameter_value('min_points')
                     labels[start:start + len(batch)][allocated] = self.core_labels_[nearest[allocated]]
             elif self.n_clusters == 1:
                 labels = np.zeros(len(x), dtype=int)
             elif self.medoids_ is not None:
-                labels = cdist(x, self.medoids_, metric="cityblock" if self.metric == "manhattan" else "euclidean").argmin(axis=1)
+                labels = cdist(x, self.medoids_, metric="cityblock" if self.parameter_value('metric') == "manhattan" else "euclidean").argmin(axis=1)
             else:
                 labels = self.model_.predict(x)
             values[valid] = [self.label_map_[int(label)] for label in labels]

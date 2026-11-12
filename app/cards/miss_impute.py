@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import shinywidgets
+from bundled_parameters import BundledParametersMixin
 from card import Card
 from code_recording import collect_job_code, recordable, recorded_job
 from cyclic_pandas import is_cyclic
@@ -31,13 +32,13 @@ from roles import Role, RoleMap
 from shiny import render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
 from sklearn.impute import IterativeImputer, KNNImputer, SimpleImputer
 
 METHOD_LABELS = {
     "simple": "Median or mode",
-    "knn": "Nearest neighbours",
+    "knn": "Nearest neighbors",
     "iterative": "Iterative prediction",
 }
 
@@ -175,28 +176,45 @@ def _restore_continuous(original: pd.Series, values: np.ndarray) -> pd.Series:
 
 
 @recordable
-class ImputationStep(TransformerMixin, BaseEstimator):
+class ImputationStep(BundledParametersMixin, TransformerMixin, BaseEstimator):
     """A DataFrame-preserving sklearn imputation step for Pythagoras."""
 
     tuning_metadata: ClassVar[dict[str, dict[str, object]]] = {
         "method": {"kind": "categorical", "choices": ["simple", "knn", "iterative"]},
     }
 
+    parameter_aliases: ClassVar[dict[str, str]] = {'neighbours': 'neighbors'}
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {
+        'knn': {'selector': 'method', 'values': ['knn'],
+                'parameters': {'neighbors': 'n_neighbors'}, 'factory': KNNImputer,
+                'defaults': {'weights': 'distance', 'keep_empty_features': True}},
+        'iterative': {'selector': 'method', 'values': ['iterative'],
+                      'parameters': {'iterations': 'max_iter'}, 'factory': IterativeImputer,
+                      'defaults': {'keep_empty_features': True}},
+    }
+
     def __init__(
         self,
         eligible: tuple[str, ...],
         predictors: tuple[str, ...],
-        method: str,
-        neighbours: int = 5,
+        method: str = "simple",
+        neighbors: int = 5,
         iterations: int = 10,
         seed: int = 2025,
+        knn=None, iterative=None,
+        neighbours=None,
     ):
         self.eligible = eligible
         self.predictors = predictors
         self.method = method
-        self.neighbours = neighbours
+        self.neighbors = neighbors
+        self.neighbours = neighbours  # Compatibility with earlier saved constructors.
         self.iterations = iterations
         self.seed = seed
+        if knn is None and neighbours is not None:
+            knn = KNNImputer(n_neighbors=neighbours, weights='distance', keep_empty_features=True)
+        self._init_parameter_groups(knn=knn, iterative=iterative)
+
 
     @staticmethod
     def _fit_simple(series: pd.Series) -> SimpleImputer:
@@ -267,21 +285,16 @@ class ImputationStep(TransformerMixin, BaseEstimator):
             self.scales_[~np.isfinite(self.scales_) | (self.scales_ == 0)] = 1.0
             scaled = (matrix - self.centres_) / self.scales_
             if self.method == "knn":
-                count = min(max(1, int(self.neighbours)), max(1, len(X) - 1))
-                self.continuous_imputer_ = KNNImputer(
+                count = min(max(1, int(self.parameter_value('neighbors'))), max(1, len(X) - 1))
+                self.continuous_imputer_ = clone(self.knn).set_params(
                     n_neighbors=count,
-                    weights="distance",
-                    keep_empty_features=True,
                 ).fit(scaled)
-                label = f"Nearest neighbours ({count})"
+                label = f"Nearest neighbors ({count})"
             else:
-                count = max(1, int(self.iterations))
-                self.continuous_imputer_ = IterativeImputer(
+                count = max(1, int(self.parameter_value('iterations')))
+                self.continuous_imputer_ = clone(self.iterative).set_params(
                     max_iter=count,
-                    random_state=int(self.seed),
-                    initial_strategy="median",
-                    skip_complete=False,
-                    keep_empty_features=True,
+                    random_state=self.iterative.random_state if self.iterative.random_state is not None else int(self.seed),
                 ).fit(scaled)
                 label = f"Iterative prediction ({count} iterations)"
             for column in self.targets_:
@@ -380,7 +393,7 @@ def _knn_impute(frame: pd.DataFrame, eligible: list[str], predictors: list[str],
     return _continuous_impute(
         frame, eligible, predictors,
         KNNImputer(n_neighbors=count, weights="distance"),
-        f"Nearest neighbours ({count})",
+        f"Nearest neighbors ({count})",
     )
 
 
@@ -675,7 +688,7 @@ def instance():
             method = input.Method()
             req(method is not None)
             active = {'Method'} | ({'Neighbours'} if method == 'knn' else set()) | ({'Iterations'} if method == 'iterative' else set())
-            values = read_active_inputs(input, {'Method':'simple','Neighbours':3,'Iterations':10}, active)
+            values = read_active_inputs(input, {'Method':'simple','Neighbours':5,'Iterations':10}, active)
             return {'method':values['Method'], 'neighbours':int(values['Neighbours']),
                     'iterations':int(values['Iterations']), 'seed':2025}
 

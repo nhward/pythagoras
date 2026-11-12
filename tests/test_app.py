@@ -985,9 +985,7 @@ class TestApplicationBrowser:
         page.locator("#data_import-DName").fill("browser iris")
         expect(page.locator("#data_import-Commit")).to_be_enabled()
         page.locator("#data_import-Commit").click()
-        expect(page.locator("#data_import-Name")).to_contain_text(
-            "browser iris", timeout=20_000
-        )
+        expect(page.locator("#data_import-Name")).to_contain_text("browser iris", timeout=20_000)
 
         page.locator("#SaveConfiguration").click()
         dialog = page.get_by_role("dialog")

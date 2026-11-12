@@ -1,0 +1,105 @@
+---
+title: Pipeline tuning specification
+---
+
+`pipeline_tune` is mutable and pipeline-compatible. Its prerequisites are a terminal `data_models` estimator or an unresolved committed candidate set, a compatible supervised EvaluationPlan when present (otherwise independent-row implicit CV), one observed Target on evaluation rows, and a classification or regression task matching the estimator. Weighting-role data and Emscripten are blocked with explanatory messages. Search space is the validated incoming tuning grid plus explicit model-only scalar choices. Existing committed choices cannot be overridden locally. No constructor range is invented.
+
+`pipeline_search.prepare` snapshots the original cleaned frame, clones the combined pipeline, materializes existing split memberships, verifies disjoint nonempty splits and holdout/prediction exclusion, fixes otherwise absent estimator seeds, and limits nested parallelism. A fingerprint covers data, roles, context, evaluation recipe and memberships, full pipeline parameters, parameter choices, model recipe, scoring, method, seed and dependency versions. Budgets are deliberately outside the fingerprint. Starting configuration settings are evaluated before candidates and are not counted against the candidate budget.
+
+The shared fold evaluator calls sklearn clone, set_params, fit and public scorers. Random uses ParameterSampler; Exhaustive uses ParameterGrid; TPE uses the native Optuna dependency categorical finite-choice indices. Its study is reconstructed from truthful completed/failed trial history. A seeded proposal plus recorded fallback random state supports reproducible sequential continuation without executable checkpoint payloads. Duplicate configurations are not refitted. Conditional method branches preserve model recipe identity.
+
+JSON checkpoints contain a versioned search specification, cumulative elapsed time, RNG state, and trial records with identity, model, kind, parameter values, state, fold metric dictionaries, time and error. Restoration validates compatibility, permitted values, unique configurations, complete fold coverage and finite scores. Partial folds do not enter ranking. Fold messages update progress and checkpoint state, but a separate equality-checked completed-trial snapshot drives the chart and best-parameter statement. Partial folds and status/time changes do not redraw these outputs; a completed trial or changed SD multiplier updates the chart. Pause is cooperative at fold boundaries. An isolated spawn worker permits cancellation of a blocking estimator fit; completed folds already reported to the UI are retained. A session closing terminates its worker. Inactive cards request a pause. No automatic launch occurs on bookmark restore.
+
+The front chart shows only completed mean objective scores as marker points, grouped and colored by model method when multiple candidates are selected. Stable colors follow the committed candidate branch order, with one legend entry per method; snapshots preserve model identity. It has no error bars, shaded ranges, starting configuration lines or best-so-far lines. Removed ChartView and SDMultiplier inputs are excluded from configuration persistence. Every settings control provides guide, position, title and explanatory text. The front also states the best parameter values, objective and starting configuration improvement, labelled as stale when appropriate. User-facing trial numbers, including table/CSV and acceptance messages, are one-based; persisted internal IDs remain zero-based. The flip side has candidate selection, per-fold variation, failures, parameters, secondary metrics, technical specification, checkpoint import/export and result CSV. Shiny polls process messages rather than fitting in its reactive loop. Replacing upstream data or editing identity-affecting controls makes results stale.
+
+Acceptance validates the checkpoint and selected complete trial, then uses `proxy_data.with_tuned_parameters` to publish an unfitted clone with fixed values, preserving display/source data, roles and evaluation plan. It removes the now-consumed tuning specification and replaces any prior pipeline_tune ProcessingRecord. Until acceptance the incoming pipeline passes through with an inactive journey entry. Reversion discards acceptance only. Separate final fitting and holdout evaluation are outside this card.
+
+Validation covers split isolation, holdout exclusion, combined parameter spaces, score directions, failures, pause/JSON resume, deterministic random continuation, budgets, TPE, stale/malformed checkpoints, preservation of source state, unfitted acceptance, and WebKit progress/selection/acceptance/reversion. Future work: conditional multi-model spaces, resource-based pruning, aligned weights and estimator-specific callbacks.
+
+
+Search and manual acceptance use evaluation scores only. Schema version 4 stores scores and secondary-metric errors per fold. All task metrics are attempted automatically; only primary scoring failure fails the trial. Missing secondary values require recorded reasons. Earlier checkpoint schemas require a new search.
+
+Every search method accepts zero maximum candidates as unlimited (`trials=0`, normalized to None by the worker). Positive maxima remain cumulative and exclude the starting configuration. The former GridCap control is removed and excluded from configuration inputs. Grid coverage includes a matching starting configuration once, counts completed and failed configurations separately, and reports partial exhaustive searches explicitly. Configuration caps and time limits remain outside search identity. The final grid configuration reaching a cap reports exhausted rather than budget reached.
+
+
+
+
+The fourth method `skopt` uses scikit-optimize Optimizer with a GP surrogate, categorical choice indices, sampling acquisition optimization and one surrogate job. Singleton dimensions stay fixed; empty spaces exhaust normally. Each proposal is seeded from the search seed and trial count and reconstructed from actual completed in-grid configurations. Only their negated primary mean scores are supplied to the minimizer. Failed trials have no invented losses; out-of-grid starting configurations have no invented coordinates. Duplicate proposals use the existing deterministic unseen fallback. Package versions and implementation remain part of search identity.
+
+With no upstream plan, `implicit_splits` materializes independent shuffled KFold/target-StratifiedKFold memberships with at most five folds, reduced for small data/minority classes. Unlabelled targets are prediction rows. Partition/Sequence/Geometry/Stratifier roles and repeated identifiers block implicit splitting and require an explicit plan. Invalid existing plans never fall back. The specification records origin, strategy, folds, seed and reserved rows, and fingerprints full split memberships; progress labels their origin. Source state is not mutated. All four methods use exactly this shared evaluator and preserve fold-fitted preprocessing, finite scoring, budgets, checkpoint lifecycle and manual acceptance.
+
+
+Chart snapshots project only completed trial IDs/kinds, parameters and primary fold scores, plus the fixed search specification. Detached snapshots prevent progress, elapsed time and secondary metric updates from redrawing completed points.
+
+
+Parallel execution uses a non-daemon spawned coordinator with a reusable spawn pool. Workers receive the immutable SearchProblem once, clone the pipeline per job and limit exposed estimator thread settings plus supported BLAS/OpenMP libraries to one. The UI defaults to Auto/zero requested workers; the direct prepare API defaults to Sequential/one for backwards-compatible programmatic use. Resolved execution mode, worker count and memory-estimate bounds are fingerprinted, preserving batch identity on resume. Automatic concurrency is max(1, available CPUs // 2), using joblib.cpu_count(); explicit requests remain CPU/memory bounded. RAM allowance is one quarter of total physical RAM; estimated fit memory is 256 MiB plus six frame copies, plus six dense covariance-sized arrays for GPR. This heuristic does not guarantee a memory ceiling.
+
+Schema 4 retains a compact fold-results list with matching sorted unique fold_ids, allowing gaps for unfinished folds. A batch records a contiguous suffix of proposed trial IDs; multiple running trials are permitted only inside that batch. Candidate/time budget changes do not alter identity, but execution settings do. Candidate allocation is batch-limited and counts failures/reserved candidates against the total. Positive budgets can shorten a batch. New batches see only terminal prior-batch outcomes; skopt batch ask uses cl_min and TPE uses constant_liar with true RUNNING trial records. No pending lie is recorded as an actual fold score.
+
+The coordinator publishes each finished fold by ID; scores for failed trials remain unranked even if other already-active folds finish. Stop scheduling immediately on pause/time-limit requests, drain active fits and checkpoint; cancellation terminates outstanding work. POSIX coordinator sessions isolate child process groups for cleanup; a shared PID/create-time registry supports bounded owned-worker cleanup without enumerating unrelated processes and guards against PID reuse. Unexpected fit-worker exits yield an error checkpoint, not an indefinite wait.
+
+Upstream evaluation metadata includes repeats, folds_per_repeat and stable split_descriptors. Flattened split indices remain the worker/checkpoint fold IDs, preserving repeat identities through pause/resume. All repeat memberships contribute to evaluation; displayed fold SD is descriptive only.
+
+Bayesian comparison is a display/analysis layer in pipeline_comparison.py, separate
+from search and acceptance. The specification records actual split_sizes; paired
+complete fold_ids and ordered repeat/fold descriptors are required. Only repeated
+shuffled independent ordinary/stratified K-fold plans qualify. The posterior follows
+the sklearn example: t(df=n-1, loc=mean(d), scale=sqrt((1/n+mean(test/train))*var(d,ddof=1))).
+Differences use internal higher-is-better scores. ROPE tails and central mass partition
+probability into worse/equivalent/better; scipy sf avoids subtractive loss in the
+upper tail. Credible intervals are fixed at 95%; configurable probability threshold
+labels remain pairwise and acceptance stays manual. A positive application-specific
+ROPE is required; degenerate variance produces unavailable probabilities, not invented
+certainty. Repeat-mean difference SD is descriptive only. The top-N shortlist limits
+quadratic growth (default 5, maximum 20). Missing split sizes, unsupported plans,
+stale identity or incomplete aligned scores withhold results with an explanation.
+The table/CSV includes one-based trial IDs, mean advantage, credible limits,
+probabilities, repeat count, paired split count, repeat SD and assessment. Display
+settings are restored as card configuration but excluded from search specification.
+Selection bias and distributional approximations are explicit; no multiplicity
+p-value correction or global-best probability claim is made.
+
+
+#### Searching alternative modeling methods
+
+With several committed candidates, each trial chooses a method and only that
+method's parameter grid. Shared preprocessing choices apply to every method.
+Every method receives one starting configuration evaluation using its committed values; the
+**Maximum candidates** budget is global and excludes all method starting configurations. The
+progress display states how many starting configuration evaluations are required. Time limits
+cover the complete search. Matching in-grid starting configurations are counted once.
+
+Random and Exhaustive visit the union of valid branches. TPE and skopt use separate
+optimizers for each method with deterministic balanced allocation between
+non-exhausted methods. No inactive-method parameter values or fictitious objective
+scores are supplied. All methods reuse identical CV memberships, fit preparation
+inside each fold, and obey the same parallel-fit limit. Method/recipe IDs remain
+part of checkpoint identity, and resuming preserves reserved branches and results.
+
+The flip-side table and CSV include a **Method** column, with recipe identity in
+**Model**. Chart hover text and the best-result statement identify the method.
+Improvement over starting configuration uses that method's own starting configuration. Accepting a completed
+trial publishes its method/preparation and parameter values together as an unfitted
+pipeline. Revert restores the incoming candidate set. Statistical comparisons can
+compare different methods because their metric and split identities match.
+
+SearchProblem.branches contains independently prepared child problems sharing the
+same immutable raw frame and memberships. A trial's reserved __method__ parameter
+is a stable recipe key, removed before fitting and accepting actual parameters.
+Checkpoint validation projects each branch onto the existing single-method
+validator after verifying global trial IDs, batch suffix and method labels.
+Coverage sums branch counts; uniqueness is per method. Pool jobs dispatch the
+method key inside workers and return scores only. Separate child specs capture
+preparation, dependency versions and fixed execution parameters. Changing the
+candidate set invalidates checkpoint identity; legacy single-method searches
+retain their existing execution path.
+
+
+
+
+The chart x-axis is labeled **Trial**. Diamond markers identify each method's
+committed starting configuration; circles identify tuned candidates. Method
+colors are preserved for both shapes. Starting configurations use the same CV
+splits as candidates, remain eligible for acceptance, and provide the reference
+for the displayed improvement. They are not null models. The candidate budget
+excludes one starting-configuration evaluation per method.
