@@ -1,5 +1,5 @@
-import json
 import asyncio
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -405,6 +405,70 @@ def test_generic_bookmark_excludes_transient_projection_inputs():
 
     assert options["selected"] == "decimal"
     assert module.configuration_state()["inputs"] == {"Persistent": "current"}
+
+
+@pytest.mark.unit
+def test_optional_legacy_lookup_does_not_warn_when_absent(caplog):
+    module = DummyModule('card')
+    module.restore_configuration_state({'inputs': {}})
+    assert module.restored_configuration_input('Legacy', False, warn_if_missing=False) is False
+    assert 'has no value' not in caplog.text
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(('name', 'inputs', 'retained', 'extra'), [
+    ('var_transform', {'Digits': 3}, {}, {}),
+    ('obs_outliers', {'Order': 'score'}, {}, {}),
+    ('obs_balance', {'Mode': 'reweight'}, {'Mode': 'reweight'}, {}),
+    ('obs_weighting', {'Power': '.5'}, {'Power': '.5'}, {}),
+    ('obs_k_clusters', {'Family': 'Aggregate', 'K': '3', 'Limit': 1000}, {'K': '3'}, {}),
+    ('obs_clusters', {'IncludeMembership': ['Partition'], 'VariableName': 'old_name'},
+     {'IncludeMembership': ['Partition']}, {}),
+    ('var_nominal', {'Editors_bbbcb25b3bdbdf4c_ExpectedLevels': 'A\nB'},
+     {'Editors_bbbcb25b3bdbdf4c_ExpectedLevels': 'A\nB'}, {'reconciliation': {'expected': {}}}),
+])
+def test_known_card_bookmark_fields_are_recognized_before_dynamic_ui(name, inputs, retained, extra, caplog):
+    import importlib
+    card = importlib.import_module(f'cards.{name}').instance()
+    card.restore_configuration_state({'inputs': inputs, **extra})
+    saved = card.configuration_state()
+    assert saved == {'inputs': retained, **extra}
+    assert 'retaining it for compatibility' not in caplog.text
+    assert 'unrecognised field' not in caplog.text
+
+
+@pytest.mark.unit
+def test_dynamic_input_patterns_do_not_hide_unrecognized_editor_fields(caplog):
+    module = DummyModule('card')
+    module.register_configuration_input_pattern(r'Editors_[0-9a-f]{16}_ExpectedLevels')
+    inputs = {'Editors_bbbcb25b3bdbdf4c_ExpectedLevels': 'A',
+              'Editors_bbbcb25b3bdbdf4c_Unknown': 'future'}
+    module.restore_configuration_state({'inputs': inputs})
+    assert module.configuration_state()['inputs'] == inputs
+    assert 'ExpectedLevels is no longer present' not in caplog.text
+    assert 'Unknown is no longer present' in caplog.text
+
+
+@pytest.mark.unit
+def test_retired_inputs_are_dropped_without_claiming_they_are_retained(caplog):
+    module = DummyModule('card')
+    module.exclude_configuration_input('Secondary')
+    module.restore_configuration_state({'inputs': {'Secondary': ['accuracy'], 'Future': True}})
+    assert module.configuration_state()['inputs'] == {'Future': True}
+    assert 'card.Secondary' not in caplog.text
+    assert 'card.Future is no longer present; retaining it for compatibility' in caplog.text
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(('name', 'field'), [
+    ('cand_parameters', 'tuning'), ('cand_train', 'search'), ('model_candidates', 'review'),
+])
+def test_learning_cards_declare_owned_state_before_bookmark_restoration(name, field, caplog):
+    import importlib
+    card = importlib.import_module(f'cards.{name}').instance()
+    card.restore_configuration_state({'inputs': {}, field: {'saved': True}})
+    assert card.restored_configuration_field(field) == {'saved': True}
+    assert 'unrecognised field' not in caplog.text
 
 
 @pytest.mark.unit
@@ -820,7 +884,7 @@ def test_waiting_indicator_delays_messages_and_clears_immediately(monkeypatch):
     now = [0.0]
     timers = []
     monkeypatch.setattr(module_lib.time, "monotonic", lambda: now[0])
-    monkeypatch.setattr(reactive, "invalidate_later", timers.append)
+    monkeypatch.setattr(module_lib, "invalidate_later", timers.append)
     indicator = WaitingIndicator()
     indicator.set("Awaiting upstream data")
     with reactive.isolate():
@@ -1052,3 +1116,55 @@ def chart():
     module.code_registry["chart"] = source
     assert "&lt;chart&gt;" in str(module.code_text())
     assert module.retrieve_code("chart") == source
+
+
+@pytest.mark.unit
+def test_consuming_restored_field_releases_bookmark_copy():
+    module = DummyModule('consume')
+    module.register_configuration_state_field('search')
+    original = {'inputs': {}, 'search': {'checkpoint': {'trials': []}}}
+    module.restore_configuration_state(original)
+    restored = module.consume_restored_configuration_field('search')
+    assert module.restored_configuration_field('search') is None
+    restored['checkpoint']['trials'].append(1)
+    assert original['search']['checkpoint']['trials'] == []
+    module.register_configuration_state_provider('search', lambda: {'checkpoint': 'current'})
+    assert module.configuration_state()['search']['checkpoint'] == 'current'
+
+
+@pytest.mark.unit
+def test_live_namespaces_are_session_local_with_duplicate_and_cleanup_isolation(monkeypatch):
+    def root():
+        callbacks = []
+        session = SimpleNamespace(on_ended=callbacks.append)
+        session.root_scope = lambda: session
+        return session, callbacks
+    first, ended = root()
+    second, _ = root()
+    current = [first]
+    monkeypatch.setattr(module_lib, 'get_current_session', lambda: current[0])
+    original = DummyModule('miss_impute')
+    duplicate = DummyModule('miss_impute')
+    assert (original.namespace, duplicate.namespace) == ('miss_impute', 'miss_impute_0')
+    current[0] = second
+    restored = DummyModule('miss_impute')
+    assert restored.namespace == original.namespace
+    assert restored.Instances is not original.Instances
+    assert Module.Instances == {}
+    for callback in ended:
+        callback()
+    assert original.Instances == {}
+    assert restored.Instances['miss_impute'] is restored
+
+
+@pytest.mark.unit
+def test_nested_module_scope_uses_root_namespace_registry(monkeypatch):
+    root = SimpleNamespace(on_ended=lambda callback: None)
+    root.root_scope = lambda: root
+    current = [root]
+    monkeypatch.setattr(module_lib, 'get_current_session', lambda: current[0])
+    first = DummyModule('miss_impute')
+    current[0] = SimpleNamespace(root_scope=lambda: root)
+    second = DummyModule('miss_impute')
+    assert second.namespace == 'miss_impute_0'
+    assert second.Instances is first.Instances

@@ -50,14 +50,15 @@ def selection_recipe(source, method, options):
 
 @recordable
 def analyze_selection(source, method, options, progress=None):
-    import time
     import importlib.metadata
+    import time
+
     import numpy as np
     from pipeline import Pipeline
-    from sklearn.base import clone
     from selection_analysis import selection_recipe
+    from sklearn.base import clone
     started = time.monotonic()
-    result = dict(source=source, method=method, options=options, error='', model=None)
+    result = {'source': source, 'method': method, 'options': options, 'error': '', 'model': None}
     try:
         recipe, target = selection_recipe(source, method, options)
         positions = np.arange(len(source.clean_frame))
@@ -67,7 +68,7 @@ def analyze_selection(source, method, options, progress=None):
             positions = np.asarray(plan.development, dtype=int)
         raw = source.clean_frame.iloc[positions]
         # The pipeline owns positional y alignment through upstream samplers.
-        steps = [] if source.pipeline is None else [(n,s) for n,s in source.pipeline.steps if n != 'data_models']
+        steps = [] if source.pipeline is None else [(n,s) for n,s in source.pipeline.steps if n != 'cand_methods']
         pipeline = Pipeline([*steps, ('selection_preview', clone(recipe))])
         pipeline.fit(raw, raw[target].to_numpy(), selection_preview__progress=progress)
         model = pipeline.named_steps['selection_preview']
@@ -100,6 +101,7 @@ def export_selection(result):
     # rather than forcing a new random split after a learned feature selection.
     if source.evaluation_plan is not None:
         from dataclasses import replace
+
         from evaluation_plan import source_fingerprint
         source.evaluation_plan.require(source, supervised=True)
         plan = replace(source.evaluation_plan, fingerprint=source_fingerprint(exported))
@@ -127,14 +129,13 @@ def selection_evidence(result):
     table['Included'] = table['Included'].astype(bool)
     return table
 
-
 @recordable
 def selection_stability(source, method, options, progress=None):
     """Diagnostic only: refit the full recipe on each upstream training split."""
     import pandas as pd
-    from sklearn.base import clone
     from pipeline import Pipeline
     from selection_analysis import selection_recipe
+    from sklearn.base import clone
 
     result = {'method':method, 'options':options, 'error':'', 'summary':pd.DataFrame(),
               'details':pd.DataFrame(), 'successful':0, 'planned':0, 'failures':[], 'notes':[]}
@@ -148,12 +149,12 @@ def selection_stability(source, method, options, progress=None):
         if plan.count < 2:
             result['notes'].append('A single upstream training split cannot show between-fold variation.')
         rows = []
-        upstream = [] if source.pipeline is None else [(n,s) for n,s in source.pipeline.steps if n != 'data_models']
+        upstream = [] if source.pipeline is None else [(n,s) for n,s in source.pipeline.steps if n != 'cand_methods']
         for fold, (train, validation) in enumerate(plan.splits(source), 1):
             raw = source.clean_frame.iloc[train]
             try:
                 pipeline = Pipeline([*[(n,clone(s)) for n,s in upstream], ('selection_preview',clone(recipe))])
-                def report(message):
+                def report(message, fold=fold):
                     if progress:
                         progress(f'{method} stability CV{fold}/{plan.count}: {message}')
                 pipeline.fit(raw, raw[target].to_numpy(), selection_preview__progress=report)

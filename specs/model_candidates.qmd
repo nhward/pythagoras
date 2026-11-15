@@ -1,0 +1,117 @@
+# Model candidates
+
+`app/cards/model_candidates.py` is a mutable, pipeline-compatible downstream
+review/selection card. It consumes `proxy_data.tuning_results`, never private UI
+table state. `app/model_review.py` contains pure evidence-construction, diagnostics,
+shortlist, Pareto and chart helpers. Statistical eligibility/posteriors reuse
+`pipeline_comparison`; no complexity or ensemble logic is added.
+
+## Evidence and lifecycle
+
+Search specs declare `prediction_evidence: 2`. During a fold, only numeric
+validation losses needed for exact repeat-wise P95/exceedance calculations are
+written to a unique compressed temporary file. Classification label errors are
+counts; probability matrices are reduced immediately to per-observation log loss.
+No predictions, outcomes, row positions, class matrices or fitted models persist.
+Fold metadata contains count, timing, kind, and (while unfinished) checksum/key,
+maximum and a context hash binding the file to the search/trial/fold.
+
+Completed trials replace file references with bounded summaries: P95 for regression,
+classification error rate/log loss, a maximum and 101 exceedance proportions.
+Thresholds are generated from the maximum rather than redundantly stored. At most
+one repeat's validation losses is materialized during finalization. Files retire
+only after the parent applies the corresponding completion update, preventing a
+configuration-save race with stale partial state. Failure/reset/session cleanup
+also remove owned files; cancellation prunes unpublished files by worker namespace.
+Direct-library runs clean completed files synchronously; temporary cache roots
+are removed at process exit.
+
+`portable_checkpoint` embeds only pending compressed arrays at explicit save/export
+boundaries. `restore_checkpoint` validates hashes/archive headers and rekeys each
+import, so switching configurations never relies on a prior session's files or
+shares file ownership. Completed configurations are file-free. The emscripten
+backend holds compressed pending bytes and never accesses native paths. Generic
+restored state is consumed once to release its duplicate bookmark copy. Large
+browser configuration staging uses an isolated IndexedDB store and a small
+sessionStorage token; records are consumed on restoration, with abandoned records
+pruned after a day. Native fitting remains unavailable in shinylive. A saved source signature
+allows file-free read-only review of completed archives when that signature
+matches but native fitting/search validation is unavailable. Read-only results
+cannot be accepted as a pipeline. Missing native estimators use recorded scalar
+choices for parameter differences, without importing or deserializing models.
+
+The worker update queue has capacity two and carries only changed trial records
+and scalar status/RNG headers. The UI merges those deltas into its history; it
+never queues deep copies of an accumulated prediction history. Completed-review
+invalidation uses a revision hash rather than a second retained history snapshot.
+Downstream evidence stores one unfitted template per method, sharing trial scalar
+choices with history, and constructs a trial pipeline on demand. No tuning
+acceptance is needed for evidence export. Legacy row lists are stripped without
+first duplicating them; old scores remain visible but implementation changes
+require a new search for current diagnostics/resume compatibility.
+
+`proxy_data` stores an immutable-by-ownership evidence record with a signature of
+the clean data, roles, modelling context, evaluation plan and shared preprocessing.
+Public getters copy evidence/pipelines defensively. Successors preserve it but the
+getter rejects incompatible state; explicit estimator replacement clears it.
+Clone/equality account for it. Explicit accepted tuning/review selections rebase
+the signature to their selected preprocessing while preserving the original
+search provenance. Review acceptance clones the stored full pipeline, records
+`model_candidates` lineage, and never fits it.
+
+## Review semantics
+
+Shortlists retain top N completed configurations independently per model method.
+A stable earliest-ID best-scoring reference is identified within each method.
+Paired comparisons require complete matching fold IDs and upstream repeated,
+shuffled ordinary/stratified CV. Nonreference rows are practically equivalent,
+meaningfully worse or inconclusive; the reference has no fictitious equivalence
+probability. A positive tolerance and decision probability are explicit controls.
+Zero paired variance remains unavailable. Selection bias is stated.
+
+Regression tail diagnostics concatenate validation absolute errors within each
+repeat, compute each repeat's P95, then average. Classification error rates and
+log losses average repeat summaries; probabilities retain class alignment. Timing
+is warm validation-batch point/label prediction throughput, including preprocessing,
+with explicit concurrency/batch/hardware limitations. No uncertainty claim treats
+repeats as independent datasets. Exceedance curves average per-repeat curves and
+use a common classification loss type for all displayed representatives.
+
+Between-method views choose one representative per method, initially its score
+reference. Two selected numerical axes define a Pareto frontier with proper score,
+risk and speed directions; incomplete measurements cannot receive frontier status.
+Interpretability remains a qualitative description. Treatment-role guidance does
+not imply causal identification. Chart clicks and flip-side row selection share
+candidate identity. A same-method comparison selector supports arbitrary pairs
+for parameter differences. Representative changes are diagnostic; acceptance is explicit.
+Footer actions and the comparison download use the standard rounded primary
+buttons. Download is 220 pixels wide with the standard file-arrow-down icon.
+Best-score reference rows use emphasized text without changing their background.
+Selection opens the parameter details panel; explicit deselection closes it.
+Grid rebuilds preserve trial identity rather than treating their transient empty
+selection as a user deselection. The parameter comparison fills the card width and wraps its first column,
+overriding the shared 180-pixel truncation rule locally. Model parameter labels use
+the method display name without its regression/classification suffix, followed by
+a hyphen-separated estimator path. Search/checkpoint keys are unchanged. Status,
+selection details and eligibility messages are concise; explanatory cautions live
+in the Quarto help rather than repeated output text.
+Representatives/acceptance restore only against matching search identity. The
+exported evidence also records the shortlist, representative IDs, tolerance,
+decision probability and accepted ID under a versioned review entry. Tables
+round displayed numeric values to three decimals; CSV retains full precision.
+
+## Validation
+
+Unit tests cover held-out row alignment, no holdout access, cloning, acceptance,
+evidence invalidation, per-method shortlists, non-equivalence without tolerance,
+repeat-aware tails, regression/classification diagnostics, Pareto directions,
+missing evidence and parameter differences. Browser tests cover the review views,
+representative persistence, acceptance/revert and tuning evidence export.
+
+Model review, pipeline-tuning history and Data journey each retain one FigureWidget
+per session and update its data/layout in place. Closing replaced models alone
+did not prevent WebKit content-process memory growth during repeated widget-view
+construction. WidgetSlot closes the retained widget on session end and remains a
+fallback for explicit replacement. History retains existing method traces across
+updates. A WebKit regression requires repeated review changes to open no new
+widget models. Fullscreen modebar changes update the existing plot configuration.

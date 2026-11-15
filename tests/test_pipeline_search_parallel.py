@@ -39,15 +39,19 @@ class AuditRidge(Ridge):
 
 def parallel_problem(mode, *, log_path='', delay=.25, method='grid'):
     data = source()
-    model = data.pipeline.named_steps.data_models
+    model = data.pipeline.named_steps.cand_methods
     model.set_params(estimator=AuditRidge(log_path=log_path,delay=delay))
     data = data.with_estimator(model,label='Audited Ridge',recipe_id='parallel-test')
-    return prepare(data, model_values={'data_models__estimator__alpha':[.1,10.]},
+    return prepare(data, model_values={'cand_methods__estimator__alpha':[.1,10.]},
                    method=method,execution=mode,workers=2)
 
 
 def normalized(state):
-    return [(t['params'],t['fold_ids'],t['folds'],t['state']) for t in state['trials']]
+    trials = copy.deepcopy(state['trials'])
+    for trial in trials:
+        for fold in trial['folds']:
+            fold.get('evidence', {}).pop('prediction_seconds', None)
+    return [(t['params'], t['fold_ids'], t['folds'], t['state']) for t in trials]
 
 
 @pytest.mark.skipif(joblib.cpu_count()<2,reason='Requires two available CPUs')
@@ -104,7 +108,7 @@ def test_out_of_order_fold_pause_and_checkpoint_validation(tmp_path):
 @pytest.mark.parametrize('method',['random','grid','tpe','skopt'])
 def test_parallel_batch_resume_matches_uninterrupted_search(method):
     data=source()
-    p=prepare(data,model_values={'data_models__estimator__alpha':[.01,.1,1.,10.]},
+    p=prepare(data,model_values={'cand_methods__estimator__alpha':[.01,.1,1.,10.]},
               method=method,execution='trials',workers=2)
     stop=threading.Event()
     def publish(state):
@@ -162,11 +166,11 @@ def test_resource_bounds_and_operational_identity(monkeypatch):
 
 @pytest.mark.skipif(joblib.cpu_count()<2,reason='Requires two available CPUs')
 def test_parallel_gp_chart_updates_only_on_completion():
-    from cards.pipeline_tune import chart_snapshot
+    from cards.cand_train import chart_snapshot
     data=source()
-    model=gp_problem().pipeline.named_steps.data_models
+    model=gp_problem().pipeline.named_steps.cand_methods
     data=data.with_estimator(model,label='GP',recipe_id='parallel-gp')
-    p=prepare(data,model_values={'data_models__estimator__alpha':[.2,.3,.4]},execution='trials',workers=2,method='grid')
+    p=prepare(data,model_values={'cand_methods__estimator__alpha':[.2,.3,.4]},execution='trials',workers=2,method='grid')
     changes=[];last=None
     def publish(state):
         nonlocal last
@@ -193,7 +197,7 @@ class CrashOnceRidge(AuditRidge):
 @pytest.mark.skipif(joblib.cpu_count()<2,reason='Requires two available CPUs')
 def test_crashed_fit_worker_reports_error_and_checkpoint_can_resume(tmp_path):
     data=source()
-    model=data.pipeline.named_steps.data_models
+    model=data.pipeline.named_steps.cand_methods
     model.set_params(estimator=CrashOnceRidge(log_path=str(tmp_path/'crash.jsonl'),delay=0))
     data=data.with_estimator(model,label='Crash test',recipe_id='crash-once')
     p=prepare(data,execution='folds',workers=2,method='grid')
@@ -235,4 +239,4 @@ def test_committed_catboost_adapter_runs_in_spawned_tuning_workers():
     assert result['status']=='exhausted'
     assert result['trials'][0]['state']=='complete'
     assert len(result['trials'][0]['folds'])==5
-    assert not data.pipeline.named_steps.data_models.named_steps.estimator.is_fitted()
+    assert not data.pipeline.named_steps.cand_methods.named_steps.estimator.is_fitted()

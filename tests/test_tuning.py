@@ -9,17 +9,57 @@ from tuning import compile_spec, discover, search_values
 pytestmark = pytest.mark.unit
 
 
+def test_restored_commit_recompiles_saved_choices_without_committing_a_later_draft():
+    import copy
+
+    from tuning import restore_commitment
+    rows = discover(Pipeline([('model', RandomForestRegressor())]))
+    row = next(r for r in rows if r['path'] == 'model__n_estimators')
+    drafts = {row['path']: dict(row['definition'], owner=row['owner'], active=True,
+                              mode='values', values=[10, 20])}
+    saved = {'spec': compile_spec(rows, drafts), 'drafts': copy.deepcopy(drafts)}
+    saved['spec']['fingerprint'] = 'previous-session'
+    restored = restore_commitment(rows, saved)
+    assert restored['spec'] == compile_spec(rows, drafts)
+    assert saved['spec']['fingerprint'] == 'previous-session'
+    drafts[row['path']]['values'] = [30, 40, 50]
+    assert restored['spec']['grid'][row['path']] == [10, 20]
+    assert restored['drafts'][row['path']]['values'] == [10, 20]
+
+
+@pytest.mark.parametrize('change', ['removed', 'owner', 'fixed', 'choices'])
+def test_restored_commit_rejects_incompatible_or_changed_search_choices(change):
+    import copy
+
+    from tuning import restore_commitment
+    rows = discover(Pipeline([('model', RandomForestRegressor())]))
+    row = next(r for r in rows if r['path'] == 'model__n_estimators')
+    drafts = {row['path']: dict(row['definition'], owner=row['owner'], active=True,
+                              mode='values', values=[10, 20])}
+    saved = {'spec': compile_spec(rows, drafts), 'drafts': copy.deepcopy(drafts)}
+    if change == 'removed':
+        rows = [r for r in rows if r['path'] != row['path']]
+    elif change == 'owner':
+        row['owner'] = 'different.Implementation'
+    elif change == 'fixed':
+        row['fixed'] = True
+    else:
+        saved['drafts'][row['path']]['values'] = [30]
+    with pytest.raises(ValueError):
+        restore_commitment(rows, saved)
+
+
 @pytest.mark.parametrize('source,expected', [
     ('miss_impute', 'Learned Imputation'),
     ('miss_impute_1', 'Learned Imputation (1)'),
     ('miss_impute_2', 'Learned Imputation (2)'),
-    ('data_models_2 › estimator', 'Model method candidates (2) › estimator'),
+    ('cand_methods_2 › estimator', 'Model method candidates (2) › estimator'),
     ('other_step_1 › nested', 'other_step_1 › nested'),
 ])
 def test_source_titles_preserve_instance_suffix_and_nested_step(source, expected):
-    from cards.tuning_parameters import source_label
+    from cards.cand_parameters import source_label
     cards = {'miss_impute': {'long_name': 'Learned Imputation'},
-             'data_models': {'long_name': 'Model method candidates'}}
+             'cand_methods': {'long_name': 'Model method candidates'}}
     assert source_label(source, cards) == expected
 
 
@@ -75,7 +115,7 @@ def test_visibility_levels_keep_enabled_parameters_and_separate_unknown_booleans
 
 
 def test_old_visibility_checkbox_migrates_to_everything_radio():
-    from cards.tuning_parameters import instance
+    from cards.cand_parameters import instance
     card = instance()
     card.restore_configuration_state({'inputs': {'ShowEverything': True}})
     with card.configuration_ui_context():
@@ -149,12 +189,12 @@ def test_tuning_commit_records_grid_in_data_journey_without_duplicate_entries():
     assert source.processing_records == ()
     assert len(result.processing_records) == 1
     record = result.processing_records[0]
-    assert record.card == 'tuning_parameters'
+    assert record.card == 'cand_parameters'
     assert record.stage == 'Learning' and record.attempted
     assert record.parameters == {'grid': {}, 'combinations': 1}
     assert record.input_shape == record.output_shape == source.shape
     journey = _journey_table(result)
-    tuning_rows = journey.loc[journey['Card'] == 'tuning_parameters']
+    tuning_rows = journey.loc[journey['Card'] == 'cand_parameters']
     assert len(tuning_rows) == 1
     assert 'combinations' in tuning_rows.iloc[0]['Parameters']
 
@@ -296,7 +336,7 @@ def test_model_recipe_preparation_is_visible_only_under_everything_and_not_tunab
 
     pipeline = Pipeline([
         ('upstream', SimpleImputer()),
-        ('data_models', Pipeline([
+        ('cand_methods', Pipeline([
             ('prepare', Pipeline([('impute', SimpleImputer()), ('scale', StandardScaler())])),
             ('estimator', Ridge()),
         ])),
@@ -304,8 +344,8 @@ def test_model_recipe_preparation_is_visible_only_under_everything_and_not_tunab
     rows = discover(pipeline)
     paths = {row['path'] for row in rows}
     assert 'upstream__strategy' in paths
-    assert 'data_models__estimator__alpha' in paths
-    recipe = next(row for row in rows if row['path'] == 'data_models__prepare__impute__strategy')
+    assert 'cand_methods__estimator__alpha' in paths
+    recipe = next(row for row in rows if row['path'] == 'cand_methods__prepare__impute__strategy')
     assert recipe['purpose'] == 'recipe'
     assert recipe['fixed']
     assert visible(recipe, 'everything')

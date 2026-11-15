@@ -76,3 +76,14 @@ def test_unknown_prediction_outcomes_are_allowed_and_context_survives_sampling()
     assert plan.ready
     assert plan.prediction == (20, 21, 22, 23)
     assert data.sample(n=10).modelling_context == data.modelling_context
+
+
+@pytest.mark.unit
+def test_model_predictors_follow_frame_order_instead_of_role_set_order():
+    from roles import Role
+    columns = ['zeta', 'alpha', 'gamma', 'beta', 'delta', 'y']
+    roles = RoleMap.from_primitive({'predictor': columns, 'target': ['y']})
+    # Deliberately choose a schema different from the role set's iteration order.
+    schema = list(reversed(list(roles.columns_with_role(Role.PREDICTOR))))
+    source = proxy_data(pd.DataFrame({c: [1., 2.] for c in schema}), _roles=roles)
+    assert source.model_predictors == [c for c in schema if c != 'y']

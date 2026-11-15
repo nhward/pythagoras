@@ -58,9 +58,9 @@ def test_candidates_are_defensive_and_training_requires_choice():
     altered[0]['estimator'].set_params(estimator__alpha=99)
     assert data.model_candidates[0]['estimator'].get_params()['estimator__alpha'] == 1
     assert len(data.clone().model_candidates) == 2
-    assert data.pipeline_for_training('tree').named_steps.data_models.named_steps.estimator.max_depth == 2
+    assert data.pipeline_for_training('tree').named_steps.cand_methods.named_steps.estimator.max_depth == 2
     assert len(configured().tuning_spec['grid']) == 2
-    assert {r['display_source'] for r in discover_source(data) if r.get('candidate_id') and r['parameter_path'].startswith('data_models__estimator__')} == {'Ridge Regression', 'Decision Tree Regression'}
+    assert {r['display_source'] for r in discover_source(data) if r.get('candidate_id') and r['parameter_path'].startswith('cand_methods__estimator__')} == {'Ridge Regression', 'Decision Tree Regression'}
 
 
 @pytest.mark.parametrize('method', ['grid', 'random', 'tpe', 'skopt'])
@@ -77,21 +77,21 @@ def test_all_searches_cover_union_with_baselines_and_resume(method):
     for trial in complete['trials']:
         key = trial['params']['__method__']
         assert trial['model_id'] == key
-        assert ('data_models__estimator__alpha' in trial['params']) == (key == 'ridge')
-        assert ('data_models__estimator__max_depth' in trial['params']) == (key == 'tree')
+        assert ('cand_methods__estimator__alpha' in trial['params']) == (key == 'ridge')
+        assert ('cand_methods__estimator__max_depth' in trial['params']) == (key == 'tree')
     checkpoint = finish(p, trials=1)
     assert len(checkpoint['trials']) == 3
     resumed = finish(p, json.loads(json.dumps(checkpoint)))
     assert [t['params'] for t in resumed['trials']] == [t['params'] for t in complete['trials']]
-    selected = next(t for t in resumed['trials'] if t['model_id'] == 'tree' and t['params']['data_models__estimator__max_depth'] == 3)
+    selected = next(t for t in resumed['trials'] if t['model_id'] == 'tree' and t['params']['cand_methods__estimator__max_depth'] == 3)
     accepted = data.with_tuned_parameters(accepted_parameters(p, resumed, selected['id']),
         fingerprint=p.specification['fingerprint'], trial=selected['id'], metric=p.specification['metric'], score=0,
         candidate_id='tree')
-    actual = accepted.pipeline_for_training().named_steps.data_models.named_steps.estimator
+    actual = accepted.pipeline_for_training().named_steps.cand_methods.named_steps.estimator
     assert actual.max_depth == 3 and not hasattr(actual, 'tree_')
     assert len(accepted.model_candidates) == 2
     assert accepted.selected_model_candidate == 'tree'
-    assert accepted.pipeline_for_training('tree').named_steps.data_models.named_steps.estimator.max_depth == 3
+    assert accepted.pipeline_for_training('tree').named_steps.cand_methods.named_steps.estimator.max_depth == 3
     assert not prepare(accepted, method='grid').branches
     bad = copy.deepcopy(resumed)
     bad['trials'][0]['params']['__method__'] = 'unknown'

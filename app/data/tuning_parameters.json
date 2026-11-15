@@ -15704,7 +15704,7 @@
     }
   },
   "review_scope": {
-    "description": "Regression/classification methods with a recipe that can meet data_models front-table requirements without ShowAll; union across upstream and internal resampling contexts. Excludes superseded and benchmark-only methods. Data-dependent exclusions still apply.",
+    "description": "Regression/classification methods with a recipe that can meet cand_methods front-table requirements without ShowAll; union across upstream and internal resampling contexts. Excludes superseded and benchmark-only methods. Data-dependent exclusions still apply.",
     "methods": {
       "sklearn.ensemble.HistGradientBoostingRegressor": "sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingRegressor",
       "sklearn.ensemble.RandomForestRegressor": "sklearn.ensemble._forest.RandomForestRegressor",

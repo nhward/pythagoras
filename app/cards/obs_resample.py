@@ -390,9 +390,11 @@ def instance():
                     selected = input.Goal() or saved_goal
                 except SilentException:
                     selected = saved_goal
-            control = ui.input_radio_buttons("Goal", label="Predicting", choices=GOALS, selected=selected, inline=True,
+            control = ui.input_radio_buttons(
+                id="Goal", label="Predicting", choices=GOALS, selected=selected, inline=True,
                 guide=this, title="Prediction goal", position="top",
-                text="Choose the predictions to evaluate. Assigned roles determine the method: Stratifier preserves proportions or defines withheld strata; longitudinal Identifier/Sequence defines entities and future known-entity predictions. None passes incoming metadata through.")
+                text="Choose the predictions to evaluate. Assigned roles determine the method: Stratifier preserves proportions or defines withheld strata; longitudinal Identifier/Sequence defines entities and future known-entity predictions. None passes incoming metadata through."
+            )
             return control
 
         @output

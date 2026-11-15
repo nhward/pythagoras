@@ -49,6 +49,7 @@ class proxy_data:
     _cleaning_records: tuple[CleaningRecord, ...] = field(default_factory=tuple)
     _pipeline: Pipeline | None = None
     _tuning_spec: dict | None = None
+    _tuning_results: dict | None = None
     _model_candidates: tuple = ()
     _selected_candidate: str | None = None
     _clean_df: pd.DataFrame | None = None
@@ -239,8 +240,10 @@ class proxy_data:
         """Predictor-role columns excluding all declared outcome components."""
         excluded = set(self.modelling_context.outcome_columns)
         excluded.update(self.role_map.columns_with_role(Role.TARGET))
-        return [c for c in self.role_map.columns_with_role(Role.PREDICTOR)
-                if c in self.frame and c not in excluded]
+        predictors = self.role_map.columns_with_role(Role.PREDICTOR)
+        # Role queries return a set. Preserve the dataframe schema order so
+        # model/selection parameters and search identities survive restoration.
+        return [c for c in self.frame.columns if c in predictors and c not in excluded]
 
     def with_modelling_context(self, context: ModellingContext):
         if not isinstance(context, ModellingContext):
@@ -393,15 +396,56 @@ class proxy_data:
         if specification.get("fingerprint") != fingerprint(discover_source(self)):
             raise ValueError("The tuning specification does not match this pipeline")
         record = ProcessingRecord(
-            stage="Learning", card="tuning_parameters", operation="Define parameter tuning",
+            stage="Learning", card="cand_parameters", operation="Define parameter tuning",
             attempted=True, parameters={"grid": specification["grid"],
                                         "combinations": specification["combinations"]},
             input_shape=self.shape, output_shape=self.shape,
             method="Independent parameter search",
         )
-        records = tuple(r for r in self.processing_records if r.card != "tuning_parameters")
+        records = tuple(r for r in self.processing_records if r.card != "cand_parameters")
         return replace(self, _tuning_spec=deepcopy(specification),
                        _processing_records=(*records, record))
+
+    def _tuning_evidence_signature(self):
+        import joblib
+        shared = [(name, step) for name, step in (() if self._pipeline is None else self._pipeline.steps)
+                  if name != 'cand_methods']
+        return joblib.hash((self.clean_frame, self.role_map.to_primitive(), self.modelling_context,
+                            self.evaluation_plan, shared))
+
+    @property
+    def tuning_results(self):
+        """Defensive completed-trial evidence, valid only for matching upstream data."""
+        from copy import deepcopy
+        if self._tuning_results is None or self._tuning_results['signature'] != self._tuning_evidence_signature():
+            return None
+        return deepcopy(self._tuning_results['results'])
+
+    def with_tuning_results(self, results):
+        from copy import deepcopy
+        from dataclasses import replace
+        return replace(self, _tuning_results={'signature': self._tuning_evidence_signature(),
+                                             'results': deepcopy(results)})
+
+    def with_selected_model(self, trial_id, *, card='model_candidates', operation='Accept reviewed model'):
+        """Accept a reviewed, unfitted complete pipeline from current tuning evidence."""
+        from dataclasses import replace
+        results = self.tuning_results
+        if results is None:
+            raise ValueError('Tuning evidence is unavailable or stale.')
+        if results.get('read_only'):
+            raise ValueError('Historical review is read-only; restore matching native search settings before accepting a model.')
+        trial = next((t for t in results['state']['trials'] if t['id'] == trial_id), None)
+        if trial is None or str(trial_id) not in results['pipelines']:
+            raise ValueError('Select a completed evaluated model.')
+        record = ProcessingRecord(stage='Learning', card=card, operation=operation,
+            attempted=True, parameters={'trial': trial_id, 'search_fingerprint': results['state']['specification']['fingerprint']},
+            method=trial.get('method', trial['model_id']), input_shape=self.shape, output_shape=self.shape)
+        result = replace(self, _pipeline=clone(results['pipelines'][str(trial_id)]), _tuning_spec=None,
+                       _selected_candidate=trial['params'].get('__method__') or next(
+                           (c['id'] for c in self._model_candidates if c['id'] == trial['model_id']), self._selected_candidate),
+                       _processing_records=(*[r for r in self.processing_records if r.card != card], record))
+        return result.with_tuning_results(results)
 
     def with_tuned_parameters(self, parameters, *, fingerprint, trial, metric, score, candidate_id=None):
         """Commit selected settings, without fitting or replacing display data."""
@@ -409,15 +453,17 @@ class proxy_data:
         if not self.has_pipeline and not self._model_candidates:
             raise ValueError("Commit a model before accepting tuned parameters")
         pipeline = self.pipeline_for_training(candidate_id).set_params(**parameters)
-        record = ProcessingRecord(stage="Learning", card="pipeline_tune",
+        record = ProcessingRecord(stage="Learning", card="cand_train",
             operation="Accept tuned pipeline parameters", attempted=True,
             parameters={"parameters": parameters, "search_fingerprint": fingerprint,
                         "trial": trial, "metric": metric, "cv_score": score, "candidate_id": candidate_id},
             input_shape=self.shape, output_shape=self.shape, method="Fixed selected configuration")
-        records = tuple(r for r in self.processing_records if r.card != "pipeline_tune")
-        return replace(self, _pipeline=pipeline, _tuning_spec=None,
+        records = tuple(r for r in self.processing_records if r.card != "cand_train")
+        results = self.tuning_results
+        result = replace(self, _pipeline=pipeline, _tuning_spec=None,
                        _selected_candidate=candidate_id or self._selected_candidate,
                        _processing_records=(*records, record))
+        return result.with_tuning_results(results) if results is not None else result
 
     def with_estimator(self, estimator, *, label, recipe_id):
         """Commit an unfitted terminal model while preserving data and preprocessing."""
@@ -426,19 +472,19 @@ class proxy_data:
         if not isinstance(estimator, BaseEstimator) or not callable(getattr(estimator, "predict", None)):
             raise TypeError("The committed method must implement 'fit' and 'predict'")
         steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else [])
-                 if name != "data_models"]
+                 if name != "cand_methods"]
         model = clone(estimator)
         for _, step in steps:
             if getattr(step, 'selection_step', False):
                 from model_commit import with_selection_schema
                 model = with_selection_schema(model, step.predictors)
-        steps.append(("data_models", model))
-        record = ProcessingRecord(stage="Learning", card="data_models",
+        steps.append(("cand_methods", model))
+        record = ProcessingRecord(stage="Learning", card="cand_methods",
             operation=f"Committed method: {label}", attempted=True,
             parameters={"recipe_id": recipe_id}, input_shape=self.shape,
             output_shape=self.shape, method=label)
-        records = tuple(record for record in self.processing_records if record.card != "data_models")
-        return replace(self, _pipeline=Pipeline(steps), _model_candidates=(), _selected_candidate=None,
+        records = tuple(record for record in self.processing_records if record.card != "cand_methods")
+        return replace(self, _pipeline=Pipeline(steps), _tuning_results=None, _model_candidates=(), _selected_candidate=None,
                        _processing_records=(*records, record))
 
     @property
@@ -467,16 +513,16 @@ class proxy_data:
             if not c['id'] or not c['label']:
                 raise ValueError('Each candidate needs a recipe ID and method label.')
             prepared = self.with_estimator(c['estimator'], label=c['label'], recipe_id=c['id'])
-            validated.append({**c, 'estimator': prepared.pipeline.named_steps['data_models']})
+            validated.append({**c, 'estimator': prepared.pipeline.named_steps['cand_methods']})
         if len(validated) == 1:
             result = self.with_estimator(validated[0]['estimator'], label=validated[0]['label'], recipe_id=validated[0]['id'])
         else:
-            steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else []) if name != 'data_models']
-            record = ProcessingRecord(stage='Learning', card='data_models', operation='Committed candidate methods',
+            steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else []) if name != 'cand_methods']
+            record = ProcessingRecord(stage='Learning', card='cand_methods', operation='Choose candidate methods',
                 attempted=True, parameters={'recipe_ids': [c['id'] for c in validated]},
                 input_shape=self.shape, output_shape=self.shape, method=', '.join(c['label'] for c in validated))
             result = replace(self, _pipeline=Pipeline(steps) if steps else None,
-                _processing_records=(*(r for r in self.processing_records if r.card != 'data_models'), record))
+                _processing_records=(*(r for r in self.processing_records if r.card != 'cand_methods'), record))
         return replace(result, _model_candidates=tuple(validated), _selected_candidate=None, _tuning_spec=None)
 
     def with_pipeline_step(
@@ -582,10 +628,10 @@ class proxy_data:
             suffix += 1
 
         steps = [] if self._pipeline is None else list(self._pipeline.steps)
-        position = next((i for i, (name, _) in enumerate(steps) if name == "data_models"), len(steps))
+        position = next((i for i, (name, _) in enumerate(steps) if name == "cand_methods"), len(steps))
         if getattr(transformer, 'selection_step', False):
             from model_commit import with_selection_schema
-            steps = [(n, with_selection_schema(s, transformer.predictors) if n == 'data_models' else s)
+            steps = [(n, with_selection_schema(s, transformer.predictors) if n == 'cand_methods' else s)
                      for n, s in steps]
         steps.insert(position, (step_name, clone(transformer)))
         variables = getattr(transformer, "columns", None)
@@ -622,6 +668,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -657,6 +704,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -722,6 +770,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=(*self.cleaning_records, record),
@@ -752,6 +801,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -828,6 +878,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -891,6 +942,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -911,6 +963,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -936,6 +989,7 @@ class proxy_data:
             _evaluation_plan=self.evaluation_plan,
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
+            _tuning_results=self._tuning_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -1123,6 +1177,10 @@ class proxy_data:
         """
         if not isinstance(other, proxy_data):
             return False
+        if check_pipeline:
+            import joblib
+            if joblib.hash(self._tuning_results) != joblib.hash(other._tuning_results):
+                return False
         if self.modelling_context != other.modelling_context:
             return False
         if check_evaluation_plan and self.evaluation_plan != other.evaluation_plan:

@@ -74,7 +74,7 @@ def test_multiple_weighting_roles_validate_and_roundtrip():
 
 
 def test_consumers_and_saved_transformers_use_the_product():
-    from cards import var_correlation, var_transform, obs_clusters
+    from cards import obs_clusters, var_correlation, var_transform
     from ClusterMembershipTransformer import ClusterMembershipTransformer
     from sklearn.base import clone
     frame = pd.DataFrame({"x": np.arange(20.) ** 2, "y": np.sin(np.arange(20.)),
@@ -119,10 +119,11 @@ def test_optional_weighting_preserves_valid_product():
 
 @pytest.mark.parametrize('name', [
     'miss_informative', 'miss_type', 'var_correlation', 'var_transform',
-    'data_coverage', 'obs_clusters', 'obs_k_clusters', 'obs_cluster_profile', 'targ_balance',
+    'data_coverage', 'obs_clusters', 'obs_k_clusters', 'obs_cluster_profile', 'obs_balance',
 ])
 def test_weight_consumers_expose_setting_and_fallback_notice(name):
     from importlib import import_module
+
     from shiny import reactive
     card = import_module(f'cards.{name}').instance()
     with reactive.isolate():

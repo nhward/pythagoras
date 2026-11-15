@@ -336,6 +336,8 @@ def _figure(result, method, fullscreen=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.register_configuration_input('IncludeMembership')
+    this.exclude_configuration_input('VariableName')
     this.export_inputs('IncludeMembership')
     this.long_name = "Cluster membership"
     this.description = "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers."

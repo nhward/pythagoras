@@ -1,5 +1,37 @@
 {
   "cards": {
+    "cand_methods": {
+      "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
+      "long_name": "Model method candidates",
+      "module": "cand_methods",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "ea88693bda0b83e61052060803dde4cc0ce516bd70e2688c6080caf88e304736"
+    },
+    "cand_models": {
+      "description": "Choose weightings that yield the desired optimal model(s).",
+      "long_name": "Candidate models",
+      "module": "cand_models",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "389cc13b4cf587dfe5aab651491fbc2a9e3835be322fada3c4207caf3bdac8eb"
+    },
+    "cand_parameters": {
+      "description": "Mark candidate parameters as tuning hyper-parameters.",
+      "long_name": "Tuning parameters",
+      "module": "cand_parameters",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "2fd3dfbf9a2a731cdd15023bccb8042c0c436d70db15ddb7ee80e8d0b76f8a89"
+    },
+    "cand_train": {
+      "description": "Train pipelines across candidate methods and hyper-parameters.",
+      "long_name": "Pipeline training",
+      "module": "cand_train",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "cbd07230f0e886008b71bf848d3b2d4e2399af60b7496d0230310bb201037ab8"
+    },
     "data_coverage": {
       "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",
       "long_name": "Data coverage",
@@ -24,14 +56,6 @@
       "pipeline_compatible": false,
       "source_hash": "9cf6df895107c7e29a988204cdda79c1e168f08e788cb3aab568826a2b600f5a"
     },
-    "data_models": {
-      "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
-      "long_name": "Model method candidates",
-      "module": "data_models",
-      "mutable": true,
-      "pipeline_compatible": true,
-      "source_hash": "81a789cf9efccdd39ddc6ab47745b12975cff45e5bb6e2280ca71d526cf412ef"
-    },
     "data_parallel": {
       "description": "Compare observations across several variables as a series of lines.",
       "long_name": "Parallel coordinates",
@@ -46,7 +70,7 @@
       "module": "data_provenance",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "f0b98a68ba111bc683f24a11c3b7b8cc399f03465d97307174517c9d070fc685"
+      "source_hash": "d878c13dcd9b301f1eab43796b60ea36ccfd9c52ef72d2b85036a19c52ba740f"
     },
     "data_strata": {
       "description": "Compare numeric distributions across strata with violin or box plots and ANOVA.",
@@ -78,7 +102,7 @@
       "module": "miss_impute",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "88ec041606c75c3ab377b1c4f4911377c3abab76dcfe886d769ba5dc7eacbae2"
+      "source_hash": "f89764765488276a126b3159fe29f36cddba8c874abd02420a3264adec37bde3"
     },
     "miss_informative": {
       "description": "Assess the predictive information of each predictor's missing values.",
@@ -136,6 +160,22 @@
       "pipeline_compatible": true,
       "source_hash": "aba874511b6cde5ff10a280d6b81a20c037bdea9c291245c860a10dfc0528ee9"
     },
+    "model_candidates": {
+      "description": "Compare tuned configurations and model methods using performance, error risk and observed prediction speed.",
+      "long_name": "Model candidates",
+      "module": "model_candidates",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "ce4b47db1e462180aa53cd26fb5daaf605dc1c721797e9ec56fe7f22a752400e"
+    },
+    "obs_balance": {
+      "description": "Assess the target's imbalance and adjust it through reweignting or resampling.",
+      "long_name": "Target balance",
+      "module": "obs_balance",
+      "mutable": true,
+      "pipeline_compatible": true,
+      "source_hash": "8fbbbdc923128de04e493d97e16697078b0a60538e2fc1052b03afd20a6f7097"
+    },
     "obs_cluster_profile": {
       "description": "Explain cluster memberships using an interpretable tree and held-out fidelity scores.",
       "long_name": "Cluster profiling",
@@ -150,7 +190,7 @@
       "module": "obs_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "e73b78caddd9060d48bd849fe748bf37632aa52600efa556abbbaa2dbc0efb96"
+      "source_hash": "b10e0c4497364feafd31d8d29f09f8fd702904968f9c89206838044467a8df0c"
     },
     "obs_dependence": {
       "description": "Are observations ordered in time or repeated within entities, and is serial dependence detectable?",
@@ -174,7 +214,7 @@
       "module": "obs_k_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "48db65b4c4501c54b2faebd904062cfd2acc51d831e1df2967dcc6f03657bbcc"
+      "source_hash": "bc9487ac155265ddc8795e4a9eb4c4d56126d0c530a180173357cf0b000ff204"
     },
     "obs_outliers": {
       "description": "Compare complementary outlier scores to investigate unusual observations and disagreements between methods.",
@@ -182,7 +222,7 @@
       "module": "obs_outliers",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "f168767df36d50be423a5edc99ca37d8e1c4b7710b46d73ddc7aebf1d224ef8d"
+      "source_hash": "ac414d343d06874daaa61d43a6ec8dd8e61e435abee00ee7e72d0a6143952f9b"
     },
     "obs_resample": {
       "description": "Choose a prediction goal; assigned roles determine evaluation splits.",
@@ -190,7 +230,7 @@
       "module": "obs_resample",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "82997b72508c1d76980435c6497478c9b7ee070b46e2f1e6e57c5d22cfce4520"
+      "source_hash": "909521e410012b3fefd7085e3225c21a9e8a65ea9e3ba204cc6a8ac2c63540ed"
     },
     "obs_weighting": {
       "description": "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights.",
@@ -198,15 +238,7 @@
       "module": "obs_weighting",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "c364dc16e19488a381c32c546c983043f5c9254ad4f5510c23c0449ee65b6502"
-    },
-    "pipeline_tune": {
-      "description": "Optimize committed pipeline and model parameters using fixed evaluation splits.",
-      "long_name": "Pipeline tuning",
-      "module": "pipeline_tune",
-      "mutable": true,
-      "pipeline_compatible": true,
-      "source_hash": "8b389cdc454d3fe43d2c5755d559dacdb4e556e74bcb38b061f35a865f2af4ca"
+      "source_hash": "a57c0568f9c4b0b5b28ee48bb10453d69a8865a426cf7da585581625404d8e71"
     },
     "sys_configuration": {
       "description": "List the host-system configuration.",
@@ -222,7 +254,7 @@
       "module": "system_log",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "421aeb61ce75216ef0087fb2e3e1bb6c2c97b9caa2d2db73d6b0655ce4007dad"
+      "source_hash": "becf33cb7b90e4bb944badb15e94dbe7e4b314068892b1af892caf1a10d594a9"
     },
     "table_report": {
       "description": "Interactively report on the data's structure.",
@@ -231,22 +263,6 @@
       "mutable": false,
       "pipeline_compatible": true,
       "source_hash": "e6f92ff2fe9057cdf509bee1dc8e833b698bb63155094b8313765066ae09af02"
-    },
-    "targ_balance": {
-      "description": "Assess the target's imbalance and adjust it through reweignting or resampling.",
-      "long_name": "Target balance",
-      "module": "targ_balance",
-      "mutable": true,
-      "pipeline_compatible": true,
-      "source_hash": "fb259f093643d96c3a643d1f0e51c2c27e7a1eb6b1988bb76088e1091b0dd522"
-    },
-    "tuning_parameters": {
-      "description": "Define and commit search values for published pipeline parameters.",
-      "long_name": "Tuning parameters",
-      "module": "tuning_parameters",
-      "mutable": true,
-      "pipeline_compatible": true,
-      "source_hash": "b49be46583395db577e7f629403c833c5b50b21eb751245434995c217046c0d7"
     },
     "var_cardinality": {
       "description": "Profile the number of distinct values and highlight variables to review.",
@@ -302,7 +318,7 @@
       "module": "var_nominal",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "184a7e4ae9ffd5f57ca3883b4eb728f44c110e986da1e395e559faa7bcb10422"
+      "source_hash": "c6274077703bb79e536871761812debf94181ecfa1bc6a7930e45142b1826a34"
     },
     "var_pairs": {
       "description": "Explore pairs of variables using charts suited to their semantic types.",
@@ -318,7 +334,7 @@
       "module": "var_roles",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "345bc0a78ab6897397dd50dd34d6c75d0c30d2f956311865034d6414eea8cc60"
+      "source_hash": "0212315d9d6e7082fb8b1619b4aa8ff932ba1cf490f6ea94b12fcd3a53f0c948"
     },
     "var_select": {
       "description": "Learn a subset of variables via shadow selection.",
@@ -350,7 +366,7 @@
       "module": "var_transform",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "4b16653d0bb425ef1e07c4160d2e338f961c94adb6ebc36632f8c35abdf644a4"
+      "source_hash": "acbfcd5eb77937a2cad8ecf48ce92f0cbe7617aaa7a0600f7218a9a58ba7af8b"
     }
   },
   "schema_version": 1

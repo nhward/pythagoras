@@ -55,3 +55,18 @@ def test_method_specific_parameters_can_be_configured_without_another_k():
     {'methods': ('Partition', 'Mixture'), 'output_columns': (('Partition', 'c'), ('Mixture', 'c'))}])
 def test_invalid_group_or_output_schema_rejected(kwargs):
     with pytest.raises(ValueError): ClusterMembershipsTransformer(('x',), **kwargs).fit(frame())
+
+
+def test_nested_density_configuration_and_discovery_use_composite_attributes():
+    from sklearn.pipeline import Pipeline
+    from tuning import discover
+
+    transformer = ClusterMembershipsTransformer(('x', 'y'), methods=('Partition', 'Density'),
+                                                density_min_points=7, density_border=False)
+    assert transformer.get_params()['density__min_points'] == 7
+    assert transformer.get_params()['density__border'] is False
+    rows = {r['path']: r for r in discover(Pipeline([('clusters', transformer)]))}
+    row = rows['clusters__density__min_points']
+    assert row['condition']['selector'] == 'clusters__methods'
+    assert row['condition']['current'] == ['Partition', 'Density']
+    assert row['legacy_path'] == 'clusters__density_min_points'

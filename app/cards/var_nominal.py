@@ -188,6 +188,9 @@ def bar_chart(series, expected=()):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.register_configuration_state_field('reconciliation')
+    this.register_configuration_input_pattern(
+        r'Editors_[0-9a-f]{16}_(ExpectedLevels|ExpectedCount|ManualSources|Destination)')
     this.long_name = "Nominal variables"
     this.description = "Review and commit nominal label corrections and rare-level pooling."
     this.front = lambda: ui.div(

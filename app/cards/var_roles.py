@@ -253,14 +253,14 @@ def instance():
     this.footer = lambda: ui.TagList(
         ui.input_action_button(
             id = "Commit", 
-            label = 'Commit Assignments', 
+            label = 'Commit', 
             icon = icon("gavel", title = "Commit the role assignments", a11y = "sem"),
             disabled = True, 
-            width = "250px", 
+            width = "220px", 
             class_ = "btn rounded-pill btn-sm d-block mx-auto btn-primary",
             style = "border: 0px; box-shadow: none;",
             guide = this, 
-            title = "Commit button",
+            title = "Commit roles button",
             text = "This button commits the role assignments. Variables assigned to None are removed from the data passed downstream, but remain available here for later reassignment. Restored or previously committed assignments are reapplied automatically when incoming data changes and they remain valid. Manual edits still require this button. The button bounces momentarily when it is ready to be clicked.",
             position = "top"
         ),

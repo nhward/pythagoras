@@ -1,0 +1,44 @@
+---
+title: "Candidate models specification"
+---
+
+`cand_models` is a mutable, pipeline-compatible continuous-regression card after
+`cand_train`. It consumes all completed compatible tuning evidence, not a
+score shortlist. A dynamic `navset_bar` contains Overall and method tabs; one
+persistent FigureWidget outside the panels renders a three-axis Scatter3d.
+Navigation never changes the Overall export. Camera `uirevision` is stable.
+
+The double-handle footer slider maps a,b in [0,100] to weights a,b−a,100−b.
+Initial weights are 100,0,0. Client callbacks update labels while dragging and
+publish `WeightCommit` only on release. The normal slider value is persisted.
+The derived commit input and navigation/inspection controls are excluded from
+configuration. Qualitative interpretability is displayed. All candidate methods are implicitly
+eligible; the retired EligibleMethods input is ignored and excluded from saved state.
+
+`candidate_selection` computes three-dimensional nondomination and log-space WPM.
+RMSE/MAE losses and P95 are minimized; throughput is maximized. R² uses 1−R².
+The visible positive ErrorFloor guards zero losses. Missing active criteria exclude
+trials, inactive missing criteria do not. Exact utility ties prefer nondominated
+trials, then primary score and stable ID. Per-method decisions use their own full
+eligible evidence. RMSE/MAE is displayed diagnostically and has no decision weight.
+
+Export attaches Overall and per-method trial IDs in `tuning_results.review`, then
+uses `with_selected_model(..., card='cand_models')` to select the full unfitted
+Overall pipeline. No ensemble or final fitting occurs. The proxy helper preserves
+its existing default record identity for `model_candidates`. Historical read-only
+results cannot select pipelines; changed-source readiness gates export. Empty or
+ineligible decisions pass the incoming pipeline through. Winner IDs are derived,
+not trusted as replay instructions. Raw weights/floor inputs persist.
+
+The flip side reuses the existing comparison semantics, selected-row inspection,
+parameter labels, auto-opening details and standard 220px Download button.
+Tests cover weighting boundaries, unit conversions, zeros, missing evidence,
+R² transformation, Pareto ties, all-trial eligibility, full pipeline selection,
+WebKit chart/tab/weight interactions and retired-filter restoration and widget reuse.
+
+The 3D scene and axis planes use the standard #bbd6f8 background with white
+gridlines and transparent paper. Frontier circles use size 6 and opacity 1;
+dominated circles use size 4 and opacity .65, both with dark outlines. The winner
+is a black size-11 diamond with a white outline. These styles encode status, not
+viewing distance or complexity. Quarto help defines dominance and tab-local
+frontiers and separates frontier membership from weighting and uncertainty.

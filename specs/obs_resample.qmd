@@ -6,7 +6,7 @@ The `obs_resample` card defines an explicit, inspectable and reproducible evalua
 
 The card stores split metadata in `proxy_data`, alongside the learning pipeline. It does not transform observations or add a pipeline step. Downstream training and tuning consume the same plan so that model comparisons use the same observations.
 
-This is **evaluation resampling**: assigning observations to training and validation subsets. It is distinct from `targ_balance`, which changes weights or resamples observations **within a training subset**.
+This is **evaluation resampling**: assigning observations to training and validation subsets. It is distinct from `obs_balance`, which changes weights or resamples observations **within a training subset**.
 
 This document incorporates the review of the original proposal. Requirements below describe intended behavior, including additions to the existing `proxy_data` contract; they are not claims of implemented functionality.
 

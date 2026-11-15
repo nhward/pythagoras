@@ -46,7 +46,7 @@ def source():
 
 
 def problem(**kwargs):
-    return prepare(source(), model_values={'data_models__estimator__alpha': [.01, .1, 10.]},
+    return prepare(source(), model_values={'cand_methods__estimator__alpha': [.01, .1, 10.]},
                    metric='neg_root_mean_squared_error', **kwargs)
 
 
@@ -54,13 +54,22 @@ def finish(p, checkpoint=None, trials=20, publish=lambda s: None, pause=lambda: 
     return run(p, checkpoint or fresh(p), trials=trials, seconds=0, publish=publish, pause=pause)
 
 
+def evaluation_history(state):
+    """Scores/predictions reproduce; wall-clock prediction timing does not."""
+    trials = copy.deepcopy(state['trials'])
+    for trial in trials:
+        for fold in trial['folds']:
+            fold.get('evidence', {}).pop('prediction_seconds', None)
+    return [(t['params'], t['folds']) for t in trials]
+
+
 def test_grid_baseline_exhaustion_holdout_and_commit():
     data = source()
-    p = prepare(data, model_values={'data_models__estimator__alpha': [.01, 10.]}, method='grid')
+    p = prepare(data, model_values={'cand_methods__estimator__alpha': [.01, 10.]}, method='grid')
     holdout = set(data.evaluation_plan.holdout)
     assert holdout == set(range(20, 24))
     assert all(not ((set(a) | set(b)) & holdout) for a, b in p.splits)
-    before = data.pipeline.get_params()['data_models__estimator__alpha']
+    before = data.pipeline.get_params()['cand_methods__estimator__alpha']
     result = finish(p)
     assert result['status'] == 'exhausted'
     assert len(result['trials']) == 3
@@ -69,12 +78,12 @@ def test_grid_baseline_exhaustion_holdout_and_commit():
     parameters = accepted_parameters(p, result, best['id'])
     tuned = data.with_tuned_parameters(parameters, fingerprint=p.specification['fingerprint'],
         trial=best['id'], metric=p.specification['metric'], score=mean_score(best, p.specification['metric']))
-    assert data.pipeline.get_params()['data_models__estimator__alpha'] == before
-    assert tuned.pipeline.get_params()['data_models__estimator__alpha'] == best['params']['data_models__estimator__alpha']
-    assert not hasattr(tuned.pipeline.named_steps.data_models.named_steps.estimator, 'coef_')
+    assert data.pipeline.get_params()['cand_methods__estimator__alpha'] == before
+    assert tuned.pipeline.get_params()['cand_methods__estimator__alpha'] == best['params']['cand_methods__estimator__alpha']
+    assert not hasattr(tuned.pipeline.named_steps.cand_methods.named_steps.estimator, 'coef_')
     pd.testing.assert_frame_equal(data.clean_frame, tuned.clean_frame)
     assert tuned.evaluation_plan.holdout_used is False
-    assert tuned.processing_records[-1].card == 'pipeline_tune'
+    assert tuned.processing_records[-1].card == 'cand_train'
 
 
 def test_fold_pause_json_resume_matches_uninterrupted():
@@ -88,7 +97,7 @@ def test_fold_pause_json_resume_matches_uninterrupted():
     with pytest.raises(ValueError, match='completed candidate'): accepted_parameters(p, paused, 0)
     resumed = finish(p, json.loads(json.dumps(paused)))
     complete = finish(p)
-    assert [(t['params'], t['folds']) for t in resumed['trials']] == [(t['params'], t['folds']) for t in complete['trials']]
+    assert evaluation_history(resumed) == evaluation_history(complete)
     assert len({json.dumps(t['params'], sort_keys=True) for t in resumed['trials']}) == 4
 
 
@@ -104,7 +113,7 @@ def test_fingerprint_rejects_changed_values_space_splits_and_incomplete_scores()
 
 
 def test_failures_secondary_metrics_and_budget_extension():
-    p = prepare(source(), model_values={'data_models__estimator__alpha': [-1., .1]},
+    p = prepare(source(), model_values={'cand_methods__estimator__alpha': [-1., .1]},
         method='grid', secondary=['neg_mean_absolute_error'])
     initial = finish(p, trials=1)
     assert initial['status'] == 'budget reached'
@@ -121,7 +130,7 @@ def test_preprocessing_and_model_parameters_form_one_space():
     spec = {'fingerprint': fingerprint(discover(data.pipeline)),
             'grid': {'scale__with_mean': [False, True]}, 'combinations': 2}
     data = data.with_tuning_spec(spec)
-    p = prepare(data, model_values={'data_models__estimator__alpha': [.1, 10.]}, method='grid')
+    p = prepare(data, model_values={'cand_methods__estimator__alpha': [.1, 10.]}, method='grid')
     assert p.specification['combinations'] == 4
     state = finish(p)
     assert len(state['trials']) == 5
@@ -165,7 +174,7 @@ def test_fold_fitting_uses_raw_training_rows_and_preserves_validation_rows():
     assert all(t['state'] == 'complete' for t in result['trials'])
     assert FoldAudit.fitted_rows == [(tuple(a), float(data.clean_frame.x.iloc[a].mean())) for a, _ in p.splits]
     assert FoldAudit.validation_rows == [tuple(b) for _, b in p.splits
-        for _ in [p.specification['metric'], *p.specification['secondary']]]
+        for _ in [p.specification['metric'], *p.specification['secondary'], 'prediction evidence']]
 
 
 @pytest.mark.parametrize('alter', [lambda s: s.pop('rng'), lambda s: s.update(trials=[{}]),
@@ -190,7 +199,7 @@ class SlowRidge(Ridge):
 
 def test_isolated_worker_can_interrupt_fit_and_resume_checkpoint(monkeypatch):
     data = source()
-    model = data.pipeline.named_steps.data_models
+    model = data.pipeline.named_steps.cand_methods
     model.set_params(estimator=SlowRidge())
     data = data.with_estimator(model, label='Slow Ridge', recipe_id='slow-ridge')
     p = prepare(data, method='grid')
@@ -242,7 +251,7 @@ def test_all_metrics_survive_json_resume():
     result = finish(p)
     assert set(p.specification['secondary']) == set(METRICS['regression']) - {p.specification['metric']}
     fold = result['trials'][0]['folds'][0]
-    assert set(fold) == {p.specification['metric'], *p.specification['secondary'], 'metric_errors'}
+    assert set(fold) == {p.specification['metric'], *p.specification['secondary'], 'metric_errors', 'evidence'}
     validate_checkpoint(p, json.loads(json.dumps(result)))
     bad = copy.deepcopy(result); bad['version'] = 1
     with pytest.raises(ValueError, match='does not match'): validate_checkpoint(p, bad)
@@ -263,7 +272,7 @@ def test_secondary_failure_does_not_fail_trial(monkeypatch):
     assert mean_score(result['trials'][0], 'r2') is None
     assert 'metric unavailable' in result['trials'][0]['folds'][0]['metric_errors']['r2']
     validate_checkpoint(p, result)
-    from cards.pipeline_tune import trial_frame
+    from cards.cand_train import trial_frame
     table = trial_frame(result)
     assert 'Complexity' not in table.columns
     assert 'r2:' in table['Metric issues'].iloc[0]
@@ -271,7 +280,7 @@ def test_secondary_failure_does_not_fail_trial(monkeypatch):
 
 def test_exhaustive_unlimited_and_baseline_overlap_coverage():
     from pipeline_search import grid_coverage
-    p = prepare(source(), model_values={'data_models__estimator__alpha': [1., 10.]}, method='grid')
+    p = prepare(source(), model_values={'cand_methods__estimator__alpha': [1., 10.]}, method='grid')
     partial = run(p, fresh(p), trials=1, publish=lambda s: None, pause=lambda: False)
     # Baseline already covers one grid configuration; the cap must not hide exhaustion.
     assert partial['status'] == 'exhausted'
@@ -298,16 +307,10 @@ def gp_problem():
     from sklearn.gaussian_process import GaussianProcessRegressor
     from sklearn.gaussian_process.kernels import RBF
     data = source()
-    model = data.pipeline.named_steps.data_models
+    model = data.pipeline.named_steps.cand_methods
     model.set_params(estimator=GaussianProcessRegressor(kernel=RBF(.5), alpha=.1, optimizer=None))
     data = data.with_estimator(model, label='GP', recipe_id='test-gp')
-    return prepare(data, model_values={'data_models__estimator__alpha': [.2,.3,.4]}, method='grid')
-
-
-
-
-
-
+    return prepare(data, model_values={'cand_methods__estimator__alpha': [.2,.3,.4]}, method='grid')
 
 
 def source_without_plan(classification=False):
@@ -317,7 +320,7 @@ def source_without_plan(classification=False):
     if classification:
         frame['y'] = pd.Categorical(np.where(np.arange(len(frame)) % 2, 'yes', 'no'))
     raw = proxy_data(frame, _roles=RoleMap.from_primitive({'predictor':['x'], 'target':['y']}))
-    model = data.pipeline.named_steps.data_models
+    model = data.pipeline.named_steps.cand_methods
     if classification:
         model.set_params(estimator=LogisticRegression())
     return raw.with_estimator(model, label='Test', recipe_id='test-implicit')
@@ -326,10 +329,10 @@ def source_without_plan(classification=False):
 @pytest.mark.parametrize('method', ['random','grid','tpe','skopt'])
 def test_all_search_methods_generate_reproducible_cv_when_no_plan(method):
     data = source_without_plan()
-    p = prepare(data, method=method, model_values={'data_models__estimator__alpha':[.01,10.]})
+    p = prepare(data, method=method, model_values={'cand_methods__estimator__alpha':[.01,10.]})
     assert p.specification['evaluation']['origin'] == 'implicit'
     assert len(p.splits) == 5
-    same = prepare(data, method=method, model_values={'data_models__estimator__alpha':[.01,10.]})
+    same = prepare(data, method=method, model_values={'cand_methods__estimator__alpha':[.01,10.]})
     assert p.specification['fingerprint'] == same.specification['fingerprint']
     for (train, valid), (train2, valid2) in zip(p.splits,same.splits):
         np.testing.assert_array_equal(train,train2)
@@ -338,7 +341,7 @@ def test_all_search_methods_generate_reproducible_cv_when_no_plan(method):
     state = finish(p, trials=1)
     resumed = finish(p,json.loads(json.dumps(state)))
     complete = finish(p)
-    assert [(t['params'],t['folds']) for t in resumed['trials']] == [(t['params'],t['folds']) for t in complete['trials']]
+    assert evaluation_history(resumed) == evaluation_history(complete)
     assert all(t['state']=='complete' for t in complete['trials'])
     assert data.evaluation_plan is None
 
@@ -360,7 +363,7 @@ def test_implicit_cv_reduces_small_fold_counts_and_rejects_ambiguous_roles():
     from dataclasses import replace
     data = source_without_plan()
     small = proxy_data(data.clean_frame.iloc[:3].copy(), _roles=data.role_map)
-    small = small.with_estimator(data.pipeline.named_steps.data_models, label='Ridge', recipe_id='test')
+    small = small.with_estimator(data.pipeline.named_steps.cand_methods, label='Ridge', recipe_id='test')
     assert len(prepare(small).splits) == 3
     for role in ('partition','sequence','geometry','stratifier'):
         raw = source_without_plan()
@@ -400,13 +403,13 @@ def test_skopt_uses_exact_upstream_memberships_and_real_finite_history(monkeypat
 def test_skopt_fits_actual_surrogate_after_initial_observations():
     from pipeline_search import skopt_proposal
     p = prepare(source_without_plan(), method='skopt',
-                model_values={'data_models__estimator__alpha':[float(i) for i in range(1,13)]})
+                model_values={'cand_methods__estimator__alpha':[float(i) for i in range(1,13)]})
     state = fresh(p)
     # Exercise the fitted GP acquisition path, beyond skopt's 10 initial points.
     for i in range(10):
-        state['trials'].append({'params':{'data_models__estimator__alpha':float(i+1)},
+        state['trials'].append({'params':{'cand_methods__estimator__alpha':float(i+1)},
             'state':'complete','folds':[{p.specification['metric']:-float(i+1)}]})
-    assert skopt_proposal(p,state)['data_models__estimator__alpha'] in p.specification['grid']['data_models__estimator__alpha']
+    assert skopt_proposal(p,state)['cand_methods__estimator__alpha'] in p.specification['grid']['cand_methods__estimator__alpha']
 
 
 @pytest.mark.parametrize('method', ['random','grid','tpe','skopt'])
@@ -422,8 +425,8 @@ def test_zero_candidate_budget_means_unlimited_for_every_method(method):
 
 def test_gp_search_publishes_chart_only_at_trial_completion(monkeypatch):
     import pipeline_search
-    from cards.pipeline_tune import chart_snapshot
-    # p = gp_problem()
+    from cards.cand_train import chart_snapshot
+    p = gp_problem()
     monkeypatch.setattr(pipeline_search,'get_scorer',lambda metric: lambda *args: -1.)
     last = None
     plotted_counts=[]
@@ -433,10 +436,8 @@ def test_gp_search_publishes_chart_only_at_trial_completion(monkeypatch):
         if snapshot != last:
             plotted_counts.append(len(snapshot['trials']))
             last = snapshot
-    # state = finish(p,trials=0,publish=publish)
+    finish(p,trials=0,publish=publish)
     assert plotted_counts == [0,1,2,3,4]
-
-
 
 
 def test_catboost_search_can_tune_previously_unset_parameter():
@@ -445,7 +446,7 @@ def test_catboost_search_can_tune_previously_unset_parameter():
         kw_args={'columns': ['x'], 'preparation': 'numeric'})),
         ('estimator', CatBoostRegressor(iterations=3, verbose=False, thread_count=1))])
     data = source().with_estimator(model, label='CatBoost', recipe_id='test-catboost')
-    key = 'data_models__estimator__depth'
+    key = 'cand_methods__estimator__depth'
     p = prepare(data, model_values={key: [2]}, method='grid')
     result = finish(p, trials=0)
     assert result['status'] == 'exhausted'
@@ -466,7 +467,7 @@ def test_gp_search_fits_each_trial_fold_once_and_records_scores_only(monkeypatch
     result = finish(p, trials=0)
     assert result['status'] == 'exhausted'
     assert len(fits) == len(result['trials']) * len(p.splits)
-    metrics = {p.specification['metric'], *p.specification['secondary'], 'metric_errors'}
+    metrics = {p.specification['metric'], *p.specification['secondary'], 'metric_errors', 'evidence'}
     assert all(set(fold) == metrics for t in result['trials'] for fold in t['folds'])
     assert 'complexity' not in json.dumps(result).lower()
     old = copy.deepcopy(result)

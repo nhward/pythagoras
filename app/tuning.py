@@ -66,9 +66,9 @@ def discover(pipeline):
                 params.setdefault(f'{owner_path}__{name}', None)
     for path, value in params.items():
         # Distinguish internal recipe preparation from explicit upstream steps.
-        recipe_parameter = (isinstance(params.get('data_models'), Pipeline)
-                and path.startswith('data_models__')
-                and not path.startswith('data_models__estimator__'))
+        recipe_parameter = (isinstance(params.get('cand_methods'), Pipeline)
+                and path.startswith('cand_methods__')
+                and not path.startswith('cand_methods__estimator__'))
         if '__' not in path or isinstance(value, (BaseEstimator, Kernel)):
             continue
         owner_path, name = path.rsplit('__', 1)
@@ -158,16 +158,16 @@ def discover_source(source):
         rows = discover(source.pipeline)
         selected = next((c for c in candidates if c['id'] == source.selected_model_candidate), candidates[0] if candidates else None)
         label = selected['label'] if selected else next(
-            (r.method for r in reversed(source.processing_records) if r.card == 'data_models'), '')
+            (r.method for r in reversed(source.processing_records) if r.card == 'cand_methods'), '')
         for row in rows:
-            if row['source'].startswith('data_models') and label:
-                row['display_source'] = label + row['source'].removeprefix('data_models').removeprefix(' › estimator')
+            if row['source'].startswith('cand_methods') and label:
+                row['display_source'] = label + row['source'].removeprefix('cand_methods').removeprefix(' › estimator')
         return rows
-    rows = [r for r in discover(source.pipeline) if not r['path'].startswith('data_models__')]
+    rows = [r for r in discover(source.pipeline) if not r['path'].startswith('cand_methods__')]
     for c in candidates:
         pipeline = source.pipeline_for_training(c['id'])
         for row in discover(pipeline):
-            if not row['path'].startswith('data_models__'):
+            if not row['path'].startswith('cand_methods__'):
                 continue
             row['candidate_id'] = c['id']
             row['parameter_path'] = row['path']
@@ -178,7 +178,7 @@ def discover_source(source):
             if row.get('legacy_path'):
                 row['legacy_path'] = candidate_prefix(c['id']) + row['legacy_path']
             row['legacy_paths'] = [candidate_prefix(c['id']) + p for p in row.get('legacy_paths', [])]
-            row['display_source'] = c['label'] + row['source'].removeprefix('data_models').removeprefix(' › estimator')
+            row['display_source'] = c['label'] + row['source'].removeprefix('cand_methods').removeprefix(' › estimator')
             rows.append(row)
     return rows
 
@@ -266,6 +266,18 @@ def migrate_drafts(rows, drafts):
     # An explicitly saved canonical definition takes precedence over its alias.
     migrated.update({path: draft for path, draft in drafts.items() if path not in aliases})
     return migrated
+
+
+def restore_commitment(rows, saved):
+    """Replay a saved commit against the restored pipeline, never the live draft."""
+    if not isinstance(saved, dict) or not isinstance(saved.get('spec'), dict) or not isinstance(saved.get('drafts'), dict):
+        raise TypeError('The saved tuning commitment is incomplete.')
+    drafts = migrate_drafts(rows, saved['drafts'])
+    specification = compile_spec(rows, drafts)
+    grid = saved['spec'].get('grid')
+    if not isinstance(grid, dict) or specification['grid'] != migrate_drafts(rows, grid):
+        raise ValueError('The saved search choices no longer match their definitions.')
+    return {'spec': specification, 'drafts': deepcopy(drafts)}
 
 
 def compile_spec(rows, drafts):

@@ -35,6 +35,7 @@ from cards import sys_bookmark
 from faicons import icon_svg as icon
 from jsonschema import validate
 from module import Module
+from reactive_timer import invalidate_later
 from shiny import App, reactive, render, req, ui
 from shiny.types import SilentException
 
@@ -987,7 +988,7 @@ def application():
             """
             cardDict = discover_cards(Module.ROOT)
             # re-evaluate every hour
-            reactive.invalidate_later(3600)
+            invalidate_later(3600)
             return cardDict
         
         ModalSection = reactive.Value(None)

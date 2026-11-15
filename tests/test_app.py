@@ -63,27 +63,27 @@ SHINYLIVE_BOOKMARK_ENV = {
 }
 
 app = create_app_fixture(
-    app="../app/app.py",
+    app="scenarios/application.py",
     scope="function",
     env=WEB_TEST_ENV,
 )
 start_app = create_app_fixture(
-    app="../app/app.py",
+    app="scenarios/application.py",
     scope="function",
     env=START_PAGE_TEST_ENV,
 )
 save_app = create_app_fixture(
-    app="../app/app.py",
+    app="scenarios/application.py",
     scope="function",
     env=SAVE_TEST_ENV,
 )
 bookmark_restore_app = create_app_fixture(
-    app="../app/app.py",
+    app="scenarios/application.py",
     scope="function",
     env=BOOKMARK_RESTORE_ENV,
 )
 workflow_restore_app = create_app_fixture(
-    app="../app/app.py",
+    app="scenarios/application.py",
     scope="function",
     env={**BOOKMARK_RESTORE_ENV, "PYTHAGORAS_TEST_SHOW_START": "true"},
 )
@@ -1011,7 +1011,7 @@ class TestApplicationBrowser:
             """
             async () => {
                 const database = await new Promise((resolve, reject) => {
-                    const request = indexedDB.open("pythagoras-bookmarks", 1);
+                    const request = indexedDB.open("pythagoras-bookmarks");
                     request.onsuccess = () => resolve(request.result);
                     request.onerror = () => reject(request.error);
                 });
@@ -1083,7 +1083,7 @@ class TestApplicationBrowser:
             """
             async () => {
                 const database = await new Promise((resolve, reject) => {
-                    const request = indexedDB.open("pythagoras-bookmarks", 1);
+                    const request = indexedDB.open("pythagoras-bookmarks");
                     request.onsuccess = () => resolve(request.result);
                     request.onerror = () => reject(request.error);
                 });
@@ -1125,7 +1125,7 @@ class TestApplicationBrowser:
             """
             async () => {
                 const database = await new Promise((resolve, reject) => {
-                    const request = indexedDB.open("pythagoras-bookmarks", 1);
+                    const request = indexedDB.open("pythagoras-bookmarks");
                     request.onsuccess = () => resolve(request.result);
                     request.onerror = () => reject(request.error);
                 });

@@ -16,7 +16,8 @@ from card import Card
 from code_recording import recordable
 from faicons import icon_svg as icon
 from module import Module
-from shiny import reactive, render, ui
+from reactive_timer import invalidate_later
+from shiny import render, ui
 
 LOG_COLUMNS = ["Time", "Level", "Logger", "Message", "Source", "Line", "Thread"]
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -92,7 +93,7 @@ def instance():
             id="Refresh",
             label="Refresh",
             icon=icon("arrows-rotate", title="Refresh the log", a11y="sem"),
-            width="250px",
+            width="220px",
             class_="btn rounded-pill btn-sm d-block mx-auto btn-primary",
             style="border: 0px; box-shadow: none;",
             guide=this,
@@ -129,7 +130,7 @@ def instance():
         def LogFrame():
             input.Refresh()
             if input.AutoRefresh():
-                reactive.invalidate_later(5)
+                invalidate_later(5)
             return _log_frame(
                 Module.log_handler.snapshot(),
                 levels=list(input.Levels() or ()),

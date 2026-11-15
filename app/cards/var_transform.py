@@ -660,6 +660,7 @@ def _distribution_figure(
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.exclude_configuration_input('Digits')
     this.export_inputs('Transform')
     this.long_name = "Variable Transform"
     this.description = "Transform the location, spread, and shape of continuous numeric variables."

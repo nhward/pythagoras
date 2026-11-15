@@ -225,6 +225,7 @@ _analyze, _table, _figure, _percentiles = _code_functions()
 
 def instance():
     this = Card(file=__file__, mutable=False)
+    this.exclude_configuration_input('Order')
     this.long_name = "Observation outliers"
     this.description = "Compare complementary outlier scores to investigate unusual observations and disagreements between methods."
 

@@ -48,6 +48,7 @@ import io
 import json
 import logging
 import numbers
+import re
 import sys
 import threading
 import time
@@ -67,6 +68,7 @@ from code_recording import recordable, recording_context, source_for
 from export_readiness import ExportReadiness, equivalent
 from faicons import icon_svg as icon
 from jsonschema import ValidationError, validate
+from reactive_timer import invalidate_later
 from session_task import SessionExtendedTask, task_restart_context
 from shiny import App, reactive, req, ui
 from shiny import ui as _ui
@@ -220,7 +222,7 @@ class WaitingIndicator:
             return None
         remaining = self.delay - (time.monotonic() - started)
         if remaining > 0:
-            reactive.invalidate_later(remaining)
+            invalidate_later(remaining)
             return None
         return BusyTracker.render_messages([message])
 
@@ -245,7 +247,7 @@ class Module(ABC):
         persistent=not IS_SHINYLIVE and environ.get('PYTHAGORAS_CATALOGUE_WORKER') != '1',
     )
     ModSession = None
-    Instances: ClassVar[dict] = {}  # class level dictionary of all instances keyed by their namespaces (possibly including deleted ones with empty values)
+    Instances: ClassVar[dict] = {}  # Fallback registry for cards constructed outside a live session.
     script_list: ClassVar[list] = [
         ROOT / "www" / "console.js",
         ROOT / "www" / "diagnostics.js",
@@ -308,6 +310,18 @@ class Module(ABC):
     # Initialiser
     def __init__(self, name, *args, **kwargs): # will be inherited by child classes
         super().__init__(*args, **kwargs)  # play nicely with multiple inheritance
+        # UI namespaces also become pipeline step names. They must be stable
+        # when a workflow is restored in another browser session, while genuine
+        # duplicate cards within the same session still need unique names.
+        session = get_current_session()
+        if session is not None:
+            root = session.root_scope()
+            registry = getattr(root, '_pythagoras_module_instances', None)
+            if registry is None:
+                registry = {}
+                root._pythagoras_module_instances = registry
+                root.on_ended(registry.clear)
+            self.Instances = registry
         #namespace
         self.name = name
         ns = self.name
@@ -360,6 +374,7 @@ class Module(ABC):
         self.generic_configuration_state = True
         self._configuration_input = None
         self._configuration_input_ids: set[str] = set()
+        self._configuration_input_patterns: list[re.Pattern[str]] = []
         self._configuration_excluded_input_ids: set[str] = set()
         self._configuration_deferred_input_ids: set[str] = set()
         self._configuration_restored_ids: set[str] = set()
@@ -479,6 +494,11 @@ class Module(ABC):
             return default
         return self._json_value(self._generic_extra_state[name])
 
+    def consume_restored_configuration_field(self, name: str, default=None):
+        """Detach restored state and release its retained copy after hydration."""
+        self.register_configuration_state_field(name)
+        return self._generic_extra_state.pop(name, default)
+
     def register_configuration_state_provider(self, name: str, provider) -> None:
         """Supply the current value of a declared card-owned state field."""
         self.register_configuration_state_field(name)
@@ -498,6 +518,10 @@ class Module(ABC):
             raise ValueError("A configuration input ID must be non-empty text")
         self._configuration_excluded_input_ids.add(input_id)
 
+    def register_configuration_input_pattern(self, pattern: str) -> None:
+        """Recognize data-dependent input IDs before their dynamic UI exists."""
+        self._configuration_input_patterns.append(re.compile(pattern))
+
     def defer_configuration_input(self, input_id: str) -> None:
         """Persist an input but let its card restore it after dynamic UI exists."""
         if not isinstance(input_id, str) or not input_id:
@@ -505,11 +529,11 @@ class Module(ABC):
         self._configuration_deferred_input_ids.add(input_id)
         self._configuration_input_ids.add(input_id)
 
-    def restored_configuration_input(self, input_id: str, default=None):
+    def restored_configuration_input(self, input_id: str, default=None, *, warn_if_missing=True):
         """Return detached restored state for a manually registered input."""
         self.register_configuration_input(input_id)
         if input_id not in self._generic_restored_inputs:
-            if self._generic_state_loaded and input_id not in self._configuration_warned_ids:
+            if warn_if_missing and self._generic_state_loaded and input_id not in self._configuration_warned_ids:
                 self.log.warning(
                     "Bookmark has no value for new input %s.%s; using its default",
                     self.name,
@@ -676,7 +700,10 @@ class Module(ABC):
 
     def warn_obsolete_configuration_inputs(self) -> None:
         """Report saved IDs which no constructor in the current card declared."""
-        obsolete = set(self._generic_restored_inputs) - self._configuration_input_ids
+        obsolete = (set(self._generic_restored_inputs) - self._configuration_input_ids
+                    - self._configuration_excluded_input_ids)
+        obsolete = {name for name in obsolete if not any(
+            pattern.fullmatch(name) for pattern in self._configuration_input_patterns)}
         for input_id in sorted(obsolete - self._configuration_warned_ids):
             self.log.warning(
                 "Bookmark input %s.%s is no longer present; retaining it for "
@@ -691,7 +718,7 @@ class Module(ABC):
         """Capture final factory metadata without making card use depend on I/O."""
         try:
             return Module.card_catalogue.capture(self)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             self.log.warning('Could not update card catalogue for %s: %s', self.name, error)
             return False
 
@@ -705,7 +732,7 @@ class Module(ABC):
             self.config.get("settings", {}).get("reuse_cards"),
         )
         if reuse_cards:
-            self.Instances.pop(self.namespace)
+            self.Instances.pop(self.namespace, None)
         else:
             self.Instances[self.namespace] = None
 
@@ -1198,7 +1225,7 @@ class Module(ABC):
                             changed_at = now
                         remaining = seconds - (now - changed_at)
                         if remaining > 0:
-                            reactive.invalidate_later(remaining)
+                            invalidate_later(remaining)
                             return
                         with reactive.isolate():
                             if not published.is_set() or published.get() != candidate:

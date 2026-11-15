@@ -1,0 +1,139 @@
+---
+title: "Model candidates"
+subtitle: "A Pythagoras card"
+author: "Nick Ward"
+format:
+  html:
+    theme: none
+    embed-resources: true
+    toc: false
+    css: ../app/www/pythagoras.css
+---
+
+Review this card after **Pipeline tuning**. Completed trial results flow downstream
+without accepting a model in the tuning card. This card compares configurations
+within each method and trade-offs between model methods. It performs no model
+fitting and constructs no ensemble.
+
+### Within a method
+
+Choose a method on the front and **Within method** in settings. Each point is a
+shortlisted configuration's mean primary-metric loss relative to that method's
+best-scoring trial. Positive loss means worse performance, for both minimizing
+and maximizing metrics. The reference is explicitly identified; it has no
+self-comparison probability. There are no uncertainty bars.
+
+Set **Practical-equivalence tolerance** in primary-metric units based on application
+needs, ideally before reviewing results. The shaded region marks plus/minus this
+tolerance. Green points meet the **Comparison decision probability** for practical
+equivalence; red points meet it for meaningful inferiority. Gray points are
+inconclusive. A missing or inconclusive comparison is not evidence of equivalence.
+Points also show the probability of lying within tolerance when estimable.
+
+Comparisons use the same paired, dependence-corrected Student-t Bayesian approach
+as the [sklearn example](https://scikit-learn.org/stable/auto_examples/model_selection/plot_grid_search_stats.html#pairwise-comparison-of-all-models-bayesian-approach).
+They require upstream repeated shuffled ordinary or stratified K-fold CV and
+matching complete split identities. Other resampling designs still show scores
+and diagnostics, with comparisons labeled inconclusive. Shortlisting and selecting
+the reference on these same results leaves selection bias: these are exploratory
+comparisons, not an independent confirmation of generalization performance.
+Equivalence is relative to a method's best, not between every shortlisted pair.
+
+The card shows only short status messages. A blank equivalence tolerance leaves
+paired assessments inconclusive; choose an application-based tolerance to enable
+them. No automatic acceptance, complexity ranking or ensemble construction is
+performed. Interpretability descriptions are qualitative and do not establish
+causal effects, including when a Treatment role is present.
+
+On the flip side, **Selected configuration and parameter differences** opens when
+a trial is selected and closes when the selection is cleared. Compare two trials
+from the same method. Best-score reference rows use emphasized text. **Download**
+saves the candidate comparison as CSV. Parameter labels use the method name and
+a readable path: for example, `cand_methods__estimator__depth` appears as
+**Cat Boost: estimator-depth** for Cat Boost Regressor trials. These are display
+labels; the underlying pipeline keys and saved parameter values are unchanged.
+The parameter column wraps long labels so the full name remains visible.
+
+**Top trials per method** limits each method separately, so one method cannot
+crowd out the others. Select a point or flip-side row to inspect the configuration.
+Choose another configuration of the same method in **Compare selected configuration with**.
+The parameter-difference table shows only settings that differ between the pair. Original unfitted pipelines supply effective
+values, including settings omitted from an inactive conditional trial branch.
+
+### Between methods
+
+Choose **Between methods**. One representative per method appears in a scatter
+plot, initially its best-scoring shortlisted trial. To choose another, select its
+row and click **Use selected as representative**. This does not accept a pipeline.
+Select axes from Score, error risk and Observed rows/s. Method names appear in the
+full-screen legend and hover text. Points on the Pareto frontier use diamonds:
+no other displayed representative is better in both chosen criteria. Missing
+measurements receive no frontier status. This is a comparison on those two axes,
+not an overall recommendation or a weighted score.
+
+For regression, **P95 absolute error** is the mean of the 95th percentile of
+held-out absolute errors calculated separately for each CV repeat. It describes
+large-error behavior in response units. It is not a prediction interval.
+
+For classification, **Error rate** describes incorrect labels and **Log loss**
+assesses predicted probabilities where supported. Class labels are never
+subtracted as though they were numerical regression outcomes. Positive probability
+losses are averaged within repeats, then across repeats.
+
+**Observed rows/s** divides held-out row count by the total time for an additional
+warm `predict` call on each validation batch. It includes upstream transforms,
+uses tuning's thread limits, and can be affected by concurrent workers, batch size
+and host load. It measures label/point prediction, not probability generation.
+It is diagnostic timing, not a standardized production-throughput benchmark.
+
+Interpretability descriptions are qualitative reasons, not numerical complexity
+scores or guarantees. A Treatment role draws attention to explanation needs;
+predictive accuracy and an interpretable model do not establish causal treatment
+effects. Use domain requirements alongside these views.
+
+### Error exceedance
+
+**Error exceedance** shows the percentage of held-out observations whose error
+exceeds each threshold. For regression this uses absolute error. For classification
+it uses log loss if all selected representatives have probability evidence;
+otherwise all use 0/1 classification errors so unlike quantities are not mixed.
+Each curve is calculated per repeat and then averaged. Repeated predictions for
+one observation are not treated as independent additional subjects.
+
+### Accepting a configuration
+
+Select a completed candidate row or point and click **Accept selected model**.
+The output carries its full unfitted pipeline and preserves the evaluation
+evidence. No final fitting or holdout evaluation occurs. **Revert acceptance**
+passes through the incoming selection. Representative choices and acceptance
+persist with card configuration only for the same search fingerprint.
+
+Tuning retains fold scores, parameter choices, prediction timing and compact error
+summaries. It does **not** retain row-level predictions, outcomes, positions or
+class-probability matrices. Exact repeat-wise P95 and the displayed 101-point
+exceedance curves are computed before temporary validation-loss arrays are
+deleted. Shared data, resampling and one unfitted template per method are retained
+once; trial pipelines are constructed only when needed.
+
+Completed configurations are self-contained JSON and require no evidence files.
+For a paused trial only, its unfinished compressed loss arrays are embedded in
+saved checkpoints/configurations and restored into a fresh isolated cache. They
+are verified by checksum and tied to the correct trial/split; host paths are not
+saved. Browser restoration uses compressed bytes rather than native files.
+Large configuration reloads use IndexedDB instead of the small sessionStorage
+quota. Completed archives can be reviewed read-only when the source-data and
+preprocessing signature match but the original native fitting environment or
+search settings are unavailable. Pipeline acceptance stays disabled until a
+matching native search environment is restored; unavailable model classes do not
+prevent review of their saved scores and compact error summaries. Temporary arrays are removed on trial completion/failure, reset or session
+cleanup. The native cache itself is temporary and disappears at process exit.
+
+Historical row-level evidence is discarded on import while score history is
+preserved. Start a new search to collect compact diagnostics under the current
+implementation. Changed source data, roles, resampling or preprocessing invalidate
+inherited evidence. Failed/incomplete trials are not review candidates. Future
+ensemble residual analysis will need to regenerate row-level predictions for its
+selected models; they are not kept speculatively by this card.
+
+Ensembling is reserved for a later downstream card. This card does not compute or
+aggregate model complexity.

@@ -198,6 +198,7 @@ def _figure(source, result, *, limit=500, bins=30, full=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.register_configuration_input('Power')
     this.long_name = "Observation Weighting"
     this.description = "Inspect weight components, effective weight concentration and zero weights; optionally reshape weights."
     this.front = lambda: ui.div(

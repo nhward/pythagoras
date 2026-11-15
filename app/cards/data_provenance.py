@@ -22,9 +22,10 @@ from card import Card
 from code_recording import recordable
 from module import Module
 from proxy_data import proxy_data
-from shiny import render, req, ui
+from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
+from widget_lifecycle import WidgetSlot, update_figure
 
 JOURNEY_COLUMNS = [
     "Step",
@@ -478,6 +479,8 @@ def instance():
     )
 
     def server(input, output, session):
+        journey_widget = WidgetSlot(session)
+        journey_instance = reactive.Value(None)
 
         @this.reactable(calc=True)
         @this.record_context
@@ -509,15 +512,25 @@ def instance():
         @render_widget
         @this.record_context
         def JourneyChart():
+            widget = journey_widget.replace(go.FigureWidget())
+            widget._config = {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
+            journey_instance.set(widget)
+            return widget
+
+        @reactive.effect
+        @this.record_context
+        async def UpdateJourneyChart():
+            widget = journey_instance()
+            req(widget is not None)
             full_screen = bool(this.isFullScreen())
             figure = _journey_figure(VisibleJourney(), full_screen=full_screen)
-            widget = go.FigureWidget(figure)
-            widget._config = getattr(widget, "_config", {}) | {
+            config = {
                 "displayModeBar": full_screen,
                 "displaylogo": False,
                 "responsive": True,
             }
-            return widget
+            if update_figure(widget, figure, config):
+                await session.send_custom_message('update_plotly_config', {'id': this.ns('JourneyChart'), 'config': config})
 
         @output
         @render.data_frame

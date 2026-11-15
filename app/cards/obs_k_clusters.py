@@ -589,6 +589,9 @@ def _figure(analysis, *, maximum, full_screen=False):
 
 def instance():
     this = Card(file=__file__, mutable=True)
+    this.register_configuration_input('K')
+    for name in ('Family', 'Limit'):
+        this.exclude_configuration_input(name)
     this.export_inputs('K', 'Maximum')
     this.long_name = "Number of clusters"
     this.description = "Assess cluster counts using seven clustering families and two resampling evaluations and record a number-of-clusters decision for downstream cluster analysis."

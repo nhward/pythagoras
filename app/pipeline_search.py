@@ -15,12 +15,14 @@ import multiprocessing as mp
 import os
 import queue
 import signal
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import joblib
 import numpy as np
+import prediction_evidence as evidence_store
 from roles import Role
 from sklearn.base import clone, is_classifier, is_regressor
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -69,7 +71,7 @@ def model_task(source):
             raise ValueError('All committed methods must match the same outcome task.')
         return tasks.pop()
     pipeline = source.pipeline
-    if pipeline is None or not pipeline.steps or pipeline.steps[-1][0] != 'data_models':
+    if pipeline is None or not pipeline.steps or pipeline.steps[-1][0] != 'cand_methods':
         raise ValueError('Commit a model in Model method candidates first.')
     task = source.modelling_context.resolved_task(source)
     if task == 'regression' and is_regressor(pipeline):
@@ -87,6 +89,8 @@ class SearchProblem:
     splits: list
     specification: dict
     branches: dict = field(default_factory=dict)
+    evidence_directory: str | None = None
+    evidence_namespace: str | None = None
 
 
 def implicit_splits(source, target, task, seed):
@@ -179,7 +183,7 @@ def prepare(source, *, model_values=None, metric=None, secondary=(), method='ran
         raise TypeError('Model parameter choices must be a JSON object of full parameter paths and lists.')
     for path, values in model_values.items():
         row = known.get(path)
-        if row is None or not path.startswith('data_models__') or row['fixed']:
+        if row is None or not path.startswith('cand_methods__') or row['fixed']:
             raise ValueError(f'Not a tunable model parameter: {path}')
         values = search_values({'kind': row['definition']['kind'] or 'categorical', 'values': values}, row['metadata'])
         if path in grid and grid[path] != values:
@@ -230,7 +234,7 @@ def prepare(source, *, model_values=None, metric=None, secondary=(), method='ran
                   if k.endswith(('__n_jobs', '__thread_count', '__nthread', '__num_threads'))})
     pipeline.set_params(**fixed)
     resources = execution_settings(pipeline, frame, splits, execution, workers)
-    records = [r for r in source.processing_records if r.card == 'data_models' and r.attempted]
+    records = [r for r in source.processing_records if r.card == 'cand_methods' and r.attempted]
     selected = next((c for c in source.model_candidates if c['id'] == source.selected_model_candidate), None)
     model_id = selected['id'] if selected else str(records[-1].parameters.get('recipe_id', '')) if records else type(model).__qualname__
     method_label = selected['label'] if selected else records[-1].method if records else type(model).__qualname__
@@ -244,14 +248,14 @@ def prepare(source, *, model_values=None, metric=None, secondary=(), method='ran
     versions = {p: importlib.metadata.version(p) for p in sorted(packages)}
     root = Path(__file__).resolve().parent
     files = {Path(__file__), root / 'pipeline.py', root / 'tuning.py', root / 'model_commit.py',
-             root / 'bundled_parameters.py'}
+             root / 'bundled_parameters.py', root / 'prediction_evidence.py'}
     for value in pipeline.get_params(deep=True).values():
         try:
             file = inspect.getsourcefile(value if callable(value) else type(value))
             if file and Path(file).resolve().is_relative_to(root): files.add(Path(file))
         except TypeError: pass
     implementation = {str(p.resolve().relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
-    specification = {'version': 4, 'model_id': model_id, 'method_label': method_label, 'task': task, 'grid': grid, 'combinations': combinations,
+    specification = {'version': 4, 'prediction_evidence': 2, 'model_id': model_id, 'method_label': method_label, 'task': task, 'grid': grid, 'combinations': combinations,
                          'metric': metric, 'secondary': secondary, 'method': method, 'seed': int(seed),
                          'fixed': fixed, 'execution': resources, 'folds': len(splits),
                          'split_sizes': [[len(a), len(b)] for a, b in splits], 'evaluation': evaluation, 'versions': versions, 'implementation': implementation}
@@ -259,7 +263,7 @@ def prepare(source, *, model_values=None, metric=None, secondary=(), method='ran
         specification.update(conditions=conditions, parameter_grids=parameter_grids)
     specification['fingerprint'] = joblib.hash((pipeline, frame, source.role_map.to_primitive(),
         source.modelling_context.to_primitive(), evaluation, splits, specification))
-    return SearchProblem(pipeline, frame, targets[0], splits, specification)
+    return SearchProblem(pipeline, frame, targets[0], splits, specification, evidence_directory=evidence_store.directory())
 
 
 def fresh(problem):
@@ -307,14 +311,20 @@ def _validate_single_checkpoint(problem, checkpoint):
             raise ValueError('A completed candidate must include every evaluation fold.')
         if trial['state'] == 'running' and len(trial['folds']) == spec['folds']:
             raise ValueError('A fully evaluated trial must be complete or failed.')
+        if trial['state'] == 'complete' and spec.get('prediction_evidence') == 2:
+            validate_diagnostic_summary(trial.get('diagnostics'), spec['task'])
         ids = trial['fold_ids']
         if (len(ids) != len(trial['folds']) or ids != sorted(set(ids))
                 or any(type(j) is not int or not 0 <= j < spec['folds'] for j in ids)):
             raise ValueError('Invalid indexed fold results.')
-        for fold in trial['folds']:
+        for fold_id, fold in zip(ids, trial['folds']):
             metrics = {spec['metric'], *spec['secondary']}
-            if set(fold) != metrics | {'metric_errors'}:
+            if set(fold) != metrics | {'metric_errors'} | ({'evidence'} if spec.get('prediction_evidence') else set()):
                 raise ValueError('Invalid fold scores.')
+            if spec.get('prediction_evidence'):
+                validate_prediction_evidence(fold['evidence'], problem.splits[fold_id][1], spec['task'],
+                                             context=joblib.hash((spec['fingerprint'], trial['params'], fold_id)),
+                                             root=problem.evidence_directory)
             errors = fold['metric_errors']
             if not isinstance(errors, dict) or not set(errors) <= set(spec['secondary']) or not all(
                     isinstance(v, str) and v for v in errors.values()):
@@ -416,15 +426,20 @@ def prepare_candidates(source, **options):
             raise ValueError('All methods must use identical evaluation memberships.')
         child.frame = first.frame
         child.splits = first.splits
+        child.specification['evaluation'] = first.specification['evaluation']
+        child.specification['split_sizes'] = first.specification['split_sizes']
     spec = copy.deepcopy(first.specification)
     spec.update(model_id='candidate-set', method_label='Multiple methods', grid={},
                 combinations=sum(c.specification['combinations'] for c in branches.values()),
-                branches={key: child.specification for key, child in branches.items()},
+                branches={key: {name: value for name, value in child.specification.items()
+                                if name not in {'evaluation', 'split_sizes'}} for key, child in branches.items()},
                 fixed={}, versions={key: value for child in branches.values() for key, value in child.specification['versions'].items()})
+    spec['evaluation'] = first.specification['evaluation']
+    spec['split_sizes'] = first.specification['split_sizes']
     spec['execution']['workers'] = min(c.specification['execution']['workers'] for c in branches.values())
     spec['execution']['estimated_fit_bytes'] = max(c.specification['execution']['estimated_fit_bytes'] for c in branches.values())
     spec['fingerprint'] = joblib.hash(spec)
-    return SearchProblem(None, first.frame, first.target, first.splits, spec, branches)
+    return SearchProblem(None, first.frame, first.target, first.splits, spec, branches, evidence_directory=evidence_store.directory())
 
 
 def candidate_proposal(problem, state):
@@ -593,6 +608,69 @@ def fit_fold(problem, params, fold):
     return estimator, result
 
 
+def validate_prediction_evidence(evidence, positions, task, observed=None, *, context=None, root=None):
+    if not isinstance(evidence, dict):
+        raise ValueError('Invalid prediction evidence.')  # noqa: TRY004
+    if set(evidence) == {'error'} and isinstance(evidence['error'], str):
+        return
+    if evidence.get('version') != 2:
+        raise ValueError('Legacy row-level prediction evidence requires a new search.')
+    required = {'version', 'count', 'prediction_seconds', 'loss_kind'}
+    allowed = required | {'key', 'sha256', 'maximum', 'context', 'error_count'}
+    if not required <= evidence.keys() or set(evidence) - allowed:
+        raise ValueError('Invalid prediction evidence fields.')
+    if type(evidence['count']) is not int or evidence['count'] != len(positions):
+        raise ValueError('Prediction evidence is not aligned to validation rows.')
+    duration = evidence['prediction_seconds']
+    if not isinstance(duration, (int, float)) or not math.isfinite(duration) or duration < 0:
+        raise ValueError('Invalid prediction duration.')
+    kinds = {'absolute_error'} if task == 'regression' else {'log_loss', 'classification_error'}
+    if evidence['loss_kind'] not in kinds:
+        raise ValueError('Invalid validation loss kind.')
+    if task == 'classification' and (type(evidence.get('error_count')) is not int or not 0 <= evidence['error_count'] <= len(positions)):
+        raise ValueError('Invalid classification error count.')
+    if 'key' in evidence:
+        if context is not None and evidence.get('context') != context:
+            raise ValueError('Unfinished evidence belongs to a different trial or split.')
+        path = evidence_store._path(evidence['key'], root) if sys.platform != 'emscripten' else None
+        if path is not None and not path.exists():
+            raise ValueError('Unfinished prediction evidence is unavailable; reload its portable checkpoint.')
+
+
+def _fold_context(problem, params, fold):
+    spec = problem.branches[params[METHOD_PARAMETER]].specification if problem.branches else problem.specification
+    return joblib.hash((spec['fingerprint'], {k: v for k, v in params.items() if k != METHOD_PARAMETER}, fold))
+
+
+def validate_diagnostic_summary(summary, task):
+    if not isinstance(summary, dict):
+        raise ValueError('Missing completed-trial diagnostic summary.')  # noqa: TRY004
+    if set(summary) == {'error'} and isinstance(summary['error'], str):
+        return
+    if summary.get('version') != 2:
+        raise ValueError('Invalid diagnostic summary version.')
+    maximum, rates = summary.get('maximum'), summary.get('exceedance')
+    if (not isinstance(maximum, (int, float)) or not math.isfinite(maximum) or maximum < 0
+            or not isinstance(rates, list) or len(rates) != evidence_store.CURVE_POINTS
+            or not np.isfinite(rates).all() or min(rates) < 0 or max(rates) > 1):
+        raise ValueError('Invalid bounded error-exceedance summary.')
+    kinds = {'absolute_error'} if task == 'regression' else {'log_loss', 'classification_error'}
+    if summary['loss_kind'] not in kinds or np.any(np.diff(rates) > 1e-12):
+        raise ValueError('Invalid diagnostic loss kind or exceedance order.')
+    required = {'version', 'loss_kind', 'maximum', 'exceedance'}
+    expected = required | ({'p95_absolute_error'} if task == 'regression' else {'error_rate', 'log_loss'})
+    if set(summary) != expected:
+        raise ValueError('Unexpected diagnostic summary fields.')
+    for key in expected - required:
+        value = summary[key]
+        if value is None and key == 'log_loss':
+            continue
+        if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError('Invalid diagnostic summary value.')
+        if key == 'error_rate' and value > 1:
+            raise ValueError('Invalid classification error rate.')
+
+
 def evaluate_fold(problem, params, fold):
     estimator, result = fit_fold(problem, params, fold)
     _, validation = problem.splits[fold]
@@ -608,6 +686,45 @@ def evaluate_fold(problem, params, fold):
                 raise
             result[metric] = None
             result['metric_errors'][metric] = f'{type(exc).__name__}: {exc}'
+    if problem.specification.get('prediction_evidence'):
+        evidence = None
+        try:
+            batch = X.iloc[validation].copy()
+            started = time.perf_counter()
+            predictions = estimator.predict(batch)
+            duration = time.perf_counter() - started
+            observed = X[problem.target].iloc[validation].to_numpy()
+            predicted = np.asarray(predictions)
+            if observed.shape != predicted.shape or predicted.ndim != 1:
+                raise ValueError('Predictions do not preserve validation-row alignment.')
+            evidence = {'version': 2, 'count': len(validation), 'prediction_seconds': duration}
+            if problem.specification['task'] == 'regression':
+                losses = np.abs(observed.astype(float) - predicted.astype(float))
+                evidence['loss_kind'] = 'absolute_error'
+            else:
+                evidence.update(error_count=int(np.count_nonzero(observed != predicted)), loss_kind='classification_error')
+                losses = None
+                if callable(getattr(estimator, 'predict_proba', None)):
+                    try:
+                        probabilities = np.asarray(estimator.predict_proba(batch), dtype=float)
+                        classes = np.asarray(estimator.classes_).tolist()
+                        if probabilities.shape != (len(validation), len(classes)) or not np.isfinite(probabilities).all() or (probabilities < 0).any() or (probabilities > 1).any() or not np.allclose(probabilities.sum(axis=1), 1):
+                            raise ValueError('Invalid classification probabilities.')
+                        probability = np.asarray([probabilities[i, classes.index(label)] if label in classes else 0.
+                                                  for i, label in enumerate(observed)])
+                        losses = -np.log(np.maximum(probability, np.finfo(float).eps))
+                        evidence['loss_kind'] = 'log_loss'
+                    except Exception:  # noqa: BLE001, S110
+                        pass  # Label-error evidence remains valid when probability prediction fails.
+            if losses is not None:
+                evidence.update(evidence_store.write_losses(losses, problem.evidence_directory, problem.evidence_namespace))
+                evidence.update(maximum=float(np.max(losses)), context=_fold_context(problem, params, fold))
+            validate_prediction_evidence(evidence, validation, problem.specification['task'], root=problem.evidence_directory)
+            result['evidence'] = evidence
+        except Exception as exc:  # noqa: BLE001
+            if isinstance(evidence, dict) and 'key' in evidence:
+                evidence_store.remove([evidence['key']], problem.evidence_directory)
+            result['evidence'] = {'error': f'{type(exc).__name__}: {exc}'}
     return result
 
 
@@ -697,7 +814,7 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
         raise ValueError('Supply a nonnegative candidate budget (zero means unlimited) and a finite nonnegative time budget.')
     if trials == 0:
         trials = None
-    state = validate_checkpoint(problem, checkpoint)
+    state = validate_checkpoint(problem, evidence_store.restore_checkpoint(checkpoint, problem.evidence_directory))
     spec = problem.specification
     execution = spec['execution']
     workers, mode = execution['workers'], execution['mode']
@@ -709,7 +826,7 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
 
     def emit(status):
         state.update(status=status, elapsed=prior + time.monotonic() - start)
-        publish(copy.deepcopy(state))
+        publish(state if getattr(publish, 'incremental', False) else copy.deepcopy(state))
 
     def submit(trial, fold):
         job = (trial['params'], fold)
@@ -790,6 +907,20 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
                     _store_fold(trial, fold, value)
                     if trial['state'] != 'failed' and len(trial['folds']) == spec['folds']:
                         trial['state'] = 'complete'
+                if trial['state'] == 'complete' and spec.get('prediction_evidence') == 2:
+                    retired = evidence_store.summarize_trial(trial, spec, problem.evidence_directory)
+                    if getattr(publish, 'incremental', False):
+                        publish.retire(retired)
+                    else:
+                        evidence_store.remove(retired, problem.evidence_directory)
+                elif trial['state'] == 'failed':
+                    retired = list(evidence_store.references({'trials': [trial]}))
+                    for result in trial['folds']:
+                        result['evidence'] = {'error': 'Trial failed; temporary diagnostics discarded.'}
+                    if getattr(publish, 'incremental', False):
+                        publish.retire(retired)
+                    else:
+                        evidence_store.remove(retired, problem.evidence_directory)
                 emit('running')
 
             # A progress subscriber can request pause as soon as a fold is published.
@@ -848,12 +979,39 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
     return state
 
 
+class _UpdatePublisher:
+    incremental = True
+
+    def __init__(self, updates):
+        self.updates = updates
+        self.revisions = {}
+        self.keys = set()
+        self.retired = set()
+
+    def retire(self, keys):
+        self.retired.update(keys)
+
+    def __call__(self, state):
+        changed = []
+        for trial in state['trials']:
+            revision = (trial['state'], len(trial['folds']), trial['elapsed'], trial['error'])
+            if self.revisions.get(trial['id']) != revision:
+                changed.append(copy.deepcopy(trial))
+                self.revisions[trial['id']] = revision
+        keys = set(evidence_store.references(state))
+        message = {'trials': changed, 'retired': list((self.keys - keys) | self.retired),
+                   'header': {k: copy.deepcopy(v) for k, v in state.items() if k not in {'trials', 'specification'}}}
+        self.updates.put(message)
+        self.keys = keys
+        self.retired.clear()
+
+
 def _worker(problem, state, trials, seconds, updates, pause_event, cancel_event, worker_registry):
     if os.name == 'posix':
         os.setsid()  # Isolate this coordinator and its children for bounded cancellation.
     from threadpoolctl import threadpool_limits
     with threadpool_limits(limits=1):
-        run(problem, state, trials=trials, seconds=seconds, publish=updates.put,
+        run(problem, state, trials=trials, seconds=seconds, publish=_UpdatePublisher(updates),
             pause=pause_event.is_set, cancel=cancel_event.is_set, worker_registry=worker_registry)
 
 
@@ -867,6 +1025,8 @@ class SearchWorker:
         self.worker_registry = None
         self.started = None
         self.prior_elapsed = 0.
+        self._state = None
+        self._namespace = None
 
     @property
     def running(self):
@@ -875,9 +1035,15 @@ class SearchWorker:
     def start(self, problem, state, trials, seconds):
         if self.running:
             raise ValueError('Pause the current search before starting another.')
+        state = evidence_store.restore_checkpoint(state, problem.evidence_directory)
         self.close()
         ctx = mp.get_context('spawn')
-        self.updates, self.pause_event, self.cancel_event = ctx.Queue(), ctx.Event(), ctx.Event()
+        self.updates, self.pause_event, self.cancel_event = ctx.Queue(maxsize=2), ctx.Event(), ctx.Event()
+        self._state = copy.deepcopy(state)
+        import uuid
+        self._namespace = uuid.uuid4().hex
+        problem = copy.copy(problem)
+        problem.evidence_namespace = self._namespace
         self.worker_registry = ctx.Array('d', 128)
         self.process = ctx.Process(target=_worker,
             args=(problem, state, trials, seconds, self.updates, self.pause_event, self.cancel_event, self.worker_registry))
@@ -889,14 +1055,22 @@ class SearchWorker:
         return self.prior_elapsed + (time.monotonic() - self.started if self.started is not None else 0.)
 
     def poll(self):
-        latest = None
+        changed = False
         if self.updates is not None:
             while True:
                 try:
-                    latest = self.updates.get_nowait()
+                    update = self.updates.get_nowait()
                 except queue.Empty:
                     break
-        return latest
+                self._state.update(update['header'])
+                for trial in update['trials']:
+                    if trial['id'] < len(self._state['trials']):
+                        self._state['trials'][trial['id']] = trial
+                    else:
+                        self._state['trials'].append(trial)
+                evidence_store.remove(update['retired'])
+                changed = True
+        return copy.deepcopy(self._state) if changed else None
 
     def pause(self):
         if self.pause_event is not None:
@@ -959,6 +1133,9 @@ class SearchWorker:
         if self.updates is not None:
             self.updates.close()
             self.updates = None
+        evidence_store.prune_namespace(self._namespace, keep=evidence_store.references(self._state))
+        self._state = None
+        self._namespace = None
 
 
 def accepted_parameters(problem, checkpoint, trial_id):

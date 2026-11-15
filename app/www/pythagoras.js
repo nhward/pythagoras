@@ -4,6 +4,34 @@
 document.addEventListener("DOMContentLoaded", () => {
     console.info("DOM has loaded");
 
+    Shiny.addCustomMessageHandler("update_plotly_config", async (message) => {
+        const plot = document.getElementById(message.id)?.querySelector(".js-plotly-plot");
+        if (plot && window.Plotly) {
+            await window.Plotly.react(plot, plot.data, plot.layout, {...plot._context, ...message.config});
+        }
+    });
+
+    Shiny.addCustomMessageHandler("cand_models_weights", (message) => {
+        const element = document.getElementById(message.id);
+        if (!element) return;
+        const slider = jQuery(element).data("ionRangeSlider");
+        if (!slider) return;
+        const summary = document.getElementById(message.summary);
+        const display = (data) => {
+            if (summary) summary.textContent = `Score ${data.from}% · Throughput ${data.to - data.from}% · P95 error ${100 - data.to}%`;
+        };
+        const commit = (data) => {
+            display(data);
+            Shiny.setInputValue(message.commit, [data.from, data.to], {priority: "event"});
+        };
+        slider.update({onChange: display, onFinish: commit});
+        commit(slider.result);
+    });
+
+    Shiny.addCustomMessageHandler("set_details_open", (message) => {
+        const details = document.getElementById(message.id);
+        if (details instanceof HTMLDetailsElement) details.open = message.open;
+    });
 
     Shiny?.addCustomMessageHandler?.("init_card", function(opts) {
         const card = document.getElementById(opts.id);
@@ -34,7 +62,45 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         publishCardFace(card);
         initCardSidebar(card);
+        card.querySelectorAll('.shiny-ipywidget-output').forEach(observePlotlyOutputSize);
     });
+
+    function observePlotlyOutputSize(host) {
+        if (host.dataset.plotlySizeObserved) return;
+        host.dataset.plotlySizeObserved = 'true';
+        let plot = null, frame = null;
+        const resize = () => {
+            if (frame !== null) return;
+            frame = requestAnimationFrame(() => {
+                frame = null;
+                if (plot?._fullLayout && plot.isConnected && host.clientWidth > 0 && host.clientHeight > 0
+                        && getComputedStyle(host).visibility !== 'hidden') {
+                    window.Plotly?.Plots.resize(plot);
+                }
+            });
+        };
+        const sizes = new ResizeObserver(resize);
+        sizes.observe(host);
+        const mounted = new MutationObserver(() => {
+            const next = host.querySelector('.js-plotly-plot');
+            if (next !== plot) {
+                plot = next;
+                mounted.disconnect();
+                mounted.observe(host, {childList: true, subtree: !plot});
+                resize();
+            }
+        });
+        plot = host.querySelector('.js-plotly-plot');
+        mounted.observe(host, {childList: true, subtree: !plot});
+        resize();
+        jQuery(host).one('shiny:unbound.plotlySize', () => {
+            sizes.disconnect();
+            mounted.disconnect();
+            if (frame !== null) cancelAnimationFrame(frame);
+            plot = null;
+            delete host.dataset.plotlySizeObserved;
+        });
+    }
 
     function initCardSidebar(card) {
         const layout = card.querySelector(".bslib-sidebar-layout");
@@ -851,6 +917,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const bookmarkDatabaseName = "pythagoras-bookmarks";
     const bookmarkStoreName = "bookmarks";
+    const stagedBookmarkStore = "staged-configurations";
     const stagedBookmarkKey = "pythagoras-bookmark-once";
     const settingsQueryParameter = "_pythagoras_settings";
     const uiQueryParameter = "_pythagoras_ui";
@@ -924,13 +991,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const openBookmarkDatabase = () => new Promise((resolve, reject) => {
-        const request = indexedDB.open(bookmarkDatabaseName, 1);
+        const request = indexedDB.open(bookmarkDatabaseName, 2);
         request.onupgradeneeded = () => {
             if (!request.result.objectStoreNames.contains(bookmarkStoreName)) {
                 request.result.createObjectStore(
                     bookmarkStoreName,
                     { keyPath: "filename" },
                 );
+            }
+            if (!request.result.objectStoreNames.contains(stagedBookmarkStore)) {
+                request.result.createObjectStore(stagedBookmarkStore);
             }
         };
         request.onsuccess = () => resolve(request.result);
@@ -1061,11 +1131,59 @@ document.addEventListener("DOMContentLoaded", () => {
         URL.revokeObjectURL(url);
     };
 
-    const stageBookmarkAndReload = (configuration) => {
-        sessionStorage.setItem(
-            stagedBookmarkKey,
-            JSON.stringify(configuration),
-        );
+    // Larger unfinished-search archives must not pass through Web Storage's
+    // small synchronous quota. IndexedDB is also available in shinylive.
+    const stageLargeConfiguration = async (configuration) => {
+        const key = `stage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const database = await openBookmarkDatabase();
+        try {
+            await new Promise((resolve, reject) => {
+                const transaction = database.transaction(stagedBookmarkStore, "readwrite");
+                const store = transaction.objectStore(stagedBookmarkStore);
+                // Remove abandoned staging records after a day; separate tabs
+                // otherwise retain their own independent reload token.
+                const cursor = store.openCursor();
+                cursor.onsuccess = () => {
+                    const value = cursor.result;
+                    if (!value) return;
+                    if (value.value.createdAt < Date.now() - 86400000) value.delete();
+                    value.continue();
+                };
+                store.add({ configuration, createdAt: Date.now() }, key);
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+                transaction.onabort = () => reject(transaction.error);
+            });
+        } finally { database.close(); }
+        return key;
+    };
+
+    const consumeStagedConfiguration = async (key) => {
+        const database = await openBookmarkDatabase();
+        try {
+            return await new Promise((resolve, reject) => {
+                const transaction = database.transaction(stagedBookmarkStore, "readwrite");
+                const store = transaction.objectStore(stagedBookmarkStore);
+                const request = store.get(key);
+                let configuration;
+                request.onsuccess = () => {
+                    configuration = request.result?.configuration;
+                    if (configuration) store.delete(key);
+                };
+                transaction.oncomplete = () => configuration
+                    ? resolve(configuration) : reject(new Error("The staged configuration was not found"));
+                transaction.onerror = () => reject(transaction.error);
+                transaction.onabort = () => reject(transaction.error);
+            });
+        } finally { database.close(); }
+    };
+
+    const stageBookmarkAndReload = async (configuration) => {
+        const serialized = JSON.stringify(configuration);
+        const staged = serialized.length > 1000000
+            ? JSON.stringify({ storage: "indexeddb-stage", key: await stageLargeConfiguration(configuration) })
+            : serialized;
+        sessionStorage.setItem(stagedBookmarkKey, staged);
         const url = new URL(window.location.href);
         url.searchParams.set(
             settingsQueryParameter,
@@ -1090,12 +1208,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (staged) {
                 sessionStorage.removeItem(stagedBookmarkKey);
                 clearSettingsQuery();
+                const stagedValue = JSON.parse(staged);
+                const configuration = stagedValue.storage === "indexeddb-stage"
+                    ? await consumeStagedConfiguration(stagedValue.key) : stagedValue;
                 Shiny.setInputValue(
                     "BookmarkStartup",
                     {
                         ready: true,
                         source: "staged",
-                        configuration: JSON.parse(staged),
+                        configuration,
                     },
                     { priority: "event" },
                 );
@@ -1116,7 +1237,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 && JSON.stringify(bookmarkUiConfiguration(latest.configuration, true))
                     !== JSON.stringify(renderedUiConfiguration())
             ) {
-                stageBookmarkAndReload(latest.configuration);
+                await stageBookmarkAndReload(latest.configuration);
                 return;
             }
             Shiny.setInputValue(
@@ -1185,7 +1306,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const record = await bookmarkRecord(message.filename);
             if (!record) throw new Error("The selected bookmark was not found");
-            stageBookmarkAndReload(record.configuration);
+            await stageBookmarkAndReload(record.configuration);
         } catch (error) {
             reportBookmarkOperation(
                 message.operationInputId,
@@ -1202,7 +1323,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 createdAt: message.createdAt,
                 configuration: message.configuration,
             });
-            stageBookmarkAndReload(message.configuration);
+            await stageBookmarkAndReload(message.configuration);
         } catch (error) {
             reportBookmarkOperation(
                 message.operationInputId,

@@ -1,0 +1,214 @@
+---
+title: Pipeline tuning
+---
+
+Tune the committed preprocessing pipeline, including any model-method candidates, using the evaluation splits from **Observation resampling** when available, or reproducible implicit cross-validation when no plan is defined. Place **Pipeline tuning** after **Model method candidates** and **Tuning parameters**. Commit **Model method candidates** and **Tuning parameters** choices before starting.
+
+#### Search and objective
+
+Choose one primary objective: 
+
+* __classification__ supports balanced accuracy, accuracy, ROC AUC and log loss
+* __regression__ supports RMSE, MAE and R². 
+
+The objective label states whether it is minimized or maximized. All supported task metrics are recorded automatically. Any metric that cannot be evaluated is recorded as unavailable with a reason. Scores for errors are displayed as positive errors; the internal sklearn scorer convention dictates higher is better.
+
+The committed finite choices from Tuning parameters are used directly. **Additional model choices** accepts a JSON object of complete sklearn parameter paths and finite lists, for example:
+
+```json
+{"cand_methods__estimator__alpha": [0.1, 1, 10]}
+```
+
+These choices are combined with the committed grid. To change an already committed parameter's choices, return to Tuning parameters. Constructor defaults are not search ranges. Fixed configuration, seeds, topology and weighting cannot be tuned.
+
+* **Random** samples unseen finite configurations.
+* **Exhaustive** evaluates each finite configuration.
+* **Bayesian TPE** adapts proposals using completed evaluations. 
+* **Bayesian GP** uses a Gaussian-process surrogate of the search objective. It proposes finite parameter choices through scikit-optimize; it does not restrict the type of predictive model being tuned. 
+
+Failed trials are excluded from surrogate fitting, without fabricated penalties; an out-of-grid starting configuration is not included as surrogate evidence. Duplicate proposals use an unseen fallback configuration. All actual completed choices remain the recorded history.
+
+Each committed method is evaluated first as a starting configuration, even if its values are outside its search choices. Candidate budgets exclude these starting configuration evaluations. **Maximum candidates** applies to every search method. Zero means no candidate limit; a positive value caps candidate trials across resumes. Unlimited searches still stop when the finite search space is exhausted or the time limit is reached. There is no separate exhaustive-cap switch. Grid coverage counts the starting configuration when it matches a grid configuration, without fitting that configuration twice. Partial exhaustive searches report completed grid configurations and failures separately. “Finished” means all grid choices have been visited, not that all succeeded. All budgets are cumulative across resumes. A zero time budget means unlimited time; time budgets are checked between folds, so an individual fit can exceed the remaining time.
+
+#### Progress and comparison
+
+The front states the best parameters found so far, their mean objective value and improvement over starting configuration. The chart shows only completed trial mean scores as points, without error bars, ranges, reference lines or connecting lines. When multiple model methods are selected, a consistent color and legend entry identify each method. Colors follow the committed candidate order and remain stable as trials complete. Hover text identifies the method and whether the trial is a starting configuration or candidate. Trial numbers are one-based. This card publishes tuning evidence without changing the incoming pipeline. Choose a model downstream. All settings have guided explanations.
+
+
+The flip side lists configurations, states, scores, fold standard deviations, times, model identity and failures. Incomplete or failed evaluations are not ranked. All secondary metrics and their failure reasons appear in the table and CSV. JSON checkpoints include fold results, parameters, search identity, versions and continuation state.
+
+#### Pause, cancel and resume
+
+**Pause** stops scheduling new work and lets active fits finish. It preserves
+completed folds, trial history and elapsed time so **Play** can continue.
+**Cancel current tuning** stops outstanding fitting and discards all trials,
+chart history, saved checkpoint and elapsed progress. **Play** then starts from
+scratch. Use Pause when you intend to continue, and Cancel when you intend to
+start over.
+
+**Play** resumes a compatible checkpoint, preserving the bars and completed
+fold results. It does not replace incompatible or exhausted history: use Cancel
+to clear it before starting a new search. A budget-limited search can continue
+after increasing its cumulative trial or time budget.
+
+Estimator thread controls (`n_jobs`, `thread_count`, `nthread`, `num_threads`,
+where exposed) and supported BLAS/OpenMP pools are limited to one per fit to avoid
+nested oversubscription. Otherwise-unseeded estimators receive the search seed;
+evaluated configurations include these fixed settings.
+
+Card instance names are allocated within each browser session. Another open
+session does not rename learned preprocessing steps when restoring a workflow;
+actual duplicate cards within the same session still receive distinct suffixes. Predictor lists follow dataframe column order rather than
+Python set iteration order, so rebuilding the same workflow preserves its search
+identity across sessions and server processes. Histories created with the former
+unstable predictor ordering may require Cancel followed by a new search; their
+original ordering was not stored and cannot be safely reconstructed.
+
+Save a checkpoint before closing a session. Checkpoints are also included in the card's bookmark configuration state, but running processes are not restored automatically. Checkpoints use schema version 4; earlier checkpoints must be replaced by a new search. Load the JSON with the same data, pipeline, choices, model, objective, seed, splits and software versions. Increase the candidate or total-time budget and press Resume. These budgets do not change the search identity. TPE proposals use the actual recorded history and a deterministic seed derived from the search seed and trial count; no optimizer pickle is loaded.
+
+Changing data, the pipeline or search settings makes old results stale. They remain visible for review, but cannot be resumed against the changed inputs. Restoring the original inputs makes a compatible checkpoint usable again.
+
+
+#### Upstream or implicit resampling
+
+Every search method reuses a defined upstream evaluation plan exactly, preserving
+its group/time restrictions and holdout/prediction exclusions. An invalid or stale
+plan must be corrected; it is never silently replaced by implicit CV.
+
+If no plan is defined, searches generate shuffled five-fold CV with the search
+seed. Classification stratifies by target; regression uses K-fold. The fold count
+is reduced to the available number of observed targets and, for classification,
+the smallest observed class count. At least two folds and two classes are required
+for classification. Missing-target rows are reserved for prediction and excluded
+from every fit and score. No final holdout is invented.
+
+This automatic fallback assumes independent rows. Assigned Partition, Sequence,
+Geometry or Stratifier roles, or repeated Identifiers, require an explicit upstream
+plan so their intended boundaries are not guessed. The implicit split strategy and
+origin are shown in progress and included in the search fingerprint and checkpoint
+specification. Splits remain fixed across candidates and resumes. Generating an
+implicit search plan does not modify the upstream source or commit an evaluation
+plan to it. A selected estimator that itself uses CV retains that internal behavior;
+search CV is an additional outer evaluation layer, not a switch disabling its CV.
+
+Bayesian GP uses `skopt.Optimizer` ask/tell rather than handing evaluation to
+`BayesSearchCV`. This preserves our fold checkpoints, cancellation and
+evidence publication. Its state is reconstructed from actual completed in-grid
+trials; only JSON history is saved, not a serialized optimizer.
+
+
+**Result refresh interval (seconds)** controls how often completed results are
+published while tuning (default: five seconds; zero publishes every completed
+update). The chart, best-result statement and downstream Model candidates evidence
+share the same snapshot. Continuous completions do not postpone the next refresh.
+Final results are published promptly when tuning stops. The candidate table uses
+the same refresh interval, while progress and worker communication remain frequent.
+This setting is saved with the card and does not change the search identity.
+
+The history chart keeps its existing widget and method traces. Its x-axis spans
+the finite combination count plus starting configurations. The initial y-axis
+spans zero to twice the first completed score (with a nonzero fallback for a zero
+score), and expands only if a later score falls outside that range. New results
+update existing point arrays rather than creating another chart widget.
+
+
+#### Parallel execution
+
+**Auto** (the card default) evaluates starting configuration folds concurrently, then runs
+concurrent candidate trials when more than one configuration remains. If only one
+configuration remains, it uses parallel folds. **Trials** runs several configurations
+concurrently with sequential folds inside each. **Folds** evaluates one configuration
+at a time with concurrent folds. **Sequential** runs one fit at a time. Exact
+upstream or implicit split memberships are unchanged by scheduling.
+
+**Maximum simultaneous fits** is the worker-process limit. Zero chooses half the available CPUs,
+rounded down, with at least one worker. Requests are bounded by detected
+CPU availability and an estimated per-fit memory footprint, including dense GP
+covariances, against one quarter of physical RAM. This is a conservative heuristic,
+not a hard memory limit; large one-hot expansions and custom transformers may need
+a smaller manual limit. Progress and the specification show the effective count.
+
+Bayesian searches propose deterministic batches and wait for the batch to finish
+before proposing the next. Skopt uses batch ask with constant-liar proposals; TPE
+accounts for pending candidates. Temporary optimizer estimates are not persisted
+as real scores. Changing worker count or execution mode changes search identity
+and can change Bayesian proposals. Extending a candidate budget after a short
+batch can also change the subsequent Bayesian path compared with a search started
+with a larger budget. Resuming an unchanged recorded batch preserves its proposals.
+
+Checkpoints store completed fold IDs, so out-of-order results and multiple
+unfinished trials can resume without repeating reported fits. Charts update only
+for completed trial scores.
+
+The total time limit measures cumulative wall time, including pool startup and
+optimizer work. The candidate table's Seconds sums work time across its
+fold tasks, so overlapping fits can total more than the overall wall time. Pause
+and time limits let active fits finish without launching replacements. Cancel
+terminates outstanding workers and clears search history; worker crashes report an error and leave an
+indexed checkpoint that can retry missing work.
+
+
+
+Upstream repeated K-fold plans evaluate every repeat. Progress states the repeat/fold counts, and checkpoints retain a repeat/fold descriptor for each evaluated split. The chart plots the mean across all evaluated splits; uncertainty comparisons are available downstream in Model candidates.
+
+#### Downstream candidate review
+
+Completed tuning results now pass through `proxy_data` to **Model candidates**,
+including unfitted pipelines, split scores, compact out-of-fold error summaries and observed
+prediction timing. This card publishes evidence without selecting a configuration.
+Practical-equivalence tolerance, per-method shortlist size and comparison decision
+probability belong to Model candidates. The tuning chart remains a points-only
+search-progress display. Old results lacking prediction evidence require a new
+search to populate downstream error-risk and speed diagnostics.
+
+#### Searching alternative modeling methods
+
+With several committed candidates, each trial chooses a method and only that
+method's parameter grid. Shared preprocessing choices apply to every method.
+Every method receives one starting configuration evaluation using its committed values; the
+**Maximum candidates** budget is global and excludes all method starting configurations. The
+progress display states how many starting configuration evaluations are required. Time limits
+cover the complete search. Matching in-grid starting configurations are counted once.
+
+Random and Exhaustive visit the union of valid branches. TPE and skopt use separate
+optimizers for each method with deterministic balanced allocation between
+non-exhausted methods. No inactive-method parameter values or fictitious objective
+scores are supplied. All methods reuse identical CV memberships, fit preparation
+inside each fold, and obey the same parallel-fit limit. Method/recipe IDs remain
+part of checkpoint identity, and resuming preserves reserved branches and results.
+
+The flip-side table and CSV include a **Method** column, with recipe identity in
+**Model**. Chart hover text and the best-result statement identify the method.
+Improvement over starting configuration uses that method's own starting configuration.
+This card preserves the incoming pipeline and candidate set, and publishes completed
+trial evidence for downstream model selection. It does not accept or revert
+configurations. Statistical comparisons can compare different methods because
+their metric and split identities match.
+
+
+
+
+The chart x-axis is labeled **Trial**. Hatched bars identify each method's
+committed starting configuration; solid bars identify tuned candidates. Method
+colors are preserved for both bar styles. Starting configurations use the same CV
+splits as candidates, remain available for downstream selection, and provide the reference
+for the displayed improvement. They are not null models. The candidate budget
+excludes one starting-configuration evaluation per method.
+
+
+#### Memory and portable configurations
+
+Only scores, settings and bounded review summaries accumulate across trials.
+Full predictions, duplicated outcomes, validation positions and probability
+matrices are not retained. Unfinished validation losses use temporary compressed
+arrays and are deleted once the trial's exact tail summaries/101-point curves
+are computed. One unfitted pipeline template is shared per method.
+
+Completed configurations need no prediction-evidence files. Saving a paused
+search embeds only its unfinished compressed arrays; restoration validates and
+isolates them for that configuration. No host paths are saved. Browser/shinylive
+restoration does not require native filesystem access, and larger configurations
+stage through IndexedDB during reload. Progress uses a bounded incremental queue.
+Starting a new search or ending the session releases its temporary evidence.
+Older row-level evidence is discarded on import; scores are preserved, but start
+a new search to use the current implementation's compact diagnostics.

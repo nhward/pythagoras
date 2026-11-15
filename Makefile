@@ -33,7 +33,7 @@ app/www/markdown/%.html: markdown/%.qmd $(QUARTO_CONFIG)
 	quarto render $< --to html --output-dir app/www
 
 
-.PHONY: preview install check-imports test test-force clean app shinylive shinylive-force shinylive-serve
+.PHONY: preview install check-imports test test-force clean app app-dev shinylive shinylive-force shinylive-serve
 
 # Refresh the editable source link in the existing environment. Dependencies
 # are left alone except for legacy PyPI packages that shadow local modules.
@@ -57,7 +57,12 @@ $(TEST_STAMP): $(TEST_DEPS)
 test-force: check-imports
 	$(PYTHON) -m pytest
 
+# Stable sessions for analysis and long-running tuning searches.
 app: check-imports
+	$(SHINY) run --launch-browser app/app.py
+
+# Opt into source/asset reloads while developing; reloads end active sessions.
+app-dev: check-imports
 	$(SHINY) run --reload --launch-browser app/app.py
 
 # Export only when application files have changed.

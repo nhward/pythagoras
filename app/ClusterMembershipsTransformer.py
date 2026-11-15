@@ -33,15 +33,15 @@ class ClusterMembershipsTransformer(BundledParametersMixin, TransformerMixin, Ba
             'reason': 'Density border-allocation modeling setting, held fixed in this version; available for future tuning.'},
     }
 
-    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {'partition': {'selector': 'method',
+    parameter_groups: ClassVar[dict[str, dict[str, object]]] = {'partition': {'selector': 'methods',
                    'values': ['Partition'],
                    'parameters': {'centre': 'center'}},
-     'distance': {'selector': 'method',
+     'distance': {'selector': 'methods',
                   'values': ['Partition', 'Density'],
                   'parameters': {'metric': 'metric'}},
-     'density': {'selector': 'method',
+     'density': {'selector': 'methods',
                  'values': ['Density'],
-                 'parameters': {'min_points': 'min_points', 'border': 'border'}}}
+                 'parameters': {'density_min_points': 'min_points', 'density_border': 'border'}}}
 
     def __init__(self, columns, *, n_clusters=2, methods=('Partition',),
                  output_columns=None, centre='centroids', metric='euclidean',

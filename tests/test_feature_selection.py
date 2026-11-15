@@ -336,6 +336,8 @@ def test_downstream_model_uses_fitted_subset_not_preview_columns(model_first):
 
 
 def test_recorded_transformer_source_replays_with_explicit_namespace():
+    from typing import ClassVar
+
     from bundled_parameters import BundledParametersMixin
     from code_recording import recording_context
     from module import Module
@@ -346,7 +348,7 @@ def test_recorded_transformer_source_replays_with_explicit_namespace():
     model=FeatureSelectionTransformer(('signal','noise'),trees=25,iterations=15)
     recording_context(registry,model.fit)(source.frame,source.frame.y)
     namespace={'np': np,'pd': pd,'BaseEstimator': BaseEstimator,'TransformerMixin': TransformerMixin,
-                   'BundledParametersMixin': BundledParametersMixin,
+                   'BundledParametersMixin': BundledParametersMixin, 'ClassVar': ClassVar,
                    'check_is_fitted': check_is_fitted}
     exec(Module.clean_code(registry['FeatureSelectionTransformer']),namespace)  # noqa: S102
     replay=namespace['FeatureSelectionTransformer'](('signal','noise'),trees=25,iterations=15)

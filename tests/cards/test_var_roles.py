@@ -201,7 +201,7 @@ class TestInstance:
         html = str(card.footer)
         assert 'id="Commit"' in html
         assert 'id="Check"' in html
-        assert "Commit Assignments" in html
+        assert "Commit" in html
 
     @pytest.mark.unit
     def test_fixture_seeds_predictor_roles(self, card):

@@ -1,0 +1,120 @@
+---
+title: "Candidate models"
+subtitle: "A Pythagoras card"
+author: "Nick Ward"
+format:
+  html:
+    theme: none
+    embed-resources: true
+    toc: false
+    css: ../app/www/pythagoras.css
+---
+
+Place **Candidate models** after **Pipeline tuning**. This experimental card
+supports continuous regression. It chooses one completed configuration overall,
+and one within each candidate method. It does not fit models or construct an
+ensemble. All completed evidence is considered, including configurations outside
+the former score-based shortlist.
+
+### Chart and tabs
+
+**Overall** compares configurations across methods. Each method tab compares
+configurations within that method. Tabs change the view only: the Overall winner
+is always the pipeline exported downstream. Method winners are recorded in tuning
+review metadata as zero-based trial identities; their complete evaluated pipelines
+remain available in the evidence for later ensemble work. Preprocessing may differ
+between those pipelines.
+
+Rotate the 3D chart by dragging, zoom with the wheel and inspect points by hovering.
+The axes show the primary tuning score, observed prediction rows per second and
+P95 absolute error. Method colours remain consistent across tabs. The scene uses
+Pythagoras’s standard pale-blue background.
+
+### What the Pareto frontier means
+
+A configuration is **dominated** when another configuration in the current tab
+is at least as good on all three criteria and strictly better on at least one:
+
+- Lower RMSE or MAE, or higher R², for Score.
+- Higher prediction throughput.
+- Lower P95 absolute error.
+
+The **Pareto frontier** is the set of configurations that are not dominated.
+Moving from one frontier configuration to another generally means trading one
+criterion against another. Frontier membership does not imply that a model has
+the best score, or that its performance difference is statistically established.
+**Overall** computes the frontier across all candidate methods; each method tab
+computes it within that method. A point can therefore be on its method’s frontier
+while dominated in Overall. Changing the weights changes the weighted winner,
+not the frontier itself.
+
+| Marker appearance | Meaning |
+|---|---|
+| Method colour | Model method, as identified in the fullscreen legend and hover text |
+| Larger, fully opaque circle (size 6) | Pareto frontier configuration |
+| Smaller, partially transparent circle (size 4, 65% opacity) | Dominated configuration |
+| Large black diamond with white outline | Winner under the current weights |
+
+Size and opacity encode Pareto status; they do not encode model complexity,
+uncertainty or viewing distance. Outlines help distinguish points against the
+blue background. Duplicate criteria values can overlap. No interpolated frontier
+surface is implied. The camera is retained across updates.
+
+Only finite three-coordinate points can be drawn. A score-only winner with missing
+prediction diagnostics can still be selected and inspected in the table, but cannot
+appear on the 3D chart. Classification and ordinal outcomes are outside this card.
+
+### Weights and automatic selection
+
+The footer slider partitions 100% between **Score**, **Throughput** and **P95
+error**. For boundaries a and b, weights are a%, (b−a)% and (100−b)%. Both handles
+at the right select 100% Score, the default. Labels update while dragging; selection
+is published when a handle is released. The same weights apply in every tab.
+There are no Accept, Revert or Selected row actions. Row and point selection only
+inspect a configuration; new completed trials can change the weighted winners.
+
+The weighted product is calculated in log space: positive RMSE/MAE and P95 error
+are minimized, throughput is maximized. R² is converted to the loss **1−R²**;
+weights therefore express proportional changes in that loss, not raw R². The
+**Minimum error for weighted products** setting explicitly floors zero and small
+losses. Its default is 1e−12. It is in target units for RMSE/MAE and P95, and
+dimensionless for the R² loss. Unit changes may require adjusting the floor.
+Above the floor, multiplying a criterion by a positive unit conversion does not
+change the ranking. Arbitrary shifts and nonlinear transformations can change it.
+
+A missing or invalid positively weighted criterion makes a configuration
+ineligible. A zero-weight criterion does not exclude it. Exact weighted-product
+ties prefer the three-axis Pareto frontier, then the primary score and finally
+the stable trial identity. If no eligible winner exists, the incoming pipeline
+passes through without a new selection. Historical read-only evidence is displayed
+but never applied as a pipeline.
+
+### Comparison details
+
+All candidate methods are implicitly eligible. Interpretability descriptions
+are provided for review and do not certify transparency. Old saved method
+filters are ignored and omitted from newly saved configuration.
+
+The flip side shows all eligible configurations in the current tab, the Overall
+and method winners, scores, diagnostic evidence and parameter differences. Rows
+labelled **Best score (reference)** are emphasised. Selecting a row opens the
+comparison details; clearing the selection closes them. **Download** exports the
+current tab's eligible table and winner indicators.
+
+**RMSE/MAE** is diagnostic only: the ratio of mean fold RMSE to mean fold MAE.
+It describes disproportionate error magnitudes and is unchanged if every error
+is multiplied by a constant. It does not quantify absolute tail risk. Perfect
+predictions have an undefined ratio, shown as missing. P95 is the mean of
+repeat-level 95th absolute-error percentiles, not a pooled percentile. It can miss
+very rare extreme errors. Throughput is observed warm validation-batch timing,
+including preprocessing, rather than a production benchmark.
+
+Practical equivalence compares configurations against their method's best
+primary-scoring trial. It requires suitable repeated shuffled CV and an
+application-based tolerance. It does not constrain weighted selection. All tuning
+comparisons are exploratory and subject to selection bias. Use independent
+validation before making deployment decisions. No automatic ensemble is created.
+
+Weights, floor and comparison settings are saved with the card. Winner
+identities are recalculated from current compatible evidence when restoring.
+Stale upstream evidence cannot be applied to a changed source.

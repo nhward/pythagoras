@@ -267,7 +267,7 @@ def test_density_border_rule_and_training_pipeline():
     model.radius_ = 1.
     query = pd.DataFrame({'x': [0., .95, 2.], 'y': [0., 0., 0.]})
     assert model.transform(query).cluster.iloc[1] != 'unallocated'
-    model.border = False
+    model.set_params(density__border=False)
     assert list(model.transform(query).cluster) == [model.label_map_[0], 'unallocated', 'unallocated']
     r = analyze(source(True), min_points=3)
     out = m._export(r, 'Density', 'density')
