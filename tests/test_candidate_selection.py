@@ -93,3 +93,51 @@ def test_full_evidence_ignores_score_shortlist_and_preserves_full_pipeline_selec
     assert selected.tuning_results is not None
     results['state']['specification']['task'] = 'classification'
     assert candidate_frame(results)[0].empty
+
+
+def test_transparency_constraint_uses_terminal_class_and_preserves_evidence():
+    from copy import deepcopy
+    from types import SimpleNamespace
+
+    from candidate_selection import transparent_candidates
+    from estimator_catalogue import load_catalogue
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import Pipeline
+    from sklearn.tree import DecisionTreeRegressor
+    data = frame()
+    # Human labels and IDs do not determine the class; even a shallow tree is Conditional.
+    data['Model'] = ['local-ridge', 'local-ridge', 'sklearn.linear_model.Ridge', 'sklearn.linear_model.Ridge']
+    data['Method'] = 'Misleading human label'
+    before = data.copy(deep=True)
+    results = {'pipelines': SimpleNamespace(templates={
+        'local-ridge': Pipeline([('model', Ridge())]),
+        'sklearn.linear_model.Ridge': Pipeline([('model', DecisionTreeRegressor(max_depth=1))]),
+    })}
+    catalogue = load_catalogue()
+    saved = deepcopy(catalogue)
+    eligible = transparent_candidates(data, results, catalogue)
+    assert eligible.Trial.tolist() == [1, 2]
+    assert decisions(eligible, METRIC, [0, 1, 0], 1e-12) == {
+        'overall': 2, 'methods': {'local-ridge': 2}}
+    pd.testing.assert_frame_equal(data, before)
+    assert catalogue == saved
+
+
+def test_transparency_constraint_fails_closed_and_can_use_saved_recipe_identity():
+    from candidate_selection import transparent_candidates
+    from estimator_catalogue import load_catalogue
+    catalogue = load_catalogue()
+    ridge = next(p['id'] for p in catalogue['profiles'] if p['estimator'] == 'sklearn.linear_model.Ridge')
+    data = frame()
+    data['Model'] = [ridge, ridge, 'unknown.Ridge', 'unknown.Ridge']
+    eligible = transparent_candidates(data, {'pipelines': {}}, catalogue)
+    assert eligible.Trial.tolist() == [1, 2]
+    data['Model'] = 'unknown.Ridge'
+    empty = transparent_candidates(data, {'pipelines': {}}, catalogue)
+    assert empty.empty and list(empty.columns) == list(data.columns)
+    assert decisions(empty, METRIC, [1, 0, 0], 1e-12) == {'overall': None, 'methods': {}}
+    # A reviewed-looking value with an unreviewed status must not qualify.
+    data['Model'] = ridge
+    row = next(e for e in catalogue['estimators'] if e['id'] == 'sklearn.linear_model.Ridge')
+    row['taxonomy']['transparency']['status'] = 'unreviewed'
+    assert transparent_candidates(data, {'pipelines': {}}, catalogue).empty

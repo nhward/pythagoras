@@ -664,7 +664,7 @@ class Module(ABC):
             if input_id not in self._configuration_excluded_input_ids
         }
         scoped_input = self._configuration_input
-        for input_id in sorted(self._configuration_input_ids):
+        for input_id in sorted(self._configuration_input_ids - self._configuration_excluded_input_ids):
             if scoped_input is None:
                 continue
             try:

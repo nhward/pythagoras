@@ -611,6 +611,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ---- ESC key: unflip if flipped; else contract if fullscreen ----
     document.addEventListener("keydown", (evt) => {
         if (evt.key !== "Escape") return;
+        // Let the modal consume Escape before changing the card underneath it.
+        if (document.querySelector("#shiny-modal.show")) return;
 
         // Don’t interfere while typing
         const t = evt.target;
@@ -1341,3 +1343,38 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
 });
+
+// Row actions survive DataGrid virtualization without per-row Shiny observers.
+(() => {
+    if (window.__pythagorasTuningRowsBound) return;
+    window.__pythagorasTuningRowsBound = true;
+    let sequence = 0;
+    function publish(element, action) {
+        Shiny.setInputValue(element.dataset.tuningInput, {
+            action,
+            path: element.dataset.tuningPath,
+            owner: element.dataset.tuningOwner,
+            version: element.dataset.tuningVersion,
+            token: element.dataset.tuningToken,
+            checked: element.checked,
+            sequence: ++sequence,
+        }, {priority: 'event'});
+    }
+    document.addEventListener('change', (event) => {
+        const control = event.target.closest('input[data-tuning-row-action="toggle"]');
+        if (control && !control.disabled) publish(control, 'toggle');
+    });
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-tuning-row-action]');
+        if (!button || button.disabled) return;
+        event.stopPropagation();
+        publish(button, button.dataset.tuningRowAction);
+    });
+    $(document).on('hidden.bs.modal', (event) => {
+        const marker = event.target.querySelector('[data-tuning-modal-input]');
+        if (!marker) return;
+        Shiny.setInputValue(marker.dataset.tuningModalInput, {
+            action: 'dismiss', token: marker.dataset.tuningToken, sequence: ++sequence,
+        }, {priority: 'event'});
+    });
+})();

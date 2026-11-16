@@ -10176,5 +10176,223 @@
     },
     "structure": [],
     "outputs": []
+  },
+  {
+    "id": "sklearn.gaussian_process.GaussianProcessRegressor:searchable_kernels_v1",
+    "estimator": "sklearn.gaussian_process.GaussianProcessRegressor",
+    "label": "Searchable RBF, polynomial and linear kernels",
+    "task": "regressor",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "kernel": {
+          "metric": "rbf",
+          "gamma": 0.5,
+          "degree": 3,
+          "coef0": 1.0,
+          "gamma_bounds": [
+            1e-05,
+            100000.0
+          ]
+        },
+        "optimizer": "fmin_l_bfgs_b"
+      },
+      "preparation": "numeric",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": null,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete numeric predictors; standard fit does not accept sample_weight.",
+      "Missing target values are not supported by these supervised recipes.",
+      "Kernel family, polynomial degree and offset are explicit scalar choices. Optimizer refines gamma on training data only; optimizer=null fixes gamma. No automatic predictor scaling."
+    ],
+    "weighting": {
+      "importance_weights": "not_supported_in_this_recipe",
+      "rebalance_weights": "not_supported_in_this_recipe",
+      "class_imbalance_mechanism": "none",
+      "better_than_most": null,
+      "notes": "No universal performance ranking. Class weighting and per-row weights may multiply; avoid applying the same rebalance twice. Sampling changes rows and is not interchangeable with importance weighting."
+    },
+    "scalability": {
+      "many_rows": "poor",
+      "many_rows_reason": "Exact Gaussian-process training typically requires O(n^3) factorization.",
+      "many_features_reason": "Depends on representation, dimensionality, and sparsity.",
+      "memory_reason": "O(n^2) training covariance matrix.",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "many_features": "conditional",
+      "prediction_reason": "Cost depends on fitted model size and feature representation; benchmark throughput and latency separately."
+    },
+    "recipe": {
+      "steps": [
+        "Decode the allowlisted kernel descriptor with kernel_search.kernel_parameters, then instantiate the native estimator.",
+        "Apply preparation=numeric as defined in README.md.",
+        "Fit inside each training fold; transform held-out data using that fitted preparation."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://scikit-learn.org/1.9/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html",
+      "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html"
+    ],
+    "probe": {
+      "dataset": "numeric",
+      "operation": "fit_predict",
+      "weights": false,
+      "batch": "kernel_search_2026_11_16",
+      "pipeline_cross_validation": true,
+      "kernel_families": [
+        "rbf",
+        "poly",
+        "linear"
+      ]
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "specialist_small_data",
+      "rationale": "Useful for small-data uncertainty modelling; exact covariance calculations make large-row use unattractive.",
+      "confidence": "medium",
+      "large_data_preference": "avoid_as_large_row_default",
+      "class_imbalance_preference": "not_applicable",
+      "imbalance_rationale": "Classification imbalance is not applicable.",
+      "assumptions": [
+        "Tabular data with a representative held-out evaluation.",
+        "Reasonable hyperparameter tuning and preprocessing.",
+        "No model-specific benchmark was run for this rating."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "point_prediction",
+      "predictive_standard_deviation",
+      "predictive_covariance"
+    ],
+    "default_for_new_selection": true
+  },
+  {
+    "id": "sklearn.gaussian_process.GaussianProcessClassifier:searchable_kernels_v1",
+    "estimator": "sklearn.gaussian_process.GaussianProcessClassifier",
+    "label": "Searchable RBF, polynomial and linear kernels",
+    "task": "classifier",
+    "reviewed_package_version": "1.9.1",
+    "construction": {
+      "parameters": {
+        "optimizer": "fmin_l_bfgs_b",
+        "max_iter_predict": 100,
+        "random_state": 1729,
+        "n_jobs": 1,
+        "kernel": {
+          "metric": "rbf",
+          "gamma": 0.5,
+          "degree": 3,
+          "coef0": 1.0,
+          "gamma_bounds": [
+            1e-05,
+            100000.0
+          ]
+        }
+      },
+      "preparation": "impute_onehot",
+      "wrapper": null
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": true,
+      "missing_numeric_predictors": true,
+      "missing_categorical_predictors": true,
+      "sparse_input": false,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Complete one-dimensional target. Dense cross-sectional data only; no sparse, structured-outcome or incremental-training guarantee.",
+      "Impute_onehot preparation is fitted independently within each outer training fold. Preprocessing is unweighted; supported weights reach the estimator only.",
+      "Kernel family, polynomial degree and offset are explicit scalar choices. Optimizer refines gamma on training data only; optimizer=null fixes gamma. No automatic predictor scaling. Classification certification is binary; multiclass behavior and calibration are not certified."
+    ],
+    "weighting": {
+      "importance_weights": "unsupported",
+      "rebalance_weights": "unsupported",
+      "class_imbalance_mechanism": "not_claimed",
+      "better_than_most": null,
+      "notes": "The nonuniform-weight check verifies API acceptance, not weight effects or survey-design inference. Evaluation weights are separate."
+    },
+    "scalability": {
+      "many_rows": "unbenchmarked",
+      "many_features": "unbenchmarked",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "memory_reason": "Dense representations may expand substantially after one-hot encoding.",
+      "many_rows_reason": "Measure training and prediction on representative data; no scalability benchmark was run.",
+      "many_features_reason": "Scaling and regularization require task-specific review.",
+      "prediction_reason": "Depends on the selected estimator and fitted model size; no timing benchmark was run."
+    },
+    "recipe": {
+      "steps": [
+        "Decode the allowlisted kernel descriptor with kernel_search.kernel_parameters, then instantiate the native estimator.",
+        "Fit preparation and estimator within each training fold, then predict on held-out observations.",
+        "Evaluate predictive quality and distributional assumptions separately."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessClassifier.html",
+      "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html"
+    ],
+    "probe": {
+      "dataset": "mixed",
+      "operation": "fit_predict",
+      "weights": false,
+      "pipeline_cross_validation": true,
+      "probabilities": true,
+      "batch": "kernel_search_2026_11_16",
+      "kernel_families": [
+        "rbf",
+        "poly",
+        "linear"
+      ]
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Binary Gaussian-process classification with the default fixed kernel and optimizer disabled. No kernel optimization, multiclass behavior or probability calibration is certified.",
+      "assumptions": [
+        "Small synthetic compatibility checks are not predictive-quality, calibration or scalability benchmarks."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "cross_sectional"
+    ],
+    "outputs": [
+      "class_label",
+      "class_probability"
+    ],
+    "default_for_new_selection": true
   }
 ]

@@ -126,3 +126,13 @@ stores its selected candidate ID and retains the original alternatives. Candidat
 identity/settings participate in equality and tuning identity; no fitted state is
 published. Committed UI state is a source/candidate-list tuple. selected_methods and
 committed_recipes coexist with compatibility singleton fields in bookmark output.
+
+
+The November 2026 intrinsic-transparency review is maintained in
+`app/data/estimator_capabilities/TRANSPARENCY_REVIEW.md`. Explicit taxonomy
+allowlists carry provider sources, review dates and conditional readability notes.
+Conditional notes describe both more-transparent and less-transparent circumstances;
+small/large are qualitative factors, not numeric thresholds or learned classifications.
+Standalone clustering/covariance/representation tools have explicit scope exclusions.
+Extension interfaces retain reasoned unreviewed status. Description refresh preserves
+runtime-probe evidence and does not confer executable eligibility or causal meaning.

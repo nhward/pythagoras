@@ -1168,3 +1168,13 @@ def test_nested_module_scope_uses_root_namespace_registry(monkeypatch):
     second = DummyModule('miss_impute')
     assert second.namespace == 'miss_impute_0'
     assert second.Instances is first.Instances
+
+
+@pytest.mark.unit
+def test_registered_retired_input_is_not_recaptured():
+    module = DummyModule('card')
+    module.register_configuration_input('ModelValues')
+    module._configuration_input = SimpleNamespace(ModelValues=lambda: '{"alpha": [99]}')
+    module.restore_configuration_state({'inputs': {'ModelValues': '{"alpha": [99]}'}})
+    module.exclude_configuration_input('ModelValues')
+    assert module.configuration_state()['inputs'] == {}

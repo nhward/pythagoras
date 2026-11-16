@@ -33,6 +33,7 @@ from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
 from widget_lifecycle import WidgetSlot, update_figure
 
+#TODO: Reviw quarto
 
 def best_parameter_label(path, trial):
     """Format a tuning path for the best-result summary only."""
@@ -152,13 +153,25 @@ def progress_figure(state, *, axis_ranges=None):
     return figure
 
 
+def validate_legacy_choices(legacy_choices, tuning_spec):
+    """Require old local choices to be explicitly committed upstream."""
+    try:
+        choices = json.loads(legacy_choices or '{}') if isinstance(legacy_choices, str) else legacy_choices
+    except (ValueError, TypeError):
+        choices = None
+    grid = (tuning_spec or {}).get('grid', {})
+    if not isinstance(choices, dict) or any(grid.get(path) != values for path, values in choices.items()):
+        raise ValueError('This saved card contains Additional model choices. Commit those choices in Tuning parameters before training: ' + str(legacy_choices))
+
+
 def instance():
     this = Card(file=__file__, mutable=True)
     this.register_configuration_state_field('search')
+    this.register_configuration_state_field('legacy_model_values')
     this.exclude_configuration_input('Secondary')
     this.long_name = 'Pipeline training'
     this.description = 'Train pipelines across candidate methods and hyper-parameters.'
-    this.export_inputs('Metric', 'Method', 'ModelValues', 'Seed', 'Trials', 'Seconds', 'Execution', 'Workers')
+    this.export_inputs('Metric', 'Method', 'Seed', 'Trials', 'Seconds', 'Execution', 'Workers')
     for name in ('GridCap', 'ChartView', 'SDMultiplier', 'EquivalenceTolerance', 'ComparisonLimit', 'DecisionProbability'):
         this.exclude_configuration_input(name)
     
@@ -174,12 +187,7 @@ def instance():
     this.back = lambda: ui.TagList(
         ui.span('Candidate evaluations', class_='text-primary text-center d-block'),
         ui.div(ui.output_data_frame('Candidates'), class_='pipeline-tune-table html-fill-container html-fill-item'),
-        ui.tags.details(ui.tags.summary('Search space and checkpoints'),
-            ui.output_text_verbatim('Specification'),
-            ui.download_button('Checkpoint', label='Save checkpoint'),
-            ui.download_button('Results', label='Download results'),
-            ui.input_file('Restore', label='Load checkpoint JSON', accept=['.json'], multiple=False),
-            class_='pipeline-tune-details'),
+
     )
     
     this.footer = lambda: ui.TagList(
@@ -193,7 +201,7 @@ def instance():
                 text = text
             ) for name, symbol, label, text in (
                 ('Start', 'play', 'Start or resume tuning',
-                 'Tune from the committed starting configuration, or resume a tuning. Trial and time budgets are cumulative.'),
+                 'Tune from the committed starting configuration, or resume a tuning. Trial and time budgets are cumulative for non-exhaustive searches.'),
                 ('Pause', 'pause', 'Pause',
                  'Stop scheduling new work and finish active fits, retaining completed folds so tuning can resume.'),
                 ('Cancel', 'backward-fast', 'Cancel current tuning',
@@ -215,7 +223,7 @@ def instance():
             text='The following options are available:'
                  '<ul>'
                  '<li><strong>Random</strong> &ndash; samples unseen configurations.</li>'
-                 '<li><strong>Exhaustive</strong> &ndash; evaluates all finite choices, subject to any candidate or time limit.</li>'
+                 '<li><strong>Exhaustive</strong> &ndash; evaluates all finite choices unless manually paused; candidate and time budgets are ignored.</li>'
                  '<li><strong>Bayesian TPE</strong> &ndash; Tree-structured Parzen Estimator, learns from recorded trials to propose promising configurations.</li>'
                  '<li><strong>Bayesian GP</strong> &ndash; Gaussian-process surrogate, learns from recorded trials to propose promising configurations.</li>'
                  '</ul>'
@@ -234,10 +242,10 @@ def instance():
                  'Each fit uses one estimator/native-library thread. Changing this setting starts a different search identity.'),
         ui.input_numeric('Trials', label='Maximum candidates excluding starting configurations (0 = unlimited)', value=30, min=0, max=10000, step=1,
             guide=this, position='left', title='Candidate budget',
-            text='Maximum candidate trials across all committed methods, excluding one starting-configuration evaluation per method. Zero removes the candidate limit for every search method; the search still stops when all finite configurations have been evaluated or the time limit is reached. Budgets are cumulative across resumes.'),
+            text='Ignored for Exhaustive. Maximum candidate trials across all committed methods, excluding one starting-configuration evaluation per method. Zero removes the candidate limit; the search still stops when all finite configurations have been evaluated or the time limit is reached. Budgets are cumulative across resumes.'),
         ui.input_numeric('Seconds', label='Total time budget in seconds (0 = unlimited)', value=0, min=0,
             guide=this, position='left', title='Time budget',
-            text='Cumulative time budget across resumes. Zero means unlimited. Time is checked between folds; Cancel current fit can interrupt a long fit.'),
+            text='Ignored for Exhaustive. Cumulative time budget across resumes. Zero means unlimited. Time is checked between folds; Cancel current fit can interrupt a long fit.'),
         ui.input_numeric('RefreshSeconds', label='Result refresh interval (seconds)', value=5, min=0, step=1,
             guide=this, position='left', title='Result refresh interval',
             text='Refresh the completed-trial chart and downstream model review together at most once per interval while tuning. '
@@ -246,13 +254,14 @@ def instance():
         ui.input_numeric('Seed', label='Random seed', value=1729, min=0, max=2147483647, step=1,
             guide=this, position='left', title='Random seed',
             text='Allows search method and modeling method to be reproducible. Changing it creates a different tuning identity.'),
-        ui.input_text_area('ModelValues', label='Additional model choices (JSON)', value='{}', rows=5,
-            placeholder='{"cand_methods__estimator__alpha": [0.1, 1, 10]}',
-            guide=this, position='left', title='Additional model choices',
-            text='Add full model parameter paths with finite lists of candidate values. Existing committed choices must be edited in Tuning parameters.'),
     )
 
     def server(input, output, session):
+        legacy_choices = this.consume_restored_configuration_field('legacy_model_values', None)
+        if legacy_choices is None:
+            legacy_choices = this.restored_configuration_input('ModelValues', '{}', warn_if_missing=False)
+        this.exclude_configuration_input('ModelValues')
+        this.register_configuration_state_provider('legacy_model_values', lambda: legacy_choices)
         history_widget = WidgetSlot(session)
         history_instance = reactive.Value(None)
         history_fingerprint = None
@@ -303,6 +312,7 @@ def instance():
 
         @this.reactable(calc=True)
         def Problem():
+            nonlocal legacy_choices
             try:
                 if Incoming() is None: raise ValueError('Waiting for upstream data.')
                 if sys.platform == 'emscripten': raise ValueError('Pipeline tuning requires the native Python server; isolated fitting is unavailable in this browser runtime.')
@@ -311,7 +321,9 @@ def instance():
                 workers = input.Workers()
                 if workers is None or int(workers) != workers:
                     raise ValueError('Choose an integer worker limit.')
-                return prepare(Incoming(), model_values=json.loads(input.ModelValues() or '{}'),
+                validate_legacy_choices(legacy_choices, Incoming().tuning_spec)
+                legacy_choices = '{}'
+                return prepare(Incoming(),
                     metric=input.Metric() or None,
                     method=input.Method(), seed=int(seed), execution=input.Execution() or 'auto', workers=int(workers)), ''
             except (ValueError, TypeError, OverflowError) as exc:
@@ -403,7 +415,7 @@ def instance():
                     checkpoint = validate_checkpoint(problem, current)
                     worker.start(problem, checkpoint, *_budgets())
                     state.set(dict(checkpoint, status='running'))
-                    message.set('Fitting resumed; budgets are cumulative.')
+                    message.set('Fitting resumed; Exhaustive ignores candidate and time budgets.' if problem.specification['method'] == 'grid' else 'Fitting resumed; budgets are cumulative.')
                     return
                 if current is not None:
                     message.set('Cannot resume this search; history retained. Cancel to clear it before starting again.')
@@ -422,6 +434,8 @@ def instance():
             message.set('Fitting started. Each method’s committed starting configuration is evaluated first.')
 
         def _budgets():
+            if input.Method() == 'grid':
+                return 0, 0.
             trials, seconds = input.Trials(), input.Seconds()
             if trials is None or int(trials) != trials or not 0 <= trials <= 10000:
                 raise ValueError('Choose a candidate budget between 0 and 10,000; zero means unlimited.')
@@ -442,29 +456,6 @@ def instance():
             evidence_source.set(None)
             state.set(None)
             message.set('Tuning cancelled and history cleared. Play starts a new search.')
-
-        @this.reactable(triggers=[input.Restore])
-        def Restore():
-            files = input.Restore()
-            if not files: return
-            try:
-                if worker.running: raise ValueError('Pause the search before loading a checkpoint.')
-                if files[0]['size'] > 20_000_000: raise ValueError('Checkpoint must be smaller than 20 MB.')
-                problem, error = Problem()
-                if problem is None: raise ValueError(error)
-                with open(files[0]['datapath']) as stream: loaded = json.load(stream)
-                hydrated = evidence_store.restore_checkpoint(loaded)
-                try:
-                    validated = validate_checkpoint(problem, hydrated)
-                except Exception:
-                    evidence_store.remove(evidence_store.references(hydrated))
-                    raise
-                worker.close()
-                evidence_store.remove(set(evidence_store.references(state())) - set(evidence_store.references(validated)))
-                evidence_source.set(Incoming()._tuning_evidence_signature())
-                state.set(validated)
-                message.set('Compatible checkpoint loaded. Resume to continue.')
-            except (ValueError, TypeError, KeyError, OSError) as exc: message.set(str(exc))
 
         @output
         @render.text
@@ -558,22 +549,6 @@ def instance():
             current = table_state()
             return render.DataGrid(trial_frame(current).round(3) if current else pd.DataFrame(columns=['Trial', 'State', 'Score']),
                                    selection_mode='row', height='100%', filters=False)
-
-        @output
-        @render.text
-        def Specification():
-            problem, error = Problem()
-            return json.dumps(problem.specification, indent=2) if problem else error
-
-        @output
-        @render.download_button(filename='pipeline-search.json')
-        def Checkpoint():
-            if state() is not None: yield json.dumps(evidence_store.portable_checkpoint(state()), allow_nan=False, indent=2)
-
-        @output
-        @render.download_button(filename='pipeline-search.csv')
-        def Results():
-            if state() is not None: yield trial_frame(state()).to_csv(index=False)
 
         @this.reactable(calc=True)
         def Exported():

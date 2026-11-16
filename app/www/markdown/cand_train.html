@@ -8,7 +8,7 @@
 
 <meta name="author" content="Nick Ward">
 
-<title>Pipeline tuning</title>
+<title>Pipeline training</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -23,41 +23,6 @@ ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
 width: 0.8em;
 margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
-}
-
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-{ counter-reset: source-line 0; }
-pre.numberSource code > span
-{ position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-{ content: counter(source-line);
-position: relative; left: -1em; text-align: right; vertical-align: baseline;
-border: none; display: inline-block;
--webkit-touch-callout: none; -webkit-user-select: none;
--khtml-user-select: none; -moz-user-select: none;
--ms-user-select: none; user-select: none;
-padding: 0 4px; width: 4em;
-}
-pre.numberSource { margin-left: 3em; padding-left: 4px; }
-div.sourceCode
-{ }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -1200,41 +1165,58 @@ visibility: hidden;
 
 
 <header id="title-block-header">
-<h1 class="title">Pipeline tuning</h1>
+<h1 class="title">Pipeline training</h1>
 <p class="subtitle">A Pythagoras card</p>
 <p class="author">Nick Ward</p>
 
 </header>
 
 
-<p>Tune the committed preprocessing pipeline, including any model-method candidates, using the evaluation splits from <strong>Observation resampling</strong> when available, or reproducible implicit cross-validation when no plan is defined. Place <strong>Pipeline tuning</strong> after <strong>Model method candidates</strong> and <strong>Tuning parameters</strong>. Commit <strong>Model method candidates</strong> and <strong>Tuning parameters</strong> choices before starting.</p>
-<h4 id="search-and-objective">Search and objective</h4>
+<p>Train the combinations of hyper-parameters and model-methods and record the score based on the chosen metric. A chart shows the extent of the training task along its X-axis. Training progress appears as additional bars in the chart. The training is undertaken in a multi-process and multi-threaded context to maximize training evaluation.</p>
+<p>This card is about managing the calculation and evaluation of combinations. This card is not for choosing the absolute-best configuration as this may depend on more than just a single score.</p>
+<h4 id="upstream-cards">Upstream cards</h4>
+<p>This card relies upon upstream cards:</p>
+<ul>
+<li><strong>Observation resampling</strong> for a resampling plan. Without a plan, searches use seeded five-fold CV (target-stratified for classification), with fewer folds for small datasets.</li>
+<li><strong>Model method candidates</strong> for modeling methods that are appropriate for any prediction task. More than one candidate method can be selected. The pipeline training cannot proceed without at least one method.</li>
+<li><strong>Tuning parameters</strong> The upstream cards (including the model method candidates card) are interrogated for any hyper-parameters. The selected hyper-parameters will create combinations (trials) that will be trained in this card. If there are no hyper-parameters selected, the training will be merely a single trial for each modeling-method.</li>
+</ul>
+<h4 id="scoring">Scoring</h4>
+<p>The score appears as the height of each bar in the chart.</p>
 <p>Choose one primary objective:</p>
 <ul>
 <li><strong>classification</strong> supports balanced accuracy, accuracy, ROC AUC and log loss</li>
 <li><strong>regression</strong> supports RMSE, MAE and R².</li>
 </ul>
 <p>The objective label states whether it is minimized or maximized. All supported task metrics are recorded automatically. Any metric that cannot be evaluated is recorded as unavailable with a reason. Scores for errors are displayed as positive errors; the internal sklearn scorer convention dictates higher is better.</p>
-<p>The committed finite choices from Tuning parameters are used directly. <strong>Additional model choices</strong> accepts a JSON object of complete sklearn parameter paths and finite lists, for example:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;cand_methods__estimator__alpha&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="fl">0.1</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">10</span><span class="ot">]</span><span class="fu">}</span></span></code></pre></div>
-<p>These choices are combined with the committed grid. To change an already committed parameter’s choices, return to Tuning parameters. Constructor defaults are not search ranges. Fixed configuration, seeds, topology and weighting cannot be tuned.</p>
+<p>The search uses only the choices committed by the upstream <strong>Tuning parameters</strong> card. Edit parameter choices there, then commit them before training. Without a committed grid, training evaluates each configured model method once using method defaults.</p>
+<h4 id="search-method">Search method</h4>
+<p>The valid combinations of hyper-parameters and modeling-methods form a finite set. While finite, this may still be a unfeasibly large set of combinations.</p>
 <ul>
-<li><strong>Random</strong> samples unseen finite configurations.</li>
-<li><strong>Exhaustive</strong> evaluates each finite configuration.</li>
-<li><strong>Bayesian TPE</strong> adapts proposals using completed evaluations.</li>
-<li><strong>Bayesian GP</strong> uses a Gaussian-process surrogate of the search objective. It proposes finite parameter choices through scikit-optimize; it does not restrict the type of predictive model being tuned.</li>
+<li><strong>Random</strong> samples the combinations and halts when the time-limit or trial-limit is reached. There is no guarantee that the best combination has be encountered yet.</li>
+<li><strong>Exhaustive</strong> evaluates each finite configuration in a repeatable order. It can only be manually halted.</li>
+<li><strong>Bayesian TPE</strong> adapts proposals using completed trials and halts when the time-limit or trial-limit is reached. There is no guarantee that the best combination has be encountered yet but it is more likely than the <strong>Random</strong> method.</li>
+<li><strong>Bayesian GP</strong> uses a Gaussian-process surrogate of the search objective. It proposes finite parameter choices through scikit-optimize. As with <strong>Bayesian TPE</strong> it adapts proposals using completed trials and halts when the time-limit or trial-limit is reached. There is no guarantee that the best combination has be encountered yet but it is more likely than the <strong>Random</strong> method.</li>
 </ul>
-<p>Failed trials are excluded from surrogate fitting, without fabricated penalties; an out-of-grid starting configuration is not included as surrogate evidence. Duplicate proposals use an unseen fallback configuration. All actual completed choices remain the recorded history.</p>
-<p>Each committed method is evaluated first as a starting configuration, even if its values are outside its search choices. Candidate budgets exclude these starting configuration evaluations. <strong>Maximum candidates</strong> applies to every search method. Zero means no candidate limit; a positive value caps candidate trials across resumes. Unlimited searches still stop when the finite search space is exhausted or the time limit is reached. There is no separate exhaustive-cap switch. Grid coverage counts the starting configuration when it matches a grid configuration, without fitting that configuration twice. Partial exhaustive searches report completed grid configurations and failures separately. “Finished” means all grid choices have been visited, not that all succeeded. All budgets are cumulative across resumes. A zero time budget means unlimited time; time budgets are checked between folds, so an individual fit can exceed the remaining time.</p>
+<h4 id="running">Running</h4>
+<p>The ▶️ button starts the training of the pipeline. Evaluation of the combinations (i.e. pipeline training and testing) will continue until one of the following:</p>
+<ul>
+<li>The last of the combinations is reached - status “Finished”</li>
+<li>The pause button (or cancel button) is pressed - status “Halted”</li>
+<li>The configured time limit is reached (e.g. 600 seconds) - status “Halted” (This does not apply to “Exhaustive”)</li>
+<li>The configured combination limit is reached (300 combinations) - status “Halted” (This does not apply to “Exhaustive”)</li>
+</ul>
+<p>Each committed method is evaluated first as a starting configuration. Candidate budgets exclude these starting configuration evaluations.</p>
+<p><strong>Exhaustive</strong> ignores both combination and time budgets and evaluates every finite configuration unless manually paused or cancelled. <strong>Maximum candidates</strong> and <strong>Maximum time budget</strong> apply to the other search methods. Zero means no limit; a positive value caps trials across resumes.</p>
+<p>“Finished” means all grid choices have been visited, not that all succeeded. For non-exhaustive searches, budgets are cumulative across resumes. A zero time budget means unlimited time; time budgets are checked between folds, so an individual fit can exceed the remaining time.</p>
 <h4 id="progress-and-comparison">Progress and comparison</h4>
-<p>The front states the best parameters found so far, their mean objective value and improvement over starting configuration. The chart shows only completed trial mean scores as points, without error bars, ranges, reference lines or connecting lines. When multiple model methods are selected, a consistent color and legend entry identify each method. Colors follow the committed candidate order and remain stable as trials complete. Hover text identifies the method and whether the trial is a starting configuration or candidate. Trial numbers are one-based. This card publishes tuning evidence without changing the incoming pipeline. Choose a model downstream. All settings have guided explanations.</p>
-<p>The flip side lists configurations, states, scores, fold standard deviations, times, model identity and failures. Incomplete or failed evaluations are not ranked. All secondary metrics and their failure reasons appear in the table and CSV. JSON checkpoints include fold results, parameters, search identity, versions and continuation state.</p>
+<p>The front states the best parameters found so far, their mean objective value and improvement over starting configuration. The chart shows only completed trial mean scores as bars. When multiple model methods are selected, a consistent color and legend entry identify each method. Colors follow the committed candidate order and remain stable as trials complete. Hover text identifies the method and whether the trial is a starting configuration or candidate. This card publishes tuning evidence without changing the incoming pipeline. Choose a best-model downstream.</p>
+<p>The flip side lists configurations, states, scores, fold standard deviations, times, model identity and failures. Incomplete or failed evaluations are not ranked. All secondary metrics and their failure reasons appear in the table. Bookmarks include training checkpoints with fold results, parameters, search identity, versions and continuation state.</p>
 <h4 id="pause-cancel-and-resume">Pause, cancel and resume</h4>
-<p><strong>Pause</strong> stops scheduling new work and lets active fits finish. It preserves completed folds, trial history and elapsed time so <strong>Play</strong> can continue. <strong>Cancel current tuning</strong> stops outstanding fitting and discards all trials, chart history, saved checkpoint and elapsed progress. <strong>Play</strong> then starts from scratch. Use Pause when you intend to continue, and Cancel when you intend to start over.</p>
-<p><strong>Play</strong> resumes a compatible checkpoint, preserving the bars and completed fold results. It does not replace incompatible or exhausted history: use Cancel to clear it before starting a new search. A budget-limited search can continue after increasing its cumulative trial or time budget.</p>
-<p>Estimator thread controls (<code>n_jobs</code>, <code>thread_count</code>, <code>nthread</code>, <code>num_threads</code>, where exposed) and supported BLAS/OpenMP pools are limited to one per fit to avoid nested oversubscription. Otherwise-unseeded estimators receive the search seed; evaluated configurations include these fixed settings.</p>
-<p>Card instance names are allocated within each browser session. Another open session does not rename learned preprocessing steps when restoring a workflow; actual duplicate cards within the same session still receive distinct suffixes. Predictor lists follow dataframe column order rather than Python set iteration order, so rebuilding the same workflow preserves its search identity across sessions and server processes. Histories created with the former unstable predictor ordering may require Cancel followed by a new search; their original ordering was not stored and cannot be safely reconstructed.</p>
-<p>Save a checkpoint before closing a session. Checkpoints are also included in the card’s bookmark configuration state, but running processes are not restored automatically. Checkpoints use schema version 4; earlier checkpoints must be replaced by a new search. Load the JSON with the same data, pipeline, choices, model, objective, seed, splits and software versions. Increase the candidate or total-time budget and press Resume. These budgets do not change the search identity. TPE proposals use the actual recorded history and a deterministic seed derived from the search seed and trial count; no optimizer pickle is loaded.</p>
+<p><strong>Pause</strong> stops scheduling new tasks and lets active tasks finish. It preserves completed folds, trial history and elapsed time so <strong>Play</strong> can continue.</p>
+<p><strong>Cancel current tuning</strong> stops outstanding tasks and discards all trials, chart history, saved checkpoint and elapsed progress. <strong>Play</strong> then starts from scratch. Use <strong>Pause</strong> when you intend to continue, and <strong>Cancel</strong> when you intend to start over.</p>
+<p><strong>Play</strong> resumes a compatible checkpoint, preserving the bars and completed fold results. It does not replace incompatible or exhausted history: use <strong>Cancel</strong> to clear it before starting a new search. A budget-limited search can continue after increasing its cumulative trial or time budget.</p>
+<p>To continue in a later session, <strong>Pause</strong> training and save a <strong>bookmark</strong>. Restore the bookmark, then press <strong>Play</strong> to resume. Bookmarks include card settings and the portable training checkpoint, including completed fold results, parameters, search identity, versions and continuation state. Running processes are not restored automatically. Resuming requires compatible data, pipeline, choices, model, objective, seed, splits and software versions. For non-exhaustive searches that reached a budget, increase the candidate or time budget before pressing Play. Budgets do not change search identity; Exhaustive ignores both limits. Older incompatible checkpoints require a new search. TPE proposals use the actual recorded history and a deterministic seed derived from the search seed and trial count; no optimizer pickle is loaded.</p>
 <p>Changing data, the pipeline or search settings makes old results stale. They remain visible for review, but cannot be resumed against the changed inputs. Restoring the original inputs makes a compatible checkpoint usable again.</p>
 <h4 id="upstream-or-implicit-resampling">Upstream or implicit resampling</h4>
 <p>Every search method reuses a defined upstream evaluation plan exactly, preserving its group/time restrictions and holdout/prediction exclusions. An invalid or stale plan must be corrected; it is never silently replaced by implicit CV.</p>
@@ -1248,14 +1230,14 @@ visibility: hidden;
 <p><strong>Maximum simultaneous fits</strong> is the worker-process limit. Zero chooses half the available CPUs, rounded down, with at least one worker. Requests are bounded by detected CPU availability and an estimated per-fit memory footprint, including dense GP covariances, against one quarter of physical RAM. This is a conservative heuristic, not a hard memory limit; large one-hot expansions and custom transformers may need a smaller manual limit. Progress and the specification show the effective count.</p>
 <p>Bayesian searches propose deterministic batches and wait for the batch to finish before proposing the next. Skopt uses batch ask with constant-liar proposals; TPE accounts for pending candidates. Temporary optimizer estimates are not persisted as real scores. Changing worker count or execution mode changes search identity and can change Bayesian proposals. Extending a candidate budget after a short batch can also change the subsequent Bayesian path compared with a search started with a larger budget. Resuming an unchanged recorded batch preserves its proposals.</p>
 <p>Checkpoints store completed fold IDs, so out-of-order results and multiple unfinished trials can resume without repeating reported fits. Charts update only for completed trial scores.</p>
-<p>The total time limit measures cumulative wall time, including pool startup and optimizer work. The candidate table’s Seconds sums work time across its fold tasks, so overlapping fits can total more than the overall wall time. Pause and time limits let active fits finish without launching replacements. Cancel terminates outstanding workers and clears search history; worker crashes report an error and leave an indexed checkpoint that can retry missing work.</p>
+<p>The total time limit measures cumulative wall time, including pool startup and optimizer work. The candidate table’s Seconds sums work time across its fold tasks, so overlapping fits can total more than the overall wall time. Pause and applicable time limits let active fits finish without launching replacements. Cancel terminates outstanding workers and clears search history; worker crashes report an error and leave an indexed checkpoint that can retry missing work.</p>
 <p>Upstream repeated K-fold plans evaluate every repeat. Progress states the repeat/fold counts, and checkpoints retain a repeat/fold descriptor for each evaluated split. The chart plots the mean across all evaluated splits; uncertainty comparisons are available downstream in Model candidates.</p>
 <h4 id="downstream-candidate-review">Downstream candidate review</h4>
 <p>Completed tuning results now pass through <code>proxy_data</code> to <strong>Model candidates</strong>, including unfitted pipelines, split scores, compact out-of-fold error summaries and observed prediction timing. This card publishes evidence without selecting a configuration. Practical-equivalence tolerance, per-method shortlist size and comparison decision probability belong to Model candidates. The tuning chart remains a points-only search-progress display. Old results lacking prediction evidence require a new search to populate downstream error-risk and speed diagnostics.</p>
 <h4 id="searching-alternative-modeling-methods">Searching alternative modeling methods</h4>
-<p>With several committed candidates, each trial chooses a method and only that method’s parameter grid. Shared preprocessing choices apply to every method. Every method receives one starting configuration evaluation using its committed values; the <strong>Maximum candidates</strong> budget is global and excludes all method starting configurations. The progress display states how many starting configuration evaluations are required. Time limits cover the complete search. Matching in-grid starting configurations are counted once.</p>
+<p>With several committed candidates, each trial chooses a method and only that method’s parameter grid. Shared preprocessing choices apply to every method. Every method receives one starting configuration evaluation using its committed values; the <strong>Maximum candidates</strong> budget is global and excludes all method starting configurations. The progress display states how many starting configuration evaluations are required. For non-exhaustive methods, time limits cover the complete search. Matching in-grid starting configurations are counted once.</p>
 <p>Random and Exhaustive visit the union of valid branches. TPE and skopt use separate optimizers for each method with deterministic balanced allocation between non-exhausted methods. No inactive-method parameter values or fictitious objective scores are supplied. All methods reuse identical CV memberships, fit preparation inside each fold, and obey the same parallel-fit limit. Method/recipe IDs remain part of checkpoint identity, and resuming preserves reserved branches and results.</p>
-<p>The flip-side table and CSV include a <strong>Method</strong> column, with recipe identity in <strong>Model</strong>. Chart hover text and the best-result statement identify the method. Improvement over starting configuration uses that method’s own starting configuration. This card preserves the incoming pipeline and candidate set, and publishes completed trial evidence for downstream model selection. It does not accept or revert configurations. Statistical comparisons can compare different methods because their metric and split identities match.</p>
+<p>The flip-side table includes a <strong>Method</strong> column, with recipe identity in <strong>Model</strong>. Chart hover text and the best-result statement identify the method. Improvement over starting configuration uses that method’s own starting configuration. This card preserves the incoming pipeline and candidate set, and publishes completed trial evidence for downstream model selection. It does not accept or revert configurations. Statistical comparisons can compare different methods because their metric and split identities match.</p>
 <p>The chart x-axis is labeled <strong>Trial</strong>. Hatched bars identify each method’s committed starting configuration; solid bars identify tuned candidates. Method colors are preserved for both bar styles. Starting configurations use the same CV splits as candidates, remain available for downstream selection, and provide the reference for the displayed improvement. They are not null models. The candidate budget excludes one starting-configuration evaluation per method.</p>
 <h4 id="memory-and-portable-configurations">Memory and portable configurations</h4>
 <p>Only scores, settings and bounded review summaries accumulate across trials. Full predictions, duplicated outcomes, validation positions and probability matrices are not retained. Unfinished validation losses use temporary compressed arrays and are deleted once the trial’s exact tail summaries/101-point curves are computed. One unfitted pipeline template is shared per method.</p>

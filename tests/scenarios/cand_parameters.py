@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from pathlib import Path
@@ -35,7 +36,7 @@ source = source.with_pipeline_step(UnreviewedStep(), name='unreviewed', preview_
 source = source.with_estimator(RandomForestRegressor(), label='Random forest', recipe_id='test')
 this._imports.set(source)
 original_server, original_footer = this.server, this._footer
-this.footer = lambda: ui.TagList(original_footer(), ui.output_text('ExportState'))
+this.footer = lambda: ui.TagList(original_footer(), ui.output_text('ExportState'), ui.div(ui.output_text('ConfigurationState'), style='display:none'))
 def server(input, output, session):
     exported = original_server(input, output, session)
     @output
@@ -43,6 +44,10 @@ def server(input, output, session):
     def ExportState():
         spec = exported().tuning_spec
         return 'No specification' if spec is None else f'Committed combinations: {spec["combinations"]}'
+    @output(suspend_when_hidden=False)
+    @render.text
+    def ConfigurationState():
+        return json.dumps(this.configuration_state())
     return exported
 this.server = server
 app = this.application()

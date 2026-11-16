@@ -42,6 +42,8 @@ CHOICES = {
     'prediction_interval': 'Prediction interval'
 }
 
+#TODO: Review quarto
+
 @recordable
 def _analyze(source, catalogue, versions, *, use_weights=False, forecasting=False, output=''):
     notes = []
@@ -194,7 +196,8 @@ def _recipe_rank(row):
     return (_readiness(row) != 'Meets requirements',
             row['compatibility'] != 'compatible',
             row['evidence'] != 'probe_passed',
-            row['availability'] != 'version_matches', row['id'])
+            row['availability'] != 'version_matches',
+            not row['profile'].get('default_for_new_selection', False), row['id'])
 
 
 def _method_groups(result, *, show_all=False, installed_only=False):
@@ -604,6 +607,7 @@ def instance():
 if Module.running_directly(name=__name__):
     from roles import RoleMap
     this = instance()
-    this._imports.set(proxy_data(pd.DataFrame({'x': [1., 2., np.nan], 'y': [2., 4., 6.]}),
+    this._imports.set(proxy_data(pd.DataFrame({'x': [1., 2., 3.], 'y': [2., 4., 6.]}),
                                _roles=RoleMap.from_primitive({'predictor': ['x'], 'target': ['y']})))
+    this.restore_configuration_state({'inputs': {'ShowAll': True}})
     this.run()

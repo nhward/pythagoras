@@ -8,9 +8,11 @@ from candidate_selection import (
     candidate_frame,
     decisions,
     pareto_figure,
+    transparent_candidates,
     weights_from_handles,
 )
 from card import Card
+from estimator_catalogue import load_catalogue
 from faicons import icon_svg as icon
 from model_review import parameter_differences
 from module import Module
@@ -21,6 +23,8 @@ from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
 from widget_lifecycle import WidgetSlot, update_figure
 
+#TODO: Review flip-side
+#TODO: Reviw quarto
 
 def instance():
     this = Card(file=__file__, mutable=True)
@@ -60,6 +64,12 @@ def instance():
 
     def settings():
         return ui.TagList(
+            ui.input_checkbox('UsuallyTransparentOnly', label='Require Usually transparent methods', value=False,
+                guide=this, title='Intrinsic transparency', position='left',
+                text='Restrict selection to methods rated Usually transparent in the catalogue. '
+                     'Conditional, usually opaque, unreviewed and unavailable classifications are excluded. '
+                     'This concerns intrinsic method transparency, not SHAP or a guarantee that every fitted pipeline is understandable. '
+                     'The table, chart and weighted winners use this constraint; training evidence is retained.'),
             ui.input_numeric('ErrorFloor', label='Minimum error for weighted products', value=1e-12, min=1e-15,
                 guide=this, title='Minimum error', position='left',
                 text='Positive floor for RMSE, MAE and P95 in target units; dimensionless for 1 − R². '
@@ -78,6 +88,7 @@ def instance():
     this.exclude_configuration_input('EligibleMethods')  # Retired bookmark filter.
 
     def server(input, output, session):
+        catalogue = load_catalogue()
         review_widget = WidgetSlot(session)
         plot_instance = reactive.Value(None)
         selected_trial = reactive.Value(None)
@@ -143,7 +154,7 @@ def instance():
             if identity != previous_fingerprint:
                 selected_trial.set(None)
                 previous_fingerprint = identity
-            frame = AllCandidates()[0]
+            frame = EligibleFrame()
             methods = {} if frame.empty else dict(zip(frame.Model, frame.Method))
             with reactive.isolate(): previous = method_choices()
             if methods != previous:
@@ -151,7 +162,10 @@ def instance():
 
         @reactive.calc
         def EligibleFrame():
-            return AllCandidates()[0].reset_index(drop=True)
+            frame = AllCandidates()[0]
+            if input.UsuallyTransparentOnly() and not frame.empty:
+                frame = transparent_candidates(frame, Results(), catalogue)
+            return frame.reset_index(drop=True)
 
         @reactive.calc
         def Weighting():
@@ -223,6 +237,11 @@ def instance():
             panel = input.MethodPanel() or 'overall'
             if not frame.empty and panel.startswith('method:'):
                 frame = frame.loc[frame.Model == panel[7:]].reset_index(drop=True)
+            if input.UsuallyTransparentOnly() and not AllCandidates()[0].empty:
+                excluded = len(AllCandidates()[0]) - len(EligibleFrame())
+                note = (note + ' ' if note else '') + f'Intrinsic transparency required: {excluded} trials excluded; only Usually transparent methods are eligible.'
+                if EligibleFrame().empty:
+                    note += ' No completed trials have a verified Usually transparent method classification.'
             return frame, note
 
         @output(suspend_when_hidden=False)
@@ -322,7 +341,7 @@ def instance():
             results, frame = Results(), Review()[0]
             decision = Decision()[0]
             if results is None or frame.empty:
-                figure = Card.empty_figure(AllCandidates()[1] if AllCandidates()[0].empty else 'No eligible configurations in this view.')
+                figure = Card.empty_figure(AllCandidates()[1] if AllCandidates()[0].empty else Review()[1] or 'No eligible configurations in this view.')
             else:
                 metric = results['state']['specification']['metric']
                 panel = input.MethodPanel() or 'overall'
@@ -370,7 +389,7 @@ def instance():
         def Status():
             frame = Review()[0]
             if frame.empty:
-                return AllCandidates()[1] if AllCandidates()[0].empty else 'No eligible configurations in this view.'
+                return AllCandidates()[1] if AllCandidates()[0].empty else Review()[1] or 'No eligible configurations in this view.'
             decision, error = Decision()
             if error:
                 return error
@@ -429,6 +448,7 @@ def instance():
                 return source
             weights, floor, _ = Weighting()
             review = {'version': 2, 'policy': 'weighted_product',
+                      'usually_transparent_only': bool(input.UsuallyTransparentOnly()),
                       'weights': weights.tolist() if weights is not None else None, 'error_floor': floor,
                       'winner_trial': decision['overall'] - 1 if decision['overall'] is not None else None,
                       'accepted_trial': decision['overall'] - 1 if decision['overall'] is not None and not results.get('read_only') else None,

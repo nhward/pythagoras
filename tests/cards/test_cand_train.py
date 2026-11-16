@@ -16,6 +16,7 @@ def test_search_progress_evidence_export_and_stale_settings(page, app):
     probe = page.locator('[id$="-ExportState"]')
     expect(probe).to_contain_text('accepted=False')
     expect(probe).to_contain_text('saved_acceptance=False')
+    page.evaluate("() => { const id = document.querySelector('[id$=\"-Trials\"]').id; const ns = id.slice(0, -6); Shiny.setInputValue(id, 1, {priority: 'event'}); Shiny.setInputValue(ns + 'Seconds', 0.000001, {priority: 'event'}); }")
     page.get_by_role('button', name='Start or resume tuning', exact=True).click()
     expect(progress).to_contain_text('Finished', timeout=45000)
     expect(progress).to_contain_text('4 complete')
@@ -91,30 +92,15 @@ def test_search_progress_evidence_export_and_stale_settings(page, app):
 
 
 @pytest.mark.ui
-def test_checkpoint_download_restore_and_larger_budget_resume(page, app, tmp_path):
+def test_flip_side_has_no_manual_checkpoint_or_download_area(page, app):
     page.goto(app.url)
-    progress = page.locator('[id$="-Progress"]')
-    expect(progress).to_contain_text('Ready', timeout=30000)
-    def set_budget(value):
-        page.evaluate("""value => Shiny.setInputValue(document.querySelector('[id$="-Trials"]').id,
-            value, {priority:'event'})""", value)
-    set_budget(1)
-    page.get_by_role('button', name='Start or resume tuning', exact=True).click()
-    expect(progress).to_contain_text('Halted', timeout=45000)
-    expect(progress).to_contain_text('2 complete')
+    expect(page.locator('[id$="-Progress"]')).to_contain_text('Ready', timeout=30000)
     page.locator('.card').first.hover()
     page.locator('[id$="-FlipButton"]').click()
-    page.get_by_text('Search space and checkpoints', exact=True).click()
-    with page.expect_download() as download:
-        page.get_by_role('link', name='Save checkpoint', exact=True).click()
-    checkpoint = tmp_path / 'search.json'
-    download.value.save_as(checkpoint)
-    page.locator('[id$="-Restore"]').set_input_files(checkpoint)
-    expect(page.locator('[id$="-Message"]')).to_contain_text('Compatible checkpoint loaded')
-    set_budget(0)
-    page.get_by_role('button', name='Start or resume tuning', exact=True).click()
-    expect(progress).to_contain_text('Finished', timeout=45000)
-    expect(progress).to_contain_text('4 complete')
+    expect(page.locator('[id$="-Candidates"]')).to_be_visible()
+    expect(page.get_by_text('Search space and checkpoints', exact=True)).to_have_count(0)
+    for suffix in ('Specification', 'Checkpoint', 'Results', 'Restore'):
+        expect(page.locator(f'[id$="-{suffix}"]')).to_have_count(0)
 
 
 implicit_app = create_app_fixture(app='../scenarios/cand_train_implicit.py', scope='function')
@@ -300,3 +286,17 @@ def test_cancel_stops_running_search_and_clears_history_before_fresh_play(page, 
     page.get_by_role('button', name='Start or resume tuning', exact=True).click()
     expect(page.locator('[id$="-Message"]')).to_contain_text('Fitting started')
     expect(progress).to_contain_text('4 complete', timeout=45000)
+
+
+@pytest.mark.ui
+def test_legacy_local_choices_block_until_committed_upstream(page, session_restore_app):
+    page.goto(session_restore_app.url)
+    page.locator('#Saved').fill(json.dumps({'inputs': {
+        'ModelValues': '{"cand_methods__estimator__alpha": [99]}',
+        'Method': 'grid', 'Seed': 1729, 'Execution': 'sequential', 'Workers': 1}}))
+    page.get_by_role('button', name='Build workflow', exact=True).click()
+    expect(page.locator('[id$="-Progress"]')).to_contain_text('Commit those choices in Tuning parameters', timeout=30000)
+    saved = json.loads(page.locator('#Snapshot').inner_text())
+    assert 'ModelValues' not in saved['inputs']
+    assert json.loads(saved['legacy_model_values']) == {'cand_methods__estimator__alpha': [99]}
+    assert page.get_by_label('Additional model choices (JSON)', exact=True).count() == 0

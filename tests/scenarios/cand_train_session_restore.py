@@ -33,12 +33,16 @@ def server(input, output, session):
         source = replace(scenario['source'], _tuning_spec=None)
         source = source.with_pipeline_step(ImputationStep(eligible=('x',), predictors=('x',), method='iterative'),
             name=impute.namespace, preview_frame=source.frame, operation='Learned imputation')
+        from tuning import discover_source, fingerprint
+        source = source.with_tuning_spec({
+            'grid': {'cand_methods__estimator__alpha': [0.01, 0.1, 10]},
+            'fingerprint': fingerprint(discover_source(source)), 'combinations': 3})
         tune = tuning_card()
         footer = tune._footer
         tune.footer = lambda: ui.TagList(footer(), ui.output_text('Message'))
         saved = json.loads(input.Saved()) if input.Saved() else {'inputs': {
-            'Method': 'grid', 'Execution': 'sequential', 'Workers': 1, 'Seed': 1729,
-            'ModelValues': '{"cand_methods__estimator__alpha":[0.01,0.1,10]}', 'Trials': 1}}
+            'Method': 'random', 'Execution': 'sequential', 'Workers': 1, 'Seed': 1729,
+            'Trials': 1}}
         tune.restore_configuration_state(saved)
         tune._imports.set(source)
         namespaces.set(impute.namespace + ';' + tune.namespace)

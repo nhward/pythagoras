@@ -114,3 +114,44 @@ def test_historical_evidence_is_reviewed_without_selecting_a_pipeline(page, hist
     expect(page.locator('[id$="-Status"]')).to_contain_text('Historical review (read-only)', timeout=45000)
     expect(page.locator('[id$="-SelectionState"]')).to_contain_text('overall=None')
     expect(page.locator('[id$="-SelectionState"]')).to_contain_text('records=[]')
+
+
+transparent_app = create_app_fixture(app='../scenarios/cand_models_transparent.py', scope='function')
+
+
+@pytest.mark.ui
+def test_transparency_constraint_restores_and_controls_all_winners(page, transparent_app):
+    page.goto(transparent_app.url)
+    status = page.locator('[id$="-Status"]')
+    expect(status).to_contain_text('1 methods', timeout=45000)
+    control = page.locator('[id$="-UsuallyTransparentOnly"]')
+    expect(control).to_be_checked()
+    expect(page.get_by_role('tab', name='Decision Tree Regression', exact=True)).to_have_count(0)
+    expect(page.get_by_role('tab', name='Ridge Regression', exact=True)).to_have_count(1)
+    state = page.locator('[id$="-SelectionState"]')
+    expect(state).to_contain_text("'ridge':")
+    expect(state).not_to_contain_text("'tree':")
+    assert 'Decision Tree Regression' not in page.locator('[id$="-ReviewPlot"] .js-plotly-plot').evaluate(
+        'el => el.data.map(t => t.name).join(";")')
+    page.evaluate('''() => Shiny.setInputValue(document.querySelector('[id$="-UsuallyTransparentOnly"]').id,
+        false, {priority:'event'})''')
+    expect(status).to_contain_text('2 methods')
+    expect(page.get_by_role('tab', name='Decision Tree Regression', exact=True)).to_have_count(1)
+    expect(state).to_contain_text("'tree':")
+
+
+transparent_empty_app = create_app_fixture(app='../scenarios/cand_models_transparent_empty.py', scope='function')
+
+
+@pytest.mark.ui
+def test_transparency_constraint_without_qualifying_trials_selects_no_winner(page, transparent_empty_app):
+    page.goto(transparent_empty_app.url)
+    status = page.locator('[id$="-Status"]')
+    expect(status).to_contain_text('No completed trials have a verified Usually transparent', timeout=45000)
+    state = page.locator('[id$="-SelectionState"]')
+    expect(state).to_contain_text('overall=None;methods={}')
+    expect(state).to_contain_text('records=[]')
+    page.evaluate('''() => Shiny.setInputValue(document.querySelector('[id$="-UsuallyTransparentOnly"]').id,
+        false, {priority:'event'})''')
+    expect(status).to_contain_text('1 methods')
+    expect(state).to_contain_text("'tree':")

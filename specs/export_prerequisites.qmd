@@ -24,7 +24,7 @@ The audit covers every production module in `app/cards`. Conditional declaration
 | `var_select` | Recommendation choice; common fitting controls and only that method's parameters. Optional stability diagnostics do not gate the recommendation. |
 | `var_text_encode` | Encoding choices and settings of selected text methods. Characteristics do not require vocabulary, LSA, or embedding settings; LSA does not require bag-of-words weighting. |
 | `var_time_encode` | Encoding choice; features and original-column policy only when enabled. |
-| `var_transform` | Transform choices; target inclusion only with a continuous target; robust settings only for centring/scaling; weights only for nonrobust centring/scaling with weighting columns. |
+| `var_transform` | Transform choices; target inclusion only with a continuous target; robust settings only for centering/scaling; weights only for non-robust centering/scaling with weighting columns. |
 
 `data_import`, `cand_methods`, `cand_parameters`, `var_modify`, and `var_nominal` already export committed state rather than unaccepted preview settings; their contracts are retained. Immutable diagnostic cards retain their pass-through exports. The template's Apply-only example remains appropriate.
 

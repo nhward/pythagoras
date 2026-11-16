@@ -398,6 +398,21 @@ the recorded probes establish only their explicit operation/configuration scope.
 
 From the repository root:
 
+The generated JSON files begin with `_comment` maintenance instructions supplied
+by their generators. A full inventory rebuild resets probe results; run the probe
+script afterward to record fresh validation. Use `--refresh-descriptions` on the
+builder when only descriptions need updating, preserving existing probe evidence.
+Probe updates preserve the catalogue's maintenance instructions.
+
+The builder's `--environment-output` option records the interpreter and distributions
+visible to that invocation, including optional packages supplied with `--extra-path`.
+It also performs the requested catalogue build or description refresh. Use the
+intended inspection environment; a different environment produces different evidence.
+
+`scripts/audit_estimator_packages.py --refresh` retrieves current external sources,
+replaces `audit_sources.json`, and regenerates `AUDIT.md`. Without `--refresh`, it
+only regenerates the report using the recorded sources.
+
 ```sh
 .venv/bin/python scripts/build_estimator_catalogue.py
 .venv/bin/python scripts/probe_estimator_catalogue.py
@@ -510,3 +525,36 @@ parallelism with histogram training. GPU execution remains an explicit separate
 choice. The pipeline tuning evaluator currently overrides nested `n_jobs` to one.
 Historical compatibility probes used one thread; this change is not a speed
 benchmark.
+
+
+## Intrinsic transparency review
+
+See [the November 2026 review](TRANSPARENCY_REVIEW.md) for coverage counts,
+conditional transparency factors, source evidence and unresolved extension classes.
+The conditions are qualitative inspection guidance; they do not automatically
+relabel fitted models or claim causal interpretation.
+
+
+## Searchable GP kernel recipes
+
+The versioned `searchable_kernels_v1` GP regression/classification recipes decode
+an allowlisted JSON `construction.parameters.kernel` descriptor using
+`kernel_search.kernel_parameters`. Scalar metric, gamma, degree, offset and bounds
+construct `SearchablePairwiseKernel`; arbitrary code or imports are not evaluated.
+Legacy native fixed-kernel recipe IDs and constructions are retained. New equally
+ready selections prefer the searchable recipes via `default_for_new_selection`.
+
+Both recipes were probed with each of RBF, Polynomial and Linear through three-fold
+held-out prediction; classification also checks normalized held-out probabilities.
+Recorded warnings remain evidence rather than a convergence or calibration claim.
+Only gamma is marginal-likelihood optimized within training folds; degree/offset/family
+remain explicit choices. Gamma bounds default to 1e-5–1e5; optimizer=None fixes gamma.
+No automatic predictor scaling, diagonal-noise adjustment or intrinsic-transparency
+reclassification is performed. Polynomial kernels can require explicit scaling and
+appropriate GP alpha for numerical stability.
+
+Re-run only these probes with:
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch kernel_search_2026_11_16
+```

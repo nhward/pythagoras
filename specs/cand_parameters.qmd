@@ -8,7 +8,29 @@ title: Tuning parameters specification
 
 Each draft is keyed by full sklearn parameter path and implementation class. Finite numeric ranges use decimal arithmetic and require positive increments; integer ranges require integral endpoints and increments. Explicit choices use JSON scalars, including null. Known bounds and choices are validated, nonfinite numbers rejected, duplicates removed, and per-parameter counts capped at 10,000. Independent cardinalities are multiplied, with one configuration for an empty grid.
 
-The front table is searchable and sortable. Columns are Tune, Parameter, Source, Search values, Current value, Reason and Purpose. The default browser sort is Tune ascending (enabled first), retaining stable underlying parameter IDs for selection; constructor defaults remain discovery metadata but are not displayed as a column. The row editor includes purpose, rationale and a documentation link where reviewed. A non-Boolean editor contains type, range or values, Save search definition, and a gated Auto-tune checkbox. Tunable Boolean rows need only the Auto-tune checkbox and search both False and True. The guided Visibility radio provides cumulative recommended, recommended plus advanced, all tunable (including unreviewed), and everything (including operational) views. Active drafts remain visible irrespective of purpose filtering. The legacy ShowEverything Boolean migrates into the radio default and is excluded from newly saved configuration. Restored active fixed drafts are deactivated, and commitments are recompiled against current metadata before export. Updating drafts uses DataGrid.update_data rather than reexecuting the table renderer. Commit and Revert changes are in the footer above a status line. The flip side contains counts, active choices and the technical specification.
+The front table fills the card and has columns Tune, Edit, Parameter, Source,
+Search values, Current value, Reason and Purpose. Tune/Edit are HTML control
+columns and not sort keys; there is no automatic Tune sort or row selection.
+Initial discovery order and user sorting/scroll survive draft updates via
+DataGrid.update_data. Stable path, owner, discovery fingerprint and card namespace
+identify row events; displayed indices never identify parameters. One delegated
+JavaScript event handler supports virtualized rows and multiple instances.
+
+Tune checkboxes change drafts immediately, and are disabled for fixed parameters
+or invalid/missing definitions. Edit opens a large modal with type, choices/range,
+metadata and documentation, OK/Cancel and easy_close=True. Fixed rows show read-only
+details. Modal fields remain staged until valid OK; cancellation, backdrop/Escape
+and close discard edits. Preserve the active flag when saving a definition, reject
+stale source/owner/fingerprint changes, and exclude modal/row-event inputs from
+bookmarks. Each modal has a token so old dismissal/save events cannot affect a
+new editor. Draft and commitment formats remain unchanged; legacy transient editor
+inputs are ignored. Boolean values initially include False/True and can be edited.
+
+The guided Visibility radio retains cumulative purpose levels and active-row
+visibility. Legacy ShowEverything migration, fixed-draft deactivation and committed
+specification revalidation remain unchanged. Commit/Revert and status remain in
+the footer; the flip side retains counts, active choices and technical specification.
+
 
 The exported specification contains pipeline fingerprint, sklearn-compatible parameter grid, and combination count. `proxy_data.tuning_spec` returns a defensive copy only when the current pipeline fingerprint matches. Pipeline changes invalidate old commitments. Standard proxy cloning and derivation preserve the stored specification, subject to fingerprint validation. Draft and committed states participate in card configuration restoration. A saved commitment is replayed once when upstream parameter discovery is ready: its committed definitions are migrated, validated and recompiled for the restored pipeline. The rebuilt grid must equal the saved grid after path migration; unsupported choices, removed active paths and changed owners are rejected with a review message. Uncommitted drafts remain separate. The rebuilt commitment is saved in subsequent configuration snapshots. Later live pipeline changes invalidate it normally, without automatic recommitment. Removed paths or changed classes reconcile with an explicit notice.
 
@@ -16,7 +38,7 @@ Tests cover discovery with and without models, required defaults, count/validati
 
 Card preview sample limits are excluded from transformer constructors; clustering previews sample before fitting while training fits all eligible fold rows. VariableTransformStep exposes deskew, scale and center Boolean constructor parameters, replacing the transforms tuple. ImputationStep supports all three styles internally and publishes method choices simple, knn and iterative.
 
-Random seeds and weighting configuration (including weight-column selections and weighting switches) are fixed, hidden by default, and cannot be activated. Range fields are hidden for explicit choices. Rows without suggested search spaces direct users to select the row and supply values in its editor.
+Random seeds and weighting configuration (including weight-column selections and weighting switches) are fixed, hidden by default, and cannot be activated. Range fields are hidden for explicit choices. Rows without suggested search spaces direct users to Edit and remain disabled for tuning until validated.
 
 
 The tuning metadata review scope records the union of potentially non-excluded
@@ -86,3 +108,24 @@ commitments require review and recommitment; old checkpoint fingerprints invalid
 Tests cover all declared bundles, cloning and legacy aliases, six imputation
 configurations, fixed selectors, multiple instances, alternative models, inference,
 all search methods, continuation, and browser editing/commit counts.
+
+
+Kernel-family recipes keep native GP estimator types and use
+`kernel_search.SearchablePairwiseKernel`, a scalar adapter over sklearn
+PairwiseKernel. It exposes metric, gamma, degree, coef0 and operational gamma_bounds.
+GP optimizes only log-gamma (unless optimizer is None or bounds are fixed); linear
+kernels expose zero optimizer dimensions. Covariance, diagonal and gradients delegate
+to the native kernel implementation. Family and degree stay discrete outer choices.
+
+Metadata `applies_when` maps sibling selector names to applicable values and feeds
+the existing conditional-grid machinery, including candidate prefixes. GP degree/offset
+apply to poly, gamma to rbf/poly; native SVM/KernelRidge retain additional supported
+families and their native defaults. Conditional rows are not hidden. Metadata minimum,
+exclusive_minimum and allow_none enforce reviewed numeric-domain constraints.
+
+Safe GP kernel descriptors are decoded by the shared factory in model construction
+and probes. Versioned searchable recipes are preferred only for new equally-ready
+selections, using optional profile `default_for_new_selection`; old recipe IDs remain
+unchanged. All scalar kernel choices, optimizer controls and adapter implementation
+participate in the existing search fingerprint and checkpoint validation. Accepted
+parameters reconstruct unfitted native GP pipelines with the selected kernel.

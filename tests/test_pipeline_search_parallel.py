@@ -10,7 +10,7 @@ import joblib
 import pytest
 from pipeline_search import SearchWorker, fresh, prepare, validate_checkpoint
 from sklearn.linear_model import Ridge
-from test_pipeline_search import finish, gp_problem, source
+from test_pipeline_search import committed_grid, finish, gp_problem, source
 
 pytestmark = pytest.mark.unit
 
@@ -42,7 +42,7 @@ def parallel_problem(mode, *, log_path='', delay=.25, method='grid'):
     model = data.pipeline.named_steps.cand_methods
     model.set_params(estimator=AuditRidge(log_path=log_path,delay=delay))
     data = data.with_estimator(model,label='Audited Ridge',recipe_id='parallel-test')
-    return prepare(data, model_values={'cand_methods__estimator__alpha':[.1,10.]},
+    return prepare(committed_grid(data, {'cand_methods__estimator__alpha':[.1,10.]}),
                    method=method,execution=mode,workers=2)
 
 
@@ -108,7 +108,7 @@ def test_out_of_order_fold_pause_and_checkpoint_validation(tmp_path):
 @pytest.mark.parametrize('method',['random','grid','tpe','skopt'])
 def test_parallel_batch_resume_matches_uninterrupted_search(method):
     data=source()
-    p=prepare(data,model_values={'cand_methods__estimator__alpha':[.01,.1,1.,10.]},
+    p=prepare(committed_grid(data, {'cand_methods__estimator__alpha':[.01,.1,1.,10.]}),
               method=method,execution='trials',workers=2)
     stop=threading.Event()
     def publish(state):
@@ -170,7 +170,7 @@ def test_parallel_gp_chart_updates_only_on_completion():
     data=source()
     model=gp_problem().pipeline.named_steps.cand_methods
     data=data.with_estimator(model,label='GP',recipe_id='parallel-gp')
-    p=prepare(data,model_values={'cand_methods__estimator__alpha':[.2,.3,.4]},execution='trials',workers=2,method='grid')
+    p=prepare(committed_grid(data, {'cand_methods__estimator__alpha':[.2,.3,.4]}),execution='trials',workers=2,method='grid')
     changes=[];last=None
     def publish(state):
         nonlocal last

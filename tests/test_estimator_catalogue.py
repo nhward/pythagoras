@@ -553,3 +553,72 @@ def test_prediction_throughput_coverage_evidence_and_configuration_drift(catalog
     changed = deepcopy(profile)
     changed['id'] = 'new.recipe'
     assert prediction_throughput(changed) is None
+
+
+@pytest.mark.unit
+def test_reviewed_conditional_transparency_exposes_both_readability_directions(catalogue):
+    for section in ('estimators', 'profiles', 'specialists'):
+        for row in catalogue[section]:
+            taxonomy = row['taxonomy']
+            if 'conditional' in taxonomy['transparency']['values']:
+                note = taxonomy['transparency']['note']
+                assert 'More transparent:' in note, row['id']
+                assert 'Less transparent:' in note, row['id']
+                assert taxonomy['sources'], row['id']
+                assert taxonomy['reviewed_on'], row['id']
+    entries = {row['id']: row for row in catalogue['estimators']}
+    tree = entries['sklearn.tree.DecisionTreeRegressor']['taxonomy']['transparency']['note']
+    assert all(factor in tree for factor in ('max_depth', 'max_leaf_nodes', 'fitted tree'))
+    forest = entries['sklearn.ensemble.RandomForestRegressor']['taxonomy']['transparency']
+    assert forest['values'] == ['usually_opaque']
+    assert 'total leaves' in forest['note'] and 'small ensemble is not automatically transparent' in forest['note']
+
+
+@pytest.mark.unit
+def test_transparency_review_preserves_uncertainty_for_extension_interfaces(catalogue):
+    entries = {row['id']: row for row in catalogue['estimators']}
+    unresolved = {
+        'deslib.dcs.BaseDCS', 'deslib.des.BaseDES', 'deslib.des.BaseProbabilistic',
+        'hmmlearn.hmm.BaseHMM', 'hmmlearn.vhmm.BaseCategoricalHMM',
+        'hmmlearn.vhmm.BaseGaussianHMM', 'hmmlearn.vhmm.VariationalBaseHMM',
+        'sklego.meta.HierarchicalPredictor',
+    }
+    actual = {name for name, row in entries.items()
+              if row['taxonomy']['transparency']['status'] == 'unreviewed'}
+    assert actual == unresolved
+    for name in unresolved:
+        detail = entries[name]['taxonomy']['transparency']
+        assert detail['values'] == []
+        assert 'No reviewed classification' not in detail['note']
+
+
+@pytest.mark.unit
+def test_new_taxonomy_reviews_distinguish_wrappers_selection_and_prediction(catalogue):
+    entries = {row['id']: row['taxonomy'] for row in catalogue['estimators']}
+    assert entries['skglm.Lasso']['core_mechanism']['values'] == ['generalized_linear']
+    assert entries['skglm.GeneralizedLinearEstimatorCV']['composition']['values'] == ['single']
+    assert entries['skglm.GeneralizedLinearEstimatorCV']['fitting_criterion']['status'] == 'depends_on_configuration'
+    assert entries['xgboost.XGBModel']['core_mechanism']['status'] == 'depends_on_configuration'
+    assert 'boosting' not in entries['xgboost.XGBRFRegressor']['composition']['values']
+    assert entries['sklearn.frozen.FrozenEstimator']['learning_strategy']['status'] == 'depends_on_configuration'
+    assert entries['sklego.meta.DecayEstimator']['composition']['status'] == 'depends_on_configuration'
+    assert entries['sklego.linear_model.LowessRegression']['learning_strategy']['values'] == ['lazy']
+    assert 'target averages' in entries['sklego.linear_model.LowessRegression']['fitting_criterion']['note']
+    assert entries['deslib.des.KNORAE']['learning_strategy']['values'] == ['hybrid']
+    assert entries['deslib.des.DESClustering']['learning_strategy']['values'] == ['eager']
+    for name in ('fastcan.LazyFastCan', 'deslib.static.Oracle', 'sklearn.cluster.KMeans', 'skglm.GraphicalLasso'):
+        assert entries[name]['transparency']['status'] == 'not_applicable'
+        assert entries[name]['transparency']['note']
+
+
+@pytest.mark.unit
+def test_description_refresh_does_not_upgrade_probe_or_construction_evidence(catalogue):
+    from model_taxonomy import annotate_catalogue
+    before = deepcopy(catalogue)
+    annotate_catalogue(catalogue)
+    for section in ('estimators', 'profiles', 'specialists'):
+        for original, refreshed in zip(before[section], catalogue[section]):
+            assert {key: value for key, value in original.items()
+                    if key not in {'taxonomy', 'output_review'}} == {
+                        key: value for key, value in refreshed.items()
+                        if key not in {'taxonomy', 'output_review'}}

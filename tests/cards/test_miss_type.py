@@ -563,6 +563,11 @@ class TestWebKitUI:
         expect(target).to_be_hidden()
         toggle.click()
         expect(target).to_be_visible()
+        page.wait_for_function("""navbar => {
+            const button = navbar.querySelector('.navbar-toggler').getBoundingClientRect();
+            const first = navbar.querySelector('[role=tab]').getBoundingClientRect();
+            return first.left >= button.right && Math.abs(first.top - button.top) < 5;
+        }""", arg=navbar.element_handle())
         target.click()
         expect(target).to_have_attribute("aria-selected", "true")
 

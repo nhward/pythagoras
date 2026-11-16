@@ -126,3 +126,41 @@ def pareto_figure(frame, metric, winner, title, colours):
         axis: {'backgroundcolor': '#bbd6f8', 'showbackground': True, 'gridcolor': '#ffffff', 'zerolinecolor': '#ffffff'}
         for axis in ('xaxis', 'yaxis', 'zaxis')})
     return figure
+
+
+def transparent_candidates(frame, results, catalogue):
+    """Restrict methods by explicit catalogue identity, never by display names."""
+    if frame.empty:
+        return frame.copy()
+    entries = catalogue['estimators']
+    by_id = {entry['id']: entry for entry in entries}
+    recipes = {row['id']: row['estimator'] for section in ('profiles', 'specialists')
+               for row in catalogue.get(section, [])}
+    allowed = set()
+    pipelines = results.get('pipelines', {})
+    templates = getattr(pipelines, 'templates', {})
+    for method in frame.Model.unique():
+        entry = by_id.get(recipes.get(method, method))
+        pipeline = templates.get(method)
+        if pipeline is None:
+            trial = int(frame.loc[frame.Model == method, 'Trial'].iloc[0]) - 1
+            try:
+                pipeline = pipelines[str(trial)]
+            except (ValueError, KeyError, TypeError):
+                pipeline = None
+        if pipeline is not None:
+            # Prefer the actual terminal class over a user-assigned method ID.
+            model = pipeline
+            while hasattr(model, 'steps'):
+                model = model.steps[-1][1]
+            implementation = type(model).__module__ + '.' + type(model).__name__
+            matches = [row for row in entries if implementation in (row['id'], row.get('implementation'))]
+        else:
+            # Historical read-only evidence can still carry an exact recipe ID.
+            matches = [entry] if entry is not None else []
+        # Conflicting aliases or absent metadata cannot certify the method.
+        if matches and all(row.get('taxonomy', {}).get('transparency', {}).get('status') == 'reviewed'
+                           and row['taxonomy']['transparency'].get('values') == ['usually_transparent']
+                           for row in matches):
+            allowed.add(method)
+    return frame.loc[frame.Model.isin(allowed)].reset_index(drop=True)

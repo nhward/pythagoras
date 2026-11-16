@@ -2,6 +2,7 @@
 import json
 import re
 from copy import deepcopy
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -16,12 +17,14 @@ from tuning import (
     VISIBILITY,
     compile_spec,
     discover_source,
+    fingerprint,
     migrate_drafts,
     restore_commitment,
     search_values,
     visible,
 )
 
+#TODO: Reviw quarto
 
 def source_label(source, cards):
     """Display card titles without changing sklearn paths or nested steps."""
@@ -47,7 +50,6 @@ def instance():
             class_='tuning-search'
         ),
         ui.output_ui(id='Table', fill=True, fillable=True, class_='tuning-parameters-table'), 
-        ui.output_ui(id='Editor', class_='tuning-parameters-editor'), 
         ui.div(ui.output_text(id='Message'), class_='tuning-parameters-message')
     )
     
@@ -79,6 +81,9 @@ def instance():
     )
 
     this.exclude_configuration_input('ShowEverything')
+    for transient in ('RowEvent', 'Active', 'SaveDefinition', 'Kind', 'Mode', 'Values',
+                      'ChoiceValues', 'Minimum', 'Maximum', 'Increment'):
+        this.exclude_configuration_input(transient)
 
     def settings():
         # Preserve the meaning of older saved checkbox settings.
@@ -100,6 +105,8 @@ def instance():
         pending_commitment = restored.get('committed') if isinstance(restored, dict) else None
         committed = reactive.Value(None)
         message = reactive.Value('')
+        editing = reactive.Value(None)
+        modal_error = reactive.Value('')
         def tuning_state():
             current = committed()
             return {'drafts': deepcopy(drafts()),
@@ -158,6 +165,7 @@ def instance():
             query = (input.Search() or '').casefold()
             cards = Module.card_catalogue.snapshot()['cards']
             records = []
+            version = fingerprint(Rows())
             for row in Rows():
                 draft = definition(row)
                 if not visible(row, input.Visibility(), active=bool(draft.get('active'))):
@@ -168,12 +176,24 @@ def instance():
                     values = search_values(draft, row['metadata'])
                     summary = f'{len(values)} values: {values[:6]}' + (' …' if len(values) > 6 else '')
                 except ValueError:
-                    summary = 'Select row to supply search values'
-                records.append({'ID':row['path'], 'Tune': '✅' if draft.get('active') else '❌',
+                    summary = 'Use Edit to supply search values'
+                    values = None
+                attributes = {'data-tuning-input': this.ns('RowEvent'),
+                              'data-tuning-path': row['path'], 'data-tuning-owner': row['owner'],
+                              'data-tuning-version': version}
+                disabled = row['fixed'] or values is None
+                toggle = ui.tags.input(type='checkbox', checked=bool(draft.get('active')),
+                    disabled=disabled, class_='form-check-input tuning-row-toggle',
+                    title='Fixed configuration' if row['fixed'] else 'Use Edit to define valid search values' if disabled else f'Tune {row["name"]}',
+                    **attributes, **{'data-tuning-row-action': 'toggle', 'aria-label': f'Tune {row["name"]}'})
+                edit = ui.tags.button('Edit', type='button', class_='btn btn-outline-primary btn-sm tuning-row-edit',
+                    title=f'{row["path"]} · {row["owner"]}', **attributes,
+                    **{'data-tuning-row-action': 'edit', 'aria-label': f'Edit {row["name"]}'})
+                records.append({'ID':row['path'], 'Tune': toggle, 'Edit': edit,
                     'Parameter':row['name'], 'Source':source, 'Current value':row['current'],
                     'Purpose':PURPOSES[row['purpose']], 'Reason':row['reason'],
                     'Search values':'Fixed configuration' if row['fixed'] else summary})
-            frame = pd.DataFrame(records, columns=['ID','Tune','Parameter','Source','Search values','Current value','Reason','Purpose'])
+            frame = pd.DataFrame(records, columns=['ID','Tune','Edit','Parameter','Source','Search values','Current value','Reason','Purpose'])
             return frame.set_index('ID')
 
         @output
@@ -191,101 +211,114 @@ def instance():
             input.Visibility()
             with reactive.isolate():
                 frame = DisplayFrame()
-            async def default_sort():
-                await Table2.update_sort([{'col': 0, 'desc': False}])
-            session.on_flushed(default_sort, once=True)
-            return render.DataGrid(frame, selection_mode='row', width="100%")
+            return render.DataGrid(frame, selection_mode='none', width="100%", height='100%')
 
         @this.reactable(triggers=[drafts])
         async def RefreshDrafts():
             Table2.data()
             await Table2.update_data(DisplayFrame())
 
-        @this.reactable(calc=True)
-        def Selected():
-            selected = Table2.data_view(selected=True)
-            if selected.empty: return None
-            return next((row for row in Rows() if row['path'] == selected.index[0]), None)
-
-        @output
-        @render.ui
-        def Editor():
-            row = Selected()
-            if row is None: return ui.p('Select a parameter to define its search values.')
-            detail = ui.div(ui.strong(row['name']), title=f'{row["path"]} · {row["owner"]}', class_='tuning-editor-detail')
-            purpose = ui.div(ui.span(f"{PURPOSES[row['purpose']]}: {row['reason']} "),
-                ui.a('Documentation', href=row['reference'], target='_blank', rel='noopener') if row['reference'] else None,
-                class_='tuning-purpose')
-            detail = ui.TagList(detail, purpose)
-            if row['fixed']: return ui.TagList(detail, ui.p('Fixed configuration; not offered for automatic tuning.'))
-            draft = definition(row)
-            try:
-                search_values(draft, row['metadata'])
-                ready = True
-            except ValueError:
-                ready = False
+        def editor_controls(row, draft):
+            detail = ui.TagList(
+                ui.div(ui.strong(row['name']), ui.code(row['path']), ui.p(row['owner']), class_='tuning-editor-detail'),
+                ui.div(ui.span(f"{PURPOSES[row['purpose']]}: {row['reason']} "),
+                    ui.a('Documentation', href=row['reference'], target='_blank', rel='noopener') if row['reference'] else None,
+                    class_='tuning-purpose'))
+            if row['fixed']:
+                return ui.TagList(detail, ui.p('Fixed configuration; not offered for automatic tuning.'))
             choices = row['metadata'].get('choices')
             if row['definition']['kind'] == 'boolean':
-                return ui.TagList(detail, ui.div(ui.input_checkbox(
-                    id='Active', label='Auto-tune this parameter',
-                    value=bool(draft.get('active'))), class_='tuning-editor-controls'))
-            if choices:
-                values_editor = ui.input_selectize(id='ChoiceValues', label='Choices', multiple=True,
-                    choices={json.dumps(v):str(v) for v in choices}, selected=[json.dumps(v) for v in draft.get('values',[])])
-            else:
-                values_editor = ui.input_text(id='Values', label='Choices as a JSON list (strings in quotes; null means None)', value=json.dumps(draft.get('values',[])))
+                choices = [False, True]
+            values = (ui.input_selectize('ChoiceValues', label='Choices', multiple=True,
+                choices={json.dumps(v): str(v) for v in choices},
+                selected=[json.dumps(v) for v in draft.get('values', [])]) if choices else
+                ui.input_text('Values', label='Choices as a JSON list (strings in quotes; null means None)',
+                              value=json.dumps(draft.get('values', []))))
             return ui.TagList(detail, ui.div(
-                ui.input_select(id='Kind', label='Parameter type', choices={'':'Choose a type', 'integer':'Integer', 'float':'Decimal', 'categorical':'Categorical', 'boolean':'Boolean'}, selected=draft.get('kind','')),
-                ui.input_select(id='Mode', label='Search definition', choices={'values':'Explicit choices', 'range':'Numeric range'}, selected=draft.get('mode','values')),
-                ui.panel_conditional("input.Mode === 'range'",
-                    ui.div(ui.input_numeric(id='Minimum', label='Minimum', value=draft.get('min',0)),
-                    ui.input_numeric(id='Maximum', label='Maximum', value=draft.get('max',1)),
-                    ui.input_numeric(id='Increment', label='Step', value=draft.get('step',1)), class_='tuning-range-fields'), class_='tuning-range'),
-                ui.panel_conditional("input.Mode === 'values'",
-                    values_editor, class_='tuning-values'),
-                ui.input_action_button(id='SaveDefinition', label='Save search definition'),
-                ui.tags.fieldset(ui.input_checkbox(id='Active', label='Auto-tune this parameter', value=bool(draft.get('active'))), disabled=not ready), class_='tuning-editor-controls'),
-                ui.p('No suggested search values are published for this parameter. Choose its type, enter explicit choices (for example [1, 2, 5]) or a numeric range, then save and enable Auto-tune.' if not ready else 'Search definition ready.'))
+                ui.input_select('Kind', label='Parameter type', choices={'': 'Choose a type', 'integer': 'Integer',
+                    'float': 'Decimal', 'categorical': 'Categorical', 'boolean': 'Boolean'}, selected=draft.get('kind', '')),
+                ui.input_select('Mode', label='Search definition', choices={'values': 'Explicit choices', 'range': 'Numeric range'},
+                                selected=draft.get('mode', 'values')),
+                ui.panel_conditional("input.Mode === 'range'", ui.div(
+                    ui.input_numeric('Minimum', label='Minimum', value=draft.get('min', 0)),
+                    ui.input_numeric('Maximum', label='Maximum', value=draft.get('max', 1)),
+                    ui.input_numeric('Increment', label='Step', value=draft.get('step', 1)), class_='tuning-range-fields')),
+                ui.panel_conditional("input.Mode === 'values'", values), class_='tuning-editor-controls'))
 
-        @this.reactable(triggers=[input.SaveDefinition])
-        def SaveDefinition():
-            row = Selected()
-            req(row is not None)
-            req(not row['fixed'])
+        @output
+        @render.text
+        def ModalError():
+            return modal_error()
+
+        def save_editor(event):
+            current = editing()
+            if current is None or event.get('token') != current['token']:
+                return
             try:
-                draft = {'owner':row['owner'], 'kind':input.Kind(), 'mode':input.Mode(),
-                         'active':definition(row).get('active',False)}
-                if draft['mode'] == 'range':
-                    draft.update(min=input.Minimum(), max=input.Maximum(), step=input.Increment())
-                else:
-                    previous = definition(row)
-                    if previous.get('kind') == 'boolean' or row['metadata'].get('choices'):
+                row = next((r for r in Rows() if r['path'] == current['path']), None)
+                if (Incoming() is not current['source'] or row is None or row['owner'] != current['owner']
+                        or fingerprint(Rows()) != current['version']):
+                    raise ValueError('Upstream parameters changed. Cancel and reopen the current parameter.')
+                if not row['fixed']:
+                    draft = {'owner': row['owner'], 'kind': input.Kind(), 'mode': input.Mode(),
+                             'active': definition(row).get('active', False)}
+                    if draft['mode'] == 'range':
+                        draft.update(min=input.Minimum(), max=input.Maximum(), step=input.Increment())
+                    elif row['definition']['kind'] == 'boolean' or row['metadata'].get('choices'):
                         draft['values'] = [json.loads(v) for v in (input.ChoiceValues() or [])]
                     else:
                         draft['values'] = json.loads(input.Values())
-                search_values(draft, row['metadata'])
-                updated = deepcopy(drafts()); updated[row['path']] = draft; drafts.set(updated)
-                message.set('Search definition saved. Tick Auto-tune to include it.')
-            except (ValueError, TypeError) as exc:
-                message.set(str(exc))
+                    search_values(draft, row['metadata'])
+                    updated = deepcopy(drafts()); updated[row['path']] = draft; drafts.set(updated)
+                    message.set('Search definition saved. Use the row checkbox to enable tuning, then Commit.')
+                editing.set(None)
+                ui.modal_remove()
+            except (ValueError, TypeError, KeyError) as exc:
+                modal_error.set(str(exc))
 
-        @this.reactable(triggers=[input.Active])
-        def Active():
-            row = Selected()
-            req(row is not None)
-            req(not row['fixed'])
-            draft = definition(row)
-            if row['definition']['kind'] == 'boolean':
-                draft.update(kind='boolean', mode='values', values=[False, True])
-            active = bool(input.Active())
-            if active == draft.get('active',False): return
-            try:
-                if active: search_values(draft, row['metadata'])
-                draft['active'] = active
-                updated = deepcopy(drafts()); updated[row['path']] = draft; drafts.set(updated)
-                message.set('')
-            except ValueError as exc:
-                message.set(str(exc))
+        @this.reactable(triggers=[input.RowEvent])
+        def RowEvent():
+            event = input.RowEvent()
+            if not isinstance(event, dict):
+                return
+            action = event.get('action')
+            if action == 'dismiss':
+                current = editing()
+                if current and current['token'] == event.get('token'):
+                    editing.set(None)
+                    ui.modal_remove()
+                return
+            if action == 'save':
+                save_editor(event)
+                return
+            row = next((r for r in Rows() if r['path'] == event.get('path')), None)
+            if row is None or row['owner'] != event.get('owner') or fingerprint(Rows()) != event.get('version'):
+                message.set('Parameter definitions changed. Use the current table controls.')
+                return
+            if action == 'toggle' and not row['fixed'] and isinstance(event.get('checked'), bool):
+                draft = definition(row)
+                try:
+                    if event['checked']:
+                        search_values(draft, row['metadata'])
+                    if event['checked'] != bool(draft.get('active')):
+                        draft['active'] = event['checked']
+                        updated = deepcopy(drafts()); updated[row['path']] = draft; drafts.set(updated)
+                    message.set('')
+                except (ValueError, TypeError) as exc:
+                    message.set(str(exc))
+            elif action == 'edit':
+                token = uuid4().hex
+                editing.set({'path': row['path'], 'owner': row['owner'], 'source': Incoming(),
+                             'version': fingerprint(Rows()), 'token': token})
+                modal_error.set('')
+                ui.modal_show(ui.modal(
+                    editor_controls(row, definition(row)), ui.output_text('ModalError'),
+                    title=('Parameter details: ' if row['fixed'] else 'Edit parameter: ') + row['name'],
+                    footer=ui.TagList(ui.modal_button('Cancel'), ui.tags.button('OK', type='button',
+                        class_='btn btn-primary', **{'data-tuning-input': this.ns('RowEvent'),
+                        'data-tuning-row-action': 'save', 'data-tuning-token': token})),
+                    size='l', easy_close=True, **{'data-tuning-modal-input': this.ns('RowEvent'),
+                                                'data-tuning-token': token}))
 
         @this.reactable(triggers=[input.Commit])
         def Commit():

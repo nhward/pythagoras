@@ -8,9 +8,9 @@ Define a finite search space for the transformations and model already present i
 
 #### Front
 
-The columns are **Tune**, **Parameter**, **Source**, **Search values**, **Current value**, **Reason**, and **Purpose**, in that order. The default sort is by Tune, with enabled parameters first; you can sort another column yourself. Source uses the card's long name, with numbered instances shown as `(1)`, `(2)`, and so on. Nested components remain visible after `›`; the underlying sklearn parameter paths are unchanged. Search accepts both long names and technical source names. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.
+The columns are **Tune**, **Edit**, **Parameter**, **Source**, **Search values**, **Current value**, **Reason**, and **Purpose**, in that order. Tune contains a checkbox and Edit contains a button for each row. Rows initially follow discovery order; checking Tune does not reorder them. You can sort the descriptive columns. Source uses the card's long name, with numbered instances shown as `(1)`, `(2)`, and so on. Nested components remain visible after `›`; the underlying sklearn parameter paths are unchanged. Search accepts both long names and technical source names. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.
 
-Use **Find parameter or source** to narrow the table, then select a row to edit it. The technical parameter path, implementation class, purpose, reason and available documentation link appear in the editor.
+Use **Find parameter or source** to narrow the table, then use its **Edit** button. A modal shows the technical parameter path, implementation class, purpose, reason and documentation link. The table fills the available card area; there is no editor beneath it.
 
 The **Show parameters** radio buttons offer progressively broader views:
 
@@ -27,17 +27,17 @@ Reviewed metadata is stored in `app/data/tuning_parameters.json` by estimator cl
 
 #### Defining values
 
-**Select row to supply search values** means the parameter has no published suggested search space. Select that row in the table to open its editor below the grid. Choose a type if needed, then enter explicit choices such as `[1, 2, 5]` or select **Numeric range** and supply minimum, maximum and step. Save the definition, enable Auto-tune, and Commit. The current value and constructor default do not establish a useful tuning range by themselves.
+**Use Edit to supply search values** means the parameter has no published suggested search space. Press its Edit button to open the modal. Choose a type if needed, then enter explicit choices such as `[1, 2, 5]` or select **Numeric range** and supply minimum, maximum and step. Press **OK** to save the definition, tick the row’s **Tune** checkbox, then **Commit**. The current value and constructor default do not establish a useful tuning range by themselves.
 
 All parameters start with tuning off. Metadata supplies suggestions where available; suggestions are not automatically activated.
 
 * Integer and decimal parameters accept an explicit JSON list or a minimum, maximum and positive step. A range includes the maximum only if the step lands exactly on it. Minimum, maximum and step fields appear only when Numeric range is selected.
-* Boolean parameters show only the Auto-tune checkbox; enabling it searches both False and True.
+* Boolean parameters initially offer both False and True. Use their Tune checkbox directly, or Edit to review and change the choices.
 * Known categorical parameters offer multiple selection from supported choices.
 * Parameters without known choices accept a JSON list, for example `["option_a", "option_b"]`. Optional numeric values can use `[null, 5, 10]`.
 * Where the current value cannot establish a type, select the type yourself.
 
-For non-Boolean parameters, press **Save search definition**, then tick **Auto-tune this parameter**. The checkbox remains unavailable until the definition is complete. Known bounds and choices are checked; unknown parameters require the user's knowledge of the estimator documentation. Existing values in the pipeline are not changed by editing the search definition.
+Press **OK** to save a valid definition to the draft, then tick the row’s **Tune** checkbox. The checkbox remains unavailable until the definition is complete. **Cancel**, Escape or clicking outside the modal discards the modal edits. Editing preserves the current Tune state; Commit is still required to change the exported search space. Fixed/operational rows open read-only details and cannot be tuned. Known bounds and choices are checked; unknown parameters require the user's knowledge of the estimator documentation. Existing values in the pipeline are not changed by editing the search definition.
 
 #### Commit and review
 
@@ -103,3 +103,44 @@ constraints still require review; nested paths alone do not establish applicabil
 
 Compatible saved flat definitions are moved to their nested paths; review and
 recommit the updated search space. Previous checkpoints must be restarted.
+
+
+### Searching kernel families
+
+New **Gaussian Process** regression and classification selections provide
+**Kernel family**, **Kernel scale (gamma)**, **Polynomial degree**, and
+**Polynomial offset**. Kernel family offers Radial basis (`rbf`), Polynomial
+(`poly`) and Linear (`linear`). Tick Tune for the choices you want and
+commit the search space before starting Pipeline training. Suggestions are not
+automatically activated.
+
+Polynomial degree is the integer exponent, searched explicitly. Degree and offset
+apply only to Polynomial; gamma applies to RBF and Polynomial. Linear has none of
+these extra search dimensions. Inapplicable parameter choices do not multiply the
+trial count. The rows remain available for inspection and their reasons explain
+applicability.
+
+For GP, the usual optimizer refines gamma separately within each training fold.
+The listed gamma is then an initial value. Set **Optimizer** to `null` in advanced
+parameters to evaluate gamma exactly as supplied. Family, degree and offset are
+never changed by the inner optimizer. GP regression's **Alpha** is different: it
+is a fixed observation-noise variance / diagonal regularization value for each
+fit, not an initial value. Tick Tune for Alpha to compare values externally
+using validation. The inner optimizer does not adjust it. Alpha is a variance,
+not a standard deviation, and its range depends on target scale and normalize_y.
+RBF uses `exp(-gamma * distance²)`;
+Polynomial uses `(gamma * dot(X, Y) + coef0) ** degree`; Linear uses `dot(X, Y)`.
+The new recipe starts with RBF, gamma 0.5, polynomial degree 3 and offset 1.
+
+SVM classifiers/regressors and Kernel ridge retain their native kernel parameters
+and defaults, with the same conditional handling of degree, gamma and offset.
+SVM `scale`/`auto` gamma rules are not GP or Kernel ridge values. Predictor units
+matter: scale predictors explicitly where appropriate. Polynomial kernels can
+be numerically ill-conditioned; GP's alpha controls observation noise/diagonal
+regularization and may need adjustment. No preprocessing or noise change is
+silently added.
+
+Existing bookmarks keep their original GP recipes, including the fixed default
+kernel. To obtain these new search controls, select the new searchable-kernel
+recipe in Model method candidates and recommit. Old search checkpoints remain
+subject to the usual compatibility checks.

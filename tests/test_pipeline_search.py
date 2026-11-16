@@ -46,7 +46,7 @@ def source():
 
 
 def problem(**kwargs):
-    return prepare(source(), model_values={'cand_methods__estimator__alpha': [.01, .1, 10.]},
+    return prepare(committed_grid(source(), {'cand_methods__estimator__alpha': [.01, .1, 10.]}),
                    metric='neg_root_mean_squared_error', **kwargs)
 
 
@@ -65,7 +65,7 @@ def evaluation_history(state):
 
 def test_grid_baseline_exhaustion_holdout_and_commit():
     data = source()
-    p = prepare(data, model_values={'cand_methods__estimator__alpha': [.01, 10.]}, method='grid')
+    p = prepare(committed_grid(data, {'cand_methods__estimator__alpha': [.01, 10.]}),  method='grid')
     holdout = set(data.evaluation_plan.holdout)
     assert holdout == set(range(20, 24))
     assert all(not ((set(a) | set(b)) & holdout) for a, b in p.splits)
@@ -104,6 +104,9 @@ def test_fold_pause_json_resume_matches_uninterrupted():
 def test_fingerprint_rejects_changed_values_space_splits_and_incomplete_scores():
     p = problem()
     state = finish(p)
+    changed_grid = prepare(committed_grid(source(), {'cand_methods__estimator__alpha': [99.]}))
+    with pytest.raises(ValueError, match='does not match'):
+        validate_checkpoint(changed_grid, state)
     changed = problem(seed=7)
     with pytest.raises(ValueError, match='does not match'): validate_checkpoint(changed, state)
     data = source(); data.clean_frame.loc[0, 'x'] = 1234
@@ -113,15 +116,15 @@ def test_fingerprint_rejects_changed_values_space_splits_and_incomplete_scores()
 
 
 def test_failures_secondary_metrics_and_budget_extension():
-    p = prepare(source(), model_values={'cand_methods__estimator__alpha': [-1., .1]},
-        method='grid', secondary=['neg_mean_absolute_error'])
+    p = prepare(committed_grid(source(), {'cand_methods__estimator__alpha': [-1., .1]}),
+        method='random', secondary=['neg_mean_absolute_error'])
     initial = finish(p, trials=1)
     assert initial['status'] == 'budget reached'
-    assert initial['trials'][1]['state'] == 'failed'
-    assert initial['trials'][1]['error']
     final = finish(p, initial, trials=2)
-    assert final['trials'][2]['state'] == 'complete'
-    assert 'neg_mean_absolute_error' in final['trials'][2]['folds'][0]
+    failed = next(t for t in final['trials'] if t['state'] == 'failed')
+    assert failed['error']
+    completed = next(t for t in final['trials'] if t['kind'] == 'candidate' and t['state'] == 'complete')
+    assert 'neg_mean_absolute_error' in completed['folds'][0]
 
 
 def test_preprocessing_and_model_parameters_form_one_space():
@@ -130,7 +133,7 @@ def test_preprocessing_and_model_parameters_form_one_space():
     spec = {'fingerprint': fingerprint(discover(data.pipeline)),
             'grid': {'scale__with_mean': [False, True]}, 'combinations': 2}
     data = data.with_tuning_spec(spec)
-    p = prepare(data, model_values={'cand_methods__estimator__alpha': [.1, 10.]}, method='grid')
+    p = prepare(committed_grid(data, {'cand_methods__estimator__alpha': [.1, 10.]}),  method='grid')
     assert p.specification['combinations'] == 4
     state = finish(p)
     assert len(state['trials']) == 5
@@ -280,27 +283,27 @@ def test_secondary_failure_does_not_fail_trial(monkeypatch):
 
 def test_exhaustive_unlimited_and_baseline_overlap_coverage():
     from pipeline_search import grid_coverage
-    p = prepare(source(), model_values={'cand_methods__estimator__alpha': [1., 10.]}, method='grid')
+    p = prepare(committed_grid(source(), {'cand_methods__estimator__alpha': [1., 10.]}),  method='grid')
     partial = run(p, fresh(p), trials=1, publish=lambda s: None, pause=lambda: False)
     # Baseline already covers one grid configuration; the cap must not hide exhaustion.
     assert partial['status'] == 'exhausted'
     assert grid_coverage(partial) == {'complete': 2, 'failed': 0, 'visited': 2, 'total': 2}
     p = problem(method='grid')
     partial = finish(p, trials=1)
-    assert partial['status'] == 'budget reached'
-    assert grid_coverage(partial)['complete'] == 1
+    assert partial['status'] == 'exhausted'
+    assert grid_coverage(partial)['complete'] == 3
     result = run(p, partial, publish=lambda s: None, pause=lambda: False)
     assert result['status'] == 'exhausted'
     assert grid_coverage(result)['complete'] == 3
 
 
-def test_time_limit_preserves_partial_grid():
+def test_exhaustive_ignores_candidate_and_elapsed_time_budgets():
     from pipeline_search import grid_coverage
     p = problem(method='grid')
     state = fresh(p); state['elapsed'] = 10.
-    result = run(p, state, seconds=5, publish=lambda s: None, pause=lambda: False)
-    assert result['status'] == 'budget reached'
-    assert grid_coverage(result)['complete'] == 0
+    result = run(p, state, trials=1, seconds=5, publish=lambda s: None, pause=lambda: False)
+    assert result['status'] == 'exhausted'
+    assert grid_coverage(result)['complete'] == 3
 
 
 def gp_problem():
@@ -310,7 +313,7 @@ def gp_problem():
     model = data.pipeline.named_steps.cand_methods
     model.set_params(estimator=GaussianProcessRegressor(kernel=RBF(.5), alpha=.1, optimizer=None))
     data = data.with_estimator(model, label='GP', recipe_id='test-gp')
-    return prepare(data, model_values={'cand_methods__estimator__alpha': [.2,.3,.4]}, method='grid')
+    return prepare(committed_grid(data, {'cand_methods__estimator__alpha': [.2,.3,.4]}),  method='grid')
 
 
 def source_without_plan(classification=False):
@@ -329,10 +332,10 @@ def source_without_plan(classification=False):
 @pytest.mark.parametrize('method', ['random','grid','tpe','skopt'])
 def test_all_search_methods_generate_reproducible_cv_when_no_plan(method):
     data = source_without_plan()
-    p = prepare(data, method=method, model_values={'cand_methods__estimator__alpha':[.01,10.]})
+    p = prepare(committed_grid(data, {'cand_methods__estimator__alpha':[.01,10.]}), method=method)
     assert p.specification['evaluation']['origin'] == 'implicit'
     assert len(p.splits) == 5
-    same = prepare(data, method=method, model_values={'cand_methods__estimator__alpha':[.01,10.]})
+    same = prepare(committed_grid(data, {'cand_methods__estimator__alpha':[.01,10.]}), method=method)
     assert p.specification['fingerprint'] == same.specification['fingerprint']
     for (train, valid), (train2, valid2) in zip(p.splits,same.splits):
         np.testing.assert_array_equal(train,train2)
@@ -402,8 +405,7 @@ def test_skopt_uses_exact_upstream_memberships_and_real_finite_history(monkeypat
 
 def test_skopt_fits_actual_surrogate_after_initial_observations():
     from pipeline_search import skopt_proposal
-    p = prepare(source_without_plan(), method='skopt',
-                model_values={'cand_methods__estimator__alpha':[float(i) for i in range(1,13)]})
+    p = prepare(committed_grid(source_without_plan(), {'cand_methods__estimator__alpha':[float(i) for i in range(1,13)]}), method='skopt')
     state = fresh(p)
     # Exercise the fitted GP acquisition path, beyond skopt's 10 initial points.
     for i in range(10):
@@ -416,7 +418,7 @@ def test_skopt_fits_actual_surrogate_after_initial_observations():
 def test_zero_candidate_budget_means_unlimited_for_every_method(method):
     p = problem(method=method)
     limited = finish(p,trials=1)
-    assert limited['status'] == 'budget reached'
+    assert limited['status'] == ('exhausted' if method == 'grid' else 'budget reached')
     unlimited = finish(p,json.loads(json.dumps(limited)),trials=0)
     assert unlimited['status'] == 'exhausted'
     assert len(unlimited['trials']) == 4
@@ -447,7 +449,7 @@ def test_catboost_search_can_tune_previously_unset_parameter():
         ('estimator', CatBoostRegressor(iterations=3, verbose=False, thread_count=1))])
     data = source().with_estimator(model, label='CatBoost', recipe_id='test-catboost')
     key = 'cand_methods__estimator__depth'
-    p = prepare(data, model_values={key: [2]}, method='grid')
+    p = prepare(committed_grid(data, {key: [2]}),  method='grid')
     result = finish(p, trials=0)
     assert result['status'] == 'exhausted'
     assert [t['params'][key] for t in result['trials']] == [None, 2]
@@ -495,3 +497,13 @@ def test_repeated_upstream_plan_keeps_split_identity_through_resume():
     restored = validate_checkpoint(p, json.loads(json.dumps(checkpoint)))
     assert restored['specification']['evaluation']['split_descriptors'] == list(repeated.split_descriptors)
     assert len(restored['trials'][0]['folds']) == 6
+
+
+def committed_grid(data, grid):
+    """Supply the same upstream commitment that cand_parameters exports."""
+    from sklearn.model_selection import ParameterGrid
+    from tuning import discover_source
+    grid = {**(data.tuning_spec or {}).get('grid', {}), **grid}
+    return data.with_tuning_spec({'grid': grid,
+        'fingerprint': fingerprint(discover_source(data)),
+        'combinations': len(ParameterGrid(grid))})

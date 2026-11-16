@@ -46,7 +46,7 @@ def configured():
 
 
 def finish(problem, state=None, **kwargs):
-    return run(problem, state or fresh(problem), trials=kwargs.pop('trials', 0), seconds=0,
+    return run(problem, state or fresh(problem), trials=kwargs.pop('trials', 0), seconds=kwargs.pop('seconds', 0),
                publish=kwargs.pop('publish', lambda s: None), pause=kwargs.pop('pause', lambda: False), **kwargs)
 
 
@@ -79,7 +79,11 @@ def test_all_searches_cover_union_with_baselines_and_resume(method):
         assert trial['model_id'] == key
         assert ('cand_methods__estimator__alpha' in trial['params']) == (key == 'ridge')
         assert ('cand_methods__estimator__max_depth' in trial['params']) == (key == 'tree')
-    checkpoint = finish(p, trials=1)
+    stopped = False
+    def publish(state):
+        nonlocal stopped
+        stopped = sum(t['state'] != 'running' for t in state['trials']) >= 3
+    checkpoint = finish(p, trials=1, publish=publish, pause=lambda: stopped)
     assert len(checkpoint['trials']) == 3
     resumed = finish(p, json.loads(json.dumps(checkpoint)))
     assert [t['params'] for t in resumed['trials']] == [t['params'] for t in complete['trials']]
@@ -100,7 +104,7 @@ def test_all_searches_cover_union_with_baselines_and_resume(method):
 
 
 def test_global_budget_excludes_all_method_baselines_and_pause_is_safe():
-    p = prepare(configured(), method='grid')
+    p = prepare(configured(), method='random')
     result = finish(p, trials=1)
     assert len(result['trials']) == 3
     assert sum(t['kind'] == 'candidate' for t in result['trials']) == 1
@@ -136,7 +140,7 @@ def test_candidate_changes_invalidate_identity_and_bad_commit_is_atomic():
 @pytest.mark.parametrize('execution', ['trials', 'folds'])
 def test_parallel_multi_method_search_and_acceptance(execution):
     p = prepare(configured(), method='grid', execution=execution, workers=2)
-    result = finish(p)
+    result = finish(p, trials=1, seconds=0.000001)
     assert result['status'] == 'exhausted', result.get('error')
     assert len(result['trials']) == 6
     assert all(len(t['folds']) == 3 and t['state'] == 'complete' for t in result['trials'])

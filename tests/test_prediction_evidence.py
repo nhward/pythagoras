@@ -16,7 +16,7 @@ from pipeline_search import (
     run,
     validate_checkpoint,
 )
-from test_pipeline_search import source
+from test_pipeline_search import committed_grid, source
 
 pytestmark = pytest.mark.unit
 
@@ -132,7 +132,7 @@ def test_completed_trial_storage_does_not_scale_with_observation_count():
         model = Pipeline([('predictors', FunctionTransformer(prepare_predictors,
                           kw_args={'columns': ['x'], 'preparation': 'numeric'})), ('estimator', Ridge())])
         data = data.with_estimator(model, label='Ridge', recipe_id='ridge')
-        problem = prepare(data, method='grid', model_values={'cand_methods__estimator__alpha': [.1, 10.]})
+        problem = prepare(committed_grid(data, {'cand_methods__estimator__alpha': [.1, 10.]}), method='grid')
         state = run(problem, fresh(problem), trials=0, publish=lambda s: None, pause=lambda: False)
         assert all(t['state'] == 'complete' for t in state['trials'])
         sizes.append(len(json.dumps(state['trials'])))
@@ -213,7 +213,7 @@ def test_completed_historical_review_is_file_free_and_cannot_accept(monkeypatch)
 
 def test_native_worker_queue_is_bounded_and_completed_files_are_retired():
     import time
-    problem = prepare(source(), method='grid', model_values={'cand_methods__estimator__alpha': [.1, 10.]})
+    problem = prepare(committed_grid(source(), {'cand_methods__estimator__alpha': [.1, 10.]}), method='grid')
     worker = SearchWorker()
     try:
         worker.start(problem, fresh(problem), 0, 0)

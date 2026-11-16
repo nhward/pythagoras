@@ -12,8 +12,7 @@ The double-handle footer slider maps a,b in [0,100] to weights a,b−a,100−b.
 Initial weights are 100,0,0. Client callbacks update labels while dragging and
 publish `WeightCommit` only on release. The normal slider value is persisted.
 The derived commit input and navigation/inspection controls are excluded from
-configuration. Qualitative interpretability is displayed. All candidate methods are implicitly
-eligible; the retired EligibleMethods input is ignored and excluded from saved state.
+configuration. Qualitative interpretability is displayed. Candidate methods are eligible by default; the retired EligibleMethods input is ignored and excluded from saved state.
 
 `candidate_selection` computes three-dimensional nondomination and log-space WPM.
 RMSE/MAE losses and P95 are minimized; throughput is maximized. R² uses 1−R².
@@ -42,3 +41,21 @@ dominated circles use size 4 and opacity .65, both with dark outlines. The winne
 is a black size-11 diamond with a white outline. These styles encode status, not
 viewing distance or complexity. Quarto help defines dominance and tab-local
 frontiers and separates frontier membership from weighting and uncertainty.
+
+
+`UsuallyTransparentOnly` is a visible, guided, persisted checkbox, default false.
+When true, the selection eligibility frame includes only methods with reviewed
+`usually_transparent` estimator-level catalogue metadata. Resolve the exact
+terminal class from shared pipeline templates where available; otherwise an
+exact saved catalogue method/recipe identity supports historical review. Do not
+infer from display names, class-name substrings or tuned depth. Unknown identity,
+conflicting aliases and all other transparency statuses fail closed. No native
+estimator imports or fitting are needed for this constraint.
+
+Apply eligibility before method navigation, chart/frontier, weighted decisions,
+comparisons and CSV export. The complete tuning evidence remains unchanged.
+Record `usually_transparent_only` in review metadata; no eligible trials produce
+no selected winner and explanatory text. Bookmark restoration recomputes winners
+using the restored constraint, rather than trusting stale saved winners. The
+existing intrinsic transparency classifications do not certify preprocessing
+interpretability, causal meaning or post-hoc explanation quality.

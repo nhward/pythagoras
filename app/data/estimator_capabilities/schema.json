@@ -18,6 +18,9 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "_comment": {
+      "type": "string"
+    },
     "$schema": {
       "type": "string"
     },
@@ -416,6 +419,9 @@
         },
         "output_review": {
           "$ref": "#/$defs/output_review"
+        },
+        "default_for_new_selection": {
+          "type": "boolean"
         }
       }
     },

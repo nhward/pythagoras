@@ -146,9 +146,9 @@ def execution_settings(pipeline, frame, splits, mode, workers):
             'memory_budget_bytes': budget, 'estimated_fit_bytes': estimate}
 
 
-def prepare(source, *, model_values=None, metric=None, secondary=(), method='random', seed=1729, execution='sequential', workers=1):
+def prepare(source, *, metric=None, secondary=(), method='random', seed=1729, execution='sequential', workers=1):
     if len(source.model_candidates) > 1 and source.selected_model_candidate is None:
-        return prepare_candidates(source, model_values=model_values, metric=metric, secondary=secondary,
+        return prepare_candidates(source, metric=metric, secondary=secondary,
                                   method=method, seed=seed, execution=execution, workers=workers)
     if not isinstance(seed, (int, np.integer)) or not 0 <= seed < 2**31:
         raise ValueError('Choose an integer seed between 0 and 2147483647.')
@@ -178,17 +178,6 @@ def prepare(source, *, model_values=None, metric=None, secondary=(), method='ran
     if source._tuning_spec is not None and source.tuning_spec is None:
         raise ValueError('The committed tuning specification is stale. Review and commit it again.')
     known = {r['path']: r for r in discover(pipeline)}
-    model_values = {} if model_values is None else model_values
-    if not isinstance(model_values, dict):
-        raise TypeError('Model parameter choices must be a JSON object of full parameter paths and lists.')
-    for path, values in model_values.items():
-        row = known.get(path)
-        if row is None or not path.startswith('cand_methods__') or row['fixed']:
-            raise ValueError(f'Not a tunable model parameter: {path}')
-        values = search_values({'kind': row['definition']['kind'] or 'categorical', 'values': values}, row['metadata'])
-        if path in grid and grid[path] != values:
-            raise ValueError(f'{path} already has committed choices. Change them in Tuning parameters.')
-        grid[path] = values
     # Validate incoming grids too: never permit fixed configuration or topology tuning.
     for path, values in grid.items():
         row = known.get(path)
@@ -391,18 +380,7 @@ def prepare_candidates(source, **options):
     committed = source.tuning_spec
     if source._tuning_spec is not None and committed is None:
         raise ValueError('The committed tuning specification is stale. Review and commit it again.')
-    choices = options.pop('model_values')
-    choices = {} if choices is None else choices
-    if not isinstance(choices, dict):
-        raise TypeError('Model choices must be an object of candidate-specific parameter paths.')
-    known = {r['path']: r for r in discover_source(source)}
-    if any(path not in known or not known[path].get('candidate_id') or known[path]['fixed'] for path in choices):
-        raise ValueError('Use candidate-specific tunable model parameter paths from Tuning parameters.')
     grids = dict((committed or {}).get('grid', {}))
-    for path, values in choices.items():
-        if path in grids and grids[path] != values:
-            raise ValueError('Change already committed choices in Tuning parameters.')
-        grids[path] = values
     branches = {}
     for c in candidates:
         prefix = candidate_prefix(c['id'])
@@ -414,7 +392,7 @@ def prepare_candidates(source, **options):
             branch_source = branch_source.with_tuning_spec({'grid': grid,
                 'fingerprint': fingerprint(discover_source(branch_source)),
                 'combinations': len(ParameterGrid(grid))})
-        child = prepare(branch_source, model_values=None, **options)
+        child = prepare(branch_source, **options)
         child.specification['method_label'] = c['label']
         branches[c['id']] = child
     first = next(iter(branches.values()))
@@ -812,7 +790,9 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
     if (trials is not None and (isinstance(trials, bool) or not isinstance(trials, int) or trials < 0)
             or not math.isfinite(seconds) or seconds < 0):
         raise ValueError('Supply a nonnegative candidate budget (zero means unlimited) and a finite nonnegative time budget.')
-    if trials == 0:
+    if problem.specification['method'] == 'grid':
+        trials, seconds = None, 0
+    elif trials == 0:
         trials = None
     state = validate_checkpoint(problem, evidence_store.restore_checkpoint(checkpoint, problem.evidence_directory))
     spec = problem.specification

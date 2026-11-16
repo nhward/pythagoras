@@ -4420,7 +4420,7 @@
       "alpha": {
         "kind": "float",
         "purpose": "recommended",
-        "reason": "Nonnegative diagonal training covariance: observation-noise variance plus numerical stabilization. Suggested scalar values assume a roughly unit-variance target (normalize_y=True); rescale for raw response units. Per-observation arrays are not supported by the scalar tuning grid. Distinct from a fitted WhiteKernel noise level.",
+        "reason": "Fixed training covariance diagonal addition: observation-noise variance / numerical regularization, not a starting value. The GP marginal-likelihood optimizer does not adjust alpha. Tune scalar alpha externally using validation while the inner optimizer may refine kernel gamma. Values depend on target scale and normalize_y; alpha is a variance, not a standard deviation, and is not automatically added as fresh observation noise to predictive uncertainty. Suggested values assume a roughly unit-variance target (normalize_y=True); rescale for raw response units. Per-observation arrays are not supported by this scalar grid.",
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html",
         "importance": 100,
         "suggested": {
@@ -4432,7 +4432,9 @@
             0.1,
             1.0
           ]
-        }
+        },
+        "minimum": 0,
+        "allow_none": false
       },
       "normalize_y": {
         "kind": "boolean",
@@ -4450,9 +4452,9 @@
       "optimizer": {
         "kind": "categorical",
         "purpose": "advanced",
-        "reason": "Kernel hyperparameter optimizer. fmin_l_bfgs_b maximizes training log marginal likelihood; null keeps supplied kernel parameters fixed. This optimization is not internal cross-validation. The default kernel has fixed bounds, so this control has no effect until an explicit non-fixed kernel is supplied.",
+        "reason": "Training-fold marginal-likelihood optimizer for continuous kernel parameters. fmin_l_bfgs_b refines gamma for searchable kernels; null holds supplied values fixed. Family, polynomial degree and offset remain outer-search choices. Legacy default kernels have fixed bounds.",
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html",
-        "importance": 70,
+        "importance": 50,
         "choices": [
           "fmin_l_bfgs_b",
           null
@@ -4467,7 +4469,7 @@
       "n_restarts_optimizer": {
         "kind": "integer",
         "purpose": "advanced",
-        "reason": "Additional kernel-optimizer starts after the initial start. Adds fitting cost; requires an active optimizer and finite kernel bounds when positive. Has no effect for the default fixed kernel.",
+        "reason": "Additional training-fold gamma-optimizer starts. Requires an active optimizer and finite gamma bounds when positive. Has no effect for fixed or linear kernels. Does not select kernel family or polynomial degree.",
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html",
         "importance": 60,
         "suggested": {
@@ -4481,7 +4483,7 @@
       "kernel": {
         "kind": "categorical",
         "purpose": "operational",
-        "reason": "Covariance-function structure. The current recipe uses kernel=null: fixed ConstantKernel(1) times fixed RBF(1). Kernel objects cannot be selected through scalar JSON grids; nested parameters are exposed when an explicit kernel is supplied. Configure topology before tuning.",
+        "reason": "Kernel object configuration. New searchable-family recipes expose scalar kernel children (Kernel family, gamma, degree, offset). Legacy kernel=null recipes retain the native fixed ConstantKernel times RBF default.",
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html",
         "importance": 0
       },
@@ -5080,7 +5082,7 @@
         }
       },
       "degree": {
-        "purpose": "advanced",
+        "purpose": "recommended",
         "kind": "integer",
         "reason": "Polynomial kernel degree; used only by polynomial kernels.",
         "suggested": {
@@ -5092,7 +5094,12 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html",
         "default_repr": "3",
-        "importance": 50
+        "importance": 100,
+        "applies_when": {
+          "kernel": [
+            "poly"
+          ]
+        }
       },
       "gamma": {
         "purpose": "recommended",
@@ -5109,6 +5116,13 @@
             0.1,
             1.0
           ]
+        },
+        "applies_when": {
+          "kernel": [
+            "rbf",
+            "poly",
+            "sigmoid"
+          ]
         }
       },
       "coef0": {
@@ -5124,7 +5138,13 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html",
         "default_repr": "0.0",
-        "importance": 50
+        "importance": 50,
+        "applies_when": {
+          "kernel": [
+            "poly",
+            "sigmoid"
+          ]
+        }
       },
       "tol": {
         "purpose": "operational",
@@ -9194,7 +9214,7 @@
         }
       },
       "degree": {
-        "purpose": "advanced",
+        "purpose": "recommended",
         "kind": "integer",
         "reason": "Polynomial kernel degree; used only by polynomial kernels.",
         "suggested": {
@@ -9206,7 +9226,12 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.NuSVR.html",
         "default_repr": "3",
-        "importance": 50
+        "importance": 100,
+        "applies_when": {
+          "kernel": [
+            "poly"
+          ]
+        }
       },
       "gamma": {
         "purpose": "recommended",
@@ -9223,6 +9248,13 @@
             0.1,
             1.0
           ]
+        },
+        "applies_when": {
+          "kernel": [
+            "rbf",
+            "poly",
+            "sigmoid"
+          ]
         }
       },
       "coef0": {
@@ -9238,7 +9270,13 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.NuSVR.html",
         "default_repr": "0.0",
-        "importance": 50
+        "importance": 50,
+        "applies_when": {
+          "kernel": [
+            "poly",
+            "sigmoid"
+          ]
+        }
       },
       "shrinking": {
         "purpose": "operational",
@@ -9354,10 +9392,20 @@
             0.1,
             1.0
           ]
+        },
+        "applies_when": {
+          "kernel": [
+            "rbf",
+            "poly",
+            "polynomial",
+            "sigmoid",
+            "laplacian",
+            "chi2"
+          ]
         }
       },
       "degree": {
-        "purpose": "advanced",
+        "purpose": "recommended",
         "kind": "integer",
         "reason": "Polynomial kernel degree; used only by polynomial kernels.",
         "suggested": {
@@ -9369,7 +9417,13 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.kernel_ridge.KernelRidge.html",
         "default_repr": "3",
-        "importance": 50
+        "importance": 100,
+        "applies_when": {
+          "kernel": [
+            "poly",
+            "polynomial"
+          ]
+        }
       },
       "coef0": {
         "purpose": "advanced",
@@ -9384,7 +9438,14 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.kernel_ridge.KernelRidge.html",
         "default_repr": "1",
-        "importance": 50
+        "importance": 50,
+        "applies_when": {
+          "kernel": [
+            "poly",
+            "polynomial",
+            "sigmoid"
+          ]
+        }
       },
       "kernel_params": {
         "purpose": "operational",
@@ -10795,7 +10856,7 @@
         }
       },
       "degree": {
-        "purpose": "advanced",
+        "purpose": "recommended",
         "kind": "integer",
         "reason": "Polynomial kernel degree; used only by polynomial kernels.",
         "suggested": {
@@ -10807,7 +10868,12 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html",
         "default_repr": "3",
-        "importance": 50
+        "importance": 100,
+        "applies_when": {
+          "kernel": [
+            "poly"
+          ]
+        }
       },
       "gamma": {
         "purpose": "recommended",
@@ -10824,6 +10890,13 @@
             0.1,
             1.0
           ]
+        },
+        "applies_when": {
+          "kernel": [
+            "rbf",
+            "poly",
+            "sigmoid"
+          ]
         }
       },
       "coef0": {
@@ -10839,7 +10912,13 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html",
         "default_repr": "0.0",
-        "importance": 50
+        "importance": 50,
+        "applies_when": {
+          "kernel": [
+            "poly",
+            "sigmoid"
+          ]
+        }
       },
       "shrinking": {
         "purpose": "operational",
@@ -14362,7 +14441,7 @@
         }
       },
       "degree": {
-        "purpose": "advanced",
+        "purpose": "recommended",
         "kind": "integer",
         "reason": "Polynomial kernel degree; used only by polynomial kernels.",
         "suggested": {
@@ -14374,7 +14453,12 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.NuSVC.html",
         "default_repr": "3",
-        "importance": 50
+        "importance": 100,
+        "applies_when": {
+          "kernel": [
+            "poly"
+          ]
+        }
       },
       "gamma": {
         "purpose": "recommended",
@@ -14391,6 +14475,13 @@
             0.1,
             1.0
           ]
+        },
+        "applies_when": {
+          "kernel": [
+            "rbf",
+            "poly",
+            "sigmoid"
+          ]
         }
       },
       "coef0": {
@@ -14406,7 +14497,13 @@
         },
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.svm.NuSVC.html",
         "default_repr": "0.0",
-        "importance": 50
+        "importance": 50,
+        "applies_when": {
+          "kernel": [
+            "poly",
+            "sigmoid"
+          ]
+        }
       },
       "shrinking": {
         "purpose": "operational",
@@ -14533,7 +14630,7 @@
       "kernel": {
         "purpose": "operational",
         "kind": "categorical",
-        "reason": "Covariance function object; null uses the library default fixed ConstantKernel times RBF. Configure an explicit kernel before searching its nested scalar parameters; do not serialize kernel objects as scalar JSON choices.",
+        "reason": "Kernel object configuration. New searchable-family recipes expose scalar kernel children (Kernel family, gamma, degree, offset). Legacy kernel=null recipes retain the native fixed ConstantKernel times RBF default.",
         "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessClassifier.html",
         "default_repr": "None",
         "importance": 0
@@ -14541,7 +14638,7 @@
       "optimizer": {
         "purpose": "advanced",
         "kind": "categorical",
-        "reason": "Optimize kernel hyperparameters by training marginal likelihood or keep them fixed. This is not internal CV; non-fixed explicit kernel bounds are required for optimization.",
+        "reason": "Training-fold marginal-likelihood optimizer for continuous kernel parameters. fmin_l_bfgs_b refines gamma for searchable kernels; null holds supplied values fixed. Family, polynomial degree and offset remain outer-search choices. Legacy default kernels have fixed bounds.",
         "suggested": {
           "values": [
             "fmin_l_bfgs_b",
@@ -14555,7 +14652,7 @@
       "n_restarts_optimizer": {
         "purpose": "advanced",
         "kind": "integer",
-        "reason": "Additional kernel optimizer starts; positive values require finite bounds and increase fit cost.",
+        "reason": "Additional training-fold gamma-optimizer starts. Requires an active optimizer and finite gamma bounds when positive. Has no effect for fixed or linear kernels. Does not select kernel family or polynomial degree.",
         "suggested": {
           "values": [
             0,
@@ -15700,6 +15797,104 @@
         "reference": "https://contrib.scikit-learn.org/skglm/generated/skglm.SparseLogisticRegression.html",
         "default_repr": "False",
         "importance": 0
+      }
+    },
+    "kernel_search.SearchablePairwiseKernel": {
+      "metric": {
+        "kind": "categorical",
+        "label": "Kernel family",
+        "purpose": "recommended",
+        "importance": 100,
+        "suggested": {
+          "values": [
+            "rbf",
+            "poly",
+            "linear"
+          ]
+        },
+        "reason": "Prediction covariance family: Radial basis (rbf), Polynomial (poly) or Linear (linear). Chosen by the outer search; GP marginal likelihood does not switch families.",
+        "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html",
+        "choices": [
+          "rbf",
+          "poly",
+          "linear"
+        ]
+      },
+      "gamma": {
+        "kind": "float",
+        "label": "Kernel scale (gamma)",
+        "purpose": "recommended",
+        "importance": 100,
+        "suggested": {
+          "values": [
+            0.01,
+            0.1,
+            0.5,
+            1.0
+          ]
+        },
+        "reason": "Positive kernel coefficient. For RBF, gamma = 1 / (2 * length_scale squared). With a GP optimizer and adjustable gamma bounds this is a starting value, refined using each training fold only. optimizer=null evaluates it exactly. Values depend on predictor units; no scaling is added automatically.",
+        "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html",
+        "applies_when": {
+          "metric": [
+            "rbf",
+            "poly"
+          ]
+        },
+        "minimum": 0,
+        "exclusive_minimum": true,
+        "allow_none": false
+      },
+      "degree": {
+        "kind": "integer",
+        "label": "Polynomial degree",
+        "purpose": "recommended",
+        "importance": 100,
+        "suggested": {
+          "values": [
+            2,
+            3,
+            4
+          ]
+        },
+        "reason": "Polynomial exponent in (gamma * dot(X,Y) + coef0) ** degree. Discrete outer search choice, never adjusted by marginal-likelihood optimization.",
+        "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html",
+        "applies_when": {
+          "metric": [
+            "poly"
+          ]
+        },
+        "minimum": 1,
+        "allow_none": false
+      },
+      "coef0": {
+        "kind": "float",
+        "label": "Polynomial offset",
+        "purpose": "recommended",
+        "importance": 100,
+        "suggested": {
+          "values": [
+            0.0,
+            0.5,
+            1.0
+          ]
+        },
+        "reason": "Nonnegative polynomial offset, evaluated exactly as specified. Only gamma is refined by the GP optimizer.",
+        "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html",
+        "applies_when": {
+          "metric": [
+            "poly"
+          ]
+        },
+        "minimum": 0,
+        "allow_none": false
+      },
+      "gamma_bounds": {
+        "kind": "categorical",
+        "purpose": "operational",
+        "importance": 0,
+        "reason": "Bounds for training-fold marginal-likelihood optimization of gamma; fixed disables that optimization. Recipe configuration, not independent scalar grid values.",
+        "reference": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html"
       }
     }
   },

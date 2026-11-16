@@ -2003,6 +2003,65 @@
         "random_state": 1729
       },
       "package_version": null
+    },
+    "sklearn.gaussian_process.GaussianProcessRegressor:searchable_kernels_v1": {
+      "rating": "Low",
+      "evidence": "documentation_informed_judgement_not_benchmark",
+      "reason": "Exact posterior prediction evaluates kernels against retained training observations; uncertainty and classification add work. Cost grows with training-set size.",
+      "sources": [
+        "https://scikit-learn.org/stable/computing/computational_performance.html",
+        "https://scikit-learn.org/1.9/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html",
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "kernel": {
+            "metric": "rbf",
+            "gamma": 0.5,
+            "degree": 3,
+            "coef0": 1.0,
+            "gamma_bounds": [
+              1e-05,
+              100000.0
+            ]
+          },
+          "optimizer": "fmin_l_bfgs_b"
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.gaussian_process.GaussianProcessClassifier:searchable_kernels_v1": {
+      "rating": "Low",
+      "evidence": "documentation_informed_judgement_not_benchmark",
+      "reason": "Exact posterior prediction evaluates kernels against retained training observations; uncertainty and classification add work. Cost grows with training-set size.",
+      "sources": [
+        "https://scikit-learn.org/stable/computing/computational_performance.html",
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessClassifier.html",
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.kernels.PairwiseKernel.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "optimizer": "fmin_l_bfgs_b",
+          "max_iter_predict": 100,
+          "random_state": 1729,
+          "n_jobs": 1,
+          "kernel": {
+            "metric": "rbf",
+            "gamma": 0.5,
+            "degree": 3,
+            "coef0": 1.0,
+            "gamma_bounds": [
+              1e-05,
+              100000.0
+            ]
+          }
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
     }
   }
 }

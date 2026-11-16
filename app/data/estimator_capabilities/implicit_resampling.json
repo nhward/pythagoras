@@ -1107,6 +1107,45 @@
         "clip": false
       },
       "package_version": "1.9.1"
+    },
+    "sklearn.gaussian_process.GaussianProcessRegressor:searchable_kernels_v1": {
+      "status": "no",
+      "reason": "Marginal-likelihood fitting uses the training observations, not an internal validation/tuning split. Outer evaluation remains separate.",
+      "parameters": {
+        "kernel": {
+          "metric": "rbf",
+          "gamma": 0.5,
+          "degree": 3,
+          "coef0": 1.0,
+          "gamma_bounds": [
+            1e-05,
+            100000.0
+          ]
+        },
+        "optimizer": "fmin_l_bfgs_b"
+      },
+      "package_version": "1.9.1"
+    },
+    "sklearn.gaussian_process.GaussianProcessClassifier:searchable_kernels_v1": {
+      "status": "no",
+      "reason": "Marginal-likelihood fitting uses the training observations, not an internal validation/tuning split. Outer evaluation remains separate.",
+      "parameters": {
+        "optimizer": "fmin_l_bfgs_b",
+        "max_iter_predict": 100,
+        "random_state": 1729,
+        "n_jobs": 1,
+        "kernel": {
+          "metric": "rbf",
+          "gamma": 0.5,
+          "degree": 3,
+          "coef0": 1.0,
+          "gamma_bounds": [
+            1e-05,
+            100000.0
+          ]
+        }
+      },
+      "package_version": "1.9.1"
     }
   }
 }

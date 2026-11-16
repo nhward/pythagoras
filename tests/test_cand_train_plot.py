@@ -86,7 +86,8 @@ def test_removed_chart_controls_are_absent_and_other_settings_have_guides():
     card = instance()
     settings = str(card.settings)
     assert 'SDMultiplier' not in settings and 'ChartView' not in settings
-    for name in ('Metric', 'Method', 'Trials', 'Seconds', 'RefreshSeconds', 'Execution', 'Workers', 'Seed', 'ModelValues'):
+    assert 'ModelValues' not in settings
+    for name in ('Metric', 'Method', 'Trials', 'Seconds', 'RefreshSeconds', 'Execution', 'Workers', 'Seed'):
         guide = card._shepherd_steps[f'{card.namespace}-{name}_wrapper']
         assert guide['title'] and guide['text'] and guide['position'] == 'left'
 
@@ -157,3 +158,18 @@ def test_chart_snapshot_does_not_copy_search_grids_or_resampling_memberships():
     assert set(snapshot['specification']) == {'metric', 'task', 'fingerprint', 'branches'}
     assert snapshot['specification']['branches'] == {'model': {'method_label': 'Model'}}
 
+
+
+@pytest.mark.unit
+def test_legacy_model_choices_require_matching_upstream_commitment():
+    from cards.cand_train import validate_legacy_choices
+    for empty in ('{}', '', {}):
+        validate_legacy_choices(empty, None)
+    choices = '{"cand_methods__estimator__alpha": [0.1, 1]}'
+    for spec in (None, {'grid': {'cand_methods__estimator__alpha': [1]}}):
+        with pytest.raises(ValueError, match='Commit those choices in Tuning parameters'):
+            validate_legacy_choices(choices, spec)
+    validate_legacy_choices(choices, {'grid': {'cand_methods__estimator__alpha': [0.1, 1]}})
+    for malformed in ('bad json', '[]', 'null'):
+        with pytest.raises(ValueError, match='Commit those choices'):
+            validate_legacy_choices(malformed, None)

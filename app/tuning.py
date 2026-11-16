@@ -124,10 +124,12 @@ def discover(pipeline):
         if kind == 'boolean' and not fixed: definition['values'] = [False, True]
         if 'choices' in metadata: definition['values'] = metadata['choices']
         definition.update(metadata.get('suggested', {}))
-        selectors = (group.get('selectors', {group.get('selector'): group.get('values')}) if group else {})
-        terms = [{'selector': f'{parent_path}__{selector}', 'values': values,
-                  'current': list(getattr(parent, selector)) if isinstance(getattr(parent, selector), tuple)
-                  else getattr(parent, selector)} for selector, values in selectors.items()]
+        selectors = (group.get('selectors', {group.get('selector'): group.get('values')})
+                     if group else metadata.get('applies_when', {}))
+        selector_path, selector_owner = (parent_path, parent) if group else (owner_path, owner)
+        terms = [{'selector': f'{selector_path}__{selector}', 'values': values,
+                  'current': list(getattr(selector_owner, selector)) if isinstance(getattr(selector_owner, selector), tuple)
+                  else getattr(selector_owner, selector)} for selector, values in selectors.items()]
         condition = ({'any': terms} if len(terms) > 1 else terms[0]) if terms else None
         if condition:
             reason += ' Applies when ' + ' or '.join(
@@ -248,6 +250,12 @@ def search_values(definition, metadata=None):
             if kind == 'integer' and not isinstance(value, int): raise ValueError('Integer choices must be integers or null.')
         if not isinstance(value, (str, int, float, bool, type(None))):
             raise TypeError('Choices must be scalar JSON values.')
+        if value is None and metadata.get('allow_none') is False:
+            raise ValueError('This parameter requires a numeric value, not null.')
+        if value is not None and 'minimum' in metadata:
+            minimum = metadata['minimum']
+            if value < minimum or (metadata.get('exclusive_minimum') and value == minimum):
+                raise ValueError(f'Values must be {"greater than" if metadata.get("exclusive_minimum") else "at least"} {minimum}.')
         bounds = metadata.get('bounds')
         if bounds and value is not None and (not isinstance(value, (int, float)) or not bounds[0] <= value <= bounds[1]):
             raise ValueError(f'Values must be between {bounds[0]} and {bounds[1]}.')

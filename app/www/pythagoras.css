@@ -1128,7 +1128,7 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
     background: var(--bs-body-bg, white);
 }
 
-/* Collapible Navset_bar */
+/* Collapsible navset_bar: toggle shares the first row with expanded tabs. */
 .nominal-navbar {
     --bs-navbar-padding-y: 0.1rem;
     --bs-navbar-brand-padding-y: 0;
@@ -1139,12 +1139,39 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
 .nominal-navbar .navbar-brand:empty { display: none; }
 .nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
-.nominal-navbar.force-collapse {flex-wrap: wrap;}
-.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
 .nominal-navbar.force-collapse .navbar-toggler {display: block;}
-.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
 .nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
 .nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+/* Scope to Shiny navset_bar markup, including bars without nominal-navbar.
+   Keep the collapse element flexible during Bootstrap's .collapsing transition;
+   its default 100% flex basis otherwise puts it below the toggle. */
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    column-gap: 0.25rem;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) .navbar-brand:empty {
+    display: none;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-toggler {
+    flex: 0 0 auto;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-collapse {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item {
+    min-width: 0;
+    max-width: 100%;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item > .nav-link {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
 .nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
 /* Tuning controls wrap in compact cards and share a row when space allows. */
 .tuning-search { display: none; }
@@ -1198,12 +1225,11 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .model-candidates-table > shiny-data-frame { height: 100%; max-height: none; flex: 1 1 0 !important; }
 .model-candidates-table .shiny-data-grid { flex: 1 1 0; height: 100%; max-height: none; }
 
-/* Allocate spare front-face height to the tuning grid, not the row editor. */
+/* Allocate spare front-face height to the tuning grid; editing is modal. */
 .tuning-parameters-table.shiny-html-output {
   display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
 }
 .front > div:has(> .tuning-parameters-table) { min-height: 0; }
-.front > div:has(> .tuning-parameters-editor),
 .front > div:has(> .tuning-parameters-message),
 .front > .tuning-search,
 .front > .tuning-parameters-message { flex: 0 0 auto; }
@@ -1299,3 +1325,10 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 
 .cand-models-status { flex: 0 0 2.6em; height: 2.6em; min-height: 2.6em !important; line-height: 1.3; overflow: auto; font-size: .85rem; }
 .cand-models-status .shiny-text-output { min-height: 0 !important; }
+
+/* Parameter editing lives in a modal; keep row actions compact. */
+.tuning-row-toggle { float: none; margin: 0; cursor: pointer; }
+.tuning-row-toggle:disabled { cursor: not-allowed; }
+.tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
+.tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
+#shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }

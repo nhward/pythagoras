@@ -68,7 +68,8 @@ def build_model(row, predictors):
         factory = PreparedCatBoostClassifier if name == 'CatBoostClassifier' else PreparedCatBoostRegressor
     else:
         factory = getattr(import_module(module), name)
-    estimator = factory(**profile['construction']['parameters'])
+    from kernel_search import kernel_parameters
+    estimator = factory(**kernel_parameters(row['estimator'], profile['construction']['parameters']))
     steps = [('predictors', FunctionTransformer(prepare_predictors,
         kw_args={'columns': list(predictors), 'preparation': preparation, 'selected_schema': selected_schema}))]
     if preparation == 'impute_onehot':

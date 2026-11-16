@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORY = ROOT / 'app/data/estimator_capabilities'
+sys.path.insert(0, str(ROOT / 'app'))
 
 
 def construct(profile, X):
@@ -29,7 +30,8 @@ def construct(profile, X):
 
     module, cls = profile['estimator'].rsplit('.', 1)
     constructor = getattr(importlib.import_module(module), cls)
-    params = dict(profile['construction']['parameters'])
+    from kernel_search import kernel_parameters
+    params = kernel_parameters(profile['estimator'], profile['construction']['parameters'])
     # Resource-only changes keep CI fast; report exactly what was exercised.
     import inspect
     signature = inspect.signature(constructor).parameters
@@ -85,6 +87,7 @@ def probe(profile):
     import pandas as pd
     from scipy import sparse
     from sklearn.base import clone
+    from sklearn.model_selection import cross_val_predict
 
     rng = np.random.default_rng(1729)
     n = 90
@@ -198,6 +201,16 @@ def probe(profile):
                     incremental.partial_fit(prepared.iloc[start_row:start_row+30], y[start_row:start_row+30], **kw)
                 assert np.isfinite(incremental.predict(prepared)).all()
                 operations.append('partial_fit_three_batches')
+        for family in profile.get('probe', {}).get('kernel_families', []):
+            prefix = 'model__' if isinstance(model, Pipeline) else ''
+            variant = clone(model).set_params(**{prefix + 'kernel__metric': family})
+            prediction = cross_val_predict(variant, prepared, y, cv=3)
+            assert len(prediction) == n and np.isfinite(prediction).all()
+            operations.append('kernel_' + family + '_three_fold_held_out_prediction')
+            if task == 'classifier':
+                probabilities = cross_val_predict(variant, prepared, y, cv=3, method='predict_proba')
+                assert np.isfinite(probabilities).all() and np.allclose(probabilities.sum(axis=1), 1)
+                operations.append('kernel_' + family + '_held_out_probabilities_normalized')
     if profile.get('probe', {}).get('require_convergence'):
         from sklearn.exceptions import ConvergenceWarning
         convergence = [str(w.message) for w in emitted if issubclass(w.category, ConvergenceWarning)]

@@ -27,7 +27,7 @@ between those pipelines.
 
 Rotate the 3D chart by dragging, zoom with the wheel and inspect points by hovering.
 The axes show the primary tuning score, observed prediction rows per second and
-P95 absolute error. Method colours remain consistent across tabs. The scene uses
+P95 absolute error. Method colors remain consistent across tabs. The scene uses
 Pythagoras’s standard pale-blue background.
 
 ### What the Pareto frontier means
@@ -50,7 +50,7 @@ not the frontier itself.
 
 | Marker appearance | Meaning |
 |---|---|
-| Method colour | Model method, as identified in the fullscreen legend and hover text |
+| Method color | Model method, as identified in the fullscreen legend and hover text |
 | Larger, fully opaque circle (size 6) | Pareto frontier configuration |
 | Smaller, partially transparent circle (size 4, 65% opacity) | Dominated configuration |
 | Large black diamond with white outline | Winner under the current weights |
@@ -97,7 +97,7 @@ filters are ignored and omitted from newly saved configuration.
 
 The flip side shows all eligible configurations in the current tab, the Overall
 and method winners, scores, diagnostic evidence and parameter differences. Rows
-labelled **Best score (reference)** are emphasised. Selecting a row opens the
+labelled **Best score (reference)** are emphasized. Selecting a row opens the
 comparison details; clearing the selection closes them. **Download** exports the
 current tab's eligible table and winner indicators.
 
@@ -118,3 +118,21 @@ validation before making deployment decisions. No automatic ensemble is created.
 Weights, floor and comparison settings are saved with the card. Winner
 identities are recalculated from current compatible evidence when restoring.
 Stale upstream evidence cannot be applied to a changed source.
+
+
+### Intrinsic transparency requirement
+
+Enable **Require Usually transparent methods** in Settings when intrinsic
+transparency is essential. The default is unchecked. When enabled, only completed
+trials whose method has a reviewed **Usually transparent** catalogue classification
+participate in the table, chart, method tabs and weighted winner selection.
+Conditional, usually opaque, unreviewed and unknown methods are excluded. This
+includes shallow decision trees: their method remains Conditional rather than
+being automatically reclassified from its depth setting.
+
+The constraint does not rerun training or discard evidence. Clear it to consider
+all completed methods again. If no methods qualify, the card explains why and
+selects no winner. The setting is saved in bookmarks and recorded with the
+selection review. It concerns the intrinsic method classification, not SHAP
+availability or a guarantee that every fitted preprocessing/model pipeline is
+understandable.

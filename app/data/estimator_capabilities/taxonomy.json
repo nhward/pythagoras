@@ -1,13 +1,15 @@
 {
-  "version": "1.2.0",
-  "reviewed_on": "2026-10-26",
+  "version": "1.3.0",
+  "reviewed_on": "2026-11-16",
   "policy": {
     "scope": "Predictive model descriptions, with explicit method allowlists and recipe overrides. Other entries remain unreviewed or not applicable.",
     "evidence": "Documentation-informed classifications; transparency is expert judgement. These labels do not change capability, installation, integration or runtime-validation evidence.",
     "capacity_growth": "Stage 2: reserved, not assessed or used for filtering.",
     "outputs": "Prediction outputs replaces Formulation. Regression summaries distinguish Point prediction from Point prediction & spread using documented prediction-specific uncertainty outputs, without a calibration claim. A single quantile, coefficient uncertainty, residual variance or dispersion among ensemble members alone does not establish prediction-spread support.",
     "composition": "Multiple labels describe nested composition; no guarantee transfers automatically from components to their aggregate.",
-    "learning_strategy": "Timing of predictive model construction: eager fits a reusable predictor before queries; lazy defers local estimation or neighbor aggregation to each query; hybrid combines eager and lazy predictive components. Ordinary preparation and neighbor-index construction do not alone change this classification. Strategy is not a runtime benchmark, data-retention policy or incremental-learning flag. Wrapper recipes require explicit review; unlisted methods remain unreviewed."
+    "learning_strategy": "Timing of predictive model construction: eager fits a reusable predictor before queries; lazy defers local estimation or neighbor aggregation to each query; hybrid combines eager and lazy predictive components. Ordinary preparation and neighbor-index construction do not alone change this classification. Strategy is not a runtime benchmark, data-retention policy or incremental-learning flag. Wrapper recipes require explicit review; unlisted methods remain unreviewed.",
+    "transparency": "Intrinsic transparency concerns understanding the complete fitted prediction rule in meaningful inputs, not SHAP availability or causal identification. Conditional notes specify factors supporting or obstructing that understanding. Small/large are qualitative review directions, not numeric cutoffs or automatic relabeling rules. Inspect fitted size, active features and all composed steps; parameter limits alone do not certify readability.",
+    "review_scope": "2026-11-16: reviewed previously unclassified concrete methods and conditional families. Standalone clustering, representation and covariance estimators are explicitly outside this outcome-prediction taxonomy. Base extension interfaces retain reasoned unreviewed status. The FastCan selector is explicitly outside the predictive scope. Mechanisms come from provider documentation; transparency judgments and readability directions are expert assessments, not provider ratings or runtime probes."
   },
   "groups": [
     {
@@ -803,7 +805,7 @@
             "conditional"
           ],
           "status": "depends_on_configuration",
-          "note": "Depends on the supplied base estimator and consensus selection; the default base estimator is linear regression."
+          "note": "More transparent: a readable base regressor with few meaningful predictors and inspectable inlier selection. Less transparent: an opaque base regressor, unstable inlier sets or many transformed predictors; inspect estimator, residual_threshold and consensus stability. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -814,7 +816,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/linear_model.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -848,7 +850,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance: a small tree can be inspected; deep trees and transformed predictors reduce transparency."
+          "note": "More transparent: few fitted leaves, low fitted depth, short paths and meaningful split features. Less transparent: many leaves/deep paths or obscure transformed features; inspect max_depth, max_leaf_nodes, ccp_alpha and the fitted tree, not just parameter limits. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -861,7 +863,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/tree.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -894,7 +896,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -907,7 +909,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -939,7 +941,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -952,7 +954,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -986,7 +988,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -999,7 +1001,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1029,7 +1031,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Default base models are trees. Bootstrap and feature-sampling settings can change the aggregation strategy; aggregate transparency depends on components."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [],
@@ -1040,7 +1042,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1070,7 +1072,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [],
@@ -1081,7 +1083,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1111,7 +1113,7 @@
             "conditional"
           ],
           "status": "depends_on_configuration",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "More transparent: few readable component models and simple voting/averaging weights. Less transparent: many or opaque components; inspect estimator count, weights and hard/soft voting. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -1122,7 +1124,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1152,7 +1154,7 @@
             "conditional"
           ],
           "status": "depends_on_configuration",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "More transparent: few readable base models and a simple readable final estimator. Less transparent: opaque base/final models, many stacking layers or many meta-features; inspect estimators, final_estimator and passthrough. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -1163,7 +1165,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1200,7 +1202,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Kernel is configurable, including linear and user-defined kernels. Transparency describes general nonlinear kernels."
+          "note": "Usually opaque for nonlinear kernels. A linear kernel with few meaningful features can admit a readable coefficient rule; many support/reference vectors or nonlinear feature maps obstruct global inspection. Inspect kernel, active features and fitted support/reference count; a kernel name alone does not certify transparency."
         },
         "learning_strategy": {
           "values": [
@@ -1213,7 +1215,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/svm.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1341,7 +1343,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "The default linear kernel also has a linear representation; nonlinear kernels need not be transparent."
+          "note": "Usually opaque for nonlinear kernels. A linear kernel with few meaningful features can admit a readable coefficient rule; many support/reference vectors or nonlinear feature maps obstruct global inspection. Inspect kernel, active features and fitted support/reference count; a kernel name alone does not certify transparency."
         },
         "learning_strategy": {
           "values": [
@@ -1354,7 +1356,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/kernel_ridge.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1390,7 +1392,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Neighbors can explain an individual prediction; there is generally no compact global equation. Metric, weights and aggregation matter."
+          "note": "More transparent: few meaningful coordinates, a small inspectable neighbor set and a simple metric. Less transparent: high dimensionality, complex weights/metrics or large neighborhoods; inspect n_neighbors/radius, weights and metric; local exemplars do not constitute a compact global rule. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1403,7 +1405,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/neighbors.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1436,7 +1438,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Predicts from class prototypes, not query-specific nearest training observations. Shrinkage and distance metric affect interpretation."
+          "note": "More transparent: few meaningful features/classes and readable class centroids. Less transparent: many classes/features, transformed coordinates or hard-to-interpret distance scaling. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1449,7 +1451,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/neighbors.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1481,7 +1483,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque with many nonlinear hidden units and connections. Inspect hidden_layer_sizes, activation, connection count and feature meaning; a small network can be easier to trace but its hidden units need not have meaningful semantics."
         },
         "learning_strategy": {
           "values": [
@@ -1494,7 +1496,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/neural_networks_supervised.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1528,7 +1530,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Models a conditional response distribution given predictors; this does not assert a joint density for predictors and response."
+          "note": "Usually opaque as a whole. Simple additive/linear kernels on few meaningful inputs can support component inspection; nonlinear kernels, many reference observations and interactions obscure a compact prediction rule. Inspect the fitted kernel and reference set; predictive uncertainty and SHAP do not establish intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -1543,7 +1545,7 @@
         "https://gaussianprocess.org/gpml/chapters/RW3.pdf",
         "https://mc-stan.org/docs/stan-users-guide/gaussian-processes.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1580,7 +1582,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Class-conditional distributions and independence assumptions are inspectable; dimensionality affects readability."
+          "note": "More transparent: few classes/features and readable class-conditional tables/distributions. Less transparent: many categories/classes/features or complex transformations; inspect smoothing, likelihood assumptions and conditional independence. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1593,7 +1595,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/naive_bayes.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1626,7 +1628,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Complement class statistics modify naive Bayes; not labelled as a conventional joint generative model."
+          "note": "More transparent: few meaningful features/classes with inspectable complement-count weights. Less transparent: large vocabularies or transformed features; inspect alpha, normalization and class statistics. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1639,7 +1641,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/naive_bayes.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1673,7 +1675,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Shared class covariance yields a linear decision boundary; shrinkage can modify covariance estimation."
+          "note": "More transparent: few meaningful predictors and readable linear discriminant coefficients. Less transparent: many correlated/transformed predictors or unstable dense covariance estimates; inspect dimensionality and shrinkage. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1686,7 +1688,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/lda_qda.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1719,7 +1721,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Class-specific covariance yields quadratic boundaries; transparency depends on dimensionality."
+          "note": "More transparent: few features/classes and simple class covariance matrices. Less transparent: many features/classes or dense class covariance matrices producing numerous quadratic interactions; inspect covariance structure and regularization. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1732,7 +1734,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/lda_qda.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1761,7 +1763,7 @@
             "conditional"
           ],
           "status": "depends_on_configuration",
-          "note": "Calibration and optional fold averaging wrap a configurable classifier; probability calibration is not guaranteed on new data."
+          "note": "More transparent: a readable base model and a simple calibration map with few fold models. Less transparent: opaque base scores or many fold-specific models; inspect estimator, method, ensemble and cv. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -1772,7 +1774,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/calibration.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1848,7 +1850,7 @@
             "conditional"
           ],
           "status": "depends_on_configuration",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "More transparent: a readable regressor and a simple invertible target transformation. Less transparent: an opaque regressor or complicated nonlinear target transform; inspect both the regressor and inverse transformation. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -1859,7 +1861,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/compose.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1893,7 +1895,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Density models; not automatically supervised classification recipes."
+          "note": "More transparent: few well-separated components, few meaningful features and simple covariance. Less transparent: many overlapping components, dense covariance or many features; inspect n_components, covariance_type and component weights. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1906,7 +1908,7 @@
       "sources": [
         "https://scikit-learn.org/stable/modules/mixture.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1939,7 +1941,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Rules have linear consequents. Committees and neighbor corrections are configuration-dependent; many rules reduce transparency."
+          "note": "More transparent: few short rules, readable linear consequents and a single committee without neighbor correction. Less transparent: many rules, many committees or local neighbor corrections; inspect rules, committees, neighbors and terms per rule. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -1950,7 +1952,7 @@
       "sources": [
         "https://pjaselin.github.io/Cubist/"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -1982,7 +1984,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Expression size and operators determine readability. Expression trees are not decision trees."
+          "note": "More transparent: short expressions, shallow expression trees and familiar operators on meaningful inputs. Less transparent: long/deep expressions, many terms or unfamiliar/nested operators; inspect the fitted expression, not only the initialization depth. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -1995,7 +1997,7 @@
       "sources": [
         "https://gplearn.readthedocs.io/en/stable/intro.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2027,7 +2029,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -2040,7 +2042,7 @@
       "sources": [
         "https://imbalanced-learn.org/stable/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2070,7 +2072,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [],
@@ -2081,7 +2083,7 @@
       "sources": [
         "https://imbalanced-learn.org/stable/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2111,7 +2113,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [],
@@ -2122,7 +2124,7 @@
       "sources": [
         "https://imbalanced-learn.org/stable/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2152,7 +2154,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [],
@@ -2163,7 +2165,7 @@
       "sources": [
         "https://imbalanced-learn.org/stable/ensemble.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2196,7 +2198,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -2209,7 +2211,7 @@
       "sources": [
         "https://xgboost.readthedocs.io/en/stable/parameter.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2243,7 +2245,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -2256,7 +2258,7 @@
       "sources": [
         "https://lightgbm.readthedocs.io/en/stable/Parameters.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2289,7 +2291,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance for the complete model, not the availability of post-hoc explanations."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -2302,7 +2304,7 @@
       "sources": [
         "https://catboost.ai/docs/en/concepts/algorithm-main-stages"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2664,7 +2666,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -2677,7 +2679,7 @@
       "sources": [
         "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.RandomSurvivalForest.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2708,7 +2710,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [
@@ -2721,7 +2723,7 @@
       "sources": [
         "https://scikit-survival.readthedocs.io/en/stable/api/generated/sksurv.ensemble.GradientBoostingSurvivalAnalysis.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2842,7 +2844,7 @@
             "conditional"
           ],
           "status": "depends_on_configuration",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: a readable base regressor, short lag window and simple forecast strategy. Less transparent: opaque regressors, many lags/horizons or recursive error propagation; inspect estimator, window_length and direct/recursive strategy. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -2853,7 +2855,7 @@
       "sources": [
         "https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.forecasting.compose.make_reduction.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2932,7 +2934,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: few meaningful fixed/random effects, few grouping levels and simple random-effect covariance. Less transparent: many interactions, groups or dense random-effect covariance; inspect fixed-effect terms, random-effect structure and grouping. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -2945,7 +2947,7 @@
       "sources": [
         "https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLM.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -2979,7 +2981,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: low AR/MA/differencing orders, simple seasonality and few meaningful exogenous regressors. Less transparent: high orders, multiple coupled seasonal terms or many transformed exogenous inputs; inspect order, seasonal_order and state dimension. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -2992,7 +2994,7 @@
       "sources": [
         "https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAX.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -3027,7 +3029,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: few meaningful coefficients and a simple explicit spatial weights structure. Less transparent: large/dense spatial dependencies and feedback through spatial multipliers; inspect weights, spatial lag coefficient and direct/indirect effects. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -3041,7 +3043,7 @@
         "https://pysal.org/spreg/generated/spreg.ML_Lag.html",
         "https://pysal.org/spreg/generated/spreg.Panel_FE_Lag.html"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -3074,7 +3076,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: few shallow routing branches and short readable leaf equations. Less transparent: many/deep leaves or many coefficients per leaf; inspect max_depth, max_leaf_nodes and leaf model feature count. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -3089,7 +3091,7 @@
         "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
         "https://pypi.org/project/linear-tree/"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -3122,7 +3124,7 @@
             "usually_opaque"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
         },
         "learning_strategy": {
           "values": [],
@@ -3137,7 +3139,7 @@
         "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
         "https://pypi.org/project/linear-tree/"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -3170,7 +3172,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: few boosting stages and a small number of readable added features. Less transparent: many stages or complex tree-derived features obscuring the final linear equation; inspect n_estimators and tree/feature complexity. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [],
@@ -3185,7 +3187,7 @@
         "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
         "https://pypi.org/project/linear-tree/"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
     },
     {
       "methods": [
@@ -3217,7 +3219,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Specialist structure and interpretation depend on documented assumptions and recipe configuration. No runtime validation is implied."
+          "note": "More transparent: few short rules with simple aggregation. Less transparent: many overlapping long rules or many features; inspect fitted rule count, rule length, max_depth and aggregation. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -3232,7 +3234,2832 @@
         "https://raw.githubusercontent.com/scikit-learn-contrib/skope-rules/master/skrules/skope_rules.py",
         "https://pypi.org/project/skope-rules/"
       ],
-      "reviewed_on": "2026-10-26"
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.Lasso",
+        "skglm.WeightedLasso"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "l1_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.Lasso.html",
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.WeightedLasso.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.GroupLasso",
+        "skglm.MultiTaskLasso"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "group_sparsity_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.GroupLasso.html",
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.MultiTaskLasso.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.MCPRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "mcp_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.MCPRegression.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.LinearSVC"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "hinge_family",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.LinearSVC.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.CoxEstimator"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "cox_partial_likelihood",
+            "elastic_net_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.CoxEstimator.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.GeneralizedLinearEstimator",
+        "skglm.GeneralizedLinearEstimatorCV"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Datafit and penalty are supplied objects; inspect their actual objective. CV selects regularization settings, not a prediction-time ensemble."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.GeneralizedLinearEstimator.html",
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.GeneralizedLinearEstimatorCV.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mlxtend.classifier.Adaline"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/Adaline/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mlxtend.classifier.LogisticRegression",
+        "mlxtend.classifier.SoftmaxRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "log_loss",
+            "l2_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/LogisticRegression/",
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/SoftmaxRegression/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mlxtend.classifier.Perceptron"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "perceptron_loss"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/Perceptron/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mlxtend.classifier.MultiLayerPerceptron"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Inspect hidden layer width, number of connections, nonlinear activations and input feature meaning. A small network is easier to inspect, but hidden units need not have a meaningful interpretation."
+        },
+        "core_mechanism": {
+          "values": [
+            "neural_network"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "log_loss"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/MultiLayerPerceptron/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mlxtend.classifier.OneRClassifier"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: one meaningful selected feature and a short category-to-class rule table. Less transparent: many categories, discretization boundaries or an obscure transformed feature. "
+        },
+        "core_mechanism": {
+          "values": [
+            "rule"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "classification_error"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/OneRClassifier/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.linear_model.DeadZoneRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "dead_zone_loss"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear-model/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.linear_model.ImbalancedLinearRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "asymmetric_squared_error",
+            "elastic_net_penalty"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear-model/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.linear_model.ProbWeightRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few meaningful input signals with inspectable weights summing to one. Less transparent: many opaque model predictions used as input signals; a simple combiner does not explain its upstream models. "
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "constrained_squared_error"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear-model/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.linear_model.LowessRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few meaningful coordinates and inspectable local weights controlled by sigma and span. Less transparent: high dimensionality or many overlapping neighborhoods; a local weighted prediction is not one global coefficient equation. "
+        },
+        "core_mechanism": {
+          "values": [
+            "neighborhood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "local_aggregation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "smoothing"
+          ],
+          "status": "reviewed",
+          "note": "Stores training observations; predictions are distance-weighted target averages using sigma/span, not a single fitted linear coefficient equation."
+        },
+        "learning_strategy": {
+          "values": [
+            "lazy"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/linear-model/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.isotonic.IsotonicRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: one meaningful predictor with a short monotone fitted curve and few breakpoints. Less transparent: many fitted thresholds or an opaque upstream score being calibrated. "
+        },
+        "core_mechanism": {
+          "values": [
+            "rule"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "squared_error",
+            "monotonicity_constraint"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/isotonic.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.cross_decomposition.CCA",
+        "sklearn.cross_decomposition.PLSCanonical",
+        "sklearn.cross_decomposition.PLSRegression"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few components, readable loadings and a compact equivalent linear coefficient map. Less transparent: many components, dense loadings or weakly interpretable latent coordinates. "
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "CCA maximizes cross-view correlation; PLS maximizes covariance through latent components. Component count controls fitted rank."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/cross_decomposition.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "fastcan.narx.NARX"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few polynomial terms of low degree, short lags and meaningful inputs. Less transparent: many terms, high degree, long lags or recurrent output feedback that makes multi-step behavior difficult to trace. "
+        },
+        "core_mechanism": {
+          "values": [
+            "symbolic"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Inspect the configured terms and coefficient-fitting setup; a documented equation is not causal identification."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://fastcan.readthedocs.io/en/latest/generated/fastcan.narx.NARX.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "catboost.CatBoost"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
+        },
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "boosting"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "loss_function selects the fitting objective and task."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://catboost.ai/docs/en/concepts/python-reference_catboost"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "lightgbm.LGBMModel",
+        "lightgbm.LGBMRanker",
+        "lightgbm.DaskLGBMRanker"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
+        },
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "boosting_type may select gradient boosting, random forest or dropout boosting; linear_tree also changes the leaf prediction rule."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Objective and regularization are configurable; ranking objectives are not regression squared error."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://lightgbm.readthedocs.io/en/stable/Parameters.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "xgboost.XGBModel"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: gblinear with few meaningful nonzero coefficients, or a very small inspectable tree ensemble. Less transparent: many/deep trees, nonlinear transformations or a large linear feature space; inspect booster, n_estimators and num_parallel_tree. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "booster may select trees or a linear model."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "booster and num_parallel_tree determine boosting, linear aggregation or parallel-tree composition."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "objective and penalties are configurable."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://xgboost.readthedocs.io/en/stable/parameter.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "xgboost.XGBRFClassifier",
+        "xgboost.XGBRFRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
+        },
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "randomized_averaging",
+            "random_feature_selection"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Inspect the configured objective; these wrappers fit parallel trees rather than ordinary sequential boosting rounds."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://xgboost.readthedocs.io/en/stable/tutorials/rf.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.multiclass.OneVsOneClassifier",
+        "sklearn.multiclass.OneVsRestClassifier",
+        "sklearn.multiclass.OutputCodeClassifier",
+        "sklearn.multioutput.ClassifierChain",
+        "sklearn.multioutput.MultiOutputClassifier",
+        "sklearn.multioutput.MultiOutputRegressor",
+        "sklearn.multioutput.RegressorChain"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a small number of intrinsically readable component models and a simple documented combining or routing rule. Less transparent: opaque base models, many components/classes/outputs, long chains or multiple nested wrapper layers. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Underlying estimators determine the core prediction mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Class decomposition, output-specific fitting or chaining depend on the named wrapper; inspect component count, chain order and voting/decoding."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base-estimator objectives are distinct from the wrapper decision rule."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Underlying estimator may be eager or lazy; wrapping it does not settle learning strategy."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/multiclass.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.frozen.FrozenEstimator"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: the wrapped fitted estimator is itself transparent. Less transparent: the wrapped estimator is opaque; freezing does not simplify its predictions. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Delegates to the wrapped estimator."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Preserves the wrapped composition; fit is disabled."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "No new fitting objective; prior estimator fitting remains relevant."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Inherits predictive construction from the wrapped estimator; pre-fitting does not make a lazy predictor eager."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.frozen.FrozenEstimator.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.model_selection.FixedThresholdClassifier",
+        "sklearn.model_selection.TunedThresholdClassifierCV"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a readable base score with an explicit decision threshold. Less transparent: an opaque base score or many transformed inputs; a simple threshold explains the decision boundary on scores, not the score itself. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Underlying classifier determines the score mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Threshold wrapper over a classifier; CV chooses a decision threshold, not necessarily an averaged ensemble."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "TunedThresholdClassifierCV optimizes a chosen decision metric; the base classifier has its own fitting objective."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the base classifier."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/classification_threshold.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.semi_supervised.SelfTrainingClassifier"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a readable final base classifier and an auditable pseudo-labeling rule. Less transparent: an opaque base classifier or extensive uncertain pseudo-label propagation; inspect threshold/k_best and iteration count. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base estimator determines the final prediction rule."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Iterative pseudo-label training wraps a base classifier; it is not automatically an ensemble."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base loss plus confidence-based pseudo-label selection; training selection is distinct from prediction."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on whether the final base predictor is eager or lazy."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/semi_supervised.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mlxtend.classifier.StackingClassifier",
+        "mlxtend.classifier.StackingCVClassifier",
+        "mlxtend.regressor.StackingRegressor",
+        "mlxtend.regressor.StackingCVRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a small number of intrinsically readable component models and a simple documented combining or routing rule. Less transparent: opaque base models, many components/classes/outputs, long chains or multiple nested wrapper layers. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base estimators and final estimator determine the mechanisms."
+        },
+        "composition": {
+          "values": [
+            "stacking"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base and meta-estimator losses are distinct; CV constructs training predictions for the meta-estimator."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the base and meta-estimator prediction strategies."
+        }
+      },
+      "sources": [
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/StackingClassifier/",
+        "https://rasbt.github.io/mlxtend/user_guide/classifier/StackingCVClassifier/",
+        "https://rasbt.github.io/mlxtend/user_guide/regressor/StackingRegressor/",
+        "https://rasbt.github.io/mlxtend/user_guide/regressor/StackingCVRegressor/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "hiclass.FlatClassifier",
+        "hiclass.LocalClassifierPerLevel",
+        "hiclass.LocalClassifierPerNode",
+        "hiclass.LocalClassifierPerParentNode"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few hierarchy levels/nodes and readable local classifiers with explicit path and probability aggregation rules. Less transparent: many levels or local models, opaque components and complex path aggregation; FlatClassifier still depends on its underlying classifier. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "The supplied local or flat classifier defines the mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Flat or hierarchical class decomposition; classifier count and aggregation vary by strategy."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Local-estimator objectives are separate from hierarchy routing and aggregation."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the supplied classifier."
+        }
+      },
+      "sources": [
+        "https://hiclass.readthedocs.io/en/v4.13.2/api/classifiers.html",
+        "https://hiclass.readthedocs.io/en/latest/algorithms/index.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mapie.calibration.TopLabelCalibrator",
+        "mapie.calibration.VennAbersCalibrator"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a readable base classifier and simple inspectable score calibration with few classes. Less transparent: an opaque base model, many classes or fold ensembles; calibration alone does not explain why the raw score arose. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base classifier determines the input score mechanism."
+        },
+        "composition": {
+          "values": [
+            "calibration"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Classifier fitting and calibration objectives differ; review selected calibrator and prefit/inductive/CV mode."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the wrapped classifier and calibration mode."
+        }
+      },
+      "sources": [
+        "https://mapie.readthedocs.io/en/stable/api/calibration/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "mapie.regression.TimeSeriesRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a readable base predictor with a simple residual-based interval and few resampled fits. Less transparent: an opaque predictor or many resampled fits and interval aggregation steps. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base regressor defines point prediction."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Conformal residual/interval construction with optional resampled aggregation."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base regression loss and conformity-score quantiles are distinct; interval coverage is not intrinsic transparency."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the underlying regressor."
+        }
+      },
+      "sources": [
+        "https://mapie.readthedocs.io/en/stable/api/regression/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.dcs.APosteriori",
+        "deslib.dcs.APriori",
+        "deslib.dcs.LCA",
+        "deslib.dcs.MCB",
+        "deslib.dcs.MLA",
+        "deslib.dcs.OLA",
+        "deslib.dcs.Rank",
+        "deslib.des.DESKL",
+        "deslib.des.DESKNN",
+        "deslib.des.DESMI",
+        "deslib.des.DESP",
+        "deslib.des.Exponential",
+        "deslib.des.KNOP",
+        "deslib.des.KNORAE",
+        "deslib.des.KNORAU",
+        "deslib.des.Logarithmic",
+        "deslib.des.METADES",
+        "deslib.des.MinimumDifference",
+        "deslib.des.RRC"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few readable pool members, a meaningful distance metric and a small inspectable competence neighborhood. Less transparent: many/opaque pool members, high-dimensional distances, query-dependent weighting or a complex meta-selector; inspect pool size, k, competence rule and selected subset. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Pool classifiers determine prediction mechanisms; competence selection adds a separate mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "DCS chooses a classifier; DES selects/weights a subset for each query. Not ordinary fixed averaging."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Pool training losses differ from competence estimation and selection criteria."
+        },
+        "learning_strategy": {
+          "values": [
+            "hybrid"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/api.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.des.DESClustering"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few clusters, readable pool members and simple cluster-wise selection. Less transparent: many clusters/pool members or opaque components; inspect cluster routing and selected subset size. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base classifiers plus clustering-based routing."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Selects a precomputed competent ensemble for the query cluster."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Pool loss, clustering and competence estimation are separate."
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/modules/des/des_clustering.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.static.SingleBest"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: the selected single classifier is readable. Less transparent: the selected classifier is opaque; selecting one does not change its structure. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "The selected classifier determines the mechanism."
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Validation score selects a pool member; the member retains its fitting objective."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the selected pool member."
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/modules/static/single_best.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.static.StaticSelection"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a small number of intrinsically readable component models and a simple documented combining or routing rule. Less transparent: opaque base models, many components/classes/outputs, long chains or multiple nested wrapper layers. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Selected pool members determine the core mechanism."
+        },
+        "composition": {
+          "values": [
+            "voting_averaging"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Validation accuracy selects a fixed subset; base objectives remain separate."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on selected base models."
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/modules/static/static_selection.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.static.StackedClassifier"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a small number of intrinsically readable component models and a simple documented combining or routing rule. Less transparent: opaque base models, many components/classes/outputs, long chains or multiple nested wrapper layers. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Pool and meta-classifier determine the mechanism."
+        },
+        "composition": {
+          "values": [
+            "stacking"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Pool and meta-classifier have distinct objectives."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on pool and meta-classifier."
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/modules/static/stacked.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.static.Oracle"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Evaluation-only oracle uses true query labels to choose a correct pool classifier; it is not a deployable prediction rule. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Evaluation-only oracle uses true query labels to choose a correct pool classifier; it is not a deployable prediction rule. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Evaluation-only oracle uses true query labels to choose a correct pool classifier; it is not a deployable prediction rule. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Evaluation-only oracle uses true query labels to choose a correct pool classifier; it is not a deployable prediction rule. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Evaluation-only oracle uses true query labels to choose a correct pool classifier; it is not a deployable prediction rule. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/modules/static/oracle.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.meta.ConfusionBalancer",
+        "sklego.meta.SubjectiveClassifier"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few classes, a readable underlying classifier and inspectable prior/confusion adjustments. Less transparent: many classes, opaque base scores or dense correction matrices; inspect prior, confusion matrix and correction strength. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "The underlying classifier determines the score mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Probability/prior/confusion adjustment wraps the classifier."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Classifier fitting and post-fit correction are distinct; these adjustments do not establish fairness or calibration."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the wrapped classifier."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/meta/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.meta.DecayEstimator"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a transparent wrapped predictor and explicit decay weights. Less transparent: an opaque wrapped predictor; inspect decay function, scale and time/order assumptions separately from the final prediction rule. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Underlying model determines the mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Training-weight wrapper; weights do not introduce a new prediction-time ensemble."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base loss with decay weights."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the underlying predictor."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/meta/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.meta.GroupedClassifier",
+        "sklego.meta.GroupedPredictor",
+        "sklego.meta.GroupedRegressor",
+        "sklego.meta.HierarchicalClassifier",
+        "sklego.meta.HierarchicalRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few meaningful groups, readable group models and explicit fallback/shrinkage. Less transparent: many groups or hierarchy levels, opaque group models, multiple shrinkage weights or complex fallback rules. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Group estimators determine mechanisms."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Group routing with optional hierarchical shrinkage/aggregation; this is distinct from mixed-effects parameter estimation."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Base loss, shrinkage and fallback are separate configuration choices."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on the group estimators."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/meta/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.meta.OrdinalClassifier",
+        "sklego.meta.Thresholder",
+        "sklego.meta.OutlierClassifier",
+        "sklego.meta.RegressionOutlierDetector",
+        "sklego.meta.ZeroInflatedRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: readable component models, few ordinal thresholds and explicit residual, outlier or zero/nonzero routing rules. Less transparent: opaque components, many ordered classes or complex threshold/branch interactions; inspect both the component prediction and wrapper rule. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Underlying classifier, regressor or outlier detector determines the mechanism."
+        },
+        "composition": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Named wrapper supplies ordinal decomposition, thresholding, residual detection or two-part zero/nonzero routing; inspect its actual components."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Component fitting losses and wrapper thresholds/routing are separate."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Depends on component estimators."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/meta/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.dummy.RandomRegressor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "Predictor-independent random baseline. Inspect strategy, fitted target distribution summary and random_state. An understandable random mechanism does not make each draw a feature-based explanation."
+        },
+        "core_mechanism": {
+          "values": [
+            "baseline"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "baseline_statistic"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/dummy/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.mixture.GMMClassifier",
+        "sklego.mixture.BayesianGMMClassifier",
+        "sklego.mixture.GMMOutlierDetector",
+        "sklego.mixture.BayesianGMMOutlierDetector"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few mixture components, few meaningful features and simple covariance matrices. Less transparent: many components/classes/features, dense covariance matrices or poorly separated components; inspect n_components, covariance_type, priors and feature scaling. "
+        },
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "mixture"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "likelihood_or_variational_objective"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/mixture/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.naive_bayes.GaussianMixtureNB",
+        "sklego.naive_bayes.BayesianGaussianMixtureNB"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few mixture components, few meaningful features and simple covariance matrices. Less transparent: many components/classes/features, dense covariance matrices or poorly separated components; inspect n_components, covariance_type, priors and feature scaling. "
+        },
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "mixture"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "class_conditional_likelihood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/naive-bayes/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.neighbors.BayesianKernelDensityClassifier"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few features and an inspectable class-wise kernel/bandwidth with representative observations. Less transparent: high dimensionality, many reference observations or complex class-density surfaces; there is no compact global coefficient equation. "
+        },
+        "core_mechanism": {
+          "values": [
+            "kernel",
+            "empirical_distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "smoothing"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "lazy"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/neighbors/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.decomposition.PCAOutlierDetection"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few readable principal components and an explicit reconstruction-error threshold. Less transparent: dense loadings over many features or many components; inspect n_components, scaling and threshold. "
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "reconstruction_error"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/decomposition/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.decomposition.UMAPOutlierDetection"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Nonlinear embedding and inverse reconstruction determine anomaly scores. Inspect neighbors, embedding dimension, inverse mapping and threshold; a low-dimensional plot alone does not explain the full reconstruction rule."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Nonlinear manifold embedding followed by reconstruction scoring; not a supervised linear model."
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "reconstruction_error"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/decomposition/"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.neighbors.KernelDensity"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few meaningful dimensions, a simple kernel/bandwidth and a small understandable reference set. Less transparent: many reference points, high dimensionality or a complex density surface. "
+        },
+        "core_mechanism": {
+          "values": [
+            "kernel",
+            "empirical_distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "smoothing"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "lazy"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/density.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.neighbors.LocalOutlierFactor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few features and a small inspectable neighborhood with meaningful distance. Less transparent: high dimensionality, complex distance metrics or many reference comparisons; inspect n_neighbors, metric and threshold. "
+        },
+        "core_mechanism": {
+          "values": [
+            "neighborhood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "local_aggregation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "local_density_ratio"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "lazy"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/outlier_detection.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.covariance.EllipticEnvelope"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few meaningful features, an inspectable center/covariance and explicit Mahalanobis threshold. Less transparent: many correlated/transformed features or a dense covariance matrix; a simple ellipsoid need not match the real data distribution. "
+        },
+        "core_mechanism": {
+          "values": [
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "robust_covariance_estimation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/outlier_detection.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.ensemble.IsolationForest"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Usually opaque as a whole. Inspect fitted tree count, total leaves, maximum depth, and transformed feature meaning. A few shallow trees can be traced; many trees or deep trees impede a global account. A small ensemble is not automatically transparent, and SHAP availability does not change intrinsic transparency."
+        },
+        "core_mechanism": {
+          "values": [
+            "tree"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "randomized_averaging"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "random_partition_path_length"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/outlier_detection.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.svm.OneClassSVM"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: linear kernel with a short explicit coefficient rule. Less transparent: nonlinear kernels, many support vectors or opaque feature transforms; inspect kernel, gamma and support-vector count. "
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Kernel-dependent support-vector boundary."
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "one_class_margin"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/outlier_detection.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.linear_model.SGDOneClassSVM"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "usually_transparent"
+          ],
+          "status": "reviewed",
+          "note": "A coefficient-based prediction rule. Inspect the number of nonzero coefficients, feature meaning, scaling and coefficient stability; many transformed or correlated features reduce readability. Coefficients are not causal effects."
+        },
+        "core_mechanism": {
+          "values": [
+            "generalized_linear"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "one_class_margin"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/outlier_detection.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.semi_supervised.LabelPropagation",
+        "sklearn.semi_supervised.LabelSpreading"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: a small meaningful similarity graph with few classes and traceable influential labeled neighbors. Less transparent: a dense/large graph, high-dimensional similarities or many propagation paths; inspect kernel, gamma/n_neighbors and clamping. "
+        },
+        "core_mechanism": {
+          "values": [
+            "kernel",
+            "neighborhood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "local_aggregation"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "depends_on_configuration",
+          "note": "Graph propagation and label-clamping/smoothing rules differ by method; not a supervised base-estimator loss."
+        },
+        "learning_strategy": {
+          "values": [
+            "hybrid"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/semi_supervised.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.cluster.AffinityPropagation",
+        "sklearn.cluster.AgglomerativeClustering",
+        "sklearn.cluster.Birch",
+        "sklearn.cluster.BisectingKMeans",
+        "sklearn.cluster.DBSCAN",
+        "sklearn.cluster.HDBSCAN",
+        "sklearn.cluster.KMeans",
+        "sklearn.cluster.MeanShift",
+        "sklearn.cluster.MiniBatchKMeans",
+        "sklearn.cluster.OPTICS",
+        "sklearn.cluster.SpectralBiclustering",
+        "sklearn.cluster.SpectralClustering",
+        "sklearn.cluster.SpectralCoclustering"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised clustering/biclustering describes partition structure rather than a supervised outcome predictor. Cluster geometry and assignment can have their own interpretability assessment. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised clustering/biclustering describes partition structure rather than a supervised outcome predictor. Cluster geometry and assignment can have their own interpretability assessment. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised clustering/biclustering describes partition structure rather than a supervised outcome predictor. Cluster geometry and assignment can have their own interpretability assessment. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised clustering/biclustering describes partition structure rather than a supervised outcome predictor. Cluster geometry and assignment can have their own interpretability assessment. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised clustering/biclustering describes partition structure rather than a supervised outcome predictor. Cluster geometry and assignment can have their own interpretability assessment. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/clustering.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "hdbscan.BranchDetector",
+        "hdbscan.HDBSCAN",
+        "hdbscan.RobustSingleLinkage"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Density hierarchy, cluster extraction and branch detection are unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Density hierarchy, cluster extraction and branch detection are unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Density hierarchy, cluster extraction and branch detection are unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Density hierarchy, cluster extraction and branch detection are unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Density hierarchy, cluster extraction and branch detection are unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://hdbscan.readthedocs.io/en/latest/how_hdbscan_works.html",
+        "https://hdbscan.readthedocs.io/en/latest/api.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "kmodes.kmodes.KModes",
+        "kmodes.kprototypes.KPrototypes"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Categorical/mixed-data prototype clustering is unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Categorical/mixed-data prototype clustering is unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Categorical/mixed-data prototype clustering is unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Categorical/mixed-data prototype clustering is unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Categorical/mixed-data prototype clustering is unsupervised structure discovery, not a supervised outcome predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://github.com/nicodv/kmodes"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.covariance.EmpiricalCovariance",
+        "sklearn.covariance.GraphicalLasso",
+        "sklearn.covariance.GraphicalLassoCV",
+        "sklearn.covariance.LedoitWolf",
+        "sklearn.covariance.MinCovDet",
+        "sklearn.covariance.OAS",
+        "sklearn.covariance.ShrunkCovariance"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone covariance/precision estimation does not define a supervised outcome predictor. Sparse precision matrices represent conditional association, not causal effects. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone covariance/precision estimation does not define a supervised outcome predictor. Sparse precision matrices represent conditional association, not causal effects. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone covariance/precision estimation does not define a supervised outcome predictor. Sparse precision matrices represent conditional association, not causal effects. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone covariance/precision estimation does not define a supervised outcome predictor. Sparse precision matrices represent conditional association, not causal effects. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone covariance/precision estimation does not define a supervised outcome predictor. Sparse precision matrices represent conditional association, not causal effects. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/covariance.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "skglm.GraphicalLasso",
+        "skglm.AdaptiveGraphicalLasso"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone sparse inverse-covariance estimation; graph sparsity can aid association inspection but is not target-prediction transparency. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone sparse inverse-covariance estimation; graph sparsity can aid association inspection but is not target-prediction transparency. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone sparse inverse-covariance estimation; graph sparsity can aid association inspection but is not target-prediction transparency. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone sparse inverse-covariance estimation; graph sparsity can aid association inspection but is not target-prediction transparency. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Standalone sparse inverse-covariance estimation; graph sparsity can aid association inspection but is not target-prediction transparency. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.GraphicalLasso.html",
+        "https://contrib.scikit-learn.org/skglm/generated/skglm.AdaptiveGraphicalLasso.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.cluster.FeatureAgglomeration",
+        "sklearn.manifold.ClassicalMDS",
+        "sklearn.manifold.MDS",
+        "sklearn.manifold.SpectralEmbedding",
+        "sklearn.manifold.TSNE"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature grouping or embedding is a standalone representation step; a simple low-dimensional display does not establish transparency of a downstream predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature grouping or embedding is a standalone representation step; a simple low-dimensional display does not establish transparency of a downstream predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature grouping or embedding is a standalone representation step; a simple low-dimensional display does not establish transparency of a downstream predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature grouping or embedding is a standalone representation step; a simple low-dimensional display does not establish transparency of a downstream predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature grouping or embedding is a standalone representation step; a simple low-dimensional display does not establish transparency of a downstream predictor. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/manifold.html",
+        "https://scikit-learn.org/stable/modules/generated/sklearn.cluster.FeatureAgglomeration.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklearn.neighbors.NearestNeighbors"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised neighbor retrieval supplies indices/distances rather than an outcome predictor; the downstream prediction rule needs its own review. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised neighbor retrieval supplies indices/distances rather than an outcome predictor; the downstream prediction rule needs its own review. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised neighbor retrieval supplies indices/distances rather than an outcome predictor; the downstream prediction rule needs its own review. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised neighbor retrieval supplies indices/distances rather than an outcome predictor; the downstream prediction rule needs its own review. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Unsupervised neighbor retrieval supplies indices/distances rather than an outcome predictor; the downstream prediction rule needs its own review. Outside this outcome-prediction taxonomy; not a claim that its outputs cannot be explained."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/neighbors.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "hmmlearn.hmm.CategoricalHMM",
+        "hmmlearn.hmm.GMMHMM",
+        "hmmlearn.hmm.GaussianHMM",
+        "hmmlearn.hmm.MultinomialHMM",
+        "hmmlearn.hmm.PoissonHMM"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few latent states, meaningful emissions, sparse/simple transitions and short sequences. Less transparent: many states, overlapping emissions, full covariance or many mixture components and long ambiguous state paths; inferred states are not proven real-world mechanisms. "
+        },
+        "core_mechanism": {
+          "values": [
+            "state_space",
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "state_space"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "likelihood"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://hmmlearn.readthedocs.io/en/stable/tutorial.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "hmmlearn.vhmm.VariationalCategoricalHMM",
+        "hmmlearn.vhmm.VariationalGaussianHMM"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [
+            "conditional"
+          ],
+          "status": "reviewed",
+          "note": "More transparent: few latent states, meaningful emissions, sparse/simple transitions and short sequences. Less transparent: many states, overlapping emissions, full covariance or many mixture components and long ambiguous state paths; inferred states are not proven real-world mechanisms. "
+        },
+        "core_mechanism": {
+          "values": [
+            "state_space",
+            "distribution"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "composition": {
+          "values": [
+            "state_space"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "fitting_criterion": {
+          "values": [
+            "variational_objective"
+          ],
+          "status": "reviewed",
+          "note": ""
+        },
+        "learning_strategy": {
+          "values": [
+            "eager"
+          ],
+          "status": "reviewed",
+          "note": ""
+        }
+      },
+      "sources": [
+        "https://hmmlearn.readthedocs.io/en/stable/api.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "deslib.dcs.BaseDCS",
+        "deslib.des.BaseDES",
+        "deslib.des.BaseProbabilistic"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "unreviewed",
+          "note": "Extension interface: subclass competence/selection behavior and supplied pool must be reviewed before assigning whole-model transparency."
+        }
+      },
+      "sources": [
+        "https://deslib.readthedocs.io/en/latest/api.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "hmmlearn.hmm.BaseHMM",
+        "hmmlearn.vhmm.BaseCategoricalHMM",
+        "hmmlearn.vhmm.BaseGaussianHMM",
+        "hmmlearn.vhmm.VariationalBaseHMM"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "unreviewed",
+          "note": "Base/extension class: concrete emission implementation, state structure and subclass prediction behavior need review; no blanket transparency classification."
+        }
+      },
+      "sources": [
+        "https://hmmlearn.readthedocs.io/en/stable/api.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "fastcan.LazyFastCan"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature/term selection used while constructing a NARX model; not a standalone outcome predictor. Lazy selection here does not mean lazy prediction. Review the resulting fitted NARX equation separately."
+        },
+        "composition": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature/term selection used while constructing a NARX model; not a standalone outcome predictor. Lazy selection here does not mean lazy prediction. Review the resulting fitted NARX equation separately."
+        },
+        "fitting_criterion": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature/term selection used while constructing a NARX model; not a standalone outcome predictor. Lazy selection here does not mean lazy prediction. Review the resulting fitted NARX equation separately."
+        },
+        "learning_strategy": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature/term selection used while constructing a NARX model; not a standalone outcome predictor. Lazy selection here does not mean lazy prediction. Review the resulting fitted NARX equation separately."
+        },
+        "transparency": {
+          "values": [],
+          "status": "not_applicable",
+          "note": "Feature/term selection used while constructing a NARX model; not a standalone outcome predictor. Lazy selection here does not mean lazy prediction. Review the resulting fitted NARX equation separately."
+        }
+      },
+      "sources": [
+        "https://fastcan.readthedocs.io/en/stable/generated/fastcan.narx.make_narx.html",
+        "https://fastcan.readthedocs.io/en/latest/array_api.html"
+      ],
+      "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "sklego.meta.HierarchicalPredictor"
+      ],
+      "attributes": {
+        "transparency": {
+          "values": [],
+          "status": "unreviewed",
+          "note": "Base hierarchical grouping interface: predict is implemented by concrete classifier/regressor subclasses. Review that subclass and its supplied estimators before assigning whole-model transparency."
+        }
+      },
+      "sources": [
+        "https://koaning.github.io/scikit-lego/api/meta/"
+      ],
+      "reviewed_on": "2026-11-16"
     }
   ],
   "recipes": {
@@ -4167,7 +6994,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Intrinsic transparency is expert guidance: depends on feature count, transformations and coefficient stability; coefficients are not causal effects. Consensus selection also affects interpretation."
+          "note": "More transparent: a readable base regressor with few meaningful predictors and inspectable inlier selection. Less transparent: an opaque base regressor, unstable inlier sets or many transformed predictors; inspect estimator, residual_threshold and consensus stability. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -4509,7 +7336,7 @@
             "conditional"
           ],
           "status": "reviewed",
-          "note": "Calibrated fold-specific linear models are averaged; not a single coefficient equation."
+          "note": "More transparent: a readable base model and a simple calibration map with few fold models. Less transparent: opaque base scores or many fold-specific models; inspect estimator, method, ensemble and cv. Intrinsic model guidance, not a post-hoc explanation or causal claim."
         },
         "learning_strategy": {
           "values": [
@@ -4807,6 +7634,81 @@
         "https://raw.githubusercontent.com/cerlymarco/linear-tree/main/lineartree/_classes.py",
         "https://pypi.org/project/linear-tree/"
       ]
+    },
+    "sklearn.gaussian_process.GaussianProcessRegressor:searchable_kernels_v1": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "marginal_likelihood"
+          ],
+          "status": "reviewed",
+          "note": "GP optimizer refines only gamma within training folds. Family, degree and offset are explicit outer-search values; no internal validation split is used."
+        }
+      },
+      "configuration": {
+        "parameters": {
+          "kernel": {
+            "metric": "rbf",
+            "gamma": 0.5,
+            "degree": 3,
+            "coef0": 1.0,
+            "gamma_bounds": [
+              1e-05,
+              100000.0
+            ]
+          },
+          "optimizer": "fmin_l_bfgs_b"
+        },
+        "preparation": "numeric",
+        "wrapper": null
+      },
+      "package_version": "1.9.1",
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html"
+      ],
+      "outputs": [
+        "point_prediction",
+        "predictive_standard_deviation",
+        "predictive_covariance"
+      ],
+      "output_note": "predict(X, return_std=True) returns a mean and standard deviation for each prediction; return_cov=True returns their covariance. This describes the fitted GP posterior: training alpha noise is not automatically added as fresh observation noise; a WhiteKernel changes the uncertainty interpretation. Calibration is not established."
+    },
+    "sklearn.gaussian_process.GaussianProcessClassifier:searchable_kernels_v1": {
+      "attributes": {
+        "fitting_criterion": {
+          "values": [
+            "bernoulli_likelihood",
+            "laplace_approximation",
+            "approximate_marginal_likelihood"
+          ],
+          "status": "reviewed",
+          "note": "GP optimizer refines only gamma within training folds. Family, degree and offset are explicit outer-search values; no internal validation split is used."
+        }
+      },
+      "sources": [
+        "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessClassifier.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "optimizer": "fmin_l_bfgs_b",
+          "max_iter_predict": 100,
+          "random_state": 1729,
+          "n_jobs": 1,
+          "kernel": {
+            "metric": "rbf",
+            "gamma": 0.5,
+            "degree": 3,
+            "coef0": 1.0,
+            "gamma_bounds": [
+              1e-05,
+              100000.0
+            ]
+          }
+        },
+        "preparation": "impute_onehot",
+        "wrapper": null
+      },
+      "package_version": "1.9.1"
     }
   }
 }
