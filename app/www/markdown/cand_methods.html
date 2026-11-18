@@ -991,6 +991,19 @@ touch-action: pan-y;
 .model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
 
 .var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-diff {
+flex: 1 1 0;
+min-height: 0;
+overflow-y: auto !important; 
+overflow-x: hidden;
+scrollbar-gutter: stable;
+}
+.var-modify-diff > .shiny-html-output { flex: 0 0 auto; }
+
+.flip-container:has(.var-modify-table).flipped > .flippable > .front,
+.flip-container:has(.var-modify-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+}
 .var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
 .var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
 .var-modify-table .shiny-data-grid > table > thead {
@@ -1010,12 +1023,37 @@ background: var(--bs-body-bg, white);
 .nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
 .nominal-navbar .navbar-brand:empty { display: none; }
 .nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
-.nominal-navbar.force-collapse {flex-wrap: wrap;}
-.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
 .nominal-navbar.force-collapse .navbar-toggler {display: block;}
-.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
 .nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
 .nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid {
+flex-wrap: nowrap;
+align-items: flex-start;
+column-gap: 0.25rem;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) .navbar-brand:empty {
+display: none;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-toggler {
+flex: 0 0 auto;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-collapse {
+flex: 1 1 0%;
+min-width: 0;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input {
+flex-direction: row;
+flex-wrap: wrap;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item {
+min-width: 0;
+max-width: 100%;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item > .nav-link {
+white-space: normal;
+overflow-wrap: anywhere;
+}
 .nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
 
 .tuning-search { display: none; }
@@ -1069,7 +1107,6 @@ visibility: hidden;
 display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
 }
 .front > div:has(> .tuning-parameters-table) { min-height: 0; }
-.front > div:has(> .tuning-parameters-editor),
 .front > div:has(> .tuning-parameters-message),
 .front > .tuning-search,
 .front > .tuning-parameters-message { flex: 0 0 auto; }
@@ -1116,10 +1153,10 @@ top: 0;
 z-index: 2;
 background: var(--bs-body-bg, white);
 }
+
 .flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
 .flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
 pointer-events: none;
-visibility: hidden;
 }
 
 .model-candidates-differences {
@@ -1148,8 +1185,28 @@ font-weight: 600;
 
 .cand-models-panels { flex: 0 0 auto !important; min-height: 0; }
 .cand-models-panels .tab-content { display: none; }
-.cand-models-weights { width: 100%; min-width: 0; }
-.cand-models-weights .shiny-input-container { width: 100% !important; margin-bottom: 0; }
+.cand-models-weights {
+min-width: 0;
+max-width: 100%;
+flex: 0 0 auto;
+align-self: center;
+margin-inline: auto;
+padding: .5rem 1.5rem;
+border-radius: var(--bs-border-radius-pill, 50rem);
+background: var(--bs-primary);
+color: white;
+}
+
+.cand-models-weights .shiny-input-container { margin-bottom: 0; }
+.cand-models-weights :is(.irs-line, .irs-bar, .irs-handle) {
+background: white;
+border-color: white;
+}
+.cand-models-weights :is(.irs-grid-pol, .irs-grid-pol.small) { background: white; }
+.cand-models-weights :is(.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single) {
+color: white;
+background: transparent;
+}
 .cand-models-weights .shiny-text-output { line-height: 1.5; height: 1.5em; min-height: 1.5em !important; overflow: auto; font-size: .85rem; }
 .flip-container:has(.cand-models-panels).flipped > .flippable > .front,
 .flip-container:has(.cand-models-panels):not(.flipped) > .flippable > .back {
@@ -1158,6 +1215,13 @@ visibility: hidden;
 }
 .cand-models-status { flex: 0 0 2.6em; height: 2.6em; min-height: 2.6em !important; line-height: 1.3; overflow: auto; font-size: .85rem; }
 .cand-models-status .shiny-text-output { min-height: 0 !important; }
+
+.tuning-row-toggle { float: none; margin: 0; cursor: pointer; }
+.tuning-row-toggle:disabled { cursor: not-allowed; }
+.tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
+.tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
+#shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
+.method-row-check { float: none; margin: 0; cursor: pointer; }
 </style>
 </head>
 
@@ -1275,8 +1339,8 @@ visibility: hidden;
 </ul>
 <p><strong>Unreviewed</strong>, <strong>Not applicable</strong>, and <strong>Depends on configuration</strong> have distinct meanings. A method summary says <strong>Varies by recipe</strong> when its displayed recipes have different descriptions; inspect each recipe rather than pooling their capabilities. Readiness and evidence still describe the named summary recipe. The characteristics do not establish compatibility, installation, integration, or successful validation. <strong>Capacity growth</strong> is reserved for stage 2 and is not currently assessed or displayed as a filter.</p>
 <h3 id="committing-a-model">Committing a model</h3>
-<p>Select a method and press <strong>Commit</strong>. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. You can select a different row at any time; the status identifies this pending choice and asks you to Commit to replace the model. Browsing alone does not replace a committed model. Changing upstream data requires a fresh commitment.</p>
-<p>JSON configuration saves the selected method and recipe separately from the committed recipe. Loading it restores the selected row by stable method identity, independent of its numeric row position or sort order, and rebuilds the committed model without fitting it. Restoration rechecks compatibility and construction support; an unavailable or incompatible saved recipe is reported rather than replaced with another model. A restored row remains freely changeable. Older configurations that did not record a model choice still require a selection and commitment.</p>
+<p>Check methods in the <strong>Select</strong> column and press <strong>Commit</strong>. Their recipes are committed, including constructor parameters and supported preparation. The status beneath the button identifies the committed methods. Checking or unchecking changes the pending candidate set; clicking a row only changes the flip-side details. Commit moves checked rows to the top and makes the first row current. Browsing alone does not replace committed methods. Changing upstream data requires a fresh commitment.</p>
+<p>JSON configuration saves the checked methods, current row and recipe separately from the committed recipes. Loading it restores the selected row by stable method identity, independent of its numeric row position or sort order, and rebuilds the committed model without fitting it. Restoration rechecks compatibility and construction support; an unavailable or incompatible saved recipe is reported rather than replaced with another model. A restored row remains freely changeable. Older configurations that did not record a model choice still require a selection and commitment.</p>
 <p>Commit does not fit a model. The pipeline selects predictor-role columns before the estimator, excluding outcomes and other non-predictor roles. Supported preparation is fitted only when the pipeline is trained. Unvalidated, unavailable, or adapter-dependent recipes cannot be committed; the footer explains the reason and retains any previous commitment. Weighting requirements remain catalogue checks; training consumers must supply fit weights explicitly.</p>
 <h4 id="learning-strategy-and-prediction-speed">Learning strategy and prediction speed</h4>
 <p><strong>Eager</strong> means that fitting constructs reusable predictive quantities before queries arrive. <strong>Lazy</strong> means that local estimation or neighbor aggregation is deferred until a prediction query. <strong>Hybrid</strong> combines both predictive mechanisms. These labels describe when learning happens, not how much time each stage takes.</p>
@@ -1286,7 +1350,7 @@ visibility: hidden;
 <p>A future downstream performance card could benchmark the fitted model and the complete inference pipeline separately, reporting both single-observation latency and batch throughput. Repeat warmed-up measurements and record batch size, requested output, model size, hardware and thread configuration. Generate any stochastic benchmark inputs before timing; preserve feature types, valid category levels, plausible ranges, missingness and relevant dependencies. Include representative held-out input rows where available: independent random values alone may exercise unrealistic prediction paths. This would measure inference performance, not predictive accuracy, and must not refit the model or execute training-only resampling while timing predictions.</p>
 <p>CatBoost recipes can be committed for entirely numeric data as well as mixed inputs. The recipe name <code>catboost_strings</code> describes its optional categorical preparation; it does not require string predictors. Numeric columns remain numeric, including numeric missing values. When categorical predictors are present, the pipeline deterministically converts their values to typed strings and uses a separate missing token that cannot collide with a real value. The CatBoost adapter identifies categorical columns from the actual training-fold design, including any upstream feature selection. Browsing or committing still performs no fit.</p>
 <h4 id="multiple-candidate-methods">Multiple candidate methods</h4>
-<p>Select one or more method rows (Ctrl/Command-click adds rows) and press <strong>Commit</strong>. All selected methods are validated before the candidate set is committed; an invalid recipe leaves the previous commitment intact. One applicable recipe is retained per selected method. Details describe the first selected method.</p>
+<p>Check one or more methods in the first <strong>Select</strong> column and press <strong>Commit</strong>. Checking or unchecking changes candidate membership without reordering rows. Clicking a row changes the current method shown on the flip side without changing the checked set. Commit moves checked methods to the top, clears the previous table sort and makes the first row current. All selected methods are validated before the candidate set is committed; an invalid recipe leaves the previous commitment intact. One applicable recipe is retained per selected method. Details describe the current row.</p>
 <p>Proxy-data stores stable recipe IDs, method names and independent unfitted model pipelines, including each method’s preparation. These are alternative endings, not an ensemble. Shared upstream transformations stay outside the alternatives. With one candidate, ordinary training behaves as before. With several candidates, a consumer must choose a candidate explicitly or use Pipeline tuning; the first candidate is never silently used for training. Configuration JSON preserves both the selected method list and the committed recipe list. Legacy single-method configuration fields remain readable. Changing upstream data requires recommitment.</p>
 <p>Accepted outputs expose the final method ID through <code>selected_model_candidate</code>; the stored alternatives remain available through <code>model_candidates</code>.</p>
 <h3 id="gaussian-process-kernel-choices">Gaussian-process kernel choices</h3>

@@ -1,14 +1,8 @@
-"""Application timers with cancellation-safe reactive-lock acquisition.
-
-Shiny 1.7.0 prints CancelledError when invalidate_later's timer is cancelled
-after sleeping but before acquiring the reactive lock. Cancellation at either
-await is normal; only that exception is absorbed here.
-"""
+"""Cancellation-safe timers that invalidate at the next Shiny session idle cycle."""
 import asyncio
 import time
 from asyncio import create_task
 
-from shiny import reactive
 from shiny.otel._core import detached_otel_context
 from shiny.reactive._core import get_current_context
 from shiny.session import get_current_session
@@ -31,11 +25,12 @@ def invalidate_later(delay):
         nonlocal cancellable
         try:
             await asyncio.sleep(max(0., deadline - time.monotonic()))
-            async with reactive.lock():
-                cancellable = False
-                with detached_otel_context():
+            cancellable = False
+            with detached_otel_context():
+                if session is not None:
+                    session.run_once_when_idle(context.invalidate)
+                else:
                     context.invalidate()
-                    await reactive.flush()
         except asyncio.CancelledError:
             return
         finally:

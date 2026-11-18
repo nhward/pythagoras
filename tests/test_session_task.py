@@ -1,18 +1,30 @@
 """Real asyncio completion callbacks during reactive/session teardown."""
 import asyncio
-from types import SimpleNamespace
 
 import pytest
 from shiny import reactive
 import session_task as m
-from shiny.reactive._core import _reactive_environment
 from shiny.types import SilentException, SilentOperationInProgressException
 
 
-@pytest.fixture(autouse=True)
-def fresh_reactive_lock(monkeypatch):
-    # Each pytest-asyncio test has its own event loop.
-    monkeypatch.setattr(_reactive_environment, "_lock", None)
+class IdleSession:
+    def __init__(self):
+        self.ended, self.destroyed, self.pending = [], [], []
+
+    def on_ended(self, callback):
+        self.ended.append(callback)
+
+    def on_destroy(self, callback):
+        self.destroyed.append(callback)
+
+    def run_once_when_idle(self, callback):
+        self.pending.append(callback)
+
+    async def flush(self):
+        while self.pending:
+            self.pending.pop(0)()
+            await reactive.flush()
+            await drain()
 
 
 async def drain():
@@ -78,19 +90,21 @@ async def test_cancel_running_task_drops_queue_and_ignores_late_result():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_cancel_discards_deferred_result_and_allows_immediate_restart():
+async def test_cancel_discards_deferred_result_and_allows_immediate_restart(monkeypatch):
+    session = IdleSession()
+    monkeypatch.setattr(m, "get_current_session", lambda: session)
     @m.SessionExtendedTask
     async def task(value):
         return value
 
-    async with reactive.lock():
-        task.invoke("old")
-        await drain()  # Worker finished, publication is waiting for the lock.
-        task.cancel()
-        with reactive.isolate():
-            assert task.status() == "cancelled"
-        task.invoke("new")
+    task.invoke("old")
+    await drain()  # Worker finished, publication waits for the session idle cycle.
+    task.cancel()
+    with reactive.isolate():
+        assert task.status() == "cancelled"
+    task.invoke("new")
     await drain()
+    await session.flush()
     with reactive.isolate():
         assert task.result() == "new"
 
@@ -100,9 +114,8 @@ async def test_cancel_discards_deferred_result_and_allows_immediate_restart():
 @pytest.mark.parametrize('outcome', ['success', 'error', 'cancel'])
 @pytest.mark.parametrize('close_session', [False, True])
 async def test_completion_after_values_destroyed(monkeypatch, outcome, close_session):
-    ended, destroyed = [], []
-    monkeypatch.setattr(m, 'get_current_session', lambda: SimpleNamespace(
-        on_ended=ended.append, on_destroy=destroyed.append))
+    session = IdleSession()
+    monkeypatch.setattr(m, 'get_current_session', lambda: session)
     loop = asyncio.get_running_loop()
     failures = []
     previous = loop.get_exception_handler()
@@ -114,18 +127,18 @@ async def test_completion_after_values_destroyed(monkeypatch, outcome, close_ses
                 raise RuntimeError('worker failed')
             return 42
 
-        # Hold publication behind the lock, reproducing the deferred callback race.
-        async with reactive.lock():
-            task.invoke()
-            task.invoke()  # Queued work must not restart after teardown.
-            if outcome == 'cancel':
-                task.cancel()
-            await drain()
-            if close_session:
-                ended[0]()
-                destroyed[0]()
-            for value in (task.status, task.value, task.error):
-                value.destroy()
+        # Keep publication queued until after the session/values are destroyed.
+        task.invoke()
+        task.invoke()
+        if outcome == 'cancel':
+            task.cancel()
+        await drain()
+        if close_session:
+            session.ended[0]()
+            session.destroyed[0]()
+        for value in (task.status, task.value, task.error):
+            value.destroy()
+        await session.flush()
         await drain()
         assert not failures
         assert not task._invocation_queue
@@ -195,4 +208,42 @@ async def test_close_cancels_running_worker_and_drops_queue():
     assert cancelled.is_set()
     assert calls == [1]
     assert task._task is None
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_queued_invocation_waits_for_async_consumers(monkeypatch):
+    session = IdleSession()
+    monkeypatch.setattr(m, 'get_current_session', lambda: session)
+    reading, release = asyncio.Event(), asyncio.Event()
+    calls, received = [], []
+
+    @m.SessionExtendedTask
+    async def task(value):
+        calls.append(value)
+        return value
+
+    @reactive.effect
+    async def consume():
+        value = task.result()
+        if value == 1:
+            reading.set()
+            await release.wait()
+        received.append(task.result())
+
+    try:
+        task.invoke(1)
+        task.invoke(2)
+        await drain()
+        publishing = asyncio.create_task(session.flush())
+        await asyncio.wait_for(reading.wait(), timeout=2)
+        assert calls == [1]
+        release.set()
+        await asyncio.wait_for(publishing, timeout=2)
+        assert calls == [1, 2]
+        assert received == [1, 2]
+    finally:
+        release.set()
+        consume.destroy()
+        task.close()
     assert not task._invocation_queue

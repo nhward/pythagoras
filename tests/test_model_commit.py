@@ -120,3 +120,51 @@ def test_cubist_recipe_preserves_feature_names_during_prediction():
     prepared = model.named_steps['prepare'].transform(frame.iloc[24:])
     assert isinstance(prepared, pd.DataFrame)
     assert list(prepared.columns) == list(model.named_steps['estimator'].feature_names_in_)
+
+
+@pytest.mark.parametrize('train', [[0, 1], [0, 2], [0, 2, 3]])
+@pytest.mark.parametrize('multiple', [False, True])
+def test_fold_nominal_schema_uses_fitted_indicators_and_preserves_roles(train, multiple):
+    from NominalEncodingTransformer import NominalEncodingTransformer
+    from roles import Role
+
+    _, row = fixture()
+    frame = pd.DataFrame({'x': [1., 2., 3., 4.], 'Utilities': ['AllPub', 'AllPub', 'NoSeWa', 'Other'],
+                          'Utilities__AllPub': [90., 91., 92., 93.], 'y': [2., 4., 6., 8.]})
+    source = proxy_data(frame, _roles=RoleMap.from_primitive({
+        'predictor': ['x', 'Utilities'], 'target': ['y'], 'stratifier': ['Utilities__AllPub']}))
+    encoder = NominalEncodingTransformer(columns=['Utilities'])
+    preview = encoder.fit_transform(frame)
+    roles = RoleMap()
+    for name in encoder.output_columns_:
+        roles.set_roles(name, {Role.PREDICTOR})
+    source = source.with_pipeline_step(encoder, name='var_encode', preview_frame=preview,
+        added_roles=roles, removed_columns=encoder.removed_columns_)
+    model = build_model(row, source.model_predictors)
+    if multiple:
+        source = source.with_model_candidates([
+            {'id': str(i), 'label': f'Ridge {i}', 'estimator': model} for i in range(2)])
+    else:
+        source = source.with_estimator(model, label='Ridge', recipe_id='ridge')
+    for candidate in (['0', '1'] if multiple else [None]):
+        pipeline = source.pipeline_for_training(candidate)
+        pipeline.fit(frame.iloc[train], frame.y.iloc[train])
+        encoding = pipeline.named_steps.var_encode
+        preparation = pipeline.named_steps.cand_methods.named_steps.predictors
+        encoded = encoding.transform(frame)
+        selected = preparation.transform(encoded)
+        assert list(selected) == ['x', *encoding.output_columns_]
+        assert 'Utilities__AllPub' not in selected  # Raw stratifier name collides with a possible indicator.
+        assert 'y' not in selected
+        assert np.isfinite(pipeline.predict(frame)).all()  # Includes levels unseen during fold fitting.
+        assert not hasattr(source.pipeline.named_steps.var_encode, 'encodings_')
+        # Refitting the same pipeline must not retain the previous fold's names.
+        pipeline.fit(frame.iloc[:2], frame.y.iloc[:2])
+        assert pipeline.named_steps.cand_methods.named_steps.estimator.n_features_in_ == 1
+        assert np.isfinite(pipeline.predict(frame)).all()
+
+
+def test_fold_encoding_keeps_missing_fixed_predictors_as_errors():
+    from model_commit import prepare_predictors
+    with pytest.raises(KeyError, match='missing'):
+        prepare_predictors(pd.DataFrame({'x': [1]}), columns=['x', 'missing'], preparation='numeric')

@@ -413,12 +413,16 @@ def test_structure_wheel_scrolls_both_axes_with_sticky_headers(page, scroll_app,
     page.set_viewport_size({'width':1000, 'height':800})
     page.goto(scroll_app.url)
     expect(by_id(page, 'DataTable2').locator('table')).to_be_visible()
+    back = by_id(page, 'Back')
+    assert back.evaluate("el => getComputedStyle(el).visibility") == 'visible'
+    assert back.evaluate("el => getComputedStyle(el).display") != 'none'
     if fullscreen:
         by_id(page, 'ExpandButton').click(force=True)
     by_id(page, 'FlipButton').click(force=True)
     grid = by_id(page, 'Structure').locator('.shiny-data-grid')
     expect(grid).to_be_visible()
     page.wait_for_timeout(1500)  # Complete the 1.3 s flip before hit testing.
+    assert by_id(page, 'Front').evaluate("el => getComputedStyle(el).visibility") == 'visible'
     page.wait_for_function('id => {const g=document.getElementById(id).querySelector(".shiny-data-grid");return g && g.scrollHeight>g.clientHeight && g.scrollWidth>g.clientWidth;}',
                            arg=namespaced_id(page, 'Structure'))
     header = grid.locator('thead')
@@ -432,3 +436,12 @@ def test_structure_wheel_scrolls_both_axes_with_sticky_headers(page, scroll_app,
     page.wait_for_function('id => document.getElementById(id).querySelector(".shiny-data-grid").scrollLeft>100',
                            arg=namespaced_id(page, 'Structure'))
     assert abs(header.bounding_box()['y'] - top) < 2
+    by_id(page, 'FlipButton').click(force=True)
+    page.wait_for_timeout(1500)
+    assert back.evaluate("el => getComputedStyle(el).visibility") == 'visible'
+    expect(by_id(page, 'Structure').locator('table')).to_be_attached()
+    front_grid = by_id(page, 'DataTable2').locator('.shiny-data-grid')
+    front_grid.hover()
+    page.mouse.wheel(600, 0)
+    page.wait_for_function('id => document.getElementById(id).querySelector(".shiny-data-grid").scrollLeft>0',
+                           arg=namespaced_id(page, 'DataTable2'))

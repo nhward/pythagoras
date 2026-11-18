@@ -103,10 +103,10 @@ CatBoost's `catboost_strings` construction is supported through lazy-imported, t
 
 #### Multiple candidate methods
 
-Select one or more method rows (Ctrl/Command-click adds rows) and press **Commit**.
+The first table column contains namespaced checkboxes keyed by stable estimator ID. Check/uncheck changes candidate membership independently of the single current row used for details. Checking does not reorder the table. Commit validates all checked methods, moves them to the top in current view order, clears any prior sort, and makes the first row current. One delegated change handler supports virtualized rows. Checkbox events are excluded from configuration snapshots; checked identities, current identity and last promoted order are saved separately. Legacy selected-method configurations migrate to the checked set and use their first method as the current row.
 All selected methods are validated before the candidate set is committed; an
 invalid recipe leaves the previous commitment intact. One applicable recipe is
-retained per selected method. Details describe the first selected method.
+retained per selected method. Details describe the current method.
 
 Proxy-data stores stable recipe IDs, method names and independent unfitted model
 pipelines, including each method's preparation. These are alternative endings,

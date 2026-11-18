@@ -1119,6 +1119,20 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 
 /* Keep variable-list scrolling inside the grid so its column headings stay put. */
 .var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-diff {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto !important; /* Override guidedDiv's inline overflow. */
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+.var-modify-diff > .shiny-html-output { flex: 0 0 auto; }
+/* Keep both faces painted throughout the rotation without letting the rear
+   face intercept pointer or wheel events in WebKit. */
+.flip-container:has(.var-modify-table).flipped > .flippable > .front,
+.flip-container:has(.var-modify-table):not(.flipped) > .flippable > .back {
+    pointer-events: none;
+}
 .var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
 .var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
 .var-modify-table .shiny-data-grid > table > thead {
@@ -1279,10 +1293,10 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
   z-index: 2;
   background: var(--bs-body-bg, white);
 }
+/* Keep both faces painted for the flip; only the facing side handles input. */
 .flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
 .flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
   pointer-events: none;
-  visibility: hidden;
 }
 
 /* Let parameter comparisons use the full card width and show complete labels. */
@@ -1314,8 +1328,28 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 /* Candidate model navigation does not take space from the persistent chart. */
 .cand-models-panels { flex: 0 0 auto !important; min-height: 0; }
 .cand-models-panels .tab-content { display: none; }
-.cand-models-weights { width: 100%; min-width: 0; }
-.cand-models-weights .shiny-input-container { width: 100% !important; margin-bottom: 0; }
+.cand-models-weights {
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 0 auto;
+    align-self: center;
+    margin-inline: auto;
+    padding: .5rem 1.5rem;
+    border-radius: var(--bs-border-radius-pill, 50rem);
+    background: var(--bs-primary);
+    color: white;
+}
+/* The wrapper sets the control width plus its horizontal padding. */
+.cand-models-weights .shiny-input-container { margin-bottom: 0; }
+.cand-models-weights :is(.irs-line, .irs-bar, .irs-handle) {
+    background: white;
+    border-color: white;
+}
+.cand-models-weights :is(.irs-grid-pol, .irs-grid-pol.small) { background: white; }
+.cand-models-weights :is(.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single) {
+    color: white;
+    background: transparent;
+}
 .cand-models-weights .shiny-text-output { line-height: 1.5; height: 1.5em; min-height: 1.5em !important; overflow: auto; font-size: .85rem; }
 .flip-container:has(.cand-models-panels).flipped > .flippable > .front,
 .flip-container:has(.cand-models-panels):not(.flipped) > .flippable > .back {
@@ -1332,3 +1366,5 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
 .tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
 #shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
+
+.method-row-check { float: none; margin: 0; cursor: pointer; }

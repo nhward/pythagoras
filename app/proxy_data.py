@@ -363,7 +363,7 @@ class proxy_data:
     def pipeline_for_training(self, candidate_id=None) -> Pipeline:
         """Return a fresh pipeline for fitting inside a training partition."""
         if candidate_id is not None and candidate_id == self._selected_candidate:
-            return clone(self._pipeline)
+            candidate_id = None
         if candidate_id is not None:
             candidate = next((c for c in self._model_candidates if c['id'] == candidate_id), None)
             if candidate is None:
@@ -374,7 +374,11 @@ class proxy_data:
             raise ValueError('Choose a model candidate explicitly before training or tune the candidate set.')
         if not self.has_pipeline:
             raise ValueError("No learning pipeline has been registered")
-        return clone(self._pipeline)
+        result = clone(self._pipeline)
+        from model_commit import with_encoding_schema
+        result.steps = [(name, with_encoding_schema(step, self) if name == 'cand_methods' else step)
+                        for name, step in result.steps]
+        return result
 
     @property
     def tuning_spec(self):
@@ -474,6 +478,8 @@ class proxy_data:
         steps = [(name, step) for name, step in (self._pipeline.steps if self._pipeline else [])
                  if name != "cand_methods"]
         model = clone(estimator)
+        from model_commit import with_encoding_schema
+        model = with_encoding_schema(model, self)
         for _, step in steps:
             if getattr(step, 'selection_step', False):
                 from model_commit import with_selection_schema
@@ -643,6 +649,11 @@ class proxy_data:
             for key, value in transformer.get_params(deep=False).items()
             if key not in omitted
         }
+        groups = getattr(transformer, 'predictor_output_groups_', None)
+        if groups is not None:
+            parameters['predictor_output_groups'] = {
+                source: list(outputs) for source, outputs in groups.items()
+                if source in self.model_predictors}
         if removed:
             parameters["removed_columns"] = list(removed)
         processing = ProcessingRecord(

@@ -300,3 +300,28 @@ def test_legacy_local_choices_block_until_committed_upstream(page, session_resto
     assert 'ModelValues' not in saved['inputs']
     assert json.loads(saved['legacy_model_values']) == {'cand_methods__estimator__alpha': [99]}
     assert page.get_by_label('Additional model choices (JSON)', exact=True).count() == 0
+
+
+failure_app = create_app_fixture(app='../scenarios/cand_train_failures.py', scope='function')
+
+
+@pytest.mark.ui
+def test_first_ten_fit_failures_are_reported_in_one_persistent_notification(page, failure_app):
+    page.goto(failure_app.url)
+    progress = page.locator('[id$="-Progress"]')
+    expect(progress).to_contain_text('Ready', timeout=30000)
+    page.get_by_role('button', name='Start or resume tuning', exact=True).click()
+    notice = page.locator('.shiny-notification-error')
+    expect(notice).to_contain_text('Training failures', timeout=60000)
+    expect(notice).to_contain_text('alpha')
+    expect(notice).to_contain_text('InvalidParameterError')
+    expect(progress).to_contain_text('14 failed', timeout=60000)
+    expect(notice).to_have_count(1)
+    expect(notice.locator('li')).to_have_count(10)
+    expect(notice).to_contain_text('Trial 2')
+    expect(notice).not_to_contain_text('Trial 12')
+    notice.locator('.shiny-notification-close').click()
+    expect(notice).to_have_count(0)
+    page.get_by_role('button', name='Cancel current tuning', exact=True).click()
+    expect(progress).to_contain_text('Ready')
+    expect(notice).to_have_count(0)

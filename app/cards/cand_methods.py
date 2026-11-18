@@ -320,6 +320,7 @@ def instance():
     this.long_name = 'Model method candidates'
     this.description = 'Identify modeling methods compatible with the current outcome, predictors and observation structure.'
     this.register_configuration_state_field('model_choice')
+    this.exclude_configuration_input('MethodCheck')
     this.export_inputs('ShowAll', 'InstalledOnly', 'UseWeights', 'Forecasting', 'Output')
 
     this.front = lambda: ui.TagList(
@@ -336,7 +337,7 @@ def instance():
     this.back = lambda: ui.TagList(
         ui.output_ui(
             id='RecipeDetails', class_="model-recipe-output",
-            guide=this, title="Recipe", position = "bottom", text="Details for the first selected method; every selected method is committed as an alternative."
+            guide=this, title="Recipe", position = "bottom", text="Details for the current row. Check methods on the front to include them as alternatives."
         )
     )
 
@@ -344,7 +345,7 @@ def instance():
         ui.input_action_button(
             id='Commit', label='Commit', icon=icon("gavel", title="Commit", a11y="sem"), 
             width="220px", class_="btn rounded-pill btn-sm d-block mx-auto btn-primary", style="border: 0px; box-shadow: none;",
-            guide=this, position = "top", text="Commit all selected methods as alternative pipeline endings. Use Ctrl/Command-click to select more than one method. No model is fitted here."
+            guide=this, position = "top", text="Commit all checked methods as alternative pipeline endings. Checked methods move to the top and the first becomes the current row. No model is fitted here."
         ), 
         ui.output_text(
             id='Status',
@@ -390,14 +391,17 @@ def instance():
         SelectedMethod = reactive.Value(saved.get('selected_methods') or ([saved['selected_method']] if saved.get('selected_method') else []))
         SelectedRecipeID = reactive.Value(saved.get('selected_recipe'))
         pending_commit = saved.get('committed_recipes') or ([saved['committed_recipe']] if saved.get('committed_recipe') else [])
-        restoring_selection = bool(saved.get('selected_methods') or saved.get('selected_method'))
+        CurrentMethod = reactive.Value(saved.get('current_method') or next(iter(saved.get('selected_methods') or ([saved['selected_method']] if saved.get('selected_method') else [])), None))
+        Promoted = reactive.Value(saved.get('promoted_methods', []))
+        restoring_selection = bool(saved.get('current_method') or saved.get('selected_methods') or saved.get('selected_method'))
 
         def choice_state():
             committed = Committed()
             methods = SelectedMethod()
             identities = [c['id'] for c in committed[1]] if committed else pending_commit
             return {'selected_methods': methods, 'selected_method': methods[0] if len(methods) == 1 else None,
-                    'selected_recipe': SelectedRecipeID(), 'committed_recipes': identities,
+                    'selected_recipe': SelectedRecipeID(), 'current_method': CurrentMethod(),
+                    'promoted_methods': Promoted(), 'committed_recipes': identities,
                     'committed_recipe': identities[0] if len(identities) == 1 else None}
 
         this.register_configuration_state_provider('model_choice', choice_state)
@@ -451,13 +455,49 @@ def instance():
             return ui.output_data_frame(id = "Table2")
 
 
+        def display_frame():
+            frame = Display().set_index('ID').copy()
+            checked = set(SelectedMethod())
+            promoted = [method for method in Promoted() if method in frame.index]
+            frame = frame.loc[promoted + [method for method in frame.index if method not in promoted]]
+            frame.insert(0, 'Select', [ui.tags.input(type='checkbox', checked=method in checked,
+                class_='form-check-input method-row-check', **{
+                    'data-method-check-input': this.ns('MethodCheck'), 'data-method-id': method,
+                    'aria-label': 'Select ' + _model_labels(method)['Model']}) for method in frame.index])
+            return frame
+
         @output
         @render.data_frame
         def Table2():
             nonlocal restoring_selection
+            Display()
             with reactive.isolate():
-                restoring_selection = bool(SelectedMethod())
-            return render.DataGrid(Display().set_index('ID'), selection_mode='rows', filters=False, width='100%')
+                restoring_selection = bool(CurrentMethod())
+                frame = display_frame()
+            return render.DataGrid(frame, selection_mode='row', filters=False, width='100%')
+
+        @this.reactable(triggers=[SelectedMethod])
+        async def RefreshChecks():
+            Table2.data()
+            await Table2.update_data(display_frame())
+
+        @this.reactable(triggers=[input.MethodCheck])
+        async def CheckMethod():
+            event = input.MethodCheck()
+            if not isinstance(event, dict) or not isinstance(event.get('checked'), bool):
+                return
+            method = event.get('method')
+            if method not in set(Display()['ID']):
+                return
+            checked = list(SelectedMethod())
+            if event['checked'] and method not in checked:
+                checked.append(method)
+            elif not event['checked'] and method in checked:
+                checked.remove(method)
+            SelectedMethod.set(checked)
+            CurrentMethod.set(method)
+            rows = list(Table2.data().index)
+            await Table2.update_cell_selection({'type': 'row', 'rows': [rows.index(method)]})
 
         @this.reactable()
         async def RestoreSelectedRow():
@@ -465,9 +505,9 @@ def instance():
             # initial load. View changes, not cell selection, trigger replay.
             rows = list(Table2.data().index)
             Table2.data_view_rows()
-            with reactive.isolate(): method = SelectedMethod()
+            with reactive.isolate(): method = CurrentMethod()
             if restoring_selection and method:
-                indices = [rows.index(m) for m in method if m in rows]
+                indices = [rows.index(method)] if method in rows else []
                 if indices:
                     await Table2.update_cell_selection({'type': 'row', 'rows': indices})
 
@@ -477,15 +517,15 @@ def instance():
             selected = Table2.data_view(selected=True)
             if selected.empty:
                 if not restoring_selection:
-                    SelectedMethod.set([]); SelectedRecipeID.set(None)
+                    CurrentMethod.set(None); SelectedRecipeID.set(None)
                 return
             method = selected.index[0]
             rows = _method_groups(Results(), show_all=bool(input.ShowAll()),
                                   installed_only=bool(input.InstalledOnly())).get(method, [])
             with reactive.isolate():
-                recipe_id = SelectedRecipeID() if SelectedMethod() == list(selected.index) else None
+                recipe_id = SelectedRecipeID() if CurrentMethod() == method else None
             restoring_selection = False
-            SelectedMethod.set(list(selected.index))
+            CurrentMethod.set(method)
             SelectedRecipeID.set(next((r['id'] for r in rows if r['id'] == recipe_id), rows[0]['id'] if rows else None))
 
         @this.reactable(calc=True)
@@ -522,21 +562,22 @@ def instance():
                 CommitError.set(f'Cannot restore saved model: {exc}')
 
         @this.reactable(triggers=[input.Commit])
-        def CommitModel():
+        async def CommitModel():
             nonlocal pending_commit
-            selected = Table2.data_view(selected=True)
-            if selected.empty:
-                CommitError.set('Select at least one method first.')
+            methods = [method for method in Table2.data_view().index if method in SelectedMethod()]
+            methods.extend(method for method in SelectedMethod() if method not in methods)
+            if not methods:
+                CommitError.set('Check at least one method first.')
                 return
             try:
                 groups = _method_groups(Results(), show_all=bool(input.ShowAll()),
                                         installed_only=bool(input.InstalledOnly()))
                 rows = []
-                for method in selected.index:
+                for method in methods:
                     recipes = groups.get(method, [])
                     if not recipes:
                         raise ValueError('A selected method is unavailable.')
-                    recipe = (SelectedRecipe() if method == selected.index[0] else None)
+                    recipe = (SelectedRecipe() if method == CurrentMethod() else None)
                     rows.append(recipe or recipes[0])
                 candidates = build_candidates(rows)
                 Incoming().with_model_candidates(candidates)
@@ -546,6 +587,13 @@ def instance():
             Committed.set((Incoming(), candidates))
             pending_commit = []
             CommitError.set('')
+            SelectedMethod.set(methods)
+            Promoted.set(methods)
+            CurrentMethod.set(methods[0])
+            SelectedRecipeID.set(rows[0]['id'])
+            await Table2.update_data(display_frame())
+            await Table2.update_sort([])
+            await Table2.update_cell_selection({'type': 'row', 'rows': [0]})
 
         @this.reactable(calc=True)
         def Exported():

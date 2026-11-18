@@ -249,9 +249,7 @@ def instance():
             return choice
 
         async def update_progress(value):
-            async with reactive.lock():
-                progress.set(value)
-                await reactive.flush()
+            session.run_once_when_idle(lambda: progress.set(value))
 
         @busy.track('Selecting variables…')
         @this.extended_task
@@ -301,9 +299,7 @@ def instance():
             return cache.get().get(key(input.SelectionMethod() or 'Boruta', Options(input.SelectionMethod() or 'Boruta')))
 
         async def update_stability_progress(value):
-            async with reactive.lock():
-                stability_progress.set(value)
-                await reactive.flush()
+            session.run_once_when_idle(lambda: stability_progress.set(value))
 
         @stability_busy.track('Checking selection stability…')
         @this.extended_task

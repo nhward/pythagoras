@@ -107,6 +107,7 @@ def instance():
         message = reactive.Value('')
         editing = reactive.Value(None)
         modal_error = reactive.Value('')
+        promoted = reactive.Value([])
         def tuning_state():
             current = committed()
             return {'drafts': deepcopy(drafts()),
@@ -194,7 +195,9 @@ def instance():
                     'Purpose':PURPOSES[row['purpose']], 'Reason':row['reason'],
                     'Search values':'Fixed configuration' if row['fixed'] else summary})
             frame = pd.DataFrame(records, columns=['ID','Tune','Edit','Parameter','Source','Search values','Current value','Reason','Purpose'])
-            return frame.set_index('ID')
+            frame = frame.set_index('ID')
+            first = [path for path in promoted() if path in frame.index]
+            return frame.loc[first + [path for path in frame.index if path not in first]]
 
         @output
         @render.ui
@@ -211,7 +214,7 @@ def instance():
             input.Visibility()
             with reactive.isolate():
                 frame = DisplayFrame()
-            return render.DataGrid(frame, selection_mode='none', width="100%", height='100%')
+            return render.DataGrid(frame, selection_mode='row', width="100%", height='100%')
 
         @this.reactable(triggers=[drafts])
         async def RefreshDrafts():
@@ -321,13 +324,21 @@ def instance():
                                                 'data-tuning-token': token}))
 
         @this.reactable(triggers=[input.Commit])
-        def Commit():
+        async def Commit():
             nonlocal pending_commitment
             try:
                 spec = compile_spec(Rows(), drafts())
                 pending_commitment = None
                 committed.set({'spec':spec, 'drafts':deepcopy(drafts())})
                 message.set('Search space committed. No models have been fitted.')
+                order = list(Table2.data_view().index)
+                checked = [row['path'] for row in Rows() if definition(row).get('active')]
+                promoted.set([path for path in order if path in checked] +
+                             [path for path in checked if path not in order])
+                frame = DisplayFrame()
+                await Table2.update_data(frame)
+                await Table2.update_sort([])
+                await Table2.update_cell_selection({'type': 'row', 'rows': [0] if len(frame) else []})
             except ValueError as exc:
                 message.set(str(exc))
 

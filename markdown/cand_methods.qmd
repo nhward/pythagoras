@@ -171,9 +171,9 @@ currently assessed or displayed as a filter.
 
 ### Committing a model
 
-Select a method and press **Commit**. The displayed summary recipe is committed, including its constructor parameters and supported preparation. The status beneath the button identifies the committed estimator and recipe. You can select a different row at any time; the status identifies this pending choice and asks you to Commit to replace the model. Browsing alone does not replace a committed model. Changing upstream data requires a fresh commitment.
+Check methods in the **Select** column and press **Commit**. Their recipes are committed, including constructor parameters and supported preparation. The status beneath the button identifies the committed methods. Checking or unchecking changes the pending candidate set; clicking a row only changes the flip-side details. Commit moves checked rows to the top and makes the first row current. Browsing alone does not replace committed methods. Changing upstream data requires a fresh commitment.
 
-JSON configuration saves the selected method and recipe separately from the committed recipe. Loading it restores the selected row by stable method identity, independent of its numeric row position or sort order, and rebuilds the committed model without fitting it. Restoration rechecks compatibility and construction support; an unavailable or incompatible saved recipe is reported rather than replaced with another model. A restored row remains freely changeable. Older configurations that did not record a model choice still require a selection and commitment.
+JSON configuration saves the checked methods, current row and recipe separately from the committed recipes. Loading it restores the selected row by stable method identity, independent of its numeric row position or sort order, and rebuilds the committed model without fitting it. Restoration rechecks compatibility and construction support; an unavailable or incompatible saved recipe is reported rather than replaced with another model. A restored row remains freely changeable. Older configurations that did not record a model choice still require a selection and commitment.
 
 Commit does not fit a model. The pipeline selects predictor-role columns before the estimator, excluding outcomes and other non-predictor roles. Supported preparation is fitted only when the pipeline is trained. Unvalidated, unavailable, or adapter-dependent recipes cannot be committed; the footer explains the reason and retains any previous commitment. Weighting requirements remain catalogue checks; training consumers must supply fit weights explicitly.
 
@@ -238,10 +238,10 @@ any upstream feature selection. Browsing or committing still performs no fit.
 
 #### Multiple candidate methods
 
-Select one or more method rows (Ctrl/Command-click adds rows) and press **Commit**.
+Check one or more methods in the first **Select** column and press **Commit**. Checking or unchecking changes candidate membership without reordering rows. Clicking a row changes the current method shown on the flip side without changing the checked set. Commit moves checked methods to the top, clears the previous table sort and makes the first row current.
 All selected methods are validated before the candidate set is committed; an
 invalid recipe leaves the previous commitment intact. One applicable recipe is
-retained per selected method. Details describe the first selected method.
+retained per selected method. Details describe the current row.
 
 Proxy-data stores stable recipe IDs, method names and independent unfitted model
 pipelines, including each method's preparation. These are alternative endings,

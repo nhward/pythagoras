@@ -3,14 +3,8 @@ import asyncio
 import pytest
 import reactive_timer as timer
 from shiny import reactive
-from shiny.reactive._core import _reactive_environment
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
-
-
-@pytest.fixture(autouse=True)
-def isolated_reactive_lock(monkeypatch):
-    monkeypatch.setattr(_reactive_environment, '_lock', None)
 
 
 @pytest.fixture
@@ -27,12 +21,15 @@ def tasks(monkeypatch):
     return created
 
 
-@pytest.mark.parametrize('phase', ['sleep', 'lock'])
+@pytest.mark.parametrize('phase', ['sleep', 'idle'])
 @pytest.mark.parametrize('cause', ['context', 'session'])
 async def test_expected_cancellation_is_quiet_and_unregisters_cleanup(phase, cause, tasks, monkeypatch, capsys):
-    callbacks = []
+    callbacks, pending = [], []
 
     class Session:
+        def run_once_when_idle(self, callback):
+            pending.append(callback)
+
         def on_ended(self, callback):
             callbacks.append(callback)
             return lambda: callbacks.remove(callback)
@@ -47,15 +44,17 @@ async def test_expected_cancellation_is_quiet_and_unregisters_cleanup(phase, cau
 
     try:
         await reactive.flush()
-        async with reactive.lock():
-            for _ in range(10):
-                await asyncio.sleep(0)
+        for _ in range(10):
+            await asyncio.sleep(0)
+        if phase == 'sleep':
             assert not tasks[0].done()
-            if cause == 'context':
-                trigger.set(1)
-            else:
-                callbacks[0]()
-            await tasks[0]
+        else:
+            assert pending  # Invalidation is deferred until the session is idle.
+        if cause == 'context':
+            trigger.set(1)
+        elif callbacks:
+            callbacks[0]()
+        await tasks[0]
         assert not tasks[0].cancelled()
         assert not callbacks
         assert 'CancelledError' not in capsys.readouterr().err
@@ -75,6 +74,7 @@ async def test_timer_still_invalidates_and_flushes_without_another_browser_event
     try:
         await reactive.flush()
         await tasks[0]
+        await reactive.flush()
         assert visits == ['ran', 'ran']
     finally:
         effect.destroy()
@@ -103,13 +103,12 @@ async def test_cancel_before_timer_starts_still_releases_session_callback(tasks,
 
 
 async def test_non_cancellation_errors_are_not_swallowed(tasks, monkeypatch):
-    async def broken_flush():
+    def broken_context():
         raise RuntimeError('real timer failure')
-
+    monkeypatch.setattr(timer, 'detached_otel_context', broken_context)
     effect = reactive.effect(lambda: timer.invalidate_later(0))
     try:
         await reactive.flush()
-        monkeypatch.setattr(reactive, 'flush', broken_flush)
         with pytest.raises(RuntimeError, match='real timer failure'):
             await tasks[0]
     finally:

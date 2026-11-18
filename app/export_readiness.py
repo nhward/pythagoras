@@ -1,7 +1,5 @@
 """Explicit prerequisites for publishing a mutable card's data."""
-import asyncio
 from card_position import CardPositionError
-
 from shiny import reactive, req
 from shiny.reactive._core import get_current_context
 from shiny.types import SilentException
@@ -79,14 +77,6 @@ class ExportReadiness:
 
         session.on_ended(close)
 
-        async def flush_publication():
-            # on_flushed runs after Shiny has drained its effect queue. Resume
-            # that queue after releasing the current reactive lock, even when
-            # there are no further browser messages or background completions.
-            async with reactive.lock():
-                if not closed:
-                    await reactive.flush()
-
         @module.reactable()
         def prepare():
             nonlocal revision
@@ -121,7 +111,7 @@ class ExportReadiness:
                 value = error
                 self.phase.set(None)
 
-            async def commit():
+            def commit():
                 if closed or current != revision:
                     return
                 with reactive.isolate():
@@ -129,13 +119,12 @@ class ExportReadiness:
                         published.set(value)
                 ready.set(True)
                 self.phase.set(None)
-                asyncio.create_task(flush_publication())
 
-            session.on_flushed(commit, once=True)
+            session.run_once_when_idle(commit)
 
         @reactive.calc
         def export():
-            req(ready())
+            req(not closed, ready())
             value = published()
             if isinstance(value, Exception):
                 raise value

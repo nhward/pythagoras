@@ -1,5 +1,16 @@
 # Estimator capabilities catalogue, version 1.5.0
 
+Dependency compatibility was rechecked on 2026-11-18 after the environment moved
+to Pandas 3.1.1, Numba 0.68.1 and Narwhals 2.29.0. All 113 recipes with available
+packages passed the existing synthetic probes; their reviewed dependency versions
+and generated probe evidence were refreshed together. The two category_encoders
+recipes (OrdinalEncoder and TargetEncoder) were subsequently rechecked with
+category-encoders 2.11.2 on the same date and both passed, bringing the verified
+recipe count to 115. Shiny is not a
+recipe dependency: upgrading it alone does not invalidate estimator evidence.
+Exact version guards remain in place. Rebuild and rerun the probes after future
+changes to the recorded modelling dependencies.
+
 
 Model descriptions use schema **1.4.0**. `taxonomy.json` is the curated source:
 explicit method groups provide core mechanism, composition, fitting criterion,

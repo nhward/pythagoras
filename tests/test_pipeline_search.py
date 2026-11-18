@@ -446,7 +446,8 @@ def test_catboost_search_can_tune_previously_unset_parameter():
     from catboost import CatBoostRegressor
     model = Pipeline([('predictors', FunctionTransformer(prepare_predictors,
         kw_args={'columns': ['x'], 'preparation': 'numeric'})),
-        ('estimator', CatBoostRegressor(iterations=3, verbose=False, thread_count=1))])
+        ('estimator', CatBoostRegressor(iterations=3, verbose=False, thread_count=1,
+                                       allow_writing_files=False))])
     data = source().with_estimator(model, label='CatBoost', recipe_id='test-catboost')
     key = 'cand_methods__estimator__depth'
     p = prepare(committed_grid(data, {key: [2]}),  method='grid')
@@ -507,3 +508,31 @@ def committed_grid(data, grid):
     return data.with_tuning_spec({'grid': grid,
         'fingerprint': fingerprint(discover_source(data)),
         'combinations': len(ParameterGrid(grid))})
+
+
+def test_search_refits_nominal_schema_for_rare_levels_and_tuned_pooling():
+    from NominalEncodingTransformer import NominalEncodingTransformer
+    from model_commit import build_model
+    from roles import Role
+
+    frame = pd.DataFrame({'x': np.arange(24, dtype=float), 'nominal': ['a'] * 12 + ['b'] * 11 + ['rare'],
+                          'y': np.arange(24, dtype=float) * 2})
+    data = proxy_data(frame, _roles=RoleMap.from_primitive({
+        'predictor': ['x', 'nominal'], 'target': ['y']}))
+    encoder = NominalEncodingTransformer(columns=['nominal'], min_frequency=3)
+    preview = encoder.fit_transform(frame)
+    roles = RoleMap()
+    for column in encoder.output_columns_:
+        roles.set_roles(column, {Role.PREDICTOR})
+    data = data.with_pipeline_step(encoder, name='var_encode', preview_frame=preview,
+                                  added_roles=roles, removed_columns=encoder.removed_columns_)
+    data = data.with_evaluation_plan(build_plan(data, strategy='kfold', objective='independent', folds=3), card='obs_resample')
+    model = build_model({'selectable': True, 'estimator': 'sklearn.linear_model.Ridge',
+                         'profile': {'construction': {'preparation': 'numeric', 'parameters': {}}}}, data.model_predictors)
+    data = data.with_estimator(model, label='Ridge', recipe_id='fold-schema')
+    p = prepare(committed_grid(data, {'var_encode__min_frequency': [None, 3]}), method='grid')
+    result = finish(p, trials=0)
+    assert result['status'] == 'exhausted'
+    assert len(result['trials']) > 1
+    assert all(trial['state'] == 'complete' for trial in result['trials']), [t['error'] for t in result['trials']]
+    validate_checkpoint(p, json.loads(json.dumps(result)))

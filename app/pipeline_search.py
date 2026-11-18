@@ -296,6 +296,8 @@ def _validate_single_checkpoint(problem, checkpoint):
         seen.add(identity)
         if trial['state'] not in {'running', 'complete', 'failed'} or len(trial['folds']) > spec['folds']:
             raise ValueError('Invalid trial state.')
+        if 'failure_kind' in trial and trial['failure_kind'] not in {'fit', 'execution', 'unknown'}:
+            raise ValueError('Invalid trial failure classification.')
         if trial['state'] == 'complete' and len(trial['folds']) != spec['folds']:
             raise ValueError('A completed candidate must include every evaluation fold.')
         if trial['state'] == 'running' and len(trial['folds']) == spec['folds']:
@@ -515,6 +517,15 @@ def skopt_proposal(problem, state):
 
 
 def _proposal(problem, state):
+    if problem.specification['method'] in {'tpe', 'skopt'}:
+        from search_feasibility import feasibility_model, weighted_proposal
+        probability = feasibility_model(problem.specification, state['trials'])
+        if probability is not None:
+            return weighted_proposal(problem, state, _performance_proposal, probability)
+    return _performance_proposal(problem, state)
+
+
+def _performance_proposal(problem, state):
     spec = problem.specification
     seen = {joblib.hash(t['params']) for t in state['trials']}
     grid = ParameterGrid(spec.get('parameter_grids', spec['grid']))
@@ -734,9 +745,10 @@ class _FitRunner:
         tick = time.monotonic()
         try:
             value = evaluate_fold(self.problem, params, fold)
-            return value, '', time.monotonic() - tick
+            return value, '', time.monotonic() - tick, None
         except Exception as exc:  # noqa: BLE001
-            return None, f'{type(exc).__name__}: {exc}', time.monotonic() - tick
+            from search_feasibility import failure_kind
+            return None, f'{type(exc).__name__}: {exc}', time.monotonic() - tick, failure_kind(exc)
 
 
 _PROCESS_RUNNER = None
@@ -836,7 +848,9 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
         if trials is not None:
             limit = min(limit, max(0, trials - (len(state['trials']) - 1)))
         limit = min(limit, spec['combinations'] - grid_coverage(state)['visited'])
-        proposed = skopt_proposals(problem, state, limit) if spec['method'] == 'skopt' and limit else []
+        from search_feasibility import feasibility_model
+        weighted = spec['method'] == 'skopt' and feasibility_model(spec, state['trials']) is not None
+        proposed = skopt_proposals(problem, state, limit) if spec['method'] == 'skopt' and limit and not weighted else []
         batch = []
         for j in range(limit):
             if proposed:
@@ -877,12 +891,14 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
                 if not future.ready():
                     continue
                 trial_id, fold = key
-                value, error, elapsed = future.get()
+                value, error, elapsed, failure = future.get()
                 del inflight[key]
                 trial = state['trials'][trial_id]
                 trial['elapsed'] += elapsed
                 if error:
-                    trial.update(state='failed', error=error)
+                    if trial.get('failure_kind', failure) != failure:
+                        failure = 'unknown'  # Mixed fold failures are not feasibility evidence.
+                    trial.update(state='failed', error=error, failure_kind=failure)
                 else:
                     _store_fold(trial, fold, value)
                     if trial['state'] != 'failed' and len(trial['folds']) == spec['folds']:

@@ -226,7 +226,7 @@ document.addEventListener("click", async (event) => {
             ? "Work through the sections in order, expanding each panel to view and work with its cards."
             : "Work through the sections in order, using the tabs to view and work with each section's cards.");
     add("#ApplicationGuide", "Application guide",
-        "Explore the application controls and sections. Each card also has its own guide. <p>A convenient to navigate the guide is with the ⬅️ and ➡️ arrow keys. The  ␛ key ends the tour.</p>");
+        "Explore the application controls and sections. Each card also has its own guide. <p>A convenient way to navigate the guide is with the ⬅️ and ➡️ arrow keys. The ␛ key ends the tour.</p>");
     add("#ManageCardSection", "Manage cards and sections",
         "Add cards and sections, or change application settings here.");
     add("#SaveConfiguration", "Bookmarks",

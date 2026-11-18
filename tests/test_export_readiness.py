@@ -4,15 +4,9 @@ from types import SimpleNamespace
 import pytest
 from shiny import reactive
 from shiny.types import SilentException
-from shiny.reactive._core import _reactive_environment
 
 from export_readiness import ExportReadiness
 from session_task import SessionExtendedTask
-
-
-@pytest.fixture(autouse=True)
-def fresh_lock(monkeypatch):
-    monkeypatch.setattr(_reactive_environment, "_lock", None)
 
 
 class Session:
@@ -22,6 +16,11 @@ class Session:
 
     def on_flushed(self, callback, once):
         self.callbacks.append(callback)
+
+    def run_once_when_idle(self, callback):
+        async def invoke():
+            callback()
+        self.callbacks.append(invoke)
 
     def on_ended(self, callback):
         self.ended.append(callback)

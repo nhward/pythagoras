@@ -134,3 +134,9 @@ class NominalEncodingTransformer(TransformerMixin, BaseEstimator):
     def get_feature_names_out(self, input_features=None):
         check_is_fitted(self, 'output_features_')
         return np.asarray(self.output_features_,dtype=object)
+
+    @property
+    def predictor_output_groups_(self):
+        """Exact fitted indicator lineage, including constant sources with no outputs."""
+        check_is_fitted(self, 'encodings_')
+        return {source: list(names) for source, (_, _, names) in self.encodings_.items()}

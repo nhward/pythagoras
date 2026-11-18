@@ -83,6 +83,8 @@ class Pipeline(ImbalancedPipeline, FeatureEnginePipeline):
                     fitted, X, y, weight=None, params=params, **logging
                 )
             self.steps[index] = (name, fitted)
+        from model_commit import bind_encoded_predictors
+        bind_encoded_predictors(self.steps[-1][1], self.steps[:-1], X)
         return X, y
 
 

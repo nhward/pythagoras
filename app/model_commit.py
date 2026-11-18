@@ -10,7 +10,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
 
-def prepare_predictors(frame, *, columns, preparation, selected_schema=False):
+def prepare_predictors(frame, *, columns, preparation, selected_schema=False,
+                       encoded_schema=None, encoded_columns=None):
     if selected_schema:
         columns = [c for c in columns if c in frame]
         if not columns:
@@ -98,6 +99,63 @@ def with_selection_schema(estimator, candidates):
     if isinstance(preparation, FunctionTransformer) and preparation.func is prepare_predictors:
         options = dict(preparation.kw_args)
         options['columns'] = list(dict.fromkeys([*options['columns'], *candidates]))
+        if options.get('encoded_columns') is not None:
+            options['encoded_columns'] = list(dict.fromkeys([*options['encoded_columns'], *candidates]))
         options['selected_schema'] = True
         preparation.set_params(kw_args=options)
     return result
+
+
+def with_encoding_schema(estimator, source):
+    """Record approved encoder lineage without fitting on the preview data."""
+    if not isinstance(estimator, Pipeline):
+        return estimator
+    selector = estimator.named_steps.get('predictors')
+    if not isinstance(selector, FunctionTransformer) or selector.func is not prepare_predictors:
+        return estimator
+    schema = {}
+    predictors = set(source.model_predictors)
+    for _, step in (() if source.pipeline is None else source.pipeline.steps):
+        if getattr(step, 'selection_step', False):
+            predictors.update(step.predictors)
+    for record in source.processing_records:
+        groups = record.parameters.get('predictor_output_groups')
+        if groups is not None:
+            schema[record.card] = {
+                'groups': dict(groups),
+                'enabled': [column for column, names in groups.items()
+                            if not names or any(name in predictors for name in names)],
+                'removed': [column for column in groups if column not in source.frame],
+                'excluded': [name for names in groups.values() for name in names if name not in predictors]}
+    if schema:
+        selector.set_params(kw_args=dict(selector.kw_args, encoded_schema=schema,
+            encoded_columns=selector.kw_args.get('encoded_columns', selector.kw_args['columns'])))
+    return estimator
+
+
+def bind_encoded_predictors(estimator, steps, frame):
+    """Replace preview indicators with exact outputs of the fitted fold encoders."""
+    if not isinstance(estimator, Pipeline):
+        return
+    selector = estimator.named_steps.get('predictors')
+    if not isinstance(selector, FunctionTransformer) or selector.func is not prepare_predictors:
+        return
+    options = dict(selector.kw_args)
+    schema = options.get('encoded_schema', {})
+    if not schema:
+        return
+    columns = list(options['encoded_columns'])
+    fitted = dict(steps)
+    for step, definition in schema.items():
+        groups = definition['groups']
+        actual = fitted[step].predictor_output_groups_
+        preview = {name for names in groups.values() for name in names}
+        columns = [name for name in columns if name not in preview and name not in definition['removed']]
+        excluded = set(definition['excluded'])
+        columns.extend(name for source in definition['enabled'] for name in actual.get(source, [])
+                       if name in frame and name not in excluded)
+    # Follow the fold's DataFrame order, retaining missing fixed inputs so that
+    # ordinary schema errors are still reported rather than silently ignored.
+    wanted = set(columns)
+    options['columns'] = [name for name in frame if name in wanted] + [name for name in columns if name not in frame]
+    selector.set_params(kw_args=options)

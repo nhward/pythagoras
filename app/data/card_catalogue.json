@@ -7,7 +7,7 @@
       "module": "cand_methods",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "2724bf9df646acd3e1eecdd5401c5fead2e41ad119cb654c878ca7c50719532b"
+      "source_hash": "d4e1e1ee4a64adc2a7d7bc6fef3562d9b26f2bbc404aca744f0c06a9d384c541"
     },
     "cand_models": {
       "description": "Choose weightings that yield the desired optimal model(s).",
@@ -15,7 +15,7 @@
       "module": "cand_models",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "416f9ba53adc56520fa245c32be084d90e84e0a6ee641034edd9bf98507042bf"
+      "source_hash": "698193c75d321516282ef5cbfab26b84d103cf76e16b23547d3509c52397c413"
     },
     "cand_parameters": {
       "description": "Mark candidate parameters as tuning hyper-parameters.",
@@ -23,7 +23,7 @@
       "module": "cand_parameters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "ab4d167b49fc7d539bf3c85585d074186b8d4552229a689ba06d50027a22aaef"
+      "source_hash": "1964244207b4c4db5b43ef7897c5ffe5135b117db3898198ff422832164a42a5"
     },
     "cand_train": {
       "description": "Train pipelines across candidate methods and hyper-parameters.",
@@ -31,7 +31,7 @@
       "module": "cand_train",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "f55167ba2b4ad8c18454174a6e75b5fcb950e049177515b0e2c77f1fd332cb15"
+      "source_hash": "90d22d3e92b2a9676c0170fecb9852272cbb50d86cbc58f79a4b00ffa0f2886a"
     },
     "data_coverage": {
       "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",
@@ -311,7 +311,7 @@
       "module": "var_modify",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "cc0044281190bf15c235855b6b0cf0eca46bc365406cc53905f115a75043041b"
+      "source_hash": "f0a24d0d49a8b287a40ba0724d2618641dea27a0048577d08c01bc1db60bf268"
     },
     "var_nominal": {
       "description": "Review and commit nominal label corrections and rare-level pooling.",
@@ -343,7 +343,7 @@
       "module": "var_select",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "261efcd340fe3bc9bd6f8d459a9ab6f14fbff2ad7ab975ecde9c5f8c45054200"
+      "source_hash": "cbdd2e2b3b6c37445cc148ad50c32f1a48935e52bbe7876e667abbf34154e0f2"
     },
     "var_text_encode": {
       "description": "Generate numeric text predictors using vocabulary, sentiment, embeddings, latent semantics and text characteristics.",

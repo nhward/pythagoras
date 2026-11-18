@@ -79,7 +79,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -170,7 +170,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -261,7 +261,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -349,7 +349,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -439,7 +439,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -529,7 +529,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -620,7 +620,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -712,7 +712,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -805,7 +805,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -898,7 +898,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -987,7 +987,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1080,7 +1080,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1171,7 +1171,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1263,7 +1263,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1353,7 +1353,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1443,7 +1443,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1532,7 +1532,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1621,7 +1621,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1707,7 +1707,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1800,7 +1800,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1892,7 +1892,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -1984,7 +1984,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2076,7 +2076,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2174,7 +2174,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2271,7 +2271,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2368,7 +2368,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2465,7 +2465,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2563,7 +2563,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2661,7 +2661,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2750,7 +2750,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2832,7 +2832,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2914,7 +2914,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -2997,7 +2997,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3082,7 +3082,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3172,7 +3172,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3262,7 +3262,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3352,7 +3352,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3439,10 +3439,10 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1",
-      "numba": "0.68.0",
+      "numba": "0.68.1",
       "llvmlite": "0.50.0"
     },
     "structure": [
@@ -3528,10 +3528,10 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1",
-      "numba": "0.68.0",
+      "numba": "0.68.1",
       "llvmlite": "0.50.0"
     },
     "structure": [
@@ -3614,11 +3614,11 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1",
       "sklearn-compat": "0.1.6",
-      "narwhals": "2.26.0"
+      "narwhals": "2.29.0"
     },
     "structure": [
       "cross_sectional"
@@ -3702,11 +3702,11 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1",
       "sklearn-compat": "0.1.6",
-      "narwhals": "2.26.0"
+      "narwhals": "2.29.0"
     },
     "structure": [
       "cross_sectional"
@@ -3720,7 +3720,7 @@
     "estimator": "category_encoders.OrdinalEncoder",
     "label": "audited_tabular_recipe",
     "task": "transformer",
-    "reviewed_package_version": "2.11.1",
+    "reviewed_package_version": "2.11.2",
     "construction": {
       "parameters": {
         "handle_unknown": "value",
@@ -3791,7 +3791,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3807,7 +3807,7 @@
     "estimator": "category_encoders.TargetEncoder",
     "label": "audited_tabular_recipe",
     "task": "transformer",
-    "reviewed_package_version": "2.11.1",
+    "reviewed_package_version": "2.11.2",
     "construction": {
       "parameters": {
         "handle_unknown": "value",
@@ -3878,7 +3878,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -3973,7 +3973,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4068,7 +4068,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4159,7 +4159,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4260,7 +4260,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4351,7 +4351,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4441,7 +4441,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4529,7 +4529,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4620,7 +4620,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4710,7 +4710,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4800,7 +4800,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4891,7 +4891,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -4981,7 +4981,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5071,7 +5071,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5160,7 +5160,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5250,7 +5250,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5339,7 +5339,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5428,7 +5428,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5517,7 +5517,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5609,7 +5609,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5698,7 +5698,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5788,7 +5788,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5878,7 +5878,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -5968,7 +5968,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6057,7 +6057,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6149,7 +6149,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6242,7 +6242,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6334,7 +6334,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6425,7 +6425,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6516,7 +6516,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6607,7 +6607,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6702,7 +6702,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6804,7 +6804,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6894,7 +6894,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -6988,7 +6988,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7077,7 +7077,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7167,7 +7167,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7256,7 +7256,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7345,7 +7345,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7434,7 +7434,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7522,7 +7522,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7612,7 +7612,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7702,7 +7702,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7791,7 +7791,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7882,7 +7882,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -7974,7 +7974,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8065,7 +8065,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8155,7 +8155,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8246,7 +8246,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8337,7 +8337,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8427,7 +8427,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8517,7 +8517,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8603,7 +8603,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8691,7 +8691,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8779,7 +8779,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8867,7 +8867,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -8957,7 +8957,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9046,7 +9046,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9132,7 +9132,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9220,7 +9220,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9309,7 +9309,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9396,7 +9396,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9483,7 +9483,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9572,7 +9572,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9658,7 +9658,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9744,7 +9744,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9831,7 +9831,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -9914,7 +9914,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -10000,7 +10000,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -10085,7 +10085,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -10170,7 +10170,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -10273,7 +10273,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },
@@ -10382,7 +10382,7 @@
     },
     "reviewed_dependencies": {
       "numpy": "2.4.6",
-      "pandas": "3.0.6",
+      "pandas": "3.1.1",
       "scipy": "1.17.1",
       "scikit-learn": "1.9.1"
     },

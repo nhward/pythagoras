@@ -1378,3 +1378,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }, {priority: 'event'});
     });
 })();
+
+// Method membership is independent of the single current row used for details.
+(() => {
+    if (window.__pythagorasMethodChecksBound) return;
+    window.__pythagorasMethodChecksBound = true;
+    let sequence = 0;
+    document.addEventListener('change', (event) => {
+        const checkbox = event.target.closest('input[data-method-check-input]');
+        if (!checkbox) return;
+        Shiny.setInputValue(checkbox.dataset.methodCheckInput, {
+            method: checkbox.dataset.methodId, checked: checkbox.checked, sequence: ++sequence,
+        }, {priority: 'event'});
+    });
+})();

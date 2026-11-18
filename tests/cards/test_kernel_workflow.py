@@ -15,7 +15,7 @@ def test_gp_method_kernel_commitment_and_training(page, app):
     page.locator('#cand_methods-ExpandButton').click()
     table = page.locator('#cand_methods-Table')
     expect(table.get_by_text('Gaussian Process', exact=True)).to_be_visible(timeout=30000)
-    table.get_by_text('Gaussian Process', exact=True).click()
+    table.get_by_role('checkbox', name='Select Gaussian Process', exact=True).check()
     page.locator('#cand_methods-Commit').click()
     expect(page.locator('#cand_methods-Status')).to_contain_text('Committed method', timeout=30000)
     page.locator('#cand_methods-Card').hover()

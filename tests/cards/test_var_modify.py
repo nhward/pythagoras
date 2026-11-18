@@ -107,6 +107,10 @@ class FakeSession:
         return None
 
 
+def fake_output(function=None, **options):
+    return function if function is not None else lambda renderer: renderer
+
+
 def closure_values(function) -> dict[str, object]:
     closure = function.__closure__ or ()
     return dict(zip(function.__code__.co_freevars, (cell.cell_contents for cell in closure)))
@@ -148,7 +152,7 @@ def recorded_helpers(card_module, *, frame=None, max_obs=1000):
     with reactive.isolate():
         card._imports.set(proxy)
     inputs = FakeInputs(max_obs=max_obs)
-    card.server(inputs, lambda function: function, FakeSession())
+    card.server(inputs, fake_output, FakeSession())
     inference = closure_values(functions["allowed_d_types"])
     conversion = closure_values(functions["CommitEvent"])
     return card, inputs, functions, inference, conversion
@@ -242,7 +246,7 @@ class TestInstance:
         card.settle = lambda *args, **kwargs: lambda function: function
         with reactive.isolate():
             card._imports.set(proxy_data(_df=seeded_frame(), _name="Test"))
-        card.server(FakeInputs(), lambda function: function, FakeSession())
+        card.server(FakeInputs(), fake_output, FakeSession())
 
         with reactive.isolate():
             saved = card.configuration_state()["modifications"]
@@ -658,3 +662,35 @@ def test_footer_edit_preserves_sorted_grid_and_scroll(page, app):
     assert grid.evaluate('el => Math.abs(el.scrollTop - window.savedModifyScroll) < 2')
     assert grid.locator('tbody tr td:first-child').all_text_contents() == original_order
     table.expect_selected_rows([10])
+
+
+long_diff_app = create_app_fixture(app='../scenarios/var_modify_long_diff.py', scope='function')
+
+
+@pytest.mark.ui
+def test_diff_stays_rendered_and_scrolls_without_hiding_faces(page, long_diff_app):
+    page.set_viewport_size({'width': 1000, 'height': 700})
+    page.goto(long_diff_app.url)
+    diff = by_id(page, 'DFDiff')
+    expect(diff).to_contain_text('renamed_variable_079', timeout=30000)
+    back = by_id(page, 'Back')
+    assert back.evaluate("el => getComputedStyle(el).visibility") == 'visible'
+    assert back.evaluate("el => getComputedStyle(el).display") != 'none'
+    get_card(page).hover()
+    by_id(page, 'FlipButton').click()
+    page.wait_for_timeout(1400)
+    report = page.locator('.var-modify-diff')
+    assert report.evaluate('el => el.scrollHeight > el.clientHeight')
+    assert report.evaluate("el => getComputedStyle(el).overflowY") == 'auto'
+    report.hover()
+    page.mouse.wheel(0, 600)
+    page.wait_for_function("document.querySelector('.var-modify-diff').scrollTop > 0")
+    assert by_id(page, 'Front').evaluate("el => getComputedStyle(el).visibility") == 'visible'
+    by_id(page, 'FlipButton').click()
+    page.wait_for_timeout(1400)
+    expect(diff).to_contain_text('renamed_variable_079')
+    assert back.evaluate("el => getComputedStyle(el).visibility") == 'visible'
+    grid = page.locator('.var-modify-table .shiny-data-grid')
+    grid.hover()
+    page.mouse.wheel(0, 300)
+    page.wait_for_function("document.querySelector('.var-modify-table .shiny-data-grid').scrollTop > 0")

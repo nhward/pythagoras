@@ -991,6 +991,19 @@ touch-action: pan-y;
 .model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
 
 .var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-diff {
+flex: 1 1 0;
+min-height: 0;
+overflow-y: auto !important; 
+overflow-x: hidden;
+scrollbar-gutter: stable;
+}
+.var-modify-diff > .shiny-html-output { flex: 0 0 auto; }
+
+.flip-container:has(.var-modify-table).flipped > .flippable > .front,
+.flip-container:has(.var-modify-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+}
 .var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
 .var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
 .var-modify-table .shiny-data-grid > table > thead {
@@ -1010,12 +1023,37 @@ background: var(--bs-body-bg, white);
 .nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
 .nominal-navbar .navbar-brand:empty { display: none; }
 .nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
-.nominal-navbar.force-collapse {flex-wrap: wrap;}
-.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
 .nominal-navbar.force-collapse .navbar-toggler {display: block;}
-.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
 .nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
 .nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid {
+flex-wrap: nowrap;
+align-items: flex-start;
+column-gap: 0.25rem;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) .navbar-brand:empty {
+display: none;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-toggler {
+flex: 0 0 auto;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-collapse {
+flex: 1 1 0%;
+min-width: 0;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input {
+flex-direction: row;
+flex-wrap: wrap;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item {
+min-width: 0;
+max-width: 100%;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item > .nav-link {
+white-space: normal;
+overflow-wrap: anywhere;
+}
 .nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
 
 .tuning-search { display: none; }
@@ -1069,7 +1107,6 @@ visibility: hidden;
 display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
 }
 .front > div:has(> .tuning-parameters-table) { min-height: 0; }
-.front > div:has(> .tuning-parameters-editor),
 .front > div:has(> .tuning-parameters-message),
 .front > .tuning-search,
 .front > .tuning-parameters-message { flex: 0 0 auto; }
@@ -1116,10 +1153,10 @@ top: 0;
 z-index: 2;
 background: var(--bs-body-bg, white);
 }
+
 .flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
 .flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
 pointer-events: none;
-visibility: hidden;
 }
 
 .model-candidates-differences {
@@ -1148,8 +1185,28 @@ font-weight: 600;
 
 .cand-models-panels { flex: 0 0 auto !important; min-height: 0; }
 .cand-models-panels .tab-content { display: none; }
-.cand-models-weights { width: 100%; min-width: 0; }
-.cand-models-weights .shiny-input-container { width: 100% !important; margin-bottom: 0; }
+.cand-models-weights {
+min-width: 0;
+max-width: 100%;
+flex: 0 0 auto;
+align-self: center;
+margin-inline: auto;
+padding: .5rem 1.5rem;
+border-radius: var(--bs-border-radius-pill, 50rem);
+background: var(--bs-primary);
+color: white;
+}
+
+.cand-models-weights .shiny-input-container { margin-bottom: 0; }
+.cand-models-weights :is(.irs-line, .irs-bar, .irs-handle) {
+background: white;
+border-color: white;
+}
+.cand-models-weights :is(.irs-grid-pol, .irs-grid-pol.small) { background: white; }
+.cand-models-weights :is(.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single) {
+color: white;
+background: transparent;
+}
 .cand-models-weights .shiny-text-output { line-height: 1.5; height: 1.5em; min-height: 1.5em !important; overflow: auto; font-size: .85rem; }
 .flip-container:has(.cand-models-panels).flipped > .flippable > .front,
 .flip-container:has(.cand-models-panels):not(.flipped) > .flippable > .back {
@@ -1158,6 +1215,12 @@ visibility: hidden;
 }
 .cand-models-status { flex: 0 0 2.6em; height: 2.6em; min-height: 2.6em !important; line-height: 1.3; overflow: auto; font-size: .85rem; }
 .cand-models-status .shiny-text-output { min-height: 0 !important; }
+
+.tuning-row-toggle { float: none; margin: 0; cursor: pointer; }
+.tuning-row-toggle:disabled { cursor: not-allowed; }
+.tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
+.tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
+#shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
 </style>
 </head>
 
@@ -1223,6 +1286,7 @@ visibility: hidden;
 <p>If no plan is defined, searches generate shuffled five-fold CV with the search seed. Classification stratifies by target; regression uses K-fold. The fold count is reduced to the available number of observed targets and, for classification, the smallest observed class count. At least two folds and two classes are required for classification. Missing-target rows are reserved for prediction and excluded from every fit and score. No final holdout is invented.</p>
 <p>This automatic fallback assumes independent rows. Assigned Partition, Sequence, Geometry or Stratifier roles, or repeated Identifiers, require an explicit upstream plan so their intended boundaries are not guessed. The implicit split strategy and origin are shown in progress and included in the search fingerprint and checkpoint specification. Splits remain fixed across candidates and resumes. Generating an implicit search plan does not modify the upstream source or commit an evaluation plan to it. A selected estimator that itself uses CV retains that internal behavior; search CV is an additional outer evaluation layer, not a switch disabling its CV.</p>
 <p>Bayesian GP uses <code>skopt.Optimizer</code> ask/tell rather than handing evaluation to <code>BayesSearchCV</code>. This preserves our fold checkpoints, cancellation and evidence publication. Its state is reconstructed from actual completed in-grid trials; only JSON history is saved, not a serialized optimizer.</p>
+<p>Bayesian TPE and Bayesian GP also learn fit feasibility separately from performance. After at least four in-grid observations including both successful fits and classified fit failures, a small classifier weights proposed configurations by their estimated chance of fitting successfully. Failed fits receive no invented score. Proposal acceptance retains a 10% exploration floor and bounded retries, so suspected problem regions remain searchable. Random and Exhaustive are unchanged. Execution/resource failures, schema lookup failures and unclassified errors are excluded from feasibility learning. Older failures without a recorded classification are also excluded. When every fit fails, search continues exploring because there is no successful region to learn. The classifier is rebuilt from recorded history on resume; it is not saved as a fitted model.</p>
 <p><strong>Result refresh interval (seconds)</strong> controls how often completed results are published while tuning (default: five seconds; zero publishes every completed update). The chart, best-result statement and downstream Model candidates evidence share the same snapshot. Continuous completions do not postpone the next refresh. Final results are published promptly when tuning stops. The candidate table uses the same refresh interval, while progress and worker communication remain frequent. This setting is saved with the card and does not change the search identity.</p>
 <p>The history chart keeps its existing widget and method traces. Its x-axis spans the finite combination count plus starting configurations. The initial y-axis spans zero to twice the first completed score (with a nonzero fallback for a zero score), and expands only if a later score falls outside that range. New results update existing point arrays rather than creating another chart widget.</p>
 <h4 id="parallel-execution">Parallel execution</h4>

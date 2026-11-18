@@ -218,7 +218,7 @@ def instance():
         ui.input_select('Metric', label='Primary objective', choices={'': 'Waiting for committed model'},
             guide=this, position='left', title='Primary objective',
             text='Choose the metric that ranks completed trials. Its label states whether lower or higher is better.'),
-        ui.input_select('Method', label='Search method', choices=METHODS, selected='random',
+        ui.input_radio_buttons('Method', label='Search method', choices=METHODS, selected='random',
             guide=this, position='left', title='Search method',
             text='The following options are available:'
                  '<ul>'
@@ -284,12 +284,43 @@ def instance():
         published_state = reactive.Value(None)
         publication = CompletedTrialPublication()
         message = reactive.Value(restore_error)
+        failure_notice = None
+
+        @reactive.effect
+        def NotifyFailures():
+            nonlocal failure_notice
+            current = state()
+            failures = [] if current is None else [t for t in current['trials'] if t['state'] == 'failed'][:10]
+            notice = None if not failures else (
+                current['specification']['fingerprint'],
+                tuple((t['id'], t['error']) for t in failures))
+            if notice == failure_notice:
+                return
+            failure_notice = notice
+            notification_id = this.ns('FitFailures')
+            if notice is None:
+                ui.notification_remove(notification_id)
+                return
+            ui.notification_show(ui.TagList(
+                ui.strong('Training failures (first 10 maximum)'),
+                ui.p('The complete failure list is available in the flip-side results table.'),
+                ui.tags.ol(*[ui.tags.li(
+                    ui.strong(f"Trial {t['id'] + 1} · {t.get('method', t['model_id'])}"),
+                    ui.tags.pre(json.dumps({k: v for k, v in t['params'].items() if k != '__method__'}),
+                                style='white-space: pre-wrap; overflow-wrap: anywhere;'),
+                    ui.div(t['error'] or 'Fit failed without an error message.', style='overflow-wrap: anywhere;'))
+                    for t in failures], style='max-height: 20rem; overflow-y: auto; padding-left: 1.5rem;')),
+                id=notification_id, type='error', duration=None, close_button=True)
+
         worker = SearchWorker()
+        
         def cleanup():
             worker.close()
             with reactive.isolate(): current = state()
             evidence_store.remove(evidence_store.references(current))
+        
         session.on_ended(cleanup)
+        
         this.register_configuration_state_provider('search', lambda: {
             'checkpoint': evidence_store.portable_checkpoint(state()),
             'source_signature': evidence_source()})
@@ -393,9 +424,11 @@ def instance():
         def Poll():
             active = this._active()
             state()  # Play also wakes this poller when it was idle.
-            if not active: worker.pause()
+            if not active: 
+                worker.pause()
             latest = worker.poll()
-            if latest is not None: state.set(latest)
+            if latest is not None: 
+                state.set(latest)
             if worker.running:
                 invalidate_later(.3)
             elif worker.process is not None:
@@ -407,7 +440,8 @@ def instance():
         def Start():
             try:
                 problem, error = Problem()
-                if problem is None: raise ValueError(error)
+                if problem is None: 
+                    raise ValueError(error)
                 if worker.running: raise ValueError('Pause the current search before starting another.')
                 current = state()
                 if (current is not None and current['status'] != 'exhausted'
@@ -416,12 +450,16 @@ def instance():
                     worker.start(problem, checkpoint, *_budgets())
                     state.set(dict(checkpoint, status='running'))
                     message.set('Fitting resumed; Exhaustive ignores candidate and time budgets.' if problem.specification['method'] == 'grid' else 'Fitting resumed; budgets are cumulative.')
+                    this.log.info("Pipeline fitting resumed")
                     return
                 if current is not None:
                     message.set('Cannot resume this search; history retained. Cancel to clear it before starting again.')
                     return
                 start_fresh(problem)
-            except (ValueError, TypeError, RuntimeError) as exc: message.set(str(exc))
+            except (ValueError, TypeError, RuntimeError) as exc: 
+                e = str(exc)
+                this.log.error(e)
+                message.set(e)
 
         def start_fresh(problem):
             initial = fresh(problem)
@@ -432,6 +470,7 @@ def instance():
             evidence_source.set(Incoming()._tuning_evidence_signature())
             state.set(dict(initial, status='running'))
             message.set('Fitting started. Each method’s committed starting configuration is evaluated first.')
+            this.log.info("Pipeline fitting started")
 
         def _budgets():
             if input.Method() == 'grid':
@@ -446,6 +485,7 @@ def instance():
         @this.reactable(triggers=[input.Pause])
         def Pause():
             worker.pause(); message.set('Pause requested; the current fold will finish and be checkpointed.')
+            this.log.info("Fitting paused")
 
         @this.reactable(triggers=[input.Cancel])
         def Cancel():
@@ -456,6 +496,7 @@ def instance():
             evidence_source.set(None)
             state.set(None)
             message.set('Tuning cancelled and history cleared. Play starts a new search.')
+            this.log.info("Fitting cancelled")
 
         @output
         @render.text
@@ -476,8 +517,6 @@ def instance():
             if current['specification']['fingerprint'] != problem.specification['fingerprint']:
                 return 'Search is stale: inputs changed. Restore the original settings to resume, or Cancel to clear history and start again.'
             completed = [t for t in current['trials'] if t['state'] == 'complete']
-            # best = max(completed, key=lambda t: mean_score(t, problem.specification['metric']), default=None)
-            # detail = f" · Best so far: trial {best['id'] + 1} ({displayed(mean_score(best, problem.specification['metric']), problem.specification['metric']):.5g})" if best else ''
             active = [t for t in current['trials'] if t['state'] == 'running']
             fold = (f" · {len(active)} active trials: {sum(len(t['folds']) for t in active)}/"
                     f"{len(active) * problem.specification['folds']} splits completed") if active else ''
@@ -488,7 +527,6 @@ def instance():
                 coverage_text = (f" · {label}: {coverage['complete']} of {coverage['total']} grid configurations completed"
                                  f"; {coverage['failed']} failed; starting configurations evaluated separately")
             status_label = {'running': 'Running', 'exhausted': 'Finished', 'budget reached': 'Halted', 'paused': 'Halted'}.get(current['status'], current['status'])
-            # return f"{status_label} · {len(completed)} complete · {sum(t['state'] == 'failed' for t in current['trials'])} failed · {current['elapsed']:.1f}s{detail}{fold}" + f' · {split_label}' + coverage_text + (f" · {current['error']}" if current.get('error') else '')
             return f"{status_label} · {len(completed)} complete · {sum(t['state'] == 'failed' for t in current['trials'])} failed · {current['elapsed']:.1f}s{fold}" + f' · {split_label}' + coverage_text + (f" · {current['error']}" if current.get('error') else '')
 
         @output
@@ -502,14 +540,10 @@ def instance():
             best = max(completed, key=lambda t: mean_score(t, spec['metric']))
             problem, _ = Problem()
             stale = problem is None or spec['fingerprint'] != problem.specification['fingerprint']
-            # baseline = next((t for t in completed if t['kind'] == 'baseline' and t.get('model_id') == best.get('model_id')), None)
-            # improvement = (f" · Improvement over starting configuration: {mean_score(best, spec['metric']) - mean_score(baseline, spec['metric']):.4g}"
-            #                if baseline else '')
             values = [ui.span(best_parameter_label(path, best), ' = ', ui.code(json.dumps(value)), '; ')
                       for path, value in sorted(best['params'].items()) if path != '__method__']
             return ui.TagList(
                 ui.strong(f"{'Previous search (stale): best' if stale else 'Best parameters found so far'} · Trial {best['id'] + 1} · {best.get('method', best.get('model_id', ''))}"),
-                # ui.div(f"{METRICS[spec['task']][spec['metric']]}: {displayed(mean_score(best, spec['metric']), spec['metric']):.4g}{improvement}"),
                 ui.div(f"{METRICS[spec['task']][spec['metric']]}: {displayed(mean_score(best, spec['metric']), spec['metric']):.4g}"),
                 ui.div(*values) if values else ui.div('No parameters enabled; the committed configuration was evaluated.'),
             )
@@ -547,8 +581,12 @@ def instance():
         @render.data_frame
         def Candidates():
             current = table_state()
-            return render.DataGrid(trial_frame(current).round(3) if current else pd.DataFrame(columns=['Trial', 'State', 'Score']),
-                                   selection_mode='row', height='100%', filters=False)
+            return render.DataGrid(
+                trial_frame(current).round(3) if current else pd.DataFrame(columns=['Trial', 'State', 'Score']),
+                selection_mode='row', 
+                height='100%', 
+                filters=False
+            )
 
         @this.reactable(calc=True)
         def Exported():

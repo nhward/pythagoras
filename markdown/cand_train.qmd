@@ -90,6 +90,7 @@ plan to it. A selected estimator that itself uses CV retains that internal behav
 Bayesian GP uses `skopt.Optimizer` ask/tell rather than handing evaluation to `BayesSearchCV`. This preserves our fold checkpoints, cancellation and
 evidence publication. Its state is reconstructed from actual completed in-grid trials; only JSON history is saved, not a serialized optimizer.
 
+Bayesian TPE and Bayesian GP also learn fit feasibility separately from performance. After at least four in-grid observations including both successful fits and classified fit failures, a small classifier weights proposed configurations by their estimated chance of fitting successfully. Failed fits receive no invented score. Proposal acceptance retains a 10% exploration floor and bounded retries, so suspected problem regions remain searchable. Random and Exhaustive are unchanged. Execution/resource failures, schema lookup failures and unclassified errors are excluded from feasibility learning. Older failures without a recorded classification are also excluded. When every fit fails, search continues exploring because there is no successful region to learn. The classifier is rebuilt from recorded history on resume; it is not saved as a fitted model.
 
 **Result refresh interval (seconds)** controls how often completed results are published while tuning (default: five seconds; zero publishes every completed
 update). The chart, best-result statement and downstream Model candidates evidence share the same snapshot. Continuous completions do not postpone the next refresh.

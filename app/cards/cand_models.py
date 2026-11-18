@@ -52,15 +52,18 @@ def instance():
                            class_='btn rounded-pill btn-sm d-block mx-auto btn-primary',
                            style='border: 0px; box-shadow: none;'),
     )
-    this.footer = lambda: ui.div(
-        ui.input_slider('Weights', label='Score | Throughput | P95 error', min=0, max=100,
-                        value=(100, 100), step=1, width='100%', drag_range=False,
-                        guide=this, title='Selection preferences', position='top',
-                        text='The three slider segments allocate Score, Throughput and P95 error weights. '
-                             'Both handles at the right give Score 100%. Selection changes on release.'),
-        ui.output_text('WeightSummary'),
-        class_='cand-models-weights',
+    this.footer = lambda: ui.TagList(
+        ui.div(
+            ui.input_slider('Weights', label=None, min=0, max=100,
+                            value=(100, 100), step=1, width='100%', drag_range=False, post="%",
+                            guide=this, title='Selection preferences', position='top',
+                            text='The three slider segments allocate Score, Throughput and P95 error weights. '
+                                 'Both handles at the right give Score 100%. Selection changes on release.'),
+            class_='cand-models-weights', style='width: calc(50% + 3rem);'
+        ),
+        ui.output_text('WeightSummary')
     )
+
 
     def settings():
         return ui.TagList(

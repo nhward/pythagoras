@@ -6,6 +6,7 @@ from contextvars import ContextVar
 
 from export_readiness import equivalent
 from shiny import reactive, req
+from shiny.reactive._core import _reactive_environment
 from shiny.reactive._reactives import DestroyedReactiveError
 from shiny.session import get_current_session
 from shiny.types import SilentOperationInProgressException
@@ -18,7 +19,7 @@ class SessionExtendedTask(reactive.ExtendedTask):
 
     Shiny schedules result publication separately from the worker task. Cancelling
     the worker alone therefore cannot prevent a write to destroyed reactive values.
-    This adapter mirrors that callback, checking closure inside the reactive lock.
+    This adapter mirrors that callback, checking closure again at the next session idle cycle.
     """
 
     def __init__(self, func):
@@ -28,7 +29,7 @@ class SessionExtendedTask(reactive.ExtendedTask):
         self._restart_owner = None
         self._pending_restart = None
         self._arguments = reactive.Value()
-        session = get_current_session()
+        session = self._publication_session = get_current_session()
         if session is not None:
             session.on_ended(self.close)
             session.on_destroy(self.close)
@@ -105,29 +106,41 @@ class SessionExtendedTask(reactive.ExtendedTask):
         # Retrieve failures even when shutdown prevents publishing them.
         error = None if task.cancelled() else task.exception()
 
-        async def publish():
-            async with reactive.lock():
-                if self._closed or generation != self._generation:
-                    return
-                try:
-                    if task.cancelled():
-                        self.status.set("cancelled")
-                    elif error is not None:
-                        self._arguments.set(arguments)
-                        self.error.set(error)
-                        self.status.set("error")
-                    else:
-                        self._arguments.set(arguments)
-                        self.value.set(task.result())
-                        self.status.set("success")
-                except DestroyedReactiveError:
-                    # A module scope can be destroyed independently of its session.
-                    self.close()
-                    return
-                await reactive.flush()
-                if (not self._closed and generation == self._generation
-                        and self._invocation_queue):
-                    self._invocation_queue.pop(0)()
-                    await reactive.flush()
+        def restart():
+            if (not self._closed and generation == self._generation
+                    and self._invocation_queue):
+                self._invocation_queue.pop(0)()
 
-        asyncio.create_task(publish())
+        async def restart_after_round():
+            await _reactive_environment.run_next_round()
+            restart()
+
+        def publish():
+            if self._closed or generation != self._generation:
+                return
+            try:
+                if task.cancelled():
+                    self.status.set("cancelled")
+                elif error is not None:
+                    self._arguments.set(arguments)
+                    self.error.set(error)
+                    self.status.set("error")
+                else:
+                    self._arguments.set(arguments)
+                    self.value.set(task.result())
+                    self.status.set("success")
+            except DestroyedReactiveError:
+                self.close()
+                return
+            # Let dependents consume this result before starting queued work.
+            if self._publication_session is not None:
+                self._publication_session.run_once_when_idle(restart)
+            else:
+                done = asyncio.create_task(restart_after_round())
+                self._done_tasks.add(done)
+                done.add_done_callback(self._done_tasks.discard)
+
+        if self._publication_session is not None:
+            self._publication_session.run_once_when_idle(publish)
+        else:
+            asyncio.get_running_loop().call_soon(publish)

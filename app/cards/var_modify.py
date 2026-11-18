@@ -241,8 +241,8 @@ def instance():
 
 
     this.front = lambda: ui.div(
-        ui.output_data_frame(
-            id="Table",
+        ui.output_ui(
+            id="Table2",
             title="Table of variables",
             text="Choose a variable from this table and alter the name, data type, or cyclic order.",
             guide=this,
@@ -257,6 +257,7 @@ def instance():
         this.guidedDiv(
             ui.output_ui(id="DFDiff"),
             id="X-DFDiff",
+            class_="var-modify-diff",
             guide=this,
             title="Change report",
             text="This report lists structural changes to the dataset by this card.",
@@ -519,6 +520,15 @@ def instance():
             return schema
 
         @output
+        @render.ui
+        @this.record_context
+        def Table2():
+            req(incomingproxy_data() is not None)
+            # Recreate on source changes: moving a card reconnects Shiny's
+            # custom element, which can append a second internal grid.
+            return ui.output_data_frame(id = "Table")
+
+        @output
         @render.data_frame
         @this.record_context
         def Table():
@@ -776,7 +786,6 @@ def instance():
             """
             Small, stable text representation for a structural diff.
             """
-            req(not this.isFront())
             lines = [f"rows: {len(df)}", f"columns: {len(df.columns)}"]
             for col in df.columns:
                 s = df[col]
@@ -786,8 +795,7 @@ def instance():
                     lines.append(f"{col}: dtype={s.dtype}, missing={int(s.isna().sum())}, unique={s.nunique(dropna=True)}")
             return lines
 
-        @output
-
+        @output(suspend_when_hidden=False)
         @render.ui
         @this.record_context
         def DFDiff():

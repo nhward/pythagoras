@@ -1010,12 +1010,37 @@ background: var(--bs-body-bg, white);
 .nominal-navbar > .container-fluid { padding-inline: 0.35rem; }
 .nominal-navbar .navbar-brand:empty { display: none; }
 .nominal-navbar .nav-link { padding: 0.2rem 0.45rem; font-size: 0.85rem; }
-.nominal-navbar.force-collapse {flex-wrap: wrap;}
-.nominal-navbar.force-collapse > .container-fluid {flex-wrap: wrap;}
 .nominal-navbar.force-collapse .navbar-toggler {display: block;}
-.nominal-navbar.force-collapse .navbar-collapse {flex-basis: 100%; flex-grow: 1;}
 .nominal-navbar.force-collapse .navbar-collapse.collapse:not(.show) {display: none !important;}
 .nominal-navbar.force-collapse .navbar-collapse.show {display: block !important;}
+
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid {
+flex-wrap: nowrap;
+align-items: flex-start;
+column-gap: 0.25rem;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) .navbar-brand:empty {
+display: none;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-toggler {
+flex: 0 0 auto;
+}
+.navbar:has(> .container-fluid > .navbar-collapse > .shiny-tab-input) > .container-fluid > .navbar-collapse {
+flex: 1 1 0%;
+min-width: 0;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input {
+flex-direction: row;
+flex-wrap: wrap;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item {
+min-width: 0;
+max-width: 100%;
+}
+.navbar-collapse > .navbar-nav.shiny-tab-input > .nav-item > .nav-link {
+white-space: normal;
+overflow-wrap: anywhere;
+}
 .nominal-navbar .navbar-collapse .nav-underline { --bs-nav-underline-border-width: 2px; }
 
 .tuning-search { display: none; }
@@ -1069,7 +1094,6 @@ visibility: hidden;
 display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
 }
 .front > div:has(> .tuning-parameters-table) { min-height: 0; }
-.front > div:has(> .tuning-parameters-editor),
 .front > div:has(> .tuning-parameters-message),
 .front > .tuning-search,
 .front > .tuning-parameters-message { flex: 0 0 auto; }
@@ -1158,6 +1182,12 @@ visibility: hidden;
 }
 .cand-models-status { flex: 0 0 2.6em; height: 2.6em; min-height: 2.6em !important; line-height: 1.3; overflow: auto; font-size: .85rem; }
 .cand-models-status .shiny-text-output { min-height: 0 !important; }
+
+.tuning-row-toggle { float: none; margin: 0; cursor: pointer; }
+.tuning-row-toggle:disabled { cursor: not-allowed; }
+.tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
+.tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
+#shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
 </style>
 </head>
 
@@ -1175,7 +1205,7 @@ visibility: hidden;
 <p>Place <strong>Candidate models</strong> after <strong>Pipeline tuning</strong>. This experimental card supports continuous regression. It chooses one completed configuration overall, and one within each candidate method. It does not fit models or construct an ensemble. All completed evidence is considered, including configurations outside the former score-based shortlist.</p>
 <h3 id="chart-and-tabs">Chart and tabs</h3>
 <p><strong>Overall</strong> compares configurations across methods. Each method tab compares configurations within that method. Tabs change the view only: the Overall winner is always the pipeline exported downstream. Method winners are recorded in tuning review metadata as zero-based trial identities; their complete evaluated pipelines remain available in the evidence for later ensemble work. Preprocessing may differ between those pipelines.</p>
-<p>Rotate the 3D chart by dragging, zoom with the wheel and inspect points by hovering. The axes show the primary tuning score, observed prediction rows per second and P95 absolute error. Method colours remain consistent across tabs. The scene uses Pythagoras’s standard pale-blue background.</p>
+<p>Rotate the 3D chart by dragging, zoom with the wheel and inspect points by hovering. The axes show the primary tuning score, observed prediction rows per second and P95 absolute error. Method colors remain consistent across tabs. The scene uses Pythagoras’s standard pale-blue background.</p>
 <h3 id="what-the-pareto-frontier-means">What the Pareto frontier means</h3>
 <p>A configuration is <strong>dominated</strong> when another configuration in the current tab is at least as good on all three criteria and strictly better on at least one:</p>
 <ul>
@@ -1197,7 +1227,7 @@ visibility: hidden;
 </thead>
 <tbody>
 <tr class="odd">
-<td>Method colour</td>
+<td>Method color</td>
 <td>Model method, as identified in the fullscreen legend and hover text</td>
 </tr>
 <tr class="even">
@@ -1222,7 +1252,7 @@ visibility: hidden;
 <p>A missing or invalid positively weighted criterion makes a configuration ineligible. A zero-weight criterion does not exclude it. Exact weighted-product ties prefer the three-axis Pareto frontier, then the primary score and finally the stable trial identity. If no eligible winner exists, the incoming pipeline passes through without a new selection. Historical read-only evidence is displayed but never applied as a pipeline.</p>
 <h3 id="comparison-details">Comparison details</h3>
 <p>All candidate methods are implicitly eligible. Interpretability descriptions are provided for review and do not certify transparency. Old saved method filters are ignored and omitted from newly saved configuration.</p>
-<p>The flip side shows all eligible configurations in the current tab, the Overall and method winners, scores, diagnostic evidence and parameter differences. Rows labelled <strong>Best score (reference)</strong> are emphasised. Selecting a row opens the comparison details; clearing the selection closes them. <strong>Download</strong> exports the current tab’s eligible table and winner indicators.</p>
+<p>The flip side shows all eligible configurations in the current tab, the Overall and method winners, scores, diagnostic evidence and parameter differences. Rows labelled <strong>Best score (reference)</strong> are emphasized. Selecting a row opens the comparison details; clearing the selection closes them. <strong>Download</strong> exports the current tab’s eligible table and winner indicators.</p>
 <p><strong>RMSE/MAE</strong> is diagnostic only: the ratio of mean fold RMSE to mean fold MAE. It describes disproportionate error magnitudes and is unchanged if every error is multiplied by a constant. It does not quantify absolute tail risk. Perfect predictions have an undefined ratio, shown as missing. P95 is the mean of repeat-level 95th absolute-error percentiles, not a pooled percentile. It can miss very rare extreme errors. Throughput is observed warm validation-batch timing, including preprocessing, rather than a production benchmark.</p>
 <p>Practical equivalence compares configurations against their method’s best primary-scoring trial. It requires suitable repeated shuffled CV and an application-based tolerance. It does not constrain weighted selection. All tuning comparisons are exploratory and subject to selection bias. Use independent validation before making deployment decisions. No automatic ensemble is created.</p>
 <p>Weights, floor and comparison settings are saved with the card. Winner identities are recalculated from current compatible evidence when restoring. Stale upstream evidence cannot be applied to a changed source.</p>

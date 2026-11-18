@@ -991,6 +991,19 @@ touch-action: pan-y;
 .model-method-recipe > summary { padding: .7rem; border-radius: .5rem; background: var(--bs-tertiary-bg, #f3f7f9); color: #176078; font-weight: 600; overflow-wrap: anywhere; }
 
 .var-modify-table { min-height: 0; min-width: 0; overflow: hidden; }
+.var-modify-diff {
+flex: 1 1 0;
+min-height: 0;
+overflow-y: auto !important; 
+overflow-x: hidden;
+scrollbar-gutter: stable;
+}
+.var-modify-diff > .shiny-html-output { flex: 0 0 auto; }
+
+.flip-container:has(.var-modify-table).flipped > .flippable > .front,
+.flip-container:has(.var-modify-table):not(.flipped) > .flippable > .back {
+pointer-events: none;
+}
 .var-modify-table shiny-data-frame { min-height: 0; flex: 1 1 auto; }
 .var-modify-table .shiny-data-grid { min-height: 0; overflow: auto; }
 .var-modify-table .shiny-data-grid > table > thead {
@@ -1140,10 +1153,10 @@ top: 0;
 z-index: 2;
 background: var(--bs-body-bg, white);
 }
+
 .flip-container:has(.data-tabulation-structure).flipped > .flippable > .front,
 .flip-container:has(.data-tabulation-structure):not(.flipped) > .flippable > .back {
 pointer-events: none;
-visibility: hidden;
 }
 
 .model-candidates-differences {
@@ -1172,8 +1185,28 @@ font-weight: 600;
 
 .cand-models-panels { flex: 0 0 auto !important; min-height: 0; }
 .cand-models-panels .tab-content { display: none; }
-.cand-models-weights { width: 100%; min-width: 0; }
-.cand-models-weights .shiny-input-container { width: 100% !important; margin-bottom: 0; }
+.cand-models-weights {
+min-width: 0;
+max-width: 100%;
+flex: 0 0 auto;
+align-self: center;
+margin-inline: auto;
+padding: .5rem 1.5rem;
+border-radius: var(--bs-border-radius-pill, 50rem);
+background: var(--bs-primary);
+color: white;
+}
+
+.cand-models-weights .shiny-input-container { margin-bottom: 0; }
+.cand-models-weights :is(.irs-line, .irs-bar, .irs-handle) {
+background: white;
+border-color: white;
+}
+.cand-models-weights :is(.irs-grid-pol, .irs-grid-pol.small) { background: white; }
+.cand-models-weights :is(.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single) {
+color: white;
+background: transparent;
+}
 .cand-models-weights .shiny-text-output { line-height: 1.5; height: 1.5em; min-height: 1.5em !important; overflow: auto; font-size: .85rem; }
 .flip-container:has(.cand-models-panels).flipped > .flippable > .front,
 .flip-container:has(.cand-models-panels):not(.flipped) > .flippable > .back {
@@ -1188,6 +1221,7 @@ visibility: hidden;
 .tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
 .tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
 #shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
+.method-row-check { float: none; margin: 0; cursor: pointer; }
 </style>
 </head>
 
@@ -1205,7 +1239,7 @@ visibility: hidden;
 <h4 id="purpose">Purpose</h4>
 <p>Define a finite search space for the transformations and model already present in the incoming pipeline. This card does not choose methods, run a search, or fit models. Multiple methods committed upstream contribute separate conditional parameter branches.</p>
 <h4 id="front">Front</h4>
-<p>The columns are <strong>Tune</strong>, <strong>Edit</strong>, <strong>Parameter</strong>, <strong>Source</strong>, <strong>Search values</strong>, <strong>Current value</strong>, <strong>Reason</strong>, and <strong>Purpose</strong>, in that order. Tune contains a checkbox and Edit contains a button for each row. Rows initially follow discovery order; checking Tune does not reorder them. You can sort the descriptive columns. Source uses the card’s long name, with numbered instances shown as <code>(1)</code>, <code>(2)</code>, and so on. Nested components remain visible after <code>›</code>; the underlying sklearn parameter paths are unchanged. Search accepts both long names and technical source names. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.</p>
+<p>The columns are <strong>Tune</strong>, <strong>Edit</strong>, <strong>Parameter</strong>, <strong>Source</strong>, <strong>Search values</strong>, <strong>Current value</strong>, <strong>Reason</strong>, and <strong>Purpose</strong>, in that order. Tune contains a checkbox and Edit contains a button for each row. Rows initially follow discovery order; checking Tune does not reorder them. Commit moves checked parameters to the top, clears any previous table sort and makes the first row current. The flip-side review is unchanged. You can sort the descriptive columns. Source uses the card’s long name, with numbered instances shown as <code>(1)</code>, <code>(2)</code>, and so on. Nested components remain visible after <code>›</code>; the underlying sklearn parameter paths are unchanged. Search accepts both long names and technical source names. Nested model parameters are included when a model has been committed upstream. Composite estimator objects are represented by their constituent parameters rather than offered as replaceable models.</p>
 <p>Use <strong>Find parameter or source</strong> to narrow the table, then use its <strong>Edit</strong> button. A modal shows the technical parameter path, implementation class, purpose, reason and documentation link. The table fills the available card area; there is no editor beneath it.</p>
 <p>The <strong>Show parameters</strong> radio buttons offer progressively broader views:</p>
 <ul>

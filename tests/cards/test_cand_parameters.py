@@ -375,3 +375,27 @@ def test_row_actions_are_namespaced_between_card_instances(page, double_app):
     other.get_by_role('checkbox').check()
     expect(second.locator('[id$="-Status"]')).to_contain_text('3 possible combinations')
     expect(first.locator('[id$="-Status"]')).to_contain_text('4 possible combinations')
+
+
+@pytest.mark.ui
+def test_commit_promotes_checked_parameters_and_focuses_first_row(page, app):
+    page.goto(app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table).to_contain_text('Observation missingness proportion', timeout=30000)
+    table.get_by_text('Parameter', exact=True).click()
+    table.get_by_text('Parameter', exact=True).click()
+    boxes = table.locator('input.tuning-row-toggle:enabled')
+    chosen = [boxes.nth(i).get_attribute('data-tuning-path') for i in (1, 3)]
+    labels = [boxes.nth(i).get_attribute('aria-label') for i in (1, 3)]
+    before = table.locator('tbody tr').all_text_contents()
+    for label in labels:
+        table.get_by_role('checkbox', name=label, exact=True).check()
+    assert table.locator('tbody tr').all_text_contents() == before
+    table.locator('.shiny-data-grid').evaluate('el => el.scrollTop = el.scrollHeight')
+    page.locator('[id$="-Commit"]').click()
+    expect(table.locator('tbody tr').nth(0).get_by_role('checkbox')).to_be_checked()
+    expect(table.locator('tbody tr').nth(1).get_by_role('checkbox')).to_be_checked()
+    expect(table.locator('tbody tr').first).to_have_attribute('aria-selected', 'true')
+    expect(table.locator('tbody tr').first).to_be_in_viewport()
+    assert set(table.locator('tbody tr').nth(i).get_by_role('checkbox').get_attribute('data-tuning-path') for i in (0, 1)) == set(chosen)
+    expect(table.locator('input.tuning-row-toggle:checked')).to_have_count(2)

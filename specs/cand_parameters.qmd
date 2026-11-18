@@ -10,7 +10,7 @@ Each draft is keyed by full sklearn parameter path and implementation class. Fin
 
 The front table fills the card and has columns Tune, Edit, Parameter, Source,
 Search values, Current value, Reason and Purpose. Tune/Edit are HTML control
-columns and not sort keys; there is no automatic Tune sort or row selection.
+columns and not sort keys; there is no automatic Tune sort. Single-row selection only identifies the current row; it does not affect tuning or the flip-side review. Commit promotes active paths in current view order, clears the previous sort and selects the first visible row. Subsequent draft edits preserve that ordering until the next Commit.
 Initial discovery order and user sorting/scroll survive draft updates via
 DataGrid.update_data. Stable path, owner, discovery fingerprint and card namespace
 identify row events; displayed indices never identify parameters. One delegated

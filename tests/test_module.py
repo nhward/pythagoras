@@ -799,8 +799,6 @@ def test_suspend_cancels_owned_tasks_before_reactables():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("event_triggered", [False, True])
 async def test_navigation_preserves_cache_and_restarts_only_cancelled_work(monkeypatch, event_triggered):
-    from shiny.reactive._core import _reactive_environment
-    monkeypatch.setattr(_reactive_environment, "_lock", None)
     module = DummyModule("navigation")
     source = reactive.Value(1)
     release = asyncio.Event()
