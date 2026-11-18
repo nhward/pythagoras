@@ -262,3 +262,43 @@ class TestWebKitUI:
             expect(table).to_contain_text(heading)
         expect(table).to_contain_text("shifted")
         expect(table).to_contain_text("Strong")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize('sizes', [(2, 3), (20, 200), (200, 5000)])
+def test_fast_numeric_drift_matches_linear_quantile_definition(card_module, sizes):
+    rng = np.random.default_rng(84)
+    left, right = rng.normal(size=sizes[0]), rng.normal(size=sizes[1])
+    quantiles = np.linspace(0, 1, max(sizes))
+    combined = np.r_[left, right]
+    scale = np.percentile(combined, 75) - np.percentile(combined, 25)
+    distance = np.mean(np.abs(np.quantile(left, quantiles) - np.quantile(right, quantiles)))
+    expected = 1 - np.exp(-distance / scale)
+    assert card_module._numeric_drift(pd.Series(left), pd.Series(right)) == pytest.approx(expected, abs=1e-12)
+
+
+@pytest.mark.ui
+def test_threshold_and_fullscreen_reuse_calibration_and_widget(page, app):
+    page.goto(app.url)
+    expect(by_id(page, 'Check')).to_contain_text('Compared 3 variables', timeout=30000)
+    plot = by_id(page, 'DriftChart').locator('.js-plotly-plot')
+    expect(plot).to_be_visible()
+    plot.evaluate('el => window.homogeneityPlot = el')
+    def runs(sequence):
+        by_id(page, 'ProbeRuns').evaluate('(el, value) => Shiny.setInputValue(el.id, value, {priority:"event"})', sequence)
+        page.wait_for_timeout(100)
+        return int(by_id(page, 'AnalysisRuns').inner_text())
+    before = runs(1)
+    by_id(page, 'Threshold').evaluate('(el) => Shiny.setInputValue(el.id, 0.6, {priority:"event"})')
+    page.wait_for_function("() => document.querySelector('[id$=\"-DriftChart\"] .js-plotly-plot')?.data?.[0]?.colorscale?.[2]?.[0] === 0.6")
+    page.wait_for_timeout(2500)  # Include the settings debounce, not just the repaint.
+    assert runs(2) == before
+    assert plot.evaluate('el => el === window.homogeneityPlot')
+    get_card(page).hover()
+    by_id(page, 'ExpandButton').click()
+    page.wait_for_timeout(700)
+    assert runs(3) == before
+    assert plot.evaluate('el => el === window.homogeneityPlot')
+    by_id(page, 'Groups').evaluate('(el) => Shiny.setInputValue(el.id, 6, {priority:"event"})')
+    expect(by_id(page, 'Check')).to_contain_text('6 sequential groups', timeout=30000)
+    assert runs(4) > before

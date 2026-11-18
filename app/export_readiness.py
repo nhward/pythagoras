@@ -1,4 +1,6 @@
 """Explicit prerequisites for publishing a mutable card's data."""
+import logging
+
 from card_position import CardPositionError
 from shiny import reactive, req
 from shiny.reactive._core import get_current_context
@@ -105,9 +107,11 @@ class ExportReadiness:
                 self.phase.set(None)
             except SilentException:
                 return
-            except Exception as error:  # noqa: BLE001
+            except Exception as error:
                 # Report failures through the public calculation. Letting an
                 # exception escape a producer effect would close the session.
+                logging.getLogger('pythagoras.exports').exception(
+                    'Export preparation failed for %s', getattr(module, 'namespace', type(module).__name__))
                 value = error
                 self.phase.set(None)
 

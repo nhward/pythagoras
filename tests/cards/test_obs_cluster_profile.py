@@ -37,6 +37,35 @@ def analyze(data=None,**kwargs):
 
 @pytest.mark.unit
 class TestProfile:
+    @pytest.mark.parametrize('categorical', [False, True])
+    def test_cyclic_predictors_with_missing_values_are_profiled(self, categorical):
+        from cyclic_pandas import CyclicDtype
+        from pandas.testing import assert_frame_equal
+
+        data = source()
+        dtype = CyclicDtype(categories=['Mon', 'Tue', 'Wed']) if categorical else CyclicDtype(period=12)
+        values = ['Mon', 'Tue', None, 'Wed'] if categorical else [1, 2, None, 3]
+        data.frame['cycle'] = pd.Series(np.resize(values, len(data)), dtype=dtype)
+        data.role_map.set_roles('cycle', [Role.PREDICTOR])
+        original = data.frame.copy(deep=True)
+        result = analyze(data)
+        assert not result.message
+        assert result.model is not None
+        assert result.predictors == ['x', 'category', 'cycle']
+        assert np.isfinite(result.accuracy)
+        assert_frame_equal(data.frame, original)
+
+    def test_caught_profiling_error_logs_its_traceback(self, monkeypatch, caplog):
+        def broken_features(*args):
+            raise TypeError('feature conversion failed')
+        monkeypatch.setattr(m, '_feature_frame', broken_features)
+        result = analyze()
+        assert result.message == 'feature conversion failed'
+        failures = [record for record in caplog.records if 'Cluster profiling failed for' in record.getMessage()]
+        assert len(failures) == 1
+        assert failures[0].exc_info[0] is TypeError
+        assert failures[0].exc_info[2] is not None
+
     @pytest.mark.parametrize('name', ['cluster__partition', 'cluster__mixture', 'cluster__density_2'])
     def test_current_generated_names_are_found_without_membership_leakage(self, name):
         data = source()
@@ -198,27 +227,32 @@ def test_target_switch_and_weighting_option(page,app):
 
 @pytest.mark.ui
 def test_dynamic_membership_tabs_and_empty_state(page,app):
+    errors = []
+    page.on('console', lambda message: errors.append(message.text) if message.type == 'error' else None)
     page.goto(app.url)
     expect(by_id(page,'Accuracy')).to_contain_text('CV accuracy',timeout=60000)
     expect(page.get_by_role('tab',name='Partition',exact=True)).to_be_visible()
     page.get_by_role('tab',name='Density_2',exact=True).click()
     expect(by_id(page,'Tree_cluster__density_2').locator('.js-plotly-plot')).to_be_visible()
     expect(by_id(page,'Accuracy')).to_contain_text('Density_2:')
-    by_id(page,'RemoveMemberships').click()
-    expect(page.get_by_role('tab',name='No memberships',exact=True)).to_be_visible()
-    expect(page.get_by_role('tab',name='Partition',exact=True)).to_have_count(0)
-    expect(by_id(page,'Accuracy')).to_contain_text('Assign a cluster-named column the Stratifier role.',timeout=60000)
-    empty = by_id(page,'EmptyTree').locator('.js-plotly-plot')
-    expect(empty).to_be_visible()
-    state = empty.evaluate('el => ({images: el.layout.images.length, message: el.layout.annotations[0].text})')
-    assert state['images'] == 1
-    assert 'No cluster membership' in state['message']
-    by_id(page,'RestoreMemberships').click()
-    expect(page.get_by_role('tab',name='Partition',exact=True)).to_be_visible()
-    expect(page.get_by_role('tab',name='No memberships',exact=True)).to_have_count(0)
-    expect(by_id(page,'Accuracy')).to_contain_text('Partition:',timeout=60000)
-    page.get_by_role('tab',name='Density_2',exact=True).click()
-    expect(by_id(page,'Tree_cluster__density_2').locator('.js-plotly-plot')).to_be_visible()
+    assert not [message for message in errors if 'Unexpected error while closing model' in message]
+    for _ in range(2):
+        by_id(page,'RemoveMemberships').click()
+        expect(page.get_by_role('tab',name='No memberships',exact=True)).to_be_visible()
+        expect(page.get_by_role('tab',name='Partition',exact=True)).to_have_count(0)
+        expect(by_id(page,'Accuracy')).to_contain_text('Assign a cluster-named column the Stratifier role.',timeout=60000)
+        empty = by_id(page,'EmptyTree').locator('.js-plotly-plot')
+        expect(empty).to_be_visible()
+        state = empty.evaluate('el => ({images: el.layout.images.length, message: el.layout.annotations[0].text})')
+        assert state['images'] == 1
+        assert 'No cluster membership' in state['message']
+        by_id(page,'RestoreMemberships').click()
+        expect(page.get_by_role('tab',name='Partition',exact=True)).to_be_visible()
+        expect(page.get_by_role('tab',name='No memberships',exact=True)).to_have_count(0)
+        expect(by_id(page,'Accuracy')).to_contain_text('Partition:',timeout=60000)
+        page.get_by_role('tab',name='Density_2',exact=True).click()
+        expect(by_id(page,'Tree_cluster__density_2').locator('.js-plotly-plot')).to_be_visible()
+        expect(page.get_by_text('No model found for id', exact=False)).to_have_count(0)
     expect(by_id(page,'PassThrough')).to_contain_text('unchanged=True')
 
 restored_app = create_app_fixture(app='../scenarios/obs_cluster_profile_restored.py',scope='function')

@@ -1,0 +1,283 @@
+[
+  {
+    "action": "Update",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "installed-initial"
+  },
+  {
+    "action": "Replace",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "installed-initial"
+  },
+  {
+    "action": "Remove",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "installed-initial"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [
+      "Unexpected error while closing model: TypeError: undefined is not an object (evaluating 'delete t.model.views[r]')"
+    ],
+    "page_errors": [],
+    "variant": "installed-initial"
+  },
+  {
+    "action": "Update",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "retain-model"
+  },
+  {
+    "action": "Replace",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "retain-model"
+  },
+  {
+    "action": "Remove",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "retain-model"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [
+      "Unexpected error while closing model: TypeError: undefined is not an object (evaluating 'delete t.model.views[r]')"
+    ],
+    "page_errors": [],
+    "variant": "installed"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [
+      "Unexpected error while closing model: TypeError: undefined is not an object (evaluating 'delete t.model.views[r]')"
+    ],
+    "page_errors": [],
+    "variant": "retain-model"
+  },
+  {
+    "action": "Update",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "model-close-only"
+  },
+  {
+    "action": "Replace",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "model-close-only"
+  },
+  {
+    "action": "Remove",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "model-close-only"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [
+      "Unexpected error while closing model: TypeError: undefined is not an object (evaluating 'delete t.model.views[r]')"
+    ],
+    "page_errors": [],
+    "variant": "model-close-only"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [
+      "Unexpected error while closing model: TypeError: undefined is not an object (evaluating 'delete t.model.views[r]')"
+    ],
+    "page_errors": [],
+    "variant": "retain-model-verified"
+  },
+  {
+    "action": "Update",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "registry-guard"
+  },
+  {
+    "action": "Replace",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "registry-guard"
+  },
+  {
+    "action": "Remove",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "registry-guard"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [],
+    "page_errors": [],
+    "variant": "registry-guard"
+  },
+  {
+    "action": "Close",
+    "browser": "webkit",
+    "versions": {
+      "shiny": "1.9.0",
+      "shinywidgets": "0.8.2",
+      "ipywidgets": "8.1.9",
+      "anywidget": "0.11.0",
+      "plotly": "7.1.0"
+    },
+    "console_errors": [
+      "Unexpected error while closing model: TypeError: undefined is not an object (evaluating 'delete t.model.views[r]')"
+    ],
+    "page_errors": [],
+    "removal_events": [
+      "WIDGET_REMOVAL {\"hasModel\":true,\"hasViews\":false}"
+    ],
+    "variant": "instrumented-model-close-only"
+  }
+]

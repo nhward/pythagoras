@@ -71,7 +71,12 @@ class MissingnessTransformer(TransformerMixin, BaseEstimator):
         positions = np.arange(len(frame))
         if training and self.row_filter_ is not None and len(frame):
             # Position-based selection also works with duplicate source labels.
-            positions = self.row_filter_.transform(frame.reset_index(drop=True)).index.to_numpy()
+            # Feature-engine's transform uses deprecated dropna(inplace=True).
+            # Apply its fitted rule without mutating the temporary DataFrame.
+            positions = frame.reset_index(drop=True).dropna(
+                thresh=len(self.row_filter_.variables_) * self.row_filter_.threshold,
+                subset=self.row_filter_.variables_,
+            ).index.to_numpy()
         return frame.iloc[positions].copy(), positions
 
     def transform(self, X):

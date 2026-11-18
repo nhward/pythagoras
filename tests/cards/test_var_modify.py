@@ -196,7 +196,7 @@ class TestInstance:
 
     @pytest.mark.unit
     def test_front_back_footer_and_settings_controls(self, card):
-        assert 'id="Table"' in str(card.front)
+        assert 'id="Table2"' in str(card.front)
         assert 'id="DFDiff"' in str(card.back)
         footer = str(card.footer)
         for control in ("NewName", "NewDataType", "NewOrder", "Commit", "Reset"):

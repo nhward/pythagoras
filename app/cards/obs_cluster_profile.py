@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 import sys
@@ -28,7 +29,7 @@ from plotly.colors import qualitative
 from proxy_data import proxy_data
 from roles import Role
 from shiny import reactive, render, req, ui
-from shiny.types import SilentOperationInProgressException
+from shiny.types import SilentException, SilentOperationInProgressException
 from shiny.ui.fill import as_fill_item, as_fillable_container
 from shinywidgets import render_widget
 from sklearn.compose import ColumnTransformer
@@ -39,6 +40,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeClassifier
+from widget_lifecycle import update_figure
 
 from cards.miss_informative import _feature_frame
 
@@ -126,7 +128,7 @@ def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
                    and not str(c).startswith(Card.SHADOW_PREFIX)
                    and not pd.api.types.is_complex_dtype(frame[c].dtype)
                    and getattr(frame[c].dtype, 'name', None) != 'geometry'
-                   and not frame[c].map(lambda v: isinstance(v, (list, dict, set, tuple, np.ndarray))).any()]
+                   and not any(isinstance(v, (list, dict, set, tuple, np.ndarray)) for v in frame[c])]
         x, numeric, categorical = _feature_frame(frame.iloc[positions].reset_index(drop=True), columns)
         # No imputation or category vocabulary is learned outside a training fold.
         if x.shape[1] == 0:
@@ -160,6 +162,7 @@ def _analyze(data, target=None, *, depth=3, leaf=.02, folds=5, limit=5000,
             'Importance mass': matrix.sum(axis=1), 'CV Recall': matrix.diagonal() / matrix.sum(axis=1)})
         result.rules = _rules(result)
     except (ValueError, TypeError) as error:
+        logging.getLogger('pythagoras.clusters').exception('Cluster profiling failed for %s', target)
         result.message = str(error)
     return result
 
@@ -249,7 +252,7 @@ def instance():
     this.description = 'Explain cluster memberships using an interpretable tree and held-out fidelity scores.'
 
     this.front = lambda: ui.navset_bar(
-        ui.nav_panel('No memberships', shinywidgets.output_widget('EmptyTree', fill=True), value='__empty__'),
+        ui.nav_panel('Preparing memberships', ui.div('Preparing cluster profiles…'), value='__pending__'),
         id='Membership', title=None, padding=0, fillable=True)
         
     this.back = lambda: ui.navset_tab(
@@ -280,8 +283,11 @@ def instance():
         busy = this.busy()
         restored = this.restored_configuration_input('Membership', None)
         restore_pending = True
-        current_tabs = ('__empty__',)
-        registered = set()
+        current_tabs = ('__pending__',)
+        registered = {}
+        tree_generation = 0
+        tree_widgets = {}
+        tree_revision = reactive.Value(0)
 
         @this.reactable(calc=True)
         @this.record_context
@@ -309,22 +315,45 @@ def instance():
             selected = input.Membership()
             return selected if selected in targets else (targets[0] if targets else None)
 
-        def register_tree(target):
-            output_id = 'Tree_' + target
+        def register_tree(target, output_id):
             @output(id=output_id)
             @render_widget
-            @this.record_context
             def tree():
+                if output_id not in tree_widgets:
+                    widget = go.FigureWidget(Card.empty_figure('No cluster membership columns.' if target == '__empty__'
+                                                             else 'Preparing cluster profile…'))
+                    widget._config = {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
+                    tree_widgets[output_id] = widget
+                with reactive.isolate():
+                    tree_revision.set(tree_revision() + 1)
+                return tree_widgets[output_id]
+
+        @this.reactable()
+        async def UpdateTreeFigures():
+            tree_revision()
+            error = None
+            try:
                 results = Profiles()
-                req(target in results, cancel_output=True)
-                widget = go.FigureWidget(_figure(results[target]))
-                widget._config = {'displayModeBar':bool(this.isFullScreen()), 'displaylogo':False, 'responsive':True}
-                return widget
+            except SilentException:
+                raise
+            except Exception as exception:
+                logging.getLogger(__name__).exception('Cluster profiling failed')
+                results, error = {}, f'{type(exception).__name__}: {exception}'
+            full = bool(this.isFullScreen())
+            for target, output_id in list(registered.items()):
+                if output_id not in tree_widgets:
+                    continue
+                widget = tree_widgets[output_id]
+                figure = Card.empty_figure('No cluster membership columns.') if target == '__empty__' else (
+                    _figure(results[target]) if target in results else Card.empty_figure(error or 'Preparing cluster profile…'))
+                config = {'displayModeBar': full and target != '__empty__', 'displaylogo': False, 'responsive': True}
+                if update_figure(widget, figure, config):
+                    await session.send_custom_message('update_plotly_config', {'id': this.ns(output_id), 'config': config})
 
         @this.reactable()
         @this.record_context
         def UpdateTabs():
-            nonlocal current_tabs, restore_pending
+            nonlocal current_tabs, restore_pending, tree_generation
             targets = Targets()
             desired = targets or ('__empty__',)
             with reactive.isolate():
@@ -336,15 +365,19 @@ def instance():
             for target in desired:
                 if target in current_tabs:
                     continue
+                tree_generation += 1
+                output_id = f'TreeView_{tree_generation}'
+                register_tree(target, output_id)
+                registered[target] = output_id
                 if target == '__empty__':
-                    panel = ui.nav_panel('No memberships', shinywidgets.output_widget('EmptyTree', fill=True), value=target)
+                    panel = ui.nav_panel('No memberships', ui.div(
+                        shinywidgets.output_widget(output_id, fill=True), id=this.ns('EmptyTree'),
+                        class_='html-fill-container html-fill-item'), value=target)
                 else:
-                    if target not in registered:
-                        register_tree(target)
-                        registered.add(target)
                     panel = ui.nav_panel(target.removeprefix("cluster__").title(),
-                        shinywidgets.output_widget(
-                            id='Tree_' + target, fill=True, 
+                        this.guidedDiv(
+                            shinywidgets.output_widget(output_id, fill=True),
+                            id='Tree_' + target, class_='html-fill-container html-fill-item',
                             guide=this, title=f'{target} decision tree', position='left',
                             text='Each tab explains one Stratifier-role cluster membership using Predictor-role variables. All membership columns are excluded from predictors. Left branches satisfy ≤; right branches mean >. Nodes show predicted cluster, training purity, and row count. One-hot category splits ≤0.5 mean absent. The footer reports held-out accuracy for this tab; the flip side compares all trees. These associations explain existing labels, not causes.'
                         ),
@@ -359,6 +392,10 @@ def instance():
             for target in current_tabs:
                 if target not in desired:
                     ui.remove_nav_panel('Membership', target=target)
+                    old_output = registered.pop(target, None)
+                    if old_output is not None:
+                        output.remove(old_output)
+                        tree_widgets.pop(old_output, None)
             current_tabs = desired
             if targets:
                 restore_pending = False
@@ -396,14 +433,6 @@ def instance():
         def Analysis():
             results = Profiles()
             return results.get(SelectedTarget(), Profile(None, message='Assign a cluster-named column the Stratifier role.'))
-
-        @output
-        @render_widget
-        @this.record_context
-        def EmptyTree():
-            widget = go.FigureWidget(Card.empty_figure('No cluster membership columns.'))
-            widget._config = {'displayModeBar':False, 'displaylogo':False}
-            return widget
 
         @output
         @render.ui

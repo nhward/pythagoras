@@ -9,7 +9,7 @@ from shiny import reactive, req
 from shiny.reactive._core import _reactive_environment
 from shiny.reactive._reactives import DestroyedReactiveError
 from shiny.session import get_current_session
-from shiny.types import SilentOperationInProgressException
+from shiny.types import SilentException, SilentOperationInProgressException
 
 task_restart_context = ContextVar("task_restart_context", default=None)
 
@@ -105,6 +105,10 @@ class SessionExtendedTask(reactive.ExtendedTask):
         arguments = self._running_arguments
         # Retrieve failures even when shutdown prevents publishing them.
         error = None if task.cancelled() else task.exception()
+        if error is not None and not isinstance(error, SilentException):
+            logging.getLogger('pythagoras.tasks').error(
+                'Background task failed: %s', self._func.__qualname__,
+                exc_info=(type(error), error, error.__traceback__))
 
         def restart():
             if (not self._closed and generation == self._generation

@@ -367,11 +367,15 @@ class TestMembershipCoverage:
         assert result.predictors == ['x', 'y']
         np.testing.assert_allclose(result.coordinates, analyze().coordinates)
 
-    def test_no_varying_predictors_has_explanation(self):
+    def test_no_varying_predictors_has_explanation(self, caplog):
         result = analyze(proxy_data(_df=pd.DataFrame({'constant': [1., 1., 1.]})))
         assert result.error
         assert not result.labels
         assert m._figure(result, 'Partition').layout.annotations[0].text == result.error
+        failures = [record for record in caplog.records if record.getMessage() == 'Cluster preparation failed']
+        assert len(failures) == 1
+        assert failures[0].exc_info[0] is ValueError
+        assert failures[0].exc_info[2] is not None
 
     def test_spectral_disconnected_graph_is_explained(self):
         result = analyze(neighbours=1)
@@ -514,6 +518,8 @@ large_app = create_app_fixture(app="../scenarios/obs_clusters_large.py", scope="
 def test_idle_membership_table_and_charts_settle(page, request, fixture_name):
     """A rendered card must not continually rebuild its table or Plotly DOM."""
     app = request.getfixturevalue(fixture_name)
+    errors = []
+    page.on('console', lambda message: errors.append(message.text) if message.type == 'error' else None)
     page.goto(app.url)
     expect(by_id(page, 'Status')).to_contain_text('rows analyzed', timeout=60000)
     expect(by_id(page, 'Membership').locator('.shiny-data-grid')).to_have_count(0)
@@ -536,6 +542,9 @@ def test_idle_membership_table_and_charts_settle(page, request, fixture_name):
         return window.clusterIdleMutations;
     }""")
     assert counts == {}, counts
+    assert not [message for message in errors if any(text in message for text in (
+        'Unexpected error while closing model', 'Error cleaning up view', 'No model found for id'))]
+
     if fixture_name == "large_app":
         page.locator('.card').first.hover()
         by_id(page, 'FlipButton').click(force=True)

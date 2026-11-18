@@ -129,3 +129,5 @@ selections, using optional profile `default_for_new_selection`; old recipe IDs r
 unchanged. All scalar kernel choices, optimizer controls and adapter implementation
 participate in the existing search fingerprint and checkpoint validation. Accepted
 parameters reconstruct unfitted native GP pipelines with the selected kernel.
+
+Commit and bookmark restoration explicitly reset the grid scroll window through the shared `table_scroll_top` browser handler. The reset is scoped to the output ID and reapplied briefly during virtualized layout reconciliation; wheel or pointer input cancels it. Restored checked rows are promoted before scrolling, including legacy bookmarks without a saved promotion order. This presentation change does not alter the flip-side contents.

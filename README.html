@@ -54,8 +54,6 @@ border: none; display: inline-block;
 padding: 0 4px; width: 4em;
 }
 pre.numberSource { margin-left: 3em; padding-left: 4px; }
-div.sourceCode
-{ }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
@@ -1220,8 +1218,28 @@ font-weight: 600;
 
 .cand-models-panels { flex: 0 0 auto !important; min-height: 0; }
 .cand-models-panels .tab-content { display: none; }
-.cand-models-weights { width: 100%; min-width: 0; }
-.cand-models-weights .shiny-input-container { width: 100% !important; margin-bottom: 0; }
+.cand-models-weights {
+min-width: 0;
+max-width: 100%;
+flex: 0 0 auto;
+align-self: center;
+margin-inline: auto;
+padding: .5rem 1.5rem;
+border-radius: var(--bs-border-radius-pill, 50rem);
+background: var(--bs-primary);
+color: white;
+}
+
+.cand-models-weights .shiny-input-container { margin-bottom: 0; }
+.cand-models-weights :is(.irs-line, .irs-bar, .irs-handle) {
+background: white;
+border-color: white;
+}
+.cand-models-weights :is(.irs-grid-pol, .irs-grid-pol.small) { background: white; }
+.cand-models-weights :is(.irs-grid-text, .irs-min, .irs-max, .irs-from, .irs-to, .irs-single) {
+color: white;
+background: transparent;
+}
 .cand-models-weights .shiny-text-output { line-height: 1.5; height: 1.5em; min-height: 1.5em !important; overflow: auto; font-size: .85rem; }
 .flip-container:has(.cand-models-panels).flipped > .flippable > .front,
 .flip-container:has(.cand-models-panels):not(.flipped) > .flippable > .back {
@@ -1236,6 +1254,7 @@ visibility: hidden;
 .tuning-row-edit { padding: .1rem .4rem; white-space: nowrap; }
 .tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
 #shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
+.method-row-check { float: none; margin: 0; cursor: pointer; }
 </style>
 </head>
 

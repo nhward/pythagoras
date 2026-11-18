@@ -2,11 +2,10 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from shiny import reactive
-from shiny.types import SilentException
-
 from export_readiness import ExportReadiness
 from session_task import SessionExtendedTask
+from shiny import reactive
+from shiny.types import SilentException
 
 
 class Session:
@@ -161,7 +160,7 @@ async def test_task_readiness_rejects_old_results_without_waiting_for_diagnostic
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_obsolete_flush_callback_and_export_error_do_not_publish_stale_data():
+async def test_obsolete_flush_callback_and_export_error_do_not_publish_stale_data(caplog):
     contract = ExportReadiness()
     session = Session()
     state = reactive.Value("old")
@@ -191,6 +190,10 @@ async def test_obsolete_flush_callback_and_export_error_do_not_publish_stale_dat
         await session.flush()  # The producer effect must not raise.
         with reactive.isolate(), pytest.raises(ValueError, match="invalid transformation"):
             export()
+        failures = [record for record in caplog.records if 'Export preparation failed' in record.getMessage()]
+        assert len(failures) == 1
+        assert failures[0].exc_info[0] is ValueError
+        assert failures[0].exc_info[2] is not None
         state.set("recovered")
         await session.flush()
         with reactive.isolate():

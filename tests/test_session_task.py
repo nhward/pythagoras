@@ -2,8 +2,8 @@
 import asyncio
 
 import pytest
-from shiny import reactive
 import session_task as m
+from shiny import reactive
 from shiny.types import SilentException, SilentOperationInProgressException
 
 
@@ -152,7 +152,7 @@ async def test_completion_after_values_destroyed(monkeypatch, outcome, close_ses
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_normal_results_errors_cancellation_and_queue():
+async def test_normal_results_errors_cancellation_and_queue(caplog):
     calls = []
     @m.SessionExtendedTask
     async def task(value):
@@ -171,6 +171,10 @@ async def test_normal_results_errors_cancellation_and_queue():
     await drain()
     with reactive.isolate(), pytest.raises(ValueError, match='worker failed'):
         task.result()
+    failures = [record for record in caplog.records if 'Background task failed' in record.getMessage()]
+    assert len(failures) == 1
+    assert failures[0].exc_info[0] is ValueError
+    assert failures[0].exc_info[2] is not None
     task.invoke(3)
     task.cancel()
     await drain()

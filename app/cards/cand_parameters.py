@@ -107,10 +107,11 @@ def instance():
         message = reactive.Value('')
         editing = reactive.Value(None)
         modal_error = reactive.Value('')
-        promoted = reactive.Value([])
+        promoted = reactive.Value(restored.get('promoted', []) if isinstance(restored, dict) else [])
+        restore_view_pending = bool(restored)
         def tuning_state():
             current = committed()
-            return {'drafts': deepcopy(drafts()),
+            return {'drafts': deepcopy(drafts()), 'promoted': list(promoted()),
                     'committed': deepcopy(pending_commitment if pending_commitment is not None else current)}
         this.register_configuration_state_provider('tuning', tuning_state)
 
@@ -213,8 +214,24 @@ def instance():
             input.Search()
             input.Visibility()
             with reactive.isolate():
+                if restore_view_pending:
+                    checked = [row['path'] for row in Rows() if definition(row).get('active')]
+                    promoted.set([path for path in promoted() if path in checked] +
+                                 [path for path in checked if path not in promoted()])
                 frame = DisplayFrame()
             return render.DataGrid(frame, selection_mode='row', width="100%", height='100%')
+
+        async def scroll_to_top():
+            await session.send_custom_message('table_scroll_top', {'id': this.ns('Table2')})
+
+        @this.reactable()
+        async def RestoreTableView():
+            nonlocal restore_view_pending
+            Table2.data_view_rows()  # Wait until the browser has bound its grid.
+            if restore_view_pending:
+                restore_view_pending = False
+                await Table2.update_sort([])
+                await scroll_to_top()
 
         @this.reactable(triggers=[drafts])
         async def RefreshDrafts():
@@ -339,6 +356,7 @@ def instance():
                 await Table2.update_data(frame)
                 await Table2.update_sort([])
                 await Table2.update_cell_selection({'type': 'row', 'rows': [0] if len(frame) else []})
+                await scroll_to_top()
             except ValueError as exc:
                 message.set(str(exc))
 

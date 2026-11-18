@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import sys
 from copy import deepcopy
@@ -30,11 +31,12 @@ from scipy.cluster.hierarchy import cut_tree, linkage
 from scipy.sparse.csgraph import connected_components
 from scipy.spatial.distance import pdist, squareform
 from shiny import reactive, render, req, ui
-from shiny.types import SilentOperationInProgressException
+from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.cluster import DBSCAN, KMeans, SpectralClustering
 from sklearn.manifold import TSNE
 from sklearn.mixture import GaussianMixture
+from widget_lifecycle import WidgetSlot, update_figure
 
 from cards.obs_k_clusters import _diana, _importance_weights, _pam
 
@@ -228,8 +230,10 @@ def _analyze(data, *, limit=1000, standardize=True, use_weights=True, metric="eu
                 result.labels[method] = np.array(["Noise" if label < 0 else mapping[label] for label in labels])
                 result.notes[method] = note
             except (ValueError, np.linalg.LinAlgError) as error:
+                logging.getLogger('pythagoras.clusters').exception('Cluster method failed: %s', method)
                 result.notes[method] = str(error)
     except (ValueError, np.linalg.LinAlgError) as error:
+        logging.getLogger('pythagoras.clusters').exception('Cluster preparation failed')
         result.error = str(error)
     return result
 
@@ -645,14 +649,41 @@ def instance():
                 return ui.span(prefix, class_ = "text-primary")
             return ui.span(prefix + (result.error or result.notes.get(method, "")) + (" " + message.get() if message.get() else ""), class_ = "text-primary")
 
+        @this.reactable(calc=True)
+        def ChartAnalysis():
+            try:
+                return Analysis(), None
+            except SilentException:
+                raise
+            except Exception as error:  # Display task failures without closing the session.
+                logging.getLogger(__name__).exception('Cluster analysis failed')
+                return None, f'{type(error).__name__}: {error}'
+
         def register_chart(method):
+            slot = WidgetSlot(session)
+            instance = reactive.Value(None)
+
             @output(id=f"Chart_{method}")
             @render_widget
-            @this.record_context
             def chart():
-                widget = go.FigureWidget(_figure(Analysis(), method, bool(this.isFullScreen())))
-                widget._config = {"displayModeBar": bool(this.isFullScreen()), "displaylogo": False}
+                widget = go.FigureWidget(Card.empty_figure('Preparing cluster view…'))
+                widget._config = {"displayModeBar": False, "displaylogo": False}
+                slot.replace(widget)
+                instance.set(widget)
                 return widget
+
+            @this.reactable()
+            async def UpdateChart():
+                widget = instance()
+                req(widget is not None)
+                full = bool(this.isFullScreen())
+                config = {"displayModeBar": full, "displaylogo": False}
+                result, error = ChartAnalysis()
+                figure = Card.empty_figure(error) if error else _figure(result, method, full)
+                if update_figure(widget, figure, config):
+                    await session.send_custom_message('update_plotly_config',
+                        {'id': this.ns(f'Chart_{method}'), 'config': config})
+
         for method in METHODS:
             register_chart(method)
 

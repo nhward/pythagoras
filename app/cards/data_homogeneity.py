@@ -4,7 +4,7 @@ import asyncio
 import gettext
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 if __name__ == "__main__":
@@ -27,8 +27,9 @@ from module import Module
 from proxy_data import proxy_data
 from roles import Role
 from shiny import reactive, render, req, ui
-from shiny.types import SilentOperationInProgressException
+from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
+from widget_lifecycle import WidgetSlot, update_figure
 
 ROW_ORDER = "__row_order__"
 REFERENCE_LABELS = {
@@ -207,8 +208,12 @@ def _numeric_drift(sample: pd.Series, reference: pd.Series) -> float:
         return 0.0 if np.array_equal(np.sort(left), np.sort(right)) else 1.0
     # One-dimensional Wasserstein distance calculated from empirical quantiles.
     quantiles = np.linspace(0, 1, max(len(left), len(right)))
+    # With thousands of requested quantiles, np.quantile repeatedly partitions
+    # at almost every observation. Sorting once and interpolating computes the
+    # same linear empirical quantiles much more cheaply.
     distance = float(np.mean(np.abs(
-        np.quantile(left, quantiles) - np.quantile(right, quantiles)
+        np.interp(quantiles, np.linspace(0, 1, len(left)), np.sort(left))
+        - np.interp(quantiles, np.linspace(0, 1, len(right)), np.sort(right))
     )))
     return float(1.0 - np.exp(-distance / scale))
 
@@ -661,6 +666,9 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
+        chart_slot = WidgetSlot(session)
+        chart_instance = reactive.Value(None)
+        last_source, last_calculation = None, None
 
         @this.reactable(calc=True)
         @this.record_context
@@ -716,18 +724,35 @@ def instance():
         @this.extended_task
         @this.record_context
         async def Calculate(data: proxy_data, options: dict[str, object]):
+            if Module.IS_SHINYLIVE:
+                return _analyse_homogeneity(data, **options)
             return await asyncio.to_thread(_analyse_homogeneity, data, **options)
 
         @this.reactable()
         @this.record_context
         def StartAnalysis():
+            nonlocal last_source, last_calculation
+            source, options = incomingproxy_data(), Options()
+            calculation = {key: value for key, value in options.items() if key != 'threshold'}
+            with reactive.isolate():
+                if source is last_source and calculation == last_calculation and Calculate.status() in {'running', 'success'}:
+                    return
             Calculate.cancel()
-            Calculate.invoke(incomingproxy_data().clone(), Options())
+            Calculate.invoke(source.clone(), options)
+            last_source, last_calculation = source, calculation
 
         @this.reactable(calc=True)
         @this.record_context
         def Analysis():
-            return Calculate.result()
+            result = Calculate.result()
+            threshold = float(input.Threshold())
+            summary = result.summary.copy()
+            if not result.scores.empty:
+                maxima = result.scores.groupby('Variable')['Drift'].max()
+                summary['Status'] = [
+                    _status(float(maxima[row['Variable']]), threshold) if row['Variable'] in maxima else row['Status']
+                    for row in summary.to_dict('records')]
+            return replace(result, summary=summary)
 
         @output
         @render.ui
@@ -737,18 +762,37 @@ def instance():
 
         @output
         @render_widget
-        @this.record_context
         def DriftChart():
-            full_screen = bool(this.isFullScreen())
-            figure = _homogeneity_figure(
-                Analysis(), threshold=float(Options()["threshold"]), full_screen=full_screen,
-            )
-            figure.update_layout(modebar={"orientation": "v"})
-            widget = go.FigureWidget(figure)
+            widget = go.FigureWidget(Card.empty_figure('Comparing distributions…'))
             widget._config = getattr(widget, "_config", {}) | {
-                "displayModeBar": full_screen, "displaylogo": False, "responsive": True,
+                "displayModeBar": False, "displaylogo": False, "responsive": True,
             }
+            chart_slot.replace(widget)
+            chart_instance.set(widget)
             return widget
+
+        @this.reactable()
+        @this.record_context
+        async def UpdateChart():
+            widget = chart_instance()
+            req(widget is not None)
+            full_screen = bool(this.isFullScreen())
+            try:
+                analysis, threshold = Analysis(), float(input.Threshold())
+                if Module.IS_SHINYLIVE:
+                    figure = _homogeneity_figure(analysis, threshold=threshold, full_screen=full_screen)
+                else:
+                    figure = await asyncio.to_thread(_homogeneity_figure, analysis,
+                        threshold=threshold, full_screen=full_screen)
+            except SilentException:
+                raise
+            except Exception as error:
+                this.log.exception('Homogeneity chart calculation failed')
+                figure = Card.empty_figure(str(error))
+            figure.update_layout(modebar={'orientation': 'v'})
+            config = {'displayModeBar': full_screen, 'displaylogo': False, 'responsive': True}
+            if update_figure(widget, figure, config):
+                await session.send_custom_message('update_plotly_config', {'id': this.ns('DriftChart'), 'config': config})
 
         @output
         @render.ui

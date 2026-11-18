@@ -392,7 +392,10 @@ def instance():
         SelectedRecipeID = reactive.Value(saved.get('selected_recipe'))
         pending_commit = saved.get('committed_recipes') or ([saved['committed_recipe']] if saved.get('committed_recipe') else [])
         CurrentMethod = reactive.Value(saved.get('current_method') or next(iter(saved.get('selected_methods') or ([saved['selected_method']] if saved.get('selected_method') else [])), None))
-        Promoted = reactive.Value(saved.get('promoted_methods', []))
+        initial_checked = saved.get('selected_methods') or ([saved['selected_method']] if saved.get('selected_method') else [])
+        initial_promoted = saved.get('promoted_methods', [])
+        Promoted = reactive.Value([method for method in initial_promoted if method in initial_checked] +
+                                 [method for method in initial_checked if method not in initial_promoted])
         restoring_selection = bool(saved.get('current_method') or saved.get('selected_methods') or saved.get('selected_method'))
 
         def choice_state():
@@ -509,7 +512,9 @@ def instance():
             if restoring_selection and method:
                 indices = [rows.index(method)] if method in rows else []
                 if indices:
+                    await Table2.update_sort([])
                     await Table2.update_cell_selection({'type': 'row', 'rows': indices})
+                    await session.send_custom_message('table_scroll_top', {'id': this.ns('Table2')})
 
         @this.reactable()
         def RememberSelection():
@@ -594,6 +599,7 @@ def instance():
             await Table2.update_data(display_frame())
             await Table2.update_sort([])
             await Table2.update_cell_selection({'type': 'row', 'rows': [0]})
+            await session.send_custom_message('table_scroll_top', {'id': this.ns('Table2')})
 
         @this.reactable(calc=True)
         def Exported():

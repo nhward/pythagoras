@@ -7,7 +7,7 @@
       "module": "cand_methods",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "d4e1e1ee4a64adc2a7d7bc6fef3562d9b26f2bbc404aca744f0c06a9d384c541"
+      "source_hash": "2a08ac05bd5b827209e3bf235a5805368cb18336037ce97c8eaa49fab8dc0433"
     },
     "cand_models": {
       "description": "Choose weightings that yield the desired optimal model(s).",
@@ -23,7 +23,7 @@
       "module": "cand_parameters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "1964244207b4c4db5b43ef7897c5ffe5135b117db3898198ff422832164a42a5"
+      "source_hash": "e2e23892153c5e14ef5412cd9371a90e40d05a93c04e4dc793d489e9a603bc45"
     },
     "cand_train": {
       "description": "Train pipelines across candidate methods and hyper-parameters.",
@@ -47,7 +47,7 @@
       "module": "data_homogeneity",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "1ef2f8084e624c9f08b9f1641dd6b9c4b822ff7b544f5a4237a15473c6603a9e"
+      "source_hash": "fd93c30d24890eff5e96c4c6841edfdc2002ccaeda768e8b799dfa1303a0638f"
     },
     "data_import": {
       "description": "Facilitate the ingestion of data, be it numeric, categorical, textual, temporal or spatial.",
@@ -183,7 +183,7 @@
       "module": "obs_cluster_profile",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "e1305637da1b299f099d9aaba3103c302a80bcad32c21fc025286ac837d84770"
+      "source_hash": "46f7a8796d358ea0b92466ece09f37bdc2c6ee5e31d5457215028dfda4a57438"
     },
     "obs_clusters": {
       "description": "Compare cluster memberships at the incoming K and optionally add Partition, Mixture and DBSCAN labels as nominal stratifiers.",
@@ -191,7 +191,7 @@
       "module": "obs_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "b10e0c4497364feafd31d8d29f09f8fd702904968f9c89206838044467a8df0c"
+      "source_hash": "a52f780627bbec6c282ccdb3b7096b27d345c0e8fbfaea80634bcc67369fbf66"
     },
     "obs_dependence": {
       "description": "Are observations ordered in time or repeated within entities, and is serial dependence detectable?",

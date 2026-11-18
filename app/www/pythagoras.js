@@ -4,6 +4,49 @@
 document.addEventListener("DOMContentLoaded", () => {
     console.info("DOM has loaded");
 
+    // Row selection does not reset a virtualized grid's scroll window. Repeat
+    // through the render/layout reconciliation following a data/sort update.
+    const tableScrollRequests = new Map();
+    Shiny.addCustomMessageHandler('table_scroll_top', ({id}) => {
+        const token = {};
+        tableScrollRequests.set(id, token);
+        let firstGridAt = null;
+        const deadline = performance.now() + 4000;
+        const cancel = () => {
+            if (tableScrollRequests.get(id) === token) tableScrollRequests.delete(id);
+        };
+        let listening = null;
+        const clean = () => {
+            listening?.removeEventListener('wheel', cancel);
+            listening?.removeEventListener('pointerdown', cancel);
+            cancel();
+        };
+        const scroll = () => {
+            const now = performance.now();
+            if (tableScrollRequests.get(id) !== token || now >= deadline) {
+                clean();
+                return;
+            }
+            const grid = document.getElementById(id)?.querySelector('.shiny-data-grid');
+            if (grid && grid.clientHeight > 0) {
+                if (!listening) {
+                    listening = grid;
+                    grid.addEventListener('wheel', cancel, {passive: true});
+                    grid.addEventListener('pointerdown', cancel);
+                }
+                firstGridAt ??= now;
+                grid.scrollTop = 0;
+                if (now - firstGridAt >= 400) {
+                    clean();
+                    return;
+                }
+            }
+            requestAnimationFrame(scroll);
+        };
+        requestAnimationFrame(scroll);
+    });
+    // End table scroll reset.
+
     Shiny.addCustomMessageHandler("update_plotly_config", async (message) => {
         const plot = document.getElementById(message.id)?.querySelector(".js-plotly-plot");
         if (plot && window.Plotly) {

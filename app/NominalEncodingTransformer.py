@@ -1,6 +1,7 @@
 """Train-only one-hot encoding with DataFrame and missing-value preservation."""
 from __future__ import annotations
 
+import warnings
 from typing import ClassVar
 
 import numpy as np
@@ -125,7 +126,14 @@ class NominalEncodingTransformer(TransformerMixin, BaseEstimator):
             # A known placeholder avoids treating missingness as an unseen level.
             codes = np.array([0 if absent else mapping.get(value,-1)
                 for value,absent in zip(series,missing)],dtype=int).reshape(-1,1)
-            values = encoder.transform(codes) if len(X) else np.empty((0,len(encoder.get_feature_names_out())))
+            with warnings.catch_warnings():
+                # Unseen fold levels are an explicit encoding policy, not a fit
+                # failure. Do not print this same expected message per fold.
+                if self.handle_unknown in ('ignore', 'infrequent_if_exist'):
+                    warnings.filterwarnings('ignore', category=UserWarning,
+                        message=r'Found unknown categories in columns .* during transform\. These unknown categories will be encoded as (?:all zeros|the infrequent category)',
+                        module=r'sklearn\.preprocessing\._encoders')
+                values = encoder.transform(codes) if len(X) else np.empty((0,len(encoder.get_feature_names_out())))
             if names:
                 values[missing,:] = np.nan
                 parts.append(pd.DataFrame(values,index=X.index,columns=names))

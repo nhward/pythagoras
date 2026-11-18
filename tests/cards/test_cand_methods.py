@@ -490,7 +490,6 @@ def test_json_restores_selected_row_separately_from_committed_model(page, app, r
     page.goto(app.url)
     table = page.locator('[id$="-Table"]')
     first = table.get_by_text('Hist Gradient Boosting', exact=True)
-    second = table.get_by_text('LGBM', exact=True)
     expect(first).to_be_visible(timeout=30000)
     choose_method(page, 'Hist Gradient Boosting')
     page.locator('[id$="-Commit"]').click()
@@ -706,7 +705,6 @@ def test_commit_multiple_methods_and_restore_candidate_set(page, app, request, m
     page.goto(app.url)
     table = page.locator('[id$="-Table"]')
     first = table.get_by_text('Hist Gradient Boosting', exact=True)
-    second = table.get_by_text('LGBM', exact=True)
     expect(first).to_be_visible(timeout=30000)
     before = table.locator('input.method-row-check').evaluate_all('els => els.map(el => el.dataset.methodId)')
     choose_method(page, 'Hist Gradient Boosting')
@@ -715,7 +713,10 @@ def test_commit_multiple_methods_and_restore_candidate_set(page, app, request, m
     expect(table.get_by_role('checkbox', name='Select LGBM', exact=True)).to_be_checked()
     assert table.locator('input.method-row-check').evaluate_all('els => els.map(el => el.dataset.methodId)') == before
     table.locator('thead').get_by_text('Model', exact=True).click()
+    table.locator('.shiny-data-grid').evaluate('el => el.scrollTop = el.scrollHeight')
     page.locator('[id$="-Commit"]').click()
+    page.wait_for_timeout(650)
+    assert table.locator('.shiny-data-grid').evaluate('el => el.scrollTop') == 0
     expect(table.locator('tbody tr').nth(0).get_by_role('checkbox')).to_be_checked()
     expect(table.locator('tbody tr').nth(1).get_by_role('checkbox')).to_be_checked()
     expect(table.locator('tbody tr').first).to_have_attribute('aria-selected', 'true')
@@ -733,6 +734,22 @@ def test_commit_multiple_methods_and_restore_candidate_set(page, app, request, m
     assert len(state['selected_methods']) == 2
     monkeypatch.setenv('PYTHAGORAS_TEST_MODEL_CONFIG', str(path))
     resumed = request.getfixturevalue('restored_app')
+    page.add_init_script("""(() => {
+        const observer = new MutationObserver(() => {
+            const grid = document.querySelector('.model-candidates-table .shiny-data-grid');
+            if (!grid || !grid.querySelector('tbody tr')) return;
+            observer.disconnect();
+            grid.scrollTop = grid.scrollHeight;
+            setTimeout(() => { grid.scrollTop = grid.scrollHeight; }, 50);
+        });
+        observer.observe(document, {subtree: true, childList: true});
+    })();""")
     page.goto(resumed.url)
     expect(page.locator('[id$="-Status"]')).to_contain_text('Committed methods:', timeout=30000)
     expect(page.locator('[id$="-Table"] input.method-row-check:checked')).to_have_count(2)
+
+    restored_table = page.locator('[id$="-Table"]')
+    page.wait_for_timeout(650)
+    expect(restored_table.locator('tbody tr').nth(0).get_by_role('checkbox')).to_be_checked()
+    expect(restored_table.locator('tbody tr').nth(1).get_by_role('checkbox')).to_be_checked()
+    assert restored_table.locator('.shiny-data-grid').evaluate('el => el.scrollTop') == 0

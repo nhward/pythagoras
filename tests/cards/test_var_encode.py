@@ -1,6 +1,7 @@
 """Nominal encoding, training isolation, pipeline schema and footer workflows."""
 import os
 import sys
+import warnings
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]/'app'
@@ -80,8 +81,9 @@ class TestEncoding:
         fitted=out.pipeline_for_training().fit(training)
         model=fitted.steps[0][1]
         assert 'green' not in model.encodings_['color'][0]
-        with pytest.warns(UserWarning):
+        with warnings.catch_warnings(record=True) as emitted:
             held=fitted.transform(s.frame.iloc[2:3])
+        assert not any('Found unknown categories' in str(w.message) for w in emitted)
         assert held.filter(like='color__').to_numpy().sum()==0
         assert list(held.columns)==list(model.get_feature_names_out())
 
@@ -90,8 +92,9 @@ class TestEncoding:
         model=NominalEncodingTransformer(['c'],max_categories=2,handle_unknown='infrequent_if_exist').fit(frame)
         assert len(model.output_columns_)==1
         assert model.summary_[0]['Pooled levels']=='b, c, d'
-        with pytest.warns(UserWarning):
+        with warnings.catch_warnings(record=True) as emitted:
             actual=model.transform(pd.DataFrame({'c':['new']}))
+        assert not any('Found unknown categories' in str(w.message) for w in emitted)
         assert actual.iloc[0,0]==1
         model=NominalEncodingTransformer(['c'],min_frequency=2).fit(frame)
         assert len(model.output_columns_)==3

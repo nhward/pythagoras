@@ -392,10 +392,39 @@ def test_commit_promotes_checked_parameters_and_focuses_first_row(page, app):
         table.get_by_role('checkbox', name=label, exact=True).check()
     assert table.locator('tbody tr').all_text_contents() == before
     table.locator('.shiny-data-grid').evaluate('el => el.scrollTop = el.scrollHeight')
+    page.locator('[id$="-Commit"]').evaluate('el => el.addEventListener("click", () => setTimeout(() => { const g = document.querySelector(".tuning-parameters-table .shiny-data-grid"); g.scrollTop = g.scrollHeight; }, 100), {once: true})')
     page.locator('[id$="-Commit"]').click()
     expect(table.locator('tbody tr').nth(0).get_by_role('checkbox')).to_be_checked()
     expect(table.locator('tbody tr').nth(1).get_by_role('checkbox')).to_be_checked()
     expect(table.locator('tbody tr').first).to_have_attribute('aria-selected', 'true')
     expect(table.locator('tbody tr').first).to_be_in_viewport()
-    assert set(table.locator('tbody tr').nth(i).get_by_role('checkbox').get_attribute('data-tuning-path') for i in (0, 1)) == set(chosen)
+    assert {table.locator('tbody tr').nth(i).get_by_role('checkbox').get_attribute('data-tuning-path') for i in (0, 1)} == set(chosen)
     expect(table.locator('input.tuning-row-toggle:checked')).to_have_count(2)
+
+
+    page.wait_for_timeout(650)
+    assert table.locator('.shiny-data-grid').evaluate('el => el.scrollTop') == 0
+
+
+checked_restore_app = create_app_fixture(app='../scenarios/cand_parameters_checked_restore.py', scope='function')
+
+
+@pytest.mark.ui
+def test_restored_checked_parameters_are_promoted_and_scrolled_to_top(page, checked_restore_app):
+    page.add_init_script("""(() => {
+        const observer = new MutationObserver(() => {
+            const grid = document.querySelector('.tuning-parameters-table .shiny-data-grid');
+            if (!grid || !grid.querySelector('tbody tr')) return;
+            observer.disconnect();
+            grid.scrollTop = grid.scrollHeight;
+            setTimeout(() => { grid.scrollTop = grid.scrollHeight; }, 50);
+        });
+        observer.observe(document, {subtree: true, childList: true});
+    })();""")
+    page.goto(checked_restore_app.url)
+    table = page.locator('[id$="-Table"]')
+    expect(table.locator('input.tuning-row-toggle:checked')).to_have_count(2, timeout=30000)
+    page.wait_for_timeout(650)
+    expect(table.locator('tbody tr').nth(0).get_by_role('checkbox')).to_be_checked()
+    expect(table.locator('tbody tr').nth(1).get_by_role('checkbox')).to_be_checked()
+    assert table.locator('.shiny-data-grid').evaluate('el => el.scrollTop') == 0
