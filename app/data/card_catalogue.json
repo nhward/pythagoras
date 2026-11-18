@@ -207,7 +207,7 @@
       "module": "obs_duplicates",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "6cb03fd7c6a8465a1446a99801ceaf52b7819a7037a3eaab2e51f3acf589cf04"
+      "source_hash": "12841f4ed2bee534be10d8731b3ec58ebb6b04fc8a3124917d8743d92b6ee0e4"
     },
     "obs_k_clusters": {
       "description": "Assess cluster counts using seven clustering families and two resampling evaluations and record a number-of-clusters decision for downstream cluster analysis.",

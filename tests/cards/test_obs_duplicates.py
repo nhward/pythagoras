@@ -202,6 +202,40 @@ def test_duplicate_rows_are_assigned_to_minimum_difference(card_module):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize('kind', ['numeric', 'missing', 'containers', 'single'])
+def test_encoded_search_matches_original_pandas_search(card_module, kind):
+    rng = np.random.default_rng(64)
+    if kind == 'numeric':
+        frame = pd.DataFrame(rng.integers(0, 4, size=(80, 5)).astype(float))
+        frame.iloc[::7, 0] = np.nan
+    elif kind == 'missing':
+        frame = pd.DataFrame({
+            'object': pd.Series([None, np.nan, pd.NA, 'a', 'a', None], dtype=object),
+            'nullable': pd.Series([1, None, 1, 2, 2, None], dtype='Int64'),
+            'category': pd.Categorical(['a', None, 'a', 'b', 'b', None]),
+        })
+    elif kind == 'containers':
+        frame = pd.DataFrame({'list': [[1], [1], [2], [1]],
+                              'dict': [{'a': 1}, {'a': 1}, {}, {}]})
+    else:
+        frame = pd.DataFrame({'value': pd.Series([None, np.nan, pd.NA, None, 'a', 'a'], dtype=object)})
+    comparable = card_module._comparison_frame(frame)
+    classified = np.zeros(len(frame), dtype=bool)
+    expected = []
+    for difference in range(frame.shape[1]):
+        duplicate = np.zeros(len(frame), dtype=bool)
+        for subset in card_module.combinations(frame.columns, frame.shape[1] - difference):
+            duplicate |= comparable.duplicated(subset=list(subset), keep='first').to_numpy()
+        positions = (np.flatnonzero(duplicate & ~classified) + 1).tolist()
+        expected.append([difference, ', '.join(map(str, positions)), len(positions)])
+        classified |= duplicate
+    pd.testing.assert_frame_equal(
+        card_module._duplicate_results(frame, maximum_differences=frame.shape[1] - 1),
+        pd.DataFrame(expected, columns=card_module.RESULT_COLUMNS),
+    )
+
+
+@pytest.mark.unit
 def test_container_values_can_be_compared(card_module):
     frame = pd.DataFrame({
         "items": [[1, 2], [1, 2], [3]],

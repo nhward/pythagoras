@@ -155,13 +155,21 @@ def _duplicate_results(
         )
 
     comparable = _comparison_frame(frame).reset_index(drop=True)
+    # pandas factorizes every selected column on every duplicated() call.
+    # Reuse integer codes across the many overlapping column subsets instead.
+    # Single-column duplicated() distinguishes some missing-value types, so
+    # retain pandas' original single-column path for that case.
+    encoded = pd.DataFrame({
+        column: pd.factorize(comparable[column], sort=False)[0]
+        for column in comparable.columns
+    }) if maximum > 0 else comparable
     already_classified = np.zeros(len(comparable), dtype=bool)
     rows = []
     for difference in range(maximum + 1):
         duplicate = np.zeros(len(comparable), dtype=bool)
         width = column_count - difference
         for selected in combinations(comparable.columns, width):
-            duplicate |= comparable.duplicated(
+            duplicate |= (comparable if width == 1 else encoded).duplicated(
                 subset=list(selected), keep="first"
             ).to_numpy()
         newly_classified = duplicate & ~already_classified
