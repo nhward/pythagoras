@@ -588,58 +588,43 @@ def _distribution_figure(
     skew_range = _axis_range(eligible["Skew before"], anchors=(0.0,))
     kurtosis_range = _axis_range(eligible["Kurtosis before"], anchors=(3.0,))
 
-    if full_screen:
-        figure = make_subplots(
-            rows=2,
-            cols=2,
-            specs=[[{}, {}], [{}, None]],
-            subplot_titles=(
-                "Skew and spread", "Location and spread", "Distribution shape",
-            ),
-            shared_xaxes="columns",
-            shared_yaxes="rows",
-            horizontal_spacing=FULL_SCREEN_HORIZONTAL_SPACING,
-            vertical_spacing=FULL_SCREEN_VERTICAL_SPACING,
-        )
-        panels = [
-            ("Skew before", "SD before", "Skew after", "SD after", 1, 1),
-            ("Mean before", "SD before", "Mean after", "SD after", 1, 2),
-            (
-                "Skew before", "Kurtosis before",
-                "Skew after", "Kurtosis after", 2, 1,
-            ),
-        ]
-        for index, (before_x, before_y, after_x, after_y, row, col) in enumerate(panels):
-            _add_distribution_panel(
-                figure, eligible,
-                before_x=before_x, before_y=before_y,
-                after_x=after_x, after_y=after_y,
-                row=row, col=col, transformed=transformed, labels=labels,
-                show_legend=index == 0,
-            )
-        figure.update_xaxes(title_text="", range=skew_range, row=1, col=1)
-        figure.update_yaxes(
-            title_text="Standard deviation", range=spread_range, row=1, col=1,
-        )
-        figure.update_xaxes(title_text="Mean", range=mean_range, row=1, col=2)
-        figure.update_yaxes(range=spread_range, row=1, col=2)
-        figure.update_xaxes(title_text="Skew", range=skew_range, row=2, col=1)
-        figure.update_yaxes(title_text="Kurtosis", range=kurtosis_range, row=2, col=1)
-    else:
-        figure = make_subplots(
-            rows=1, cols=1, subplot_titles=("Location and spread",),
-        )
+    # if full_screen:
+    figure = make_subplots(
+        rows=2,
+        cols=2,
+        specs=[[{}, {}], [{}, None]],
+        subplot_titles=(
+            "Skew and spread", "Location and spread", "Distribution shape",
+        ) if full_screen else ("","",""),
+        shared_xaxes="columns",
+        shared_yaxes="rows",
+        horizontal_spacing=FULL_SCREEN_HORIZONTAL_SPACING,
+        vertical_spacing=FULL_SCREEN_VERTICAL_SPACING,
+    )
+    panels = [
+        ("Skew before", "SD before", "Skew after", "SD after", 1, 1),
+        ("Mean before", "SD before", "Mean after", "SD after", 1, 2),
+        (
+            "Skew before", "Kurtosis before",
+            "Skew after", "Kurtosis after", 2, 1,
+        ),
+    ]
+    for index, (before_x, before_y, after_x, after_y, row, col) in enumerate(panels):
         _add_distribution_panel(
             figure, eligible,
-            before_x="Mean before", before_y="SD before",
-            after_x="Mean after", after_y="SD after",
-            row=1, col=1, transformed=transformed, labels=labels,
-            show_legend=True,
+            before_x=before_x, before_y=before_y,
+            after_x=after_x, after_y=after_y,
+            row=row, col=col, transformed=transformed, labels=labels,
+            show_legend=index == 0,
         )
-        figure.update_xaxes(title_text="Mean", range=mean_range, row=1, col=1)
-        figure.update_yaxes(
-            title_text="Standard deviation", range=spread_range, row=1, col=1,
-        )
+    figure.update_xaxes(title_text="", range=skew_range, row=1, col=1)
+    figure.update_yaxes(
+        title_text="Standard deviation" if full_screen else "SD", range=spread_range, row=1, col=1,
+    )
+    figure.update_xaxes(title_text="Mean", range=mean_range, row=1, col=2)
+    figure.update_yaxes(range=spread_range, row=1, col=2)
+    figure.update_xaxes(title_text="Skew", range=skew_range, row=2, col=1)
+    figure.update_yaxes(title_text="Kurtosis", range=kurtosis_range, row=2, col=1)
 
     figure.update_xaxes(fixedrange=not full_screen)
     figure.update_yaxes(fixedrange=not full_screen)
@@ -647,10 +632,10 @@ def _distribution_figure(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#bbd6f8",
-        margin={"l": 65, "r": 25, "t": 45, "b": 75},
+        margin={"l": 30, "r": 5, "t": 50, "b": 50} if full_screen else {"l": 50, "r": 35, "t": 15, "b": 5},
         legend={
             "orientation": "h", "x": 0.5, "xanchor": "center",
-            "y": -0.22, "yanchor": "top",
+            "y": -0.15, "yanchor": "top",
         },
         modebar={"orientation": "v"},
         font={"size": 13 if full_screen else 10},

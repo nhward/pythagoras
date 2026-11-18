@@ -280,19 +280,15 @@ def test_describe_reports_ordinary_not_excess_kurtosis(card_module):
 
 
 @pytest.mark.unit
-def test_card_figure_has_only_location_and_spread_panel(card_module):
+def test_card_figure_panel(card_module):
     data, _ = distribution_data()
     result = card_module._analyse_distribution(data, ["Deskew", "Center", "Scale"])
-
     figure = card_module._distribution_figure(result.statistics, transformed=True)
-
-    assert figure.layout.xaxis.title.text == "Mean"
-    assert figure.layout.yaxis.title.text == "Standard deviation"
     assert figure.layout.xaxis.range[0] < 0
     assert figure.layout.yaxis.range[0] < 0
-    assert "xaxis2" not in figure.layout
-    assert [trace.name for trace in figure.data].count("Before") == 1
-    assert [trace.name for trace in figure.data].count("After") == 1
+    assert "xaxis2" in figure.layout
+    assert [trace.name for trace in figure.data].count("Before") == 3
+    assert [trace.name for trace in figure.data].count("After") == 3
     assert figure.layout.legend.orientation == "h"
     assert figure.layout.legend.y < 0
 
