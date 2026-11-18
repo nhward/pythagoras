@@ -3,6 +3,7 @@ import copy
 import json
 import threading
 import time
+from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
@@ -99,6 +100,70 @@ def test_fold_pause_json_resume_matches_uninterrupted():
     complete = finish(p)
     assert evaluation_history(resumed) == evaluation_history(complete)
     assert len({json.dumps(t['params'], sort_keys=True) for t in resumed['trials']}) == 4
+
+
+def test_audit_source_changes_do_not_invalidate_training(monkeypatch):
+    p = problem()
+    original = Path.read_bytes
+    monkeypatch.setattr(Path, 'read_bytes', lambda path: original(path) + b'\n# presentation-only change\n')
+    changed = problem()
+    assert p.specification['implementation'] != changed.specification['implementation']
+    assert p.specification['fingerprint'] == changed.specification['fingerprint']
+    resumed = validate_checkpoint(changed, fresh(p))
+    assert resumed['specification'] == changed.specification
+    assert resumed['continuation_history'][0]['specification'] == p.specification
+    assert resumed['continuation_history'][0]['overridden'] is False
+
+
+def test_inactive_history_does_not_invalidate_training():
+    data = source()
+    inactive = data.with_inactive_step(stage='Learning', card='miss_impute',
+        operation='Imputation', parameters={'unused_diagnostic_option': 99})
+    assert prepare(data).specification['fingerprint'] == prepare(inactive).specification['fingerprint']
+
+
+@pytest.mark.parametrize('legacy', [False, True])
+def test_explicit_compatibility_override_preserves_results_and_restarts_partial_trials(monkeypatch, legacy):
+    import pipeline_search
+    p = problem()
+    stop = threading.Event()
+    def publish(state):
+        if len(state['trials']) > 1 and len(state['trials'][1]['folds']) == 1:
+            stop.set()
+    paused = finish(p, publish=publish, pause=stop.is_set)
+    assert paused['trials'][0]['state'] == 'complete'
+    assert len(paused['trials'][1]['folds']) == 1
+    if legacy:
+        paused['specification'].pop('training_compatibility')
+        paused['specification']['fingerprint'] = 'legacy-fingerprint'
+    else:
+        monkeypatch.setattr(pipeline_search, 'TRAINING_COMPATIBILITY_VERSION', 2)
+    changed = problem()
+    with pytest.raises(ValueError, match='does not match'):
+        validate_checkpoint(changed, paused)
+    adopted = validate_checkpoint(changed, paused, allow_incompatible=True)
+    assert adopted['trials'][0] == paused['trials'][0]
+    assert adopted['trials'][1]['folds'] == []
+    assert adopted['trials'][1]['fold_ids'] == []
+    assert adopted['continuation_history'][0]['overridden'] is True
+    assert adopted['continuation_history'][0]['completed_trial_ids'] == [0]
+    assert adopted['continuation_history'][0]['restarted_trial_ids'] == [1]
+    assert adopted['continuation_history'][0]['specification'] == paused['specification']
+    result = finish(changed, adopted)
+    assert result['status'] == 'exhausted'
+    import prediction_evidence
+    saved = json.loads(json.dumps(prediction_evidence.portable_checkpoint(result)))
+    restored = prediction_evidence.restore_checkpoint(saved)
+    assert restored['continuation_history'] == adopted['continuation_history']
+    validate_checkpoint(changed, restored)
+
+
+def test_override_still_rejects_structurally_incompatible_progress():
+    p = problem()
+    state = finish(p)
+    changed = prepare(committed_grid(source(), {'cand_methods__estimator__alpha': [99.]}))
+    with pytest.raises(ValueError, match='search space'):
+        validate_checkpoint(changed, state, allow_incompatible=True)
 
 
 def test_fingerprint_rejects_changed_values_space_splits_and_incomplete_scores():
@@ -511,8 +576,8 @@ def committed_grid(data, grid):
 
 
 def test_search_refits_nominal_schema_for_rare_levels_and_tuned_pooling():
-    from NominalEncodingTransformer import NominalEncodingTransformer
     from model_commit import build_model
+    from NominalEncodingTransformer import NominalEncodingTransformer
     from roles import Role
 
     frame = pd.DataFrame({'x': np.arange(24, dtype=float), 'nominal': ['a'] * 12 + ['b'] * 11 + ['rare'],

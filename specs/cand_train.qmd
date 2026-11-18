@@ -24,7 +24,7 @@ Exhaustive (`grid`) ignores candidate and time budgets in the coordinator, inclu
 
 
 
-The fourth method `skopt` uses scikit-optimize Optimizer with a GP surrogate, categorical choice indices, sampling acquisition optimization and one surrogate job. Singleton dimensions stay fixed; empty spaces exhaust normally. Each proposal is seeded from the search seed and trial count and reconstructed from actual completed in-grid configurations. Only their negated primary mean scores are supplied to the minimizer. Failed trials have no invented losses; out-of-grid starting configurations have no invented coordinates. Duplicate proposals use the existing deterministic unseen fallback. Package versions and implementation remain part of search identity.
+The fourth method `skopt` uses scikit-optimize Optimizer with a GP surrogate, categorical choice indices, sampling acquisition optimization and one surrogate job. Singleton dimensions stay fixed; empty spaces exhaust normally. Each proposal is seeded from the search seed and trial count and reconstructed from actual completed in-grid configurations. Only their negated primary mean scores are supplied to the minimizer. Failed trials have no invented losses; out-of-grid starting configurations have no invented coordinates. Duplicate proposals use the existing deterministic unseen fallback. Package versions and the declared training compatibility version remain part of search identity; whole-file implementation hashes are audit provenance.
 
 With no upstream plan, `implicit_splits` materializes independent shuffled KFold/target-StratifiedKFold memberships with at most five folds, reduced for small data/minority classes. Unlabelled targets are prediction rows. Partition/Sequence/Geometry/Stratifier roles and repeated identifiers block implicit splitting and require an explicit plan. Invalid existing plans never fall back. The specification records origin, strategy, folds, seed and reserved rows, and fingerprints full split memberships; progress labels their origin. Source state is not mutated. All four methods use exactly this shared evaluator and preserve fold-fitted preprocessing, finite scoring, budgets, checkpoint lifecycle and evidence publication.
 
@@ -112,7 +112,12 @@ History keeps one widget and existing method traces. Its x-range includes finite
 History uses bars at each trial ID, colored by model method. Starting configurations have a diagonal hatch; candidate bars are solid. Bars retain the existing widget, trace identities, axis ranges and publication interval.
 
 Play resumes compatible, non-exhausted checkpoints, preserving completed bars.
-Incompatible or exhausted history is retained until Cancel. Pause finishes active
+Exhausted history is retained until Cancel. Mismatched or legacy history offers a
+compatibility warning and an explicit Resume anyway override. Cancel on that
+warning preserves all saved history. The override records the previous complete
+specification and trial-count boundary in continuation_history, retains completed
+results, restarts unfinished trials, and displays a persistent comparability warning.
+Checkpoint structure is validated even after an override. Pause finishes active
 fits and preserves continuation state. Cancel stops the worker, removes temporary
 prediction evidence and clears checkpoint, trial history, publication and source
 signature; Play then starts fresh. There is no separate restart button, temporary
@@ -136,7 +141,28 @@ and therefore candidate search fingerprints across Python hash seeds. Tests buil
 a selection/model search in independent interpreters with different hash seeds
 and require identical predictor lists and fingerprints. Older checkpoints that
 record only the former opaque fingerprint cannot recover an unrecorded ordering;
-they must not be forcibly accepted against reordered pipeline inputs.
+continuation requires an explicit compatibility warning and successful structural validation.
 
 
 TPE and GP proposals share a score-free feasibility layer. Classified fit rejections and complete in-grid trials train a seeded, single-threaded random-forest classifier on categorical parameter tokens (inactive conditional dimensions have their own token). At least four observations and both labels are required. Execution/schema faults and legacy failures without classification are ignored. Success probability weights optimizer proposals through bounded rejection sampling, with acceptance 0.1 + 0.9 * probability and up to eight attempts; the most feasible attempted proposal is the fallback. No point is marked visited until actually allocated. Performance surrogates still see only real successful scores. RNG streams for optimizer suggestions and feasibility acceptance are separated; JSON history and checkpoint RNG reproduce continuation. GP batches with feasibility evidence allocate weighted proposals sequentially, retaining running-point duplicate protection. Per-method candidate histories remain separate. Failure classification is optional checkpoint metadata, validated when present; old checkpoints remain readable.
+
+
+Training compatibility and audit provenance are separate. Whole-file SHA256
+hashes remain in specification.implementation for audit but are excluded from
+single-method and candidate-set fingerprints and compatibility comparisons.
+The fingerprint covers the effective fold-training pipeline, clean input frame,
+roles, modelling context, evaluation memberships, candidates, search settings,
+package versions and TRAINING_COMPATIBILITY_VERSION in pipeline_search.py.
+Descriptive processing history and inactive-card records do not contribute.
+Active fold-fitted steps remain significant even if a full-data preview happens
+to be unchanged; no symbolic elimination of apparently redundant steps is used.
+
+When changing code, review training compatibility explicitly. Bump
+TRAINING_COMPATIBILITY_VERSION for incompatible preprocessing, fitting, scoring
+or search semantics, including changes in computational helpers. Do not bump it
+for appearance, help, widget lifecycle, diagnostics unused by training, or
+optimizations verified to preserve training behaviour. Keep structural checkpoint
+validation aligned with any schema change. Compatible resumes adopt current audit
+metadata and retain previous specifications in continuation_history. Legacy
+fingerprints are never silently declared equivalent; bookmark restoration remains
+available and Play offers a warning before attempting an override.

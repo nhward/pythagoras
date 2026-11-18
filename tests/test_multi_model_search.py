@@ -1,6 +1,7 @@
 """Conditional method alternatives preserve fold fitting and checkpoint identity."""
 import copy
 import json
+from pathlib import Path
 
 import pytest
 from model_commit import prepare_predictors
@@ -43,6 +44,25 @@ def configured():
     spec = compile_spec(rows, drafts)
     assert spec['combinations'] == 5
     return data.with_tuning_spec(spec)
+
+
+def test_candidate_set_ignores_audit_changes_but_warns_for_compatibility_changes(monkeypatch):
+    import pipeline_search
+    p = prepare(configured(), method='grid')
+    original = Path.read_bytes
+    monkeypatch.setattr(Path, 'read_bytes', lambda path: original(path) + b'\n# UI revision\n')
+    changed = prepare(configured(), method='grid')
+    assert changed.specification['fingerprint'] == p.specification['fingerprint']
+    assert changed.specification['implementation'] != p.specification['implementation']
+    state = validate_checkpoint(changed, fresh(p))
+    assert state['continuation_history'][0]['overridden'] is False
+    monkeypatch.setattr(pipeline_search, 'TRAINING_COMPATIBILITY_VERSION', 2)
+    incompatible = prepare(configured(), method='grid')
+    with pytest.raises(ValueError, match='does not match'):
+        validate_checkpoint(incompatible, state)
+    resumed = validate_checkpoint(incompatible, state, allow_incompatible=True)
+    assert resumed['continuation_history'][-1]['overridden'] is True
+    validate_checkpoint(incompatible, json.loads(json.dumps(resumed)))
 
 
 def finish(problem, state=None, **kwargs):

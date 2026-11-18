@@ -40,6 +40,19 @@ from tuning import (
     search_values,
 )
 
+# Bump only when training/scoring/search semantics become incompatible.
+# UI, diagnostics and behaviour-preserving optimizations do not require a bump.
+TRAINING_COMPATIBILITY_VERSION = 1
+
+
+def compatibility_specification(specification):
+    """Exclude file-level audit provenance from resume compatibility."""
+    result = {k: v for k, v in specification.items() if k != 'implementation'}
+    if 'branches' in result:
+        result['branches'] = {k: compatibility_specification(v) for k, v in result['branches'].items()}
+    return result
+
+
 METRICS = {
     'regression': {'neg_root_mean_squared_error': 'RMSE · minimize',
                    'neg_mean_absolute_error': 'MAE · minimize', 'r2': 'R² · maximize'},
@@ -244,14 +257,14 @@ def prepare(source, *, metric=None, secondary=(), method='random', seed=1729, ex
             if file and Path(file).resolve().is_relative_to(root): files.add(Path(file))
         except TypeError: pass
     implementation = {str(p.resolve().relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
-    specification = {'version': 4, 'prediction_evidence': 2, 'model_id': model_id, 'method_label': method_label, 'task': task, 'grid': grid, 'combinations': combinations,
+    specification = {'version': 4, 'training_compatibility': TRAINING_COMPATIBILITY_VERSION, 'prediction_evidence': 2, 'model_id': model_id, 'method_label': method_label, 'task': task, 'grid': grid, 'combinations': combinations,
                          'metric': metric, 'secondary': secondary, 'method': method, 'seed': int(seed),
                          'fixed': fixed, 'execution': resources, 'folds': len(splits),
                          'split_sizes': [[len(a), len(b)] for a, b in splits], 'evaluation': evaluation, 'versions': versions, 'implementation': implementation}
     if conditions:
         specification.update(conditions=conditions, parameter_grids=parameter_grids)
     specification['fingerprint'] = joblib.hash((pipeline, frame, source.role_map.to_primitive(),
-        source.modelling_context.to_primitive(), evaluation, splits, specification))
+        source.modelling_context.to_primitive(), evaluation, splits, compatibility_specification(specification)))
     return SearchProblem(pipeline, frame, targets[0], splits, specification, evidence_directory=evidence_store.directory())
 
 
@@ -418,7 +431,7 @@ def prepare_candidates(source, **options):
     spec['split_sizes'] = first.specification['split_sizes']
     spec['execution']['workers'] = min(c.specification['execution']['workers'] for c in branches.values())
     spec['execution']['estimated_fit_bytes'] = max(c.specification['execution']['estimated_fit_bytes'] for c in branches.values())
-    spec['fingerprint'] = joblib.hash(spec)
+    spec['fingerprint'] = joblib.hash(compatibility_specification(spec))
     return SearchProblem(None, first.frame, first.target, first.splits, spec, branches, evidence_directory=evidence_store.directory())
 
 
@@ -435,8 +448,31 @@ def candidate_proposal(problem, state):
     return None
 
 
-def validate_checkpoint(problem, checkpoint):
+def validate_checkpoint(problem, checkpoint, *, allow_incompatible=False):
+    """Validate progress, retaining audit provenance when adopting a new revision.
+
+    Explicit overrides retain completed evidence but restart unfinished trials.
+    Structural validation still applies, including grids, metrics and fold IDs.
+    """
     try:
+        checkpoint = copy.deepcopy(checkpoint)
+        previous = checkpoint['specification']
+        current = problem.specification
+        different = compatibility_specification(previous) != compatibility_specification(current)
+        if different and not allow_incompatible:
+            raise ValueError('Checkpoint does not match the current data, pipeline, search space, splits, objective or software.')
+        if previous != current:
+            checkpoint.setdefault('continuation_history', []).append({
+                'specification': previous, 'trial_count': len(checkpoint['trials']),
+                'overridden': different,
+                'completed_trial_ids': [t['id'] for t in checkpoint['trials'] if t['state'] == 'complete'],
+                'restarted_trial_ids': [t['id'] for t in checkpoint['trials'] if different and t['state'] == 'running'],
+            })
+            checkpoint['specification'] = copy.deepcopy(current)
+            if different:
+                for trial in checkpoint['trials']:
+                    if trial['state'] == 'running':
+                        trial.update(folds=[], fold_ids=[], elapsed=0., error='')
         return _validate_checkpoint(problem, checkpoint)
     except (KeyError, TypeError, IndexError, OverflowError, AttributeError) as exc:
         raise ValueError('Malformed search checkpoint.') from exc

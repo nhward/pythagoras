@@ -31,7 +31,7 @@
       "module": "cand_train",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "90d22d3e92b2a9676c0170fecb9852272cbb50d86cbc58f79a4b00ffa0f2886a"
+      "source_hash": "028d10c4911828140ea033bd134fde32821ea161c80e8295d1287b465ca8aded"
     },
     "data_coverage": {
       "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",
@@ -103,7 +103,7 @@
       "module": "miss_impute",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "f89764765488276a126b3159fe29f36cddba8c874abd02420a3264adec37bde3"
+      "source_hash": "483537db8090cad88f14b621208f304915fc3b32e7562f66f37db8bd415f2342"
     },
     "miss_informative": {
       "description": "Assess the predictive information of each predictor's missing values.",
@@ -191,7 +191,7 @@
       "module": "obs_clusters",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "a52f780627bbec6c282ccdb3b7096b27d345c0e8fbfaea80634bcc67369fbf66"
+      "source_hash": "60d7953110f091febb8916e27ab63797f51132ff5adb2017a042572f651084b2"
     },
     "obs_dependence": {
       "description": "Are observations ordered in time or repeated within entities, and is serial dependence detectable?",

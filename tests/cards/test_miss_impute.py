@@ -310,10 +310,27 @@ class TestWebKitUI:
 
     @pytest.mark.ui
     def test_apply_control_changes_export_status(self, page: Page, app: ShinyAppProc):
+        errors = []
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.on('console', lambda message: errors.append(message.text)
+                if 'Unexpected error while closing model' in message.text else None)
         page.goto(app.url)
         expect(by_id(page, "Check")).to_contain_text("Ready to impute", timeout=20_000)
+        chart = by_id(page, 'MissingChart').locator('.js-plotly-plot')
+        expect(chart).to_be_visible()
+        chart.evaluate('el => window.imputationPlot = el')
         by_id(page, "Apply").locator("input[type=checkbox]").check(force=True)
         expect(by_id(page, "Check")).to_contain_text("Imputed 3 predictors", timeout=20_000)
+        page.wait_for_function('() => window.imputationPlot.data?.[1]?.x.every(value => value === 0)')
+        assert chart.evaluate('el => el === window.imputationPlot')
+        by_id(page, 'ExpandButton').click(force=True)
+        page.wait_for_function('() => window.imputationPlot._context.displayModeBar === true')
+        assert chart.evaluate('el => el === window.imputationPlot')
+        by_id(page, 'Apply').locator('input[type=checkbox]').uncheck(force=True)
+        expect(by_id(page, 'Check')).to_contain_text('Ready to impute', timeout=20_000)
+        page.wait_for_function('() => window.imputationPlot.data?.[1]?.x.some(value => value > 0)')
+        assert chart.evaluate('el => el === window.imputationPlot')
+        assert errors == []
 
     @pytest.mark.ui
     def test_flipside_performance_rows_are_classified_and_coloured(

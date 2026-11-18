@@ -79,12 +79,13 @@ def test_search_progress_evidence_export_and_stale_settings(page, app):
     expect(probe).to_contain_text('accepted=False')
     expect(probe).to_contain_text('results=4')
     expect(probe).to_contain_text('alpha=1.0')
-    # A changed seed blocks resume without discarding history; Cancel clears history before a new search.
+    # A changed seed warns without discarding history; Cancel clears it before a new search.
     page.evaluate("""() => Shiny.setInputValue(document.querySelector('[id$="-Seed"]').id, 99, {priority:'event'})""")
     expect(progress).to_contain_text('stale')
     page.get_by_role('button', name='Start or resume tuning', exact=True).click()
     expect(page.locator('[id$="-Message"]')).to_contain_text('history retained')
     expect(probe).to_contain_text('results=4')
+    page.get_by_role('dialog').get_by_role('button', name='Cancel', exact=True).click()
     page.get_by_role('button', name='Cancel current tuning', exact=True).click()
     expect(progress).to_contain_text('Ready')
     page.get_by_role('button', name='Start or resume tuning', exact=True).click()
@@ -228,13 +229,30 @@ def test_restored_hash_mismatch_keeps_bars_until_cancel(page, mismatched_app):
     page.get_by_role('button', name='Start or resume tuning', exact=True).click()
     expect(page.locator('[id$="-RestartDiagnostic"]')).to_have_count(0)
     expect(page.get_by_role('button', name='Start a new tuning search', exact=True)).to_have_count(0)
-    expect(page.locator('[id$="-Message"]')).to_contain_text('history retained')
+    expect(page.get_by_role('dialog')).to_contain_text('Training compatibility warning')
     assert plotted_trials(page) == original
+    page.get_by_role('dialog').get_by_role('button', name='Cancel', exact=True).click()
     page.get_by_role('button', name='Cancel current tuning', exact=True).click()
     expect(progress).to_contain_text('Ready')
     page.get_by_role('button', name='Start or resume tuning', exact=True).click()
     expect(page.locator('[id$="-Message"]')).to_contain_text('Fitting started')
     expect(progress).to_contain_text('4 complete', timeout=45000)
+
+
+@pytest.mark.ui
+def test_legacy_checkpoint_can_resume_with_explicit_warning(page, mismatched_app):
+    page.goto(mismatched_app.url)
+    progress = page.locator('[id$="-Progress"]')
+    expect(progress).to_contain_text('stale', timeout=30000)
+    page.wait_for_function("() => document.querySelector('[id$=\"-History\"] .js-plotly-plot')?.data?.[0]?.x?.length === 2")
+    original = plotted_trials(page)
+    page.get_by_role('button', name='Start or resume tuning', exact=True).click()
+    expect(page.get_by_role('dialog')).to_contain_text('Completed scores may not be comparable')
+    page.get_by_role('button', name='Resume anyway', exact=True).click()
+    expect(progress).to_contain_text('4 complete', timeout=45000)
+    expect(progress).to_contain_text('Compatibility override')
+    page.wait_for_function("() => document.querySelector('[id$=\"-History\"] .js-plotly-plot')?.data?.[0]?.x?.length === 4")
+    assert plotted_trials(page)[:2] == original
 
 
 session_restore_app = create_app_fixture(app='../scenarios/cand_train_session_restore.py', scope='function')

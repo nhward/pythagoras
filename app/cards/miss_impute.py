@@ -29,12 +29,13 @@ from list_pandas import is_list
 from module import Module
 from proxy_data import proxy_data
 from roles import Role, RoleMap
-from shiny import render, req, ui
-from shiny.types import SilentOperationInProgressException
+from shiny import reactive, render, req, ui
+from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
 from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
 from sklearn.impute import IterativeImputer, KNNImputer, SimpleImputer
+from widget_lifecycle import WidgetSlot, update_figure
 
 METHOD_LABELS = {
     "simple": "Median or mode",
@@ -666,6 +667,8 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
+        chart_slot = WidgetSlot(session)
+        chart_instance = reactive.Value(None)
 
         @this.reactable(calc=True)
         @this.record_context
@@ -765,14 +768,31 @@ def instance():
 
         @output
         @render_widget
-        @this.record_context
         def MissingChart():
+            widget = go.FigureWidget(Card.empty_figure('Preparing imputation chart…'))
+            widget._config = {"displayModeBar": False, "displaylogo": False, "responsive": True}
+            chart_slot.replace(widget)
+            chart_instance.set(widget)
+            return widget
+
+        @this.reactable()
+        @this.record_context
+        async def UpdateChart():
+            widget = chart_instance()
+            req(widget is not None)
             full_screen = bool(this.isFullScreen())
             applied = "Apply" in (input.Apply() or [])
-            figure = _missingness_figure(Analysis().summary, applied, full_screen)
-            widget = go.FigureWidget(figure)
-            widget._config = getattr(widget, "_config", {}) | {"displayModeBar": full_screen, "displaylogo": False, "responsive": True}
-            return widget
+            try:
+                figure = _missingness_figure(Analysis().summary, applied, full_screen)
+            except SilentException:
+                raise
+            except Exception as error:
+                this.log.exception('Imputation chart calculation failed')
+                figure = Card.empty_figure(str(error))
+            config = {"displayModeBar": full_screen, "displaylogo": False, "responsive": True}
+            if update_figure(widget, figure, config):
+                await session.send_custom_message('update_plotly_config',
+                    {'id': this.ns('MissingChart'), 'config': config})
 
         @output
         @render.ui

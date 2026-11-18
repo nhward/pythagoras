@@ -284,6 +284,7 @@ def instance():
         published_state = reactive.Value(None)
         publication = CompletedTrialPublication()
         message = reactive.Value(restore_error)
+        pending_resume = None
         failure_notice = None
 
         @reactive.effect
@@ -438,6 +439,7 @@ def instance():
 
         @this.reactable(triggers=[input.Start])
         def Start():
+            nonlocal pending_resume
             try:
                 problem, error = Problem()
                 if problem is None: 
@@ -453,6 +455,18 @@ def instance():
                     this.log.info("Pipeline fitting resumed")
                     return
                 if current is not None:
+                    if current['specification']['fingerprint'] != problem.specification['fingerprint']:
+                        pending_resume = (current['specification']['fingerprint'], problem.specification['fingerprint'])
+                        message.set('Training compatibility warning; history retained until you choose Resume anyway.')
+                        ui.modal_show(ui.modal(
+                            ui.p('Saved training progress has a different or older compatibility identity. '
+                                 'Completed scores may not be comparable with new results. '
+                                 'Unfinished trials will restart; completed results and their original provenance will be retained.'),
+                            ui.p('Resume anyway still checks checkpoint structure. Changed models, search spaces or evaluation layouts may require a new search.'),
+                            title='Training compatibility warning', easy_close=True,
+                            footer=ui.TagList(ui.modal_button('Cancel'),
+                                ui.input_action_button('ResumeAnyway', label='Resume anyway', class_='btn-warning'))))
+                        return
                     message.set('Cannot resume this search; history retained. Cancel to clear it before starting again.')
                     return
                 start_fresh(problem)
@@ -460,6 +474,31 @@ def instance():
                 e = str(exc)
                 this.log.error(e)
                 message.set(e)
+
+        @this.reactable(triggers=[input.ResumeAnyway])
+        def ResumeAnyway():
+            nonlocal pending_resume
+            ui.modal_remove()
+            try:
+                problem, error = Problem()
+                if problem is None:
+                    raise ValueError(error)
+                current = state()
+                if worker.running or current is None or pending_resume != (
+                        current['specification']['fingerprint'], problem.specification['fingerprint']):
+                    raise ValueError('Training inputs changed after the warning. Press Play to review compatibility again.')
+                checkpoint = validate_checkpoint(problem, current, allow_incompatible=True)
+                worker.start(problem, checkpoint, *_budgets())
+                evidence_store.remove(set(evidence_store.references(current)) - set(evidence_store.references(checkpoint)))
+                state.set(dict(checkpoint, status='running'))
+                evidence_source.set(Incoming()._tuning_evidence_signature())
+                message.set('Resumed with compatibility override. Earlier and new scores may not be comparable.')
+                this.log.warning('Training resumed with an explicit compatibility override')
+            except (ValueError, TypeError, RuntimeError) as exc:
+                message.set(str(exc))
+                ui.notification_show(str(exc), type='error', duration=None)
+            finally:
+                pending_resume = None
 
         def start_fresh(problem):
             initial = fresh(problem)
@@ -515,7 +554,7 @@ def instance():
             split_label = f"{evaluation['origin'].title()} {evaluation['strategy']} resampling{repeat_label} · {execution['workers']} workers"
             if current is None: return f"Ready · {len(problem.branches) or 1} starting-configuration evaluations · {problem.specification['combinations']:,} configurations · {problem.specification['folds']} folds · {split_label}"
             if current['specification']['fingerprint'] != problem.specification['fingerprint']:
-                return 'Search is stale: inputs changed. Restore the original settings to resume, or Cancel to clear history and start again.'
+                return 'Search is stale: training compatibility changed or is unverified. Play offers a warning and Resume anyway; Cancel clears history.'
             completed = [t for t in current['trials'] if t['state'] == 'complete']
             active = [t for t in current['trials'] if t['state'] == 'running']
             fold = (f" · {len(active)} active trials: {sum(len(t['folds']) for t in active)}/"
@@ -527,7 +566,9 @@ def instance():
                 coverage_text = (f" · {label}: {coverage['complete']} of {coverage['total']} grid configurations completed"
                                  f"; {coverage['failed']} failed; starting configurations evaluated separately")
             status_label = {'running': 'Running', 'exhausted': 'Finished', 'budget reached': 'Halted', 'paused': 'Halted'}.get(current['status'], current['status'])
-            return f"{status_label} · {len(completed)} complete · {sum(t['state'] == 'failed' for t in current['trials'])} failed · {current['elapsed']:.1f}s{fold}" + f' · {split_label}' + coverage_text + (f" · {current['error']}" if current.get('error') else '')
+            warning = ' · Compatibility override: earlier and new scores may not be comparable.' if any(
+                entry.get('overridden') for entry in current.get('continuation_history', [])) else ''
+            return f"{status_label} · {len(completed)} complete · {sum(t['state'] == 'failed' for t in current['trials'])} failed · {current['elapsed']:.1f}s{fold}" + f' · {split_label}' + coverage_text + (f" · {current['error']}" if current.get('error') else '') + warning
 
         @output
         @render.ui

@@ -673,6 +673,7 @@ def instance():
                 return widget
 
             @this.reactable()
+            @this.record_context
             async def UpdateChart():
                 widget = instance()
                 req(widget is not None)
