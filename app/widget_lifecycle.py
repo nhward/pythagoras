@@ -1,5 +1,44 @@
 """Release replaced chart widgets, including inside Shiny module sessions."""
+from importlib import import_module
+from importlib.metadata import version
+from pathlib import Path
+
+from htmltools import HTMLDependency, TagList
 from shiny.session import session_context
+
+
+def install_widget_lifecycle():
+    """Load a narrow browser compatibility fix after the widget bridge.
+
+    shinywidgets 0.8.2 and its Jupyter bundle remove model/view references
+    before asynchronous view-removal callbacks finish. Scope this to the
+    affected bundle/version, leaving installed dependencies untouched and
+    allowing future fixed releases through.
+    """
+    if version('shinywidgets') != '0.8.2':
+        return
+    package = import_module('shinywidgets')
+    bundle = Path(package.__file__).parent / 'static' / 'output.js'
+    if 'delete v.model;' not in bundle.read_text():
+        return
+    output = import_module('shinywidgets._output_widget')
+    original = output.output_binding_dependency
+    if getattr(original, '_pythagoras_teardown_fix', False):
+        return
+
+    def dependency():
+        # Never replace/register the output binding: existing outputs and late
+        # cards must keep the same manager and comm handlers.
+        return TagList(original(), HTMLDependency(
+            name='pythagoras-widget-view-lifecycle', version='1.0.0',
+            source={'subdir': str(Path(__file__).parent / 'www')},
+            script={'src': 'widget_view_lifecycle.js'}, all_files=False))
+
+    dependency._pythagoras_teardown_fix = True
+    output.output_binding_dependency = dependency
+
+
+install_widget_lifecycle()
 
 
 def _removed_layout_properties(previous, current, prefix=''):

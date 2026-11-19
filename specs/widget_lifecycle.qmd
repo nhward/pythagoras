@@ -1,0 +1,47 @@
+---
+title: "Plotly widget lifecycle"
+---
+
+Cards with changing Plotly results create one FigureWidget in a dependency-free
+render_widget output. A separate effect updates it through update_figure().
+WidgetSlot owns replacement and session-end cleanup. Data, metrics and fullscreen
+controls must not cause repeated construction of browser widget models.
+
+Candidate ensemble, duplicates and variable similarity follow this pattern, like
+Candidate training, Candidate models and data homogeneity. Metric, member, style, pending/result and fullscreen updates retain the same
+widget/view. Rendering is independent of background fitting.
+
+The installed shinywidgets 0.8.2 bridge and its bundled Jupyter model.close()
+also have an asynchronous teardown defect. Jupyter deletes model.views before
+pending view removals execute; their callbacks still dereference model.views.
+The bridge explicitly pre-removes only views with destroy(), while current
+anywidget Plotly views expose remove() without destroy(). Its legacy branch also
+deletes view.model prematurely. The resulting JavaScript Error object appears as
+{} in some console displays; the captured stack dereferences model.views.
+
+widget_lifecycle adds a narrowly versioned compatibility script when shinywidgets
+is 0.8.2 and its bundle contains the affected deletion. It leaves the provider's
+output binding, manager and comm handlers intact. The script wraps WidgetModel.close
+once, restores missing view.model references and retains the view registry until
+asynchronous close completes. Repeated closure shares the same pending operation.
+Exceptions propagate to the provider's existing reporting; no console filtering is
+introduced. Installed site-packages files are not modified. Other versions need
+independent verification before extending or removing the workaround.
+
+The earlier full output-binding replacement has been removed. Registering a second
+binding/manager after an existing output was displayed could split output rendering
+from model-message handling and cause "No model found for id". The regression
+creates one output before compatibility setup, inserts another after the first
+is displayed, and refreshes both. Both outputs must continue sharing the provider's
+single manager. Module installs the guard before card UI construction, including standalone cards.
+The small compatibility script is an additional HTMLDependency;
+it never replaces the provider dependency or registers a widget output binding.
+
+Browser regressions exercise repeated real widget replacement, explicit closure,
+DOM view removal, and deliberate unexpected teardown failure. Candidate ensemble
+regressions assert widget identity and absence of browser errors across metric,
+member, style, enablement and fullscreen changes. The continuous upstream-progress
+regression remains applicable.
+
+Preview-card regressions also cover duplicates, homogeneity and variable similarity
+charts across initial display and fullscreen changes.

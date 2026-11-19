@@ -10394,5 +10394,106 @@
       "class_probability"
     ],
     "default_for_new_selection": true
+  },
+  {
+    "id": "pykrige.rk.Krige:ordinary_2d_500",
+    "estimator": "pykrige.rk.Krige",
+    "label": "Ordinary kriging · 2D · 500 neighbours",
+    "task": "regressor",
+    "reviewed_package_version": "1.7.3",
+    "construction": {
+      "parameters": {
+        "method": "ordinary",
+        "variogram_model": "spherical",
+        "n_closest_points": 500,
+        "exact_values": false
+      },
+      "preparation": "numeric_array",
+      "wrapper": "sklearn.compose.TransformedTargetRegressor"
+    },
+    "capabilities": {
+      "numeric_predictors": true,
+      "categorical_predictors": false,
+      "missing_numeric_predictors": false,
+      "missing_categorical_predictors": false,
+      "sparse_input": false,
+      "sample_weight_fit": false,
+      "incremental_training": false
+    },
+    "conditions": [
+      "Exactly two finite numeric Predictor columns interpreted as Euclidean spatial coordinates in consistent units; not a general high-dimensional GP. No automatic coordinate extraction from Geometry.",
+      "At least 500 observations must remain in every training partition after any learned row filtering. Each prediction uses its nearest 500 training coordinates.",
+      "The Spherical variogram parameters are estimated from training data; this is not hyperparameter-free GP fitting. No independent feature standardization is applied to spatial coordinates.",
+      "No categorical predictors, missing coordinates, sparse input or sample_weight fitting. PyKrige weight controls variogram lag weighting, not observation importance.",
+      "Moving-window prediction still constructs global training pairwise distances/covariance; no many-row scalability or uncertainty calibration claim.",
+      "Identity TransformedTargetRegressor supplies sklearn fitted-state recognition: native Krige stores model, not model_, and fails sklearn 1.9 Pipeline fitted checks without this built-in wrapper. No target transformation is applied.",
+      "Spatial regression only. The provider also offers 3D methods, but this recipe and probe certify only 2D ordinary kriging; no temporal or spatiotemporal capability is claimed."
+    ],
+    "weighting": {
+      "importance_weights": "unsupported",
+      "rebalance_weights": "unsupported",
+      "class_imbalance_mechanism": "not_claimed",
+      "better_than_most": null,
+      "notes": "No per-observation fitting weights. Variogram lag weighting and weighted scoring do not establish sample_weight fitting."
+    },
+    "scalability": {
+      "many_rows": "unfavourable",
+      "many_features": "unfavourable",
+      "out_of_core": "not_in_this_recipe",
+      "evidence": "algorithmic_guidance_not_benchmark",
+      "benchmark": null,
+      "memory_reason": "Global dense training geometry/covariance plus a local 500-by-500 solve per query.",
+      "many_rows_reason": "Global training pairwise distances and covariance require quadratic storage even with moving-window predictions.",
+      "many_features_reason": "This exact recipe accepts only two coordinate columns.",
+      "prediction_reason": "Nearest-neighbour lookup and a local dense kriging solve for each query; benchmark on the intended dataset."
+    },
+    "recipe": {
+      "steps": [
+        "Select exactly two coordinate Predictor columns in stable schema order and convert them to a dense float NumPy array, without scaling.",
+        "Wrap Krige in sklearn.compose.TransformedTargetRegressor with its default identity target transform for sklearn fitted-state recognition.",
+        "Fit independently in each outer training partition, which must retain at least 500 observations; predict held-out coordinates using the 500-neighbour moving window."
+      ],
+      "fit_parameters": {},
+      "weight_argument": null
+    },
+    "sources": [
+      "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+      "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+    ],
+    "probe": {
+      "dataset": "numeric_coordinates",
+      "operation": "fit_predict",
+      "weights": false,
+      "pipeline_cross_validation": true,
+      "probabilities": false,
+      "require_convergence": true,
+      "samples": 780,
+      "batch": "pykrige_2026_11_19"
+    },
+    "subjective_assessment": {
+      "kind": "expert_judgement_not_benchmark",
+      "overall": "conditional_candidate",
+      "confidence": "medium",
+      "rationale": "Conditional spatial interpolation candidate for smooth spatial correlation; coordinate geometry, variogram assumptions, neighbourhood size and spatial validation matter. Not arbitrary-dimensional tabular GP regression.",
+      "assumptions": [
+        "Synthetic API compatibility checks do not certify prediction accuracy, calibrated kriging variances or large-data performance."
+      ]
+    },
+    "reviewed_dependencies": {
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1"
+    },
+    "structure": [
+      "spatial"
+    ],
+    "outputs": [
+      "point_prediction"
+    ],
+    "requirements": [
+      "two_numeric_coordinate_predictors",
+      "at_least_500_training_rows_per_split"
+    ]
   }
 ]

@@ -2062,6 +2062,26 @@
         "wrapper": null
       },
       "package_version": "1.9.1"
+    },
+    "pykrige.rk.Krige:ordinary_2d_500": {
+      "rating": "Low",
+      "evidence": "documentation_informed_judgement_not_benchmark",
+      "reason": "Each query selects 500 nearest training coordinates and solves a dense local ordinary-kriging system. Repeated query-dependent solves can dominate prediction cost; this is an expert expectation, not measured throughput.",
+      "sources": [
+        "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+        "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+      ],
+      "configuration": {
+        "parameters": {
+          "method": "ordinary",
+          "variogram_model": "spherical",
+          "n_closest_points": 500,
+          "exact_values": false
+        },
+        "preparation": "numeric_array",
+        "wrapper": "sklearn.compose.TransformedTargetRegressor"
+      },
+      "package_version": "1.7.3"
     }
   }
 }

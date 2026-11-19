@@ -60,6 +60,7 @@ dependencies = [
   "scikit-optimize>=0.10.2,<0.11; sys_platform != 'emscripten'",
   "scikit-lego==0.9.10",
   "skglm==0.5",
+  "pykrige==1.7.3",
 ]
 
 # card, module, cards and roles are local source modules, not PyPI dependencies.

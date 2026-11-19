@@ -1,13 +1,13 @@
 # Estimator package audit
 
-Generated: 2026-10-24T19:55:41.215224+00:00
+Generated: 2026-11-19T04:25:25.431031+00:00
 
 All top-level project entries in Related Projects before translations, all contrib README project headings, and all public contrib repositories (including archived/infrastructure repositories). Broader directories and method-family searches remain future audit phases.
 
-Registry: 94 projects; decisions: {'deferred': 49, 'excluded': 19, 'included': 26}.
+Registry: 95 projects; decisions: {'deferred': 49, 'excluded': 19, 'included': 27}.
 Unreviewed source entries: 0.
-Catalogue: 538 estimator aliases, 113 reviewed profiles, 21 documentation-only recipes.
-Profile validation: {'passed': 113}.
+Catalogue: 539 estimator aliases, 116 reviewed profiles, 21 documentation-only recipes.
+Profile validation: {'passed': 116}.
 
 Inspection means public-class/signature/tag discovery, not verified pipeline compatibility. Aliases can identify the same implementation. Missing optional packages remain visible in package metadata; their profiles are unavailable.
 
@@ -117,16 +117,18 @@ Inspection means public-class/signature/tag discovery, not verified pipeline com
 | [u8darts](https://unit8co.github.io/darts/) | deferred | — | not_requested | 0 | Time-series containers, horizons and split semantics require specialist recipes; broad module discovery deferred. |
 | [xgboost](https://github.com/dmlc/xgboost) | included | xgboost | inspected | 6 | Existing reviewed package; retained and reinspected. |
 | [yellowbrick](https://github.com/DistrictDataLabs/yellowbrick) | excluded | — | not_requested | 0 | Estimator visualizers; excluded from predictive/preprocessing methods in this phase. |
+| [pykrige](https://github.com/GeoStat-Framework/PyKrige) | included | pykrige | inspected | 1 | Review the public sklearn Krige estimator for 2D moving-window ordinary kriging; RegressionKriging requires separate predictor/coordinate arguments and is not a committed recipe. |
 
 ## Method grouping
 
-21 methods have reviewed supersession metadata. Linked recipes are hidden by default and restored by Show excluded and unreviewed recipes. This is display grouping; objective-family nesting does not guarantee interchangeable solvers, capabilities or validated recipes.
+22 methods have reviewed supersession metadata. Linked recipes are hidden by default and restored by Show excluded and unreviewed recipes. This is display grouping; objective-family nesting does not guarantee interchangeable solvers, capabilities or validated recipes.
 
 | Method | Broader method | Relationship |
 |---|---|---|
 | category_encoders.BinaryEncoder | category_encoders.BaseNEncoder | configured_special_case |
 | feature_engine.transformation.ReciprocalTransformer | feature_engine.transformation.PowerTransformer | configured_special_case |
 | mlxtend.regressor.LinearRegression | sklearn.linear_model.ElasticNet | objective_family |
+| skglm.ElasticNet | sklearn.linear_model.ElasticNet | alternative_implementation |
 | skglm.Lasso | skglm.ElasticNet | configured_special_case |
 | sklearn.feature_selection.SelectFdr | sklearn.feature_selection.GenericUnivariateSelect | configured_special_case |
 | sklearn.feature_selection.SelectFpr | sklearn.feature_selection.GenericUnivariateSelect | configured_special_case |

@@ -17,6 +17,7 @@ os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
+from cards.obs_duplicates import BUTTON_VALUE
 from list_pandas import as_list
 from proxy_data import proxy_data
 from roles import Role, RoleMap
@@ -361,7 +362,8 @@ class TestWebKitUI:
         get_card(page).locator("button.collapse-toggle").click()
         by_id(page, "UseTarget").set_checked(use_target)
         expect(by_id(page, "Check")).to_contain_text(f"{count} redundant exact-duplicate row", timeout=15_000)
-        set_shiny_input(page, "RemoveExact", ["Exact duplicates"])
+        # Explicitly disable removal while inspecting the incoming observations.
+        set_shiny_input(page, "RemoveExact", [])
         expect(by_id(page, "Check")).to_contain_text(f"{count} redundant exact-duplicate", timeout=15_000)
         expect(by_id(page, "Check")).to_contain_text(f"among {count+remaining} observations.")
         by_id(page, "UseTarget").set_checked(not use_target)
@@ -392,7 +394,7 @@ class TestWebKitUI:
     def test_remove_exact_duplicates_recalculates_outputs(self, page: Page, app: ShinyAppProc):
         page.goto(app.url)
         expect(by_id(page, "Check")).to_contain_text("1 redundant exact-duplicate row", timeout=15_000)
-        set_shiny_input(page, "RemoveExact", ["Exact duplicates"])
+        set_shiny_input(page, "RemoveExact", [BUTTON_VALUE])
         expect(by_id(page, "Check")).to_contain_text("Removed 1 redundant exact-duplicate row; 4 observations remain", timeout=15_000)
         by_id(page, "FlipButton").click(force=True)
         expect(by_id(page, "Table2")).to_be_visible(timeout=10_000)

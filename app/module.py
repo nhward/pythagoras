@@ -74,6 +74,10 @@ from shiny import App, reactive, req, ui
 from shiny import ui as _ui
 from shiny.session import get_current_session
 from shiny.types import SilentException
+from widget_lifecycle import install_widget_lifecycle
+
+# Install before cards construct any static or dynamic widget output UI.
+install_widget_lifecycle()
 
 _UNSET = object()
 

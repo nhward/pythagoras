@@ -301,7 +301,8 @@
                 "pandas_categories",
                 "catboost_strings",
                 "impute_onehot",
-                "categorical_complete"
+                "categorical_complete",
+                "numeric_array"
               ]
             },
             "wrapper": {
@@ -422,6 +423,12 @@
         },
         "default_for_new_selection": {
           "type": "boolean"
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

@@ -1849,6 +1849,21 @@
       "status": "excluded",
       "reason": "Estimator visualizers; excluded from predictive/preprocessing methods in this phase.",
       "archived": false
+    },
+    {
+      "id": "pykrige",
+      "distribution": "pykrige",
+      "import_name": "pykrige",
+      "modules": [
+        "rk"
+      ],
+      "project_url": "https://github.com/GeoStat-Framework/PyKrige",
+      "documentation_url": "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/",
+      "source_entries": [],
+      "reviewed_on": "2026-11-19",
+      "status": "included",
+      "reason": "Review the public sklearn Krige estimator for 2D moving-window ordinary kriging; RegressionKriging requires separate predictor/coordinate arguments and is not a committed recipe.",
+      "archived": false
     }
   ]
 }

@@ -122,7 +122,7 @@ def recorded_helpers(card_module, *, frame=None, inputs=None, role_map=None, ful
     )
     with reactive.isolate():
         card._imports.set(proxy)
-    card.server(inputs or FakeInputs(), capture, SimpleNamespace())
+    card.server(inputs or FakeInputs(), capture, SimpleNamespace(on_ended=lambda callback: None))
     return card, functions
 
 

@@ -1146,6 +1146,17 @@
         }
       },
       "package_version": "1.9.1"
+    },
+    "pykrige.rk.Krige:ordinary_2d_500": {
+      "status": "no",
+      "reason": "Variogram fitting and moving-window kriging use training data without internal validation/tuning splits. Use an upstream plan appropriate to spatial dependence.",
+      "parameters": {
+        "method": "ordinary",
+        "variogram_model": "spherical",
+        "n_closest_points": 500,
+        "exact_values": false
+      },
+      "package_version": "1.7.3"
     }
   }
 }

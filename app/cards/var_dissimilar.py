@@ -27,9 +27,10 @@ from roles import Role
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from scipy.stats import skew
-from shiny import render, req, ui
+from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
+from widget_lifecycle import WidgetSlot, update_figure
 
 #TODO: expose correlation extra-weighting as a setting
 #TODO: employ observations weights when available (How?)
@@ -106,6 +107,8 @@ def instance():
     )
 
     def server(input, output, session):
+        chart_slot = WidgetSlot(session)
+        chart_instance = reactive.Value(None)
 
         @this.reactable(calc = True)
         @this.settle(seconds=2)
@@ -551,6 +554,16 @@ def instance():
         @render_widget
         @this.record_context
         def Chart():
+            widget = chart_slot.replace(go.FigureWidget(Card.empty_figure('Comparing variables…')))
+            widget._config = {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
+            chart_instance.set(widget)
+            return widget
+
+        @this.reactable()
+        @this.record_context
+        async def UpdateChart():
+            widget = chart_instance()
+            req(widget is not None)
             matrix = DissimilarityMatrix()
             fig = _hierarchy_figure(
                 matrix,
@@ -575,13 +588,9 @@ def instance():
                     "hoverCompareCartesian",
                 ]
             )
-            fw = go.FigureWidget(fig)
-            fw._config = (getattr(fw, "_config", {}) | {
-                "displayModeBar": bool(this.isFullScreen()),
-                "displaylogo": False,
-                "responsive": True
-            })
-            return fw
+            config = {'displayModeBar': bool(this.isFullScreen()), 'displaylogo': False, 'responsive': True}
+            if update_figure(widget, fig, config):
+                await session.send_custom_message('update_plotly_config', {'id': this.ns('Chart'), 'config': config})
 
 
         @output

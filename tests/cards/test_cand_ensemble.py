@@ -22,10 +22,14 @@ def plot(page):
 
 @pytest.mark.ui
 def test_five_default_members_metric_sorting_subset_and_export(page, app):
+    errors = []
+    page.on('pageerror', lambda error: errors.append(str(error)))
+    page.on('console', lambda message: errors.append(message.text) if message.type == 'error' else None)
     page.goto(app.url)
     expect(page.locator('[id$="-Status"]')).to_contain_text('5 members', timeout=60000)
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('incoming')
     expect(plot(page)).to_be_visible()
+    plot(page).evaluate('el => { window.initialEnsemblePlot = el; }')
     assert plot(page).evaluate('el => el.data[0].x.length') == 6
     assert plot(page).evaluate('el => el.data[0].x.every((x,i,a) => !i || a[i-1] <= x)')
     page.locator('[id$="-Apply"] input').check()
@@ -43,6 +47,17 @@ def test_five_default_members_metric_sorting_subset_and_export(page, app):
     expect(page.locator('[id$="-Status"]')).to_contain_text('4 members', timeout=30000)
     page.locator('[id$="-Apply"] input').uncheck()
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('incoming', timeout=10000)
+    assert plot(page).evaluate('el => el === window.initialEnsemblePlot')
+    page.locator('.card').first.hover()
+    page.locator('[id$="-ExpandButton"]').click()
+    page.wait_for_function('''() => document.querySelector('[id$="-Chart"] .js-plotly-plot')?._context.displayModeBar === true''')
+    page.locator('[id$="-ContractButton"]').click()
+    page.wait_for_function('''() => document.querySelector('[id$="-Chart"] .js-plotly-plot')?._context.displayModeBar === false''')
+    assert plot(page).evaluate('el => el === window.initialEnsemblePlot')
+    page.locator('[id$="-FlipButton"]').click(force=True)
+    for name in ('MAE', 'RMSE', 'R²'):
+        expect(page.locator('[id$="-Table"]').get_by_role('columnheader', name=name, exact=True)).to_be_visible()
+    assert not errors, errors
 
 
 @pytest.mark.ui
@@ -75,12 +90,14 @@ def test_training_progress_does_not_restart_or_hide_unchanged_ensemble(page, pro
     page.goto(progress_app.url)
     expect(page.locator('[id$="-Status"]')).to_contain_text('2 members', timeout=30000)
     expect(plot(page)).to_be_visible()
+    plot(page).evaluate('el => { window.ensemblePlot = el; }')
     probe = page.locator('[id$="-ProgressProbe"]')
     page.wait_for_function(r'''() => {
         const text = document.querySelector('[id$="-ProgressProbe"]')?.textContent || '';
         return Number(text.match(/updates=(\d+)/)?.[1]) >= 15;
     }''')
     expect(probe).to_contain_text('fits=1')
+    assert plot(page).evaluate('el => el === window.ensemblePlot')
     page.locator('[id$="-Apply"] input').check()
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('ensemble=2', timeout=10000)
     settings(page)

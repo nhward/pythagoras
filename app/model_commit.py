@@ -4,7 +4,7 @@ from importlib import import_module
 import numpy as np
 import pandas as pd
 from evaluation_plan import level_key
-from sklearn.compose import ColumnTransformer, make_column_selector
+from sklearn.compose import ColumnTransformer, TransformedTargetRegressor, make_column_selector
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
@@ -27,7 +27,7 @@ def prepare_predictors(frame, *, columns, preparation, selected_schema=False,
             result[column] = result[column].astype('category')
         elif preparation in ('categorical_complete', 'impute_onehot'):
             result[column] = result[column].astype(object).where(result[column].notna(), np.nan)
-    return result
+    return np.asarray(result, dtype=float) if preparation == 'numeric_array' else result
 
 
 def commit_problem(row):
@@ -36,8 +36,8 @@ def commit_problem(row):
     if not row.get('selectable'):
         return 'This recipe is not validated and installed for the current requirements.'
     construction = row['profile']['construction']
-    if construction.get('wrapper') not in (None, 'sklearn.pipeline.Pipeline') or construction.get('preparation') not in (
-        'none', 'numeric', 'numeric_complete', 'pandas_categories', 'categorical_complete', 'impute_onehot', 'catboost_strings'
+    if construction.get('wrapper') not in (None, 'sklearn.pipeline.Pipeline', 'sklearn.compose.TransformedTargetRegressor') or construction.get('preparation') not in (
+        'none', 'numeric', 'numeric_complete', 'numeric_array', 'pandas_categories', 'categorical_complete', 'impute_onehot', 'catboost_strings'
     ):
         return 'This recipe needs a construction adapter before it can be committed.'
     if construction.get('preparation') == 'catboost_strings' and row['estimator'] not in {
@@ -71,6 +71,8 @@ def build_model(row, predictors):
         factory = getattr(import_module(module), name)
     from kernel_search import kernel_parameters
     estimator = factory(**kernel_parameters(row['estimator'], profile['construction']['parameters']))
+    if profile['construction'].get('wrapper') == 'sklearn.compose.TransformedTargetRegressor':
+        estimator = TransformedTargetRegressor(regressor=estimator)
     steps = [('predictors', FunctionTransformer(prepare_predictors,
         kw_args={'columns': list(predictors), 'preparation': preparation, 'selected_schema': selected_schema}))]
     if preparation == 'impute_onehot':

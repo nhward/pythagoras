@@ -35,7 +35,8 @@ errors must remain visible, not become successful empty results.
 
 The front horizontal bars show selected members plus ensemble, best first by
 signed scorer, losses displayed naturally. Orange distinguishes ensemble. Flip
-side is a provisional numerical table. Unavailable metrics are missing, not zero.
+side shows every feasible task metric mean, sorted by the preferred metric, with
+preferred-metric fold SD and split count. Unavailable metrics are missing, not zero.
 Repeated/grouped/temporal plans preserve the upstream memberships; post-selection
 resampling is explicitly distinguished from independent test performance.
 

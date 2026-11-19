@@ -6060,6 +6060,56 @@
         "https://koaning.github.io/scikit-lego/api/meta/"
       ],
       "reviewed_on": "2026-11-16"
+    },
+    {
+      "methods": [
+        "pykrige.rk.Krige"
+      ],
+      "attributes": {
+        "core_mechanism": {
+          "values": [
+            "kernel",
+            "neighborhood",
+            "spatial"
+          ],
+          "status": "reviewed",
+          "note": "Ordinary kriging uses covariance/variogram relationships; this recipe restricts conditioning to nearest neighbours."
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": "One query-local ordinary kriging predictor; not an ensemble."
+        },
+        "fitting_criterion": {
+          "values": [
+            "variogram_least_squares",
+            "minimum_variance_unbiased"
+          ],
+          "status": "reviewed",
+          "note": "Automatically estimates variogram parameters using soft-L1 least squares; solves the ordinary kriging minimum-variance unbiased prediction equations."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Local interpolation weights can be inspected but depend on query location, reference observations and fitted variogram; not a compact global rule."
+        },
+        "learning_strategy": {
+          "values": [
+            "hybrid"
+          ],
+          "status": "reviewed",
+          "note": "Fits variogram geometry eagerly, then selects a query-specific neighbourhood and solves its local prediction equations."
+        }
+      },
+      "sources": [
+        "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+        "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+      ],
+      "reviewed_on": "2026-11-19"
     }
   ],
   "recipes": {

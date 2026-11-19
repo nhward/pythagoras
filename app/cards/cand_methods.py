@@ -64,6 +64,15 @@ def _analyze(source, catalogue, versions, *, use_weights=False, forecasting=Fals
     spatial = bool(list(roles.columns_with_role(Role.GEOMETRY)))
     structure = []
     available = []
+    if len(source.model_predictors) == 2 and all(
+            pd.api.types.is_numeric_dtype(source.frame[c].dtype)
+            and not pd.api.types.is_bool_dtype(source.frame[c].dtype) for c in source.model_predictors):
+        available.append('two_numeric_coordinate_predictors')
+    plan = source.evaluation_plan
+    if plan is not None and plan.ready:
+        training_sizes = [len(train) for train, _ in plan.splits(source)]
+        if training_sizes and min(training_sizes) >= 500:
+            available.append('at_least_500_training_rows_per_split')
     if sequences:
         available.append('time_index')
     if identifiers:
@@ -616,13 +625,13 @@ def instance():
             valid = committed is not None and committed[0] is Incoming()
             message = ('Committed method' + ('s' if len(committed[1]) > 1 else '') + ': '
                        + ', '.join(c['label'] for c in committed[1]) if valid
-                       else 'No estimator committed. Select methods and Commit.')
+                       else 'No estimator committed.')
             if committed is not None and not valid:
                 message += ' Upstream data changed; commit again.'
             selected = SelectedMethod()
             committed_methods = [c.get('method_id') for c in committed[1]] if committed else []
             if selected and selected != committed_methods:
-                message += (' Selected method: ' if len(selected) == 1 else ' Selected methods: ') + ', '.join(_model_labels(m)['Model'] for m in selected) + '; press Commit to apply ' + ('this choice.' if len(selected) == 1 else 'these choices.')
+                message += (' Selected method: ' if len(selected) == 1 else ' Selected methods: ') + ', '.join(_model_labels(m)['Model'] for m in selected)
             error = CommitError()
             return f'{message} {error}' if error else message
 

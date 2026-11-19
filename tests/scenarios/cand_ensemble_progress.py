@@ -1,8 +1,8 @@
 """Frequent upstream progress updates while a slower ensemble task is running."""
-import time
-from pathlib import Path
 import os
 import sys
+import time
+from pathlib import Path
 
 APP_ROOT = Path(__file__).resolve().parents[2] / 'app'
 os.chdir(APP_ROOT)
@@ -16,6 +16,8 @@ original_evaluate = cand_ensemble.evaluate_ensemble
 
 
 def slow_evaluate(*args, **kwargs):
+    if not args[1]:
+        return original_evaluate(*args, **kwargs)
     counts['fits'] += 1
     time.sleep(1.2)
     return original_evaluate(*args, **kwargs)

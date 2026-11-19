@@ -16,7 +16,7 @@ probabilities from every member. Hard voting uses majority labels, breaking ties
 by the stable class order. Members have equal voting weight. The upstream goal
 weights select the representatives; they are not prediction weights.
 
-**Preferred metric** changes the chart and table without refitting models or
+**Preferred metric** changes the chart and the table sort order without refitting models or
 changing the upstream representatives. Metric choices follow the outcome task.
 Unavailable metrics, such as log loss for hard voting, have no score.
 
@@ -30,7 +30,9 @@ require an explicit plan. Holdout and prediction observations are excluded.
 
 The front chart sorts from best to worst and highlights the ensemble in orange.
 Losses appear in their natural units. Hover text and the provisional flip-side
-table report fold standard deviation and completed splits. These are
+table report fold standard deviation and completed splits for the preferred metric.
+The table also shows all feasible task metrics side by side: RMSE, MAE and R²
+for regression, and available classification metrics. These are
 **post-selection resampling scores**: the member configurations were already
 selected using tuning evidence, so this is not independent test performance.
 

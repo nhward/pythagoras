@@ -533,6 +533,19 @@
         ]
       ],
       "discovered_classes": 6
+    },
+    "pykrige": {
+      "version": "1.7.3",
+      "status": "inspected",
+      "module_scope": [
+        "rk"
+      ],
+      "registry_id": "pykrige",
+      "project_url": "https://github.com/GeoStat-Framework/PyKrige",
+      "documentation_url": "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/",
+      "reviewed_on": "2026-11-19",
+      "source_entries": [],
+      "discovered_classes": 1
     }
   },
   "discovery_issues": [
@@ -57222,6 +57235,129 @@
         "note": "Consult an individual recipe; API method presence alone does not establish output support.",
         "sources": []
       }
+    },
+    {
+      "id": "pykrige.rk.Krige",
+      "implementation": "pykrige.compat.Krige",
+      "package": "pykrige",
+      "package_version": "1.7.3",
+      "kinds": [
+        "regressor"
+      ],
+      "constructor": {
+        "signature": "(method='ordinary', variogram_model='linear', nlags=6, weight=False, n_closest_points=10, verbose=False, exact_values=True, pseudo_inv=False, pseudo_inv_type='pinv', variogram_parameters=None, variogram_function=None, anisotropy_scaling=(1.0, 1.0), anisotropy_angle=(0.0, 0.0, 0.0), enable_statistics=False, coordinates_type='euclidean', drift_terms=None, point_drift=None, ext_drift_grid=(None, None, None), functional_drift=None)",
+        "required_arguments": []
+      },
+      "default_tags": {
+        "estimator_type": "regressor",
+        "target_tags": {
+          "required": true,
+          "one_d_labels": false,
+          "two_d_labels": false,
+          "positive_only": false,
+          "multi_output": false,
+          "single_output": true
+        },
+        "transformer_tags": null,
+        "classifier_tags": null,
+        "regressor_tags": {
+          "poor_score": false
+        },
+        "array_api_support": false,
+        "no_validation": false,
+        "non_deterministic": false,
+        "requires_fit": true,
+        "_skip_test": false,
+        "input_tags": {
+          "one_d_array": false,
+          "two_d_array": true,
+          "three_d_array": false,
+          "sparse": false,
+          "categorical": false,
+          "string": false,
+          "dict": false,
+          "positive_only": false,
+          "allow_nan": false,
+          "pairwise": false
+        }
+      },
+      "tag_error": null,
+      "tag_evidence": "installed_instance_introspection",
+      "methods": {
+        "fit": "(self, x, y, *args, **kwargs)",
+        "predict": "(self, x, *args, **kwargs)",
+        "score": "(self, X, y, sample_weight=None)"
+      },
+      "weighting": {
+        "fit_sample_weight": "not_explicit_unknown",
+        "class_weight_explicit_parameter": false,
+        "importance_weight_interpretation": "Requires reviewed profile; a signature is not proof that weights affect fitting.",
+        "rebalance_weight_interpretation": "Per-row rebalance weights may use sample_weight where verified; class weights and resampling are separate mechanisms.",
+        "prediction_weights": "Not inferred from score(sample_weight). Training and evaluation weights are separate."
+      },
+      "incremental_api_present": false,
+      "achievable_profile_ids": [
+        "pykrige.rk.Krige:ordinary_2d_500"
+      ],
+      "unreviewed_capabilities": [
+        "Capabilities outside attached reviewed profiles are unknown, not unsupported."
+      ],
+      "taxonomy": {
+        "core_mechanism": {
+          "values": [
+            "kernel",
+            "neighborhood",
+            "spatial"
+          ],
+          "status": "reviewed",
+          "note": "Ordinary kriging uses covariance/variogram relationships; this recipe restricts conditioning to nearest neighbours."
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": "One query-local ordinary kriging predictor; not an ensemble."
+        },
+        "fitting_criterion": {
+          "values": [
+            "variogram_least_squares",
+            "minimum_variance_unbiased"
+          ],
+          "status": "reviewed",
+          "note": "Automatically estimates variogram parameters using soft-L1 least squares; solves the ordinary kriging minimum-variance unbiased prediction equations."
+        },
+        "learning_strategy": {
+          "values": [
+            "hybrid"
+          ],
+          "status": "reviewed",
+          "note": "Fits variogram geometry eagerly, then selects a query-specific neighbourhood and solves its local prediction equations."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Local interpolation weights can be inspected but depend on query location, reference observations and fitted variogram; not a compact global rule."
+        },
+        "capacity_growth": {
+          "values": [],
+          "status": "deferred",
+          "note": "Reserved for stage 2; not assessed."
+        },
+        "sources": [
+          "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+          "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+        ],
+        "reviewed_on": "2026-11-19"
+      },
+      "outputs": [],
+      "output_review": {
+        "status": "depends_on_configuration",
+        "note": "Consult an individual recipe; API method presence alone does not establish output support.",
+        "sources": []
+      }
     }
   ],
   "profiles": [
@@ -76239,6 +76375,187 @@
         "resource_parameter_overrides": {},
         "warnings": [],
         "seconds": 0.2788,
+        "limits": "Small synthetic compatibility check, not predictive-quality/scalability benchmarking or proof of every parameter combination. Accepting weights alone does not establish their statistical semantics."
+      }
+    },
+    {
+      "id": "pykrige.rk.Krige:ordinary_2d_500",
+      "estimator": "pykrige.rk.Krige",
+      "label": "Ordinary kriging \u00b7 2D \u00b7 500 neighbours",
+      "task": "regressor",
+      "reviewed_package_version": "1.7.3",
+      "construction": {
+        "parameters": {
+          "method": "ordinary",
+          "variogram_model": "spherical",
+          "n_closest_points": 500,
+          "exact_values": false
+        },
+        "preparation": "numeric_array",
+        "wrapper": "sklearn.compose.TransformedTargetRegressor"
+      },
+      "capabilities": {
+        "numeric_predictors": true,
+        "categorical_predictors": false,
+        "missing_numeric_predictors": false,
+        "missing_categorical_predictors": false,
+        "sparse_input": false,
+        "sample_weight_fit": false,
+        "incremental_training": false
+      },
+      "conditions": [
+        "Exactly two finite numeric Predictor columns interpreted as Euclidean spatial coordinates in consistent units; not a general high-dimensional GP. No automatic coordinate extraction from Geometry.",
+        "At least 500 observations must remain in every training partition after any learned row filtering. Each prediction uses its nearest 500 training coordinates.",
+        "The Spherical variogram parameters are estimated from training data; this is not hyperparameter-free GP fitting. No independent feature standardization is applied to spatial coordinates.",
+        "No categorical predictors, missing coordinates, sparse input or sample_weight fitting. PyKrige weight controls variogram lag weighting, not observation importance.",
+        "Moving-window prediction still constructs global training pairwise distances/covariance; no many-row scalability or uncertainty calibration claim.",
+        "Identity TransformedTargetRegressor supplies sklearn fitted-state recognition: native Krige stores model, not model_, and fails sklearn 1.9 Pipeline fitted checks without this built-in wrapper. No target transformation is applied.",
+        "Spatial regression only. The provider also offers 3D methods, but this recipe and probe certify only 2D ordinary kriging; no temporal or spatiotemporal capability is claimed."
+      ],
+      "weighting": {
+        "importance_weights": "unsupported",
+        "rebalance_weights": "unsupported",
+        "class_imbalance_mechanism": "not_claimed",
+        "better_than_most": null,
+        "notes": "No per-observation fitting weights. Variogram lag weighting and weighted scoring do not establish sample_weight fitting."
+      },
+      "scalability": {
+        "many_rows": "unfavourable",
+        "many_features": "unfavourable",
+        "out_of_core": "not_in_this_recipe",
+        "evidence": "algorithmic_guidance_not_benchmark",
+        "benchmark": null,
+        "memory_reason": "Global dense training geometry/covariance plus a local 500-by-500 solve per query.",
+        "many_rows_reason": "Global training pairwise distances and covariance require quadratic storage even with moving-window predictions.",
+        "many_features_reason": "This exact recipe accepts only two coordinate columns.",
+        "prediction_reason": "Nearest-neighbour lookup and a local dense kriging solve for each query; benchmark on the intended dataset."
+      },
+      "recipe": {
+        "steps": [
+          "Select exactly two coordinate Predictor columns in stable schema order and convert them to a dense float NumPy array, without scaling.",
+          "Wrap Krige in sklearn.compose.TransformedTargetRegressor with its default identity target transform for sklearn fitted-state recognition.",
+          "Fit independently in each outer training partition, which must retain at least 500 observations; predict held-out coordinates using the 500-neighbour moving window."
+        ],
+        "fit_parameters": {},
+        "weight_argument": null
+      },
+      "sources": [
+        "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+        "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+      ],
+      "probe": {
+        "dataset": "numeric_coordinates",
+        "operation": "fit_predict",
+        "weights": false,
+        "pipeline_cross_validation": true,
+        "probabilities": false,
+        "require_convergence": true,
+        "samples": 780,
+        "batch": "pykrige_2026_11_19"
+      },
+      "subjective_assessment": {
+        "kind": "expert_judgement_not_benchmark",
+        "overall": "conditional_candidate",
+        "confidence": "medium",
+        "rationale": "Conditional spatial interpolation candidate for smooth spatial correlation; coordinate geometry, variogram assumptions, neighbourhood size and spatial validation matter. Not arbitrary-dimensional tabular GP regression.",
+        "assumptions": [
+          "Synthetic API compatibility checks do not certify prediction accuracy, calibrated kriging variances or large-data performance."
+        ]
+      },
+      "reviewed_dependencies": {
+        "numpy": "2.4.6",
+        "pandas": "3.1.1",
+        "scipy": "1.17.1",
+        "scikit-learn": "1.9.1"
+      },
+      "structure": [
+        "spatial"
+      ],
+      "outputs": [
+        "point_prediction"
+      ],
+      "requirements": [
+        "two_numeric_coordinate_predictors",
+        "at_least_500_training_rows_per_split"
+      ],
+      "inspected_package_version": "1.7.3",
+      "inspected_dependencies": {
+        "numpy": "2.4.6",
+        "pandas": "3.1.1",
+        "scipy": "1.17.1",
+        "scikit-learn": "1.9.1"
+      },
+      "version_match": true,
+      "validation": "passed",
+      "taxonomy": {
+        "core_mechanism": {
+          "values": [
+            "kernel",
+            "neighborhood",
+            "spatial"
+          ],
+          "status": "reviewed",
+          "note": "Ordinary kriging uses covariance/variogram relationships; this recipe restricts conditioning to nearest neighbours."
+        },
+        "composition": {
+          "values": [
+            "single"
+          ],
+          "status": "reviewed",
+          "note": "One query-local ordinary kriging predictor; not an ensemble."
+        },
+        "fitting_criterion": {
+          "values": [
+            "variogram_least_squares",
+            "minimum_variance_unbiased"
+          ],
+          "status": "reviewed",
+          "note": "Automatically estimates variogram parameters using soft-L1 least squares; solves the ordinary kriging minimum-variance unbiased prediction equations."
+        },
+        "learning_strategy": {
+          "values": [
+            "hybrid"
+          ],
+          "status": "reviewed",
+          "note": "Fits variogram geometry eagerly, then selects a query-specific neighbourhood and solves its local prediction equations."
+        },
+        "transparency": {
+          "values": [
+            "usually_opaque"
+          ],
+          "status": "reviewed",
+          "note": "Local interpolation weights can be inspected but depend on query location, reference observations and fitted variogram; not a compact global rule."
+        },
+        "capacity_growth": {
+          "values": [],
+          "status": "deferred",
+          "note": "Reserved for stage 2; not assessed."
+        },
+        "sources": [
+          "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+          "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+        ],
+        "reviewed_on": "2026-11-19"
+      },
+      "output_review": {
+        "status": "reviewed",
+        "note": "Recorded recipe outputs; not an exhaustive API inventory. Probability estimates do not establish calibration. Runtime evidence remains separate.",
+        "sources": [
+          "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.rk.Krige.html",
+          "https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/generated/pykrige.ok.OrdinaryKriging.html"
+        ]
+      },
+      "validation_details": {
+        "checked_at": "2026-11-19T04:24:16.816675+00:00",
+        "operations": [
+          "clone_get_set_params",
+          "pipeline_three_fold_held_out_prediction",
+          "fit_predict_finite",
+          "no_convergence_warnings"
+        ],
+        "resource_parameter_overrides": {},
+        "warnings": [],
+        "seconds": 6.311,
         "limits": "Small synthetic compatibility check, not predictive-quality/scalability benchmarking or proof of every parameter combination. Accepting weights alone does not establish their statistical semantics."
       }
     }

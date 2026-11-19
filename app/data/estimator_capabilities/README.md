@@ -569,3 +569,42 @@ Re-run only these probes with:
 ```sh
 .venv/bin/python scripts/probe_estimator_catalogue.py --batch kernel_search_2026_11_16
 ```
+
+## PyKrige spatial candidate (2026-11-19)
+
+`pykrige.rk.Krige:ordinary_2d_500` adds PyKrige 1.7.3 as a **spatial-only**
+regression candidate. Exactly two complete finite numeric Predictor columns must
+represent Euclidean coordinates in consistent units. Geometry is not automatically
+expanded into predictors. The provider also offers 3D kriging; that is documented
+scope, not a validated 3D recipe. No general tabular, temporal or spatiotemporal
+capability is claimed.
+
+The recipe uses ordinary moving-window kriging, a training-fitted spherical
+variogram, `n_closest_points=500` and `exact_values=False`. It requires at least
+500 observations in each outer training partition, including after any learned
+row filtering. Candidate assessment checks the upstream plan's nominal training
+sizes; it cannot guarantee how many observations a learned filter will retain.
+Observation importance weights, missing coordinates and categorical predictors
+are unsupported. Variogram lag weighting is not sample-weight fitting.
+
+No custom estimator adapter is introduced. Existing predictor preparation converts
+the two coordinate columns to a dense NumPy float array, without scaling. A standard
+`sklearn.compose.TransformedTargetRegressor` with its default identity transform
+provides fitted-state recognition: native Krige stores `model` rather than a
+trailing-underscore fitted attribute, so sklearn 1.9 pipeline prediction otherwise
+raises NotFittedError. The wrapper does not transform target values.
+
+The scoped probe uses 780 synthetic coordinate observations: each of three outer
+training folds has 520 rows, so the actual 500-neighbour configuration is exercised
+without resource overrides. Cloning, parameter round trips, held-out predictions,
+full-fixture finite predictions and convergence checks passed without warnings.
+Other existing recipe evidence was preserved rather than reset by a full rebuild.
+These are API checks, not accuracy, uncertainty-calibration or scalability evidence.
+Only point prediction is certified through the pipeline interface. Expected
+prediction throughput is Low (documentation-informed expert judgement): local
+500-by-500 solves recur for queries, and global training geometry/covariance
+still incurs quadratic storage.
+
+```sh
+.venv/bin/python scripts/probe_estimator_catalogue.py --batch pykrige_2026_11_19
+```

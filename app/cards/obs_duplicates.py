@@ -29,6 +29,7 @@ from roles import Role
 from shiny import reactive, render, req, ui
 from shiny.types import SilentOperationInProgressException
 from shinywidgets import render_widget
+from widget_lifecycle import WidgetSlot, update_figure
 
 RESULT_COLUMNS = [
     "Differences tolerated",
@@ -305,6 +306,8 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
+        chart_slot = WidgetSlot(session)
+        chart_instance = reactive.Value(None)
 
         @this.reactable(calc=True)
         @this.record_context
@@ -450,6 +453,16 @@ def instance():
         @render_widget
         @this.record_context
         def BarChart():
+            widget = chart_slot.replace(go.FigureWidget(Card.empty_figure('Comparing duplicate observations…')))
+            widget._config = {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
+            chart_instance.set(widget)
+            return widget
+
+        @this.reactable()
+        @this.record_context
+        async def UpdateBarChart():
+            widget = chart_instance()
+            req(widget is not None)
             full_screen = bool(this.isFullScreen())
             figure = _duplicates_figure(
                 BeforeResults(), Results(), full_screen=full_screen,
@@ -461,13 +474,9 @@ def instance():
                     "hoverClosestCartesian", "hoverCompareCartesian",
                 ],
             )
-            widget = go.FigureWidget(figure)
-            widget._config = getattr(widget, "_config", {}) | {
-                "displayModeBar": full_screen,
-                "displaylogo": False,
-                "responsive": True,
-            }
-            return widget
+            config = {'displayModeBar': full_screen, 'displaylogo': False, 'responsive': True}
+            if update_figure(widget, figure, config):
+                await session.send_custom_message('update_plotly_config', {'id': this.ns('BarChart'), 'config': config})
 
         @output
         @render.ui

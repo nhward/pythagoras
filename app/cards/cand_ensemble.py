@@ -13,6 +13,7 @@ from pipeline_search import METRICS
 from shiny import reactive, render, req, ui
 from shiny.types import SilentException, SilentOperationInProgressException
 from shinywidgets import render_widget
+from widget_lifecycle import WidgetSlot, update_figure
 
 STYLES = {'regression': {'mean': 'Equal mean', 'median': 'Median'},
           'classification': {'soft': 'Soft voting (mean probabilities)', 'hard': 'Hard majority voting'}}
@@ -69,6 +70,8 @@ def instance():
 
     def server(input, output, session):
         busy = this.busy()
+        chart_widget = WidgetSlot(session)
+        chart_instance = reactive.Value(None)
         cancellation = None
         requested = reactive.Value(None)
         choices_identity = None
@@ -170,17 +173,24 @@ def instance():
                 signature, result, error = Evaluate.result()
             except SilentOperationInProgressException:
                 req(False)
-            try:
-                current = evaluation_signature(Incoming(), *Options())
-            except ValueError:
-                current = None
-            req(signature == current)
+            snapshot = requested()
+            req(snapshot is not None, signature == snapshot[2], snapshot[1] == Options())
             return result, error
 
         @output
         @render_widget
         @this.record_context
         def Chart():
+            widget = chart_widget.replace(go.FigureWidget(Card.empty_figure('Waiting for ensemble evaluation.')))
+            widget._config = {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
+            chart_instance.set(widget)
+            return widget
+
+        @this.reactable()
+        @this.record_context
+        async def UpdateChart():
+            widget = chart_instance()
+            req(widget is not None)
             full = bool(this.isFullScreen())
             try:
                 result, error = Results()
@@ -188,9 +198,9 @@ def instance():
                 figure = _figure(result, metric, full) if result and metric in METRICS[result.task] else Card.empty_figure(error or 'Choose a metric.')
             except SilentException:
                 figure = Card.empty_figure(Available()[1] or 'Waiting for ensemble evaluation.')
-            widget = go.FigureWidget(figure)
-            widget._config = {'displayModeBar': full, 'displaylogo': False, 'responsive': True}
-            return widget
+            config = {'displayModeBar': full, 'displaylogo': False, 'responsive': True}
+            if update_figure(widget, figure, config):
+                await session.send_custom_message('update_plotly_config', {'id': this.ns('Chart'), 'config': config})
 
         @output
         @render.data_frame
@@ -199,7 +209,7 @@ def instance():
             metric = input.Metric()
             if result:
                 req(metric in METRICS[result.task])
-            table = result.table(metric).drop(columns=['Key', 'Rank score']) if result else pd.DataFrame({'Note': [error]})
+            table = result.metric_table(metric) if result else pd.DataFrame({'Note': [error]})
             return render.DataTable(table, width='100%', height=None)
 
         @output

@@ -141,6 +141,26 @@ class EnsembleEvaluation:
         return pd.DataFrame(rows).sort_values('Rank score', ascending=False, kind='stable', na_position='last')
 
 
+    def metric_table(self, preferred):
+        """All feasible metric means, ordered by the preferred metric."""
+        table = self.table(preferred).set_index('Key')
+        label = METRICS[self.task][preferred].split(' · ')[0]
+        summary = table[['Model']].copy()
+        notes = {key: [] for key in table.index}
+        for metric, description in METRICS[self.task].items():
+            values = self.table(metric).set_index('Key').reindex(table.index)
+            name = description.split(' · ')[0]
+            if values.Score.notna().any():
+                summary[name] = values.Score
+            for key, note in values.Note.items():
+                if note:
+                    notes[key].append(f'{name}: {note}')
+        summary[f'{label} SD'] = table.SD
+        summary[f'{label} splits'] = table.Splits
+        summary['Note'] = ['; '.join(notes[key]) for key in summary.index]
+        return summary.reset_index(drop=True)
+
+
 @recordable
 def evaluate_ensemble(source, selected, style, cancelled=None):
     results, winners = representatives(source)

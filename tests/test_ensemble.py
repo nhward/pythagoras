@@ -48,6 +48,11 @@ def test_five_winners_fitted_per_split_and_unfitted_training_definition(source):
     table = result.table('neg_root_mean_squared_error')
     assert table.Score.is_monotonic_increasing
     assert result.table('r2').Score.is_monotonic_decreasing
+    metrics = result.metric_table('r2')
+    assert {'MAE', 'RMSE', 'R²'} <= set(metrics.columns)
+    assert metrics['R²'].is_monotonic_decreasing
+    assert metrics.Model.tolist() == result.table('r2').Model.tolist()
+    np.testing.assert_allclose(metrics.RMSE, result.table('neg_root_mean_squared_error').set_index('Model').loc[metrics.Model, 'Score'])
 
 
 def test_subset_median_empty_selection_and_cancellation(source):
@@ -100,6 +105,11 @@ def test_classification_weighted_representatives_and_voting(style):
             np.testing.assert_allclose(ensemble.predict_proba(source.clean_frame).sum(axis=1), 1)
         else:
             assert not hasattr(ensemble, 'predict_proba')
+    metrics = result.metric_table('accuracy').set_index('Model')
+    assert {'Accuracy', 'Balanced accuracy', 'ROC AUC', 'Log loss'} <= set(metrics.columns)
+    if style == 'hard':
+        assert np.isnan(metrics.loc['Ensemble', 'Log loss'])
+        assert metrics.loc['Ensemble', 'Note']
     assert not hasattr(clone(result.definition), 'estimators_')
 
 

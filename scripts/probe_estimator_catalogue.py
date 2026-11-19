@@ -23,10 +23,10 @@ sys.path.insert(0, str(ROOT / 'app'))
 
 def construct(profile, X):
     import numpy as np
-    from sklearn.compose import ColumnTransformer
+    from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
     from sklearn.impute import SimpleImputer
     from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import OneHotEncoder, StandardScaler
+    from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
     module, cls = profile['estimator'].rsplit('.', 1)
     constructor = getattr(importlib.import_module(module), cls)
@@ -79,6 +79,10 @@ def construct(profile, X):
                                       ('encode', OneHotEncoder(handle_unknown='ignore', sparse_output=False))]), cat_cols),
         ])
         model = Pipeline([('prepare', preprocessor), ('model', model)])
+    if profile['construction'].get('wrapper') == 'sklearn.compose.TransformedTargetRegressor':
+        model = TransformedTargetRegressor(regressor=model)
+    if preparation == 'numeric_array':
+        model = Pipeline([('array', FunctionTransformer(np.asarray, kw_args={'dtype': float})), ('model', model)])
     return model, X, fit_params, overrides
 
 
@@ -90,7 +94,7 @@ def probe(profile):
     from sklearn.model_selection import cross_val_predict
 
     rng = np.random.default_rng(1729)
-    n = 90
+    n = int(profile.get('probe', {}).get('samples', 90))
     X = pd.DataFrame({'value': rng.normal(size=n), 'other': rng.uniform(size=n)})
     task = profile['task']
     y = (X.value.to_numpy() > 0).astype(int) if task == 'classifier' else X.value.to_numpy() * 2 + rng.normal(scale=.1, size=n)

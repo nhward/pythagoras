@@ -7,7 +7,7 @@
       "module": "cand_ensemble",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "9037396353e82f3323b761b95834c1bedfe7078dafbad3f8c713a15dbc4b5c4a"
+      "source_hash": "573105e3eb91d56576e2826da580cd94d134c93744f6282aca2f58a63743521d"
     },
     "cand_methods": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
@@ -15,7 +15,7 @@
       "module": "cand_methods",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "2a08ac05bd5b827209e3bf235a5805368cb18336037ce97c8eaa49fab8dc0433"
+      "source_hash": "ff6b4eaa01adf1f5b932733b43bb92adecceb45df5716e81825ae1e81e98a503"
     },
     "cand_models": {
       "description": "Choose weightings that yield the desired optimal model(s).",
@@ -215,7 +215,7 @@
       "module": "obs_duplicates",
       "mutable": true,
       "pipeline_compatible": false,
-      "source_hash": "12841f4ed2bee534be10d8731b3ec58ebb6b04fc8a3124917d8743d92b6ee0e4"
+      "source_hash": "ad87db7c25f9c83a7d7a4534d7b1b6b666ba6946cc9e41b8ce8066c73471f91d"
     },
     "obs_k_clusters": {
       "description": "Assess cluster counts using seven clustering families and two resampling evaluations and record a number-of-clusters decision for downstream cluster analysis.",
@@ -303,7 +303,7 @@
       "module": "var_dissimilar",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "eac412075dd76edd7da26aae235b1832f8b30d9f37041fbdb282907da2daca42"
+      "source_hash": "259d63635d55125f22529eaf26064c1e3406add1bfccde2d632176004131172a"
     },
     "var_encode": {
       "description": "Encode nominal, Code, Ordered, Cyclic, Logical and Basket predictors through sklearn pipeline steps.",

@@ -205,12 +205,13 @@ def input_assessment(profile, estimator, required=()):
         elif tags.get('allow_nan') is not True:
             conditions.append('Native missing-value support unreviewed')
             unknown = True
-    elif preparation in {'numeric', 'categorical_complete', 'pandas_categories', 'catboost_strings'}:
+    elif preparation in {'numeric', 'numeric_array', 'categorical_complete', 'pandas_categories', 'catboost_strings'}:
         conditions.append({'numeric': 'Numeric predictors',
+                           'numeric_array': 'Complete numeric predictors as a NumPy array',
                            'categorical_complete': 'Numeric or categorical predictors',
                            'pandas_categories': 'Categorical predictors declared as pandas categories',
                            'catboost_strings': 'Categorical predictors supplied as strings with categorical columns identified'}[preparation])
-        if preparation == 'numeric' and 'categorical_predictors' in required:
+        if preparation in {'numeric', 'numeric_array'} and 'categorical_predictors' in required:
             needs.append('Represent categorical predictors numerically')
         if preparation in {'pandas_categories', 'catboost_strings'} and 'categorical_predictors' in required:
             needs.append('Check categorical representation and estimator configuration')
