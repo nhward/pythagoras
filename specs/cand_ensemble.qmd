@@ -51,3 +51,8 @@ Progress publications, unrelated trials, changes to unselected winners and revie
 weights that leave the selected winners unchanged do not cancel or reject an
 in-flight evaluation. Result and export readiness use the same identity; task
 arguments retain the original matching snapshot until fitting inputs change.
+
+At least two distinct available representatives must be selected. Invalid or single-member
+requests cancel superseded work, clear stale diagnostics and show a waiting message
+without invoking the evaluator. The second upstream member is selected by default
+and starts evaluation automatically. Reducing the selection to one waits again.

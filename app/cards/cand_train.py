@@ -105,7 +105,7 @@ def progress_figure(state, *, axis_ranges=None):
     metric = state['specification']['metric']
     completed = sorted((t for t in state['trials'] if t['state'] == 'complete'), key=lambda t: t['id'])
     if not completed:
-        return Card.empty_figure('Waiting for the first complete evaluation; partial folds are not ranked.')
+        return Card.empty_figure('Waiting for the first complete evaluation.')
     branches = state['specification'].get('branches', {})
     def method_id(trial):
         return trial['params'].get('__method__', trial.get('model_id', trial.get('method', '')))

@@ -105,3 +105,23 @@ def test_training_progress_does_not_restart_or_hide_unchanged_ensemble(page, pro
     expect(probe).to_contain_text('fits=2', timeout=10000)
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('ensemble=2', timeout=10000)
     expect(page.locator('[id$="-Status"]')).to_contain_text('2 members')
+
+
+waiting_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_waiting.py'), scope='function')
+
+
+@pytest.mark.ui
+def test_waits_without_fitting_until_two_models_are_available(page, waiting_app):
+    page.goto(waiting_app.url)
+    status = page.locator('[id$="-Status"]')
+    expect(status).to_contain_text('Waiting for at least two', timeout=30000)
+    expect(page.locator('[id$="-FitCalls"]')).to_have_text('fits=0')
+    expect(page.locator('[id$="-Busy"]')).to_have_text('')
+    page.get_by_role('button', name='Add second model', exact=True).click()
+    expect(status).to_contain_text('2 members', timeout=30000)
+    expect(page.locator('[id$="-FitCalls"]')).to_have_text('fits=1')
+    settings(page)
+    page.locator('[id$="-Models"] input[value="method_1"]').uncheck()
+    expect(status).to_contain_text('Waiting for at least two', timeout=10000)
+    expect(page.locator('[id$="-FitCalls"]')).to_have_text('fits=1')
+    page.wait_for_function('''() => document.querySelector('[id$="-Chart"] .js-plotly-plot')?.data?.length === 0''')

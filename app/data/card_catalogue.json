@@ -7,7 +7,7 @@
       "module": "cand_ensemble",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "573105e3eb91d56576e2826da580cd94d134c93744f6282aca2f58a63743521d"
+      "source_hash": "77b70bfc9ae282d5ffa82587ad55e61eb0751f4617f0d4f843cf89c2874204e7"
     },
     "cand_methods": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
@@ -39,7 +39,7 @@
       "module": "cand_train",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "028d10c4911828140ea033bd134fde32821ea161c80e8295d1287b465ca8aded"
+      "source_hash": "d31c91843bcc5e4f164d5831e8d5caa4edd1dae3e5db4bc8737ed0476de84f81"
     },
     "data_coverage": {
       "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",

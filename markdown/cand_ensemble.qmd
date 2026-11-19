@@ -5,7 +5,9 @@ title: "Candidate ensemble"
 Place **Candidate ensemble** after **Candidate models**. It uses one weighted
 winning configuration from each eligible method, including that configuration's
 complete preprocessing pipeline. Five eligible methods produce five available
-members. All available members are selected initially.
+members. All available members are selected initially. Evaluation waits until at
+least two available method winners are selected. With only one upstream model, no
+fit starts; evaluation begins automatically when a second model becomes available.
 
 ### Settings
 

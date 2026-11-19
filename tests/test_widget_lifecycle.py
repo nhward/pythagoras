@@ -11,7 +11,7 @@ pytestmark = pytest.mark.unit
 def test_placeholder_layout_is_removed_when_results_arrive(preserve_traces):
     import plotly.graph_objects as go
     from card import Card
-    widget = Card.empty_figure('Waiting for the first complete evaluation; partial folds are not ranked.')
+    widget = Card.empty_figure('Waiting for the first complete evaluation.')
     assert widget.layout.annotations and widget.layout.images
     results = go.Figure(go.Scatter(x=[1], y=[4], legendgroup='method'))
     results.update_xaxes(title_text='Trial', range=[.5, 10.5])

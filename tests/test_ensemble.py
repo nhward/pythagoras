@@ -62,8 +62,10 @@ def test_subset_median_empty_selection_and_cancellation(source):
     X = source.clean_frame
     np.testing.assert_allclose(result.fitted[0].predict(X), np.median(
         [model.predict(X) for _, model in result.fitted[0].estimators_], axis=0))
-    with pytest.raises(ValueError, match='Select at least'):
+    with pytest.raises(ValueError, match='at least two'):
         evaluate_ensemble(source, (), 'mean')
+    with pytest.raises(ValueError, match='at least two'):
+        evaluate_ensemble(source, keys[:1], 'mean')
     stop = threading.Event(); stop.set()
     with pytest.raises(InterruptedError):
         evaluate_ensemble(source, keys, 'mean', stop)
@@ -76,7 +78,7 @@ def test_upstream_plan_is_reused(source):
     from candidate_selection import candidate_frame, decisions
     from model_review import completed_evidence
     from pipeline_search import fresh, prepare, run
-    problem = prepare(updated)
+    problem = prepare(replace(updated, _selected_candidate=None))
     state = run(problem, fresh(problem), trials=0, publish=lambda s: None, pause=lambda: False)
     evidence = completed_evidence(problem, state)
     frame, _ = candidate_frame(evidence)
@@ -152,7 +154,7 @@ def test_holdout_and_prediction_rows_never_enter_ensemble_fits():
         [('train', 'development'), ('valid', 'validation'), ('held', 'holdout'), ('predict', 'prediction')]})
     assert plan.ready, plan.errors
     source = source.with_evaluation_plan(plan, card='obs_resample')
-    problem = prepare(source)
+    problem = prepare(replace(source, _selected_candidate=None))
     state = run(problem, fresh(problem), trials=0, publish=lambda s: None, pause=lambda: False)
     evidence = completed_evidence(problem, state)
     chosen = decisions(candidate_frame(evidence)[0], problem.specification['metric'], [1, 0, 0], 1e-12)
@@ -182,7 +184,8 @@ def test_evaluation_identity_tracks_selected_inputs_only(source):
     updated = updated.with_selected_model(evidence['state']['trials'][-2]['id'])
     assert evaluation_signature(updated, selected, 'mean') == signature
     assert evaluation_signature(updated, selected, 'median') != signature
-    assert evaluation_signature(updated, selected[:1], 'mean') != signature
+    with pytest.raises(ValueError, match='at least two'):
+        evaluation_signature(updated, selected[:1], 'mean')
     pipelines = evidence['pipelines']
     method, _ = pipelines.choices[str(evidence['review']['representatives'][selected[0]])]
     templates = dict(pipelines.templates)

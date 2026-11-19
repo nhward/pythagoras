@@ -1236,7 +1236,7 @@ visibility: hidden;
 </header>
 
 
-<p>Place <strong>Candidate ensemble</strong> after <strong>Candidate models</strong>. It uses one weighted winning configuration from each eligible method, including that configuration’s complete preprocessing pipeline. Five eligible methods produce five available members. All available members are selected initially.</p>
+<p>Place <strong>Candidate ensemble</strong> after <strong>Candidate models</strong>. It uses one weighted winning configuration from each eligible method, including that configuration’s complete preprocessing pipeline. Five eligible methods produce five available members. All available members are selected initially. Evaluation waits until at least two available method winners are selected. With only one upstream model, no fit starts; evaluation begins automatically when a second model becomes available.</p>
 <h3 id="settings">Settings</h3>
 <p><strong>Member models</strong> selects which method winners participate. <strong>Ensemble style</strong> offers equal mean or median predictions for regression, and soft or hard voting for classification. Soft voting averages aligned class probabilities and requires probabilities from every member. Hard voting uses majority labels, breaking ties by the stable class order. Members have equal voting weight. The upstream goal weights select the representatives; they are not prediction weights.</p>
 <p><strong>Preferred metric</strong> changes the chart and the table sort order without refitting models or changing the upstream representatives. Metric choices follow the outcome task. Unavailable metrics, such as log loss for hard voting, have no score.</p>

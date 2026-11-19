@@ -91,8 +91,8 @@ def representatives(source):
 def evaluation_signature(source, selected, style):
     """Only selected fitting inputs, independent of unrelated search progress."""
     results, winners = representatives(source)
-    if not selected or any(key not in winners for key in selected):
-        raise ValueError('Select at least one available method winner.')
+    if len(set(selected)) < 2 or any(key not in winners for key in selected):
+        raise ValueError('Waiting for at least two selected, available method winners.')
     spec = results['state']['specification']
     return joblib.hash((source.clean_frame, source.role_map.to_primitive(), source.modelling_context,
         source.evaluation_plan, spec['task'], spec['seed'], style,
@@ -164,8 +164,8 @@ class EnsembleEvaluation:
 @recordable
 def evaluate_ensemble(source, selected, style, cancelled=None):
     results, winners = representatives(source)
-    if not selected or any(key not in winners for key in selected):
-        raise ValueError('Select at least one available method winner.')
+    if len(set(selected)) < 2 or any(key not in winners for key in selected):
+        raise ValueError('Waiting for at least two selected, available method winners.')
     task = results['state']['specification']['task']
     factory = RegressionEnsemble if task == 'regression' else ClassificationEnsemble
     members = tuple((key, winners[key]['pipeline']) for key in selected)

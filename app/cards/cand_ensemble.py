@@ -74,6 +74,7 @@ def instance():
         chart_instance = reactive.Value(None)
         cancellation = None
         requested = reactive.Value(None)
+        waiting = reactive.Value('')
         choices_identity = None
         restored_models = this.restored_configuration_input('Models', None, warn_if_missing=False)
         restored_style = this.restored_configuration_input('Style', None, warn_if_missing=False)
@@ -155,8 +156,14 @@ def instance():
             source, options = Incoming(), Options()
             try:
                 signature = evaluation_signature(source, *options)
-            except ValueError:
-                signature = None
+            except ValueError as error:
+                if cancellation is not None:
+                    cancellation.set()
+                Evaluate.cancel()
+                requested.set(None)
+                waiting.set(str(error))
+                return
+            waiting.set('')
             with reactive.isolate():
                 previous = requested()
             if previous is not None and signature is not None and previous[2] == signature:
@@ -169,6 +176,8 @@ def instance():
 
         @this.reactable(calc=True)
         def Results():
+            if waiting():
+                return None, waiting()
             try:
                 signature, result, error = Evaluate.result()
             except SilentOperationInProgressException:
