@@ -1,4 +1,4 @@
-"""Regression candidate decisions from all completed evidence, without fitting."""
+"""Weighted candidate decisions from all completed evidence, without fitting."""
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -7,6 +7,10 @@ from pipeline_search import METRICS, displayed, mean_score
 from plotly.colors import qualitative
 
 AXES = ('Score', 'Observed rows/s', 'P95 absolute error')
+
+
+def criteria(frame):
+    return ('Score', 'Observed rows/s', 'Error rate' if 'Error rate' in frame else 'P95 absolute error')
 
 
 def weights_from_handles(handles):
@@ -20,11 +24,11 @@ def weights_from_handles(handles):
 def candidate_frame(results, tolerance=None, probability=.95):
     if results is None:
         return pd.DataFrame(), 'Complete pipeline tuning upstream to compare models.'
-    if results['state']['specification']['task'] != 'regression':
-        return pd.DataFrame(), 'Candidate models currently supports continuous regression only.'
     frame, note = review_frame(results, tolerance, limit=None, probability=probability)
     if frame.empty:
         return frame, note or 'No completed configurations are available.'
+    if results['state']['specification']['task'] == 'classification':
+        return frame, note
     ratios = {}
     for trial in results['state']['trials']:
         rmse = displayed(mean_score(trial, 'neg_root_mean_squared_error'), 'neg_root_mean_squared_error') if all('neg_root_mean_squared_error' in fold for fold in trial['folds']) else None
@@ -38,11 +42,11 @@ def pareto_frontier(frame, metric):
     """All three axes; missing coordinates do not fabricate frontier points."""
     if frame.empty:
         return np.zeros(0, dtype=bool)
-    values = frame[list(AXES)].to_numpy(dtype=float, copy=True)
+    values = frame[list(criteria(frame))].to_numpy(dtype=float, copy=True)
     if not metric.startswith('neg_'):
         values[:, 0] *= -1
     values[:, 1] *= -1
-    valid = np.isfinite(values).all(axis=1) & (frame['Observed rows/s'].to_numpy() > 0) & (frame['P95 absolute error'].to_numpy() >= 0)
+    valid = np.isfinite(values).all(axis=1) & (frame['Observed rows/s'].to_numpy() > 0) & (frame[criteria(frame)[2]].to_numpy() >= 0)
     return np.array([valid[i] and not np.any(valid & np.all(values <= row, axis=1) & np.any(values < row, axis=1))
                      for i, row in enumerate(values)])
 
@@ -61,11 +65,13 @@ def weighted_winner(frame, metric, weights, floor):
         raise ValueError('Choose a positive minimum error for weighted products.')
     if frame.empty:
         return None
-    values = frame[list(AXES)].to_numpy(dtype=float, copy=True)
-    if metric == 'r2':
+    values = frame[list(criteria(frame))].to_numpy(dtype=float, copy=True)
+    if metric == 'r2':  # noqa: SIM114
         values[:, 0] = 1 - values[:, 0]
-    elif metric not in {'neg_root_mean_squared_error', 'neg_mean_absolute_error'}:
-        raise ValueError('Use RMSE, MAE or R² for continuous regression.')
+    elif metric in {'accuracy', 'balanced_accuracy', 'roc_auc'}:
+        values[:, 0] = 1 - values[:, 0]
+    elif metric not in {'neg_root_mean_squared_error', 'neg_mean_absolute_error', 'neg_log_loss'}:
+        raise ValueError('Choose a supported regression or classification metric.')
     valid = np.ones(len(frame), dtype=bool)
     utility = np.zeros(len(frame))
     for i, weight in enumerate(weights):
@@ -94,33 +100,35 @@ def decisions(frame, metric, weights, floor):
 
 def pareto_figure(frame, metric, winner, title, colours):
     frame = frame.reset_index(drop=True)
+    task = 'classification' if 'Error rate' in frame else 'regression'
+    error_label = 'Error rate' if task == 'classification' else 'P95 error'
     figure = go.Figure()
     frontier = pareto_frontier(frame, metric)
-    visible = np.isfinite(frame[list(AXES)].to_numpy(dtype=float)).all(axis=1)
+    visible = np.isfinite(frame[list(criteria(frame))].to_numpy(dtype=float)).all(axis=1)
     for method, group in frame.groupby('Model', sort=False):
         colour = qualitative.Plotly[colours.get(method, 0) % len(qualitative.Plotly)]
         for efficient in (False, True):
             rows = group.loc[visible[group.index] & (frontier[group.index] == efficient)]
             if rows.empty:
                 continue
-            figure.add_trace(go.Scatter3d(x=rows[AXES[0]], y=rows[AXES[1]], z=rows[AXES[2]], mode='markers',
+            figure.add_trace(go.Scatter3d(x=rows[AXES[0]], y=rows[AXES[1]], z=rows[criteria(frame)[2]], mode='markers',
                 name=str(rows.iloc[0].Method), legendgroup=str(method), showlegend=efficient or not frontier[group.index].any(),
                 marker={'color': colour, 'size': 6 if efficient else 4, 'opacity': 1 if efficient else .65,
                         'line': {'color': '#334155', 'width': 1}},
                 customdata=rows.Trial, meta={'trials': rows.Trial.astype(int).tolist()},
-                hovertemplate='Trial %{customdata}<br>Score %{x:.5g}<br>Rows/s %{y:.5g}<br>P95 %{z:.5g}<extra>%{fullData.name}</extra>'))
+                hovertemplate='Trial %{customdata}<br>Score %{x:.5g}<br>Rows/s %{y:.5g}<br>' + error_label + ' %{z:.5g}<extra>%{fullData.name}</extra>'))
     selected = frame.loc[frame.Trial == winner]
-    if not selected.empty and np.isfinite(selected[list(AXES)].to_numpy(dtype=float)).all():
+    if not selected.empty and np.isfinite(selected[list(criteria(frame))].to_numpy(dtype=float)).all():
         row = selected.iloc[0]
-        figure.add_trace(go.Scatter3d(x=[row[AXES[0]]], y=[row[AXES[1]]], z=[row[AXES[2]]], mode='markers',
+        figure.add_trace(go.Scatter3d(x=[row[AXES[0]]], y=[row[AXES[1]]], z=[row[criteria(frame)[2]]], mode='markers',
             name=f'Weighted winner · Trial {winner}', marker={'size': 11, 'symbol': 'diamond', 'color': '#111111',
             'line': {'width': 3, 'color': '#ffffff'}}, meta={'trials': [winner]},
             hovertemplate=f'Trial {winner} · weighted winner<extra></extra>'))
     figure.update_layout(title={'text': title, 'font': {'size': 16}}, margin={'l': 0, 'r': 0, 't': 35, 'b': 0},
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='#bbd6f8',
-        autosize=True, uirevision='cand-models-camera', scene={'xaxis': {'title': {'text': METRICS['regression'][metric].split(' · ')[0], 'font': {'size': 11}}, 'tickfont': {'size': 10}, 'nticks': 3},
+        autosize=True, uirevision='cand-models-camera', scene={'xaxis': {'title': {'text': METRICS[task][metric].split(' · ')[0], 'font': {'size': 11}}, 'tickfont': {'size': 10}, 'nticks': 3},
             'yaxis': {'title': {'text': 'Rows/s', 'font': {'size': 11}}, 'tickfont': {'size': 10}, 'nticks': 3},
-            'zaxis': {'title': {'text': 'P95 error', 'font': {'size': 11}}, 'tickfont': {'size': 10}, 'nticks': 3},
+            'zaxis': {'title': {'text': error_label, 'font': {'size': 11}}, 'tickfont': {'size': 10}, 'nticks': 3},
             'aspectmode': 'cube'}, legend={'orientation': 'h', 'y': -.05})
     figure.update_scenes(bgcolor='#bbd6f8', **{
         axis: {'backgroundcolor': '#bbd6f8', 'showbackground': True, 'gridcolor': '#ffffff', 'zerolinecolor': '#ffffff'}

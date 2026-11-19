@@ -1,4 +1,4 @@
-"""Choose regression models using weighted score, speed and tail-error evidence."""
+"""Choose models using weighted score, speed and task-specific error evidence."""
 import joblib
 import numpy as np
 import pandas as pd
@@ -34,8 +34,8 @@ def instance():
 
     this.front = lambda: ui.TagList(
         ui.output_ui('Panels', class_='cand-models-panels'),
-        shinywidgets.output_widget('ReviewPlot', fill=True, guide=this, title='Regression trade-offs',
-            text='Rotate to inspect score, prediction throughput and P95 absolute error. Bright points are nondominated; '
+        shinywidgets.output_widget('ReviewPlot', fill=True, guide=this, title='Model trade-offs',
+            text='Rotate to inspect score, prediction throughput and P95 absolute error (regression) or error rate (classification). Bright points are nondominated; '
                  'the diamond is the weighted winner. Tabs change the view, not the exported Overall winner.'),
         ui.div(ui.output_text('Status'), class_='cand-models-status'),
     )
@@ -57,7 +57,7 @@ def instance():
             ui.input_slider('Weights', label=None, min=0, max=100,
                             value=(100, 100), step=1, width='100%', drag_range=False, post="%",
                             guide=this, title='Selection preferences', position='top',
-                            text='The three slider segments allocate Score, Throughput and P95 error weights. '
+                            text='The three slider segments allocate Score, Throughput and prediction error weights (P95 absolute error for regression; error rate for classification). '
                                  'Both handles at the right give Score 100%. Selection changes on release.'),
             class_='cand-models-weights', style='width: calc(50% + 3rem);'
         ),
@@ -75,7 +75,7 @@ def instance():
                      'The table, chart and weighted winners use this constraint; training evidence is retained.'),
             ui.input_numeric('ErrorFloor', label='Minimum error for weighted products', value=1e-12, min=1e-15,
                 guide=this, title='Minimum error', position='left',
-                text='Positive floor for RMSE, MAE and P95 in target units; dimensionless for 1 − R². '
+                text='Positive floor for RMSE, MAE and P95 in target units; dimensionless for 1 − R² and classification losses. '
                      'Values below this floor are treated equally. Changing units may require changing this floor.'),
             ui.input_numeric('EquivalenceTolerance', label='Practical-equivalence tolerance (metric units)', value=None, min=0,
                 guide=this, title='Practical equivalence', position='left',
@@ -380,7 +380,8 @@ def instance():
             weights, _, error = Weighting()
             if error:
                 return error
-            return f'Score {weights[0]:.0%} · Throughput {weights[1]:.0%} · P95 error {weights[2]:.0%}'
+            label = 'Error rate' if Results() and Results()['state']['specification']['task'] == 'classification' else 'P95 error'
+            return f'Score {weights[0]:.0%} · Throughput {weights[1]:.0%} · {label} {weights[2]:.0%}'
 
         @output
         @render.text
@@ -447,7 +448,7 @@ def instance():
             req(source is results_source())
             results = Results()
             decision = Decision()[0]
-            if results is None or results['state']['specification']['task'] != 'regression':
+            if results is None:
                 return source
             weights, floor, _ = Weighting()
             review = {'version': 2, 'policy': 'weighted_product',

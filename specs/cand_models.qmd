@@ -2,7 +2,7 @@
 title: "Candidate models specification"
 ---
 
-`cand_models` is a mutable, pipeline-compatible continuous-regression card after
+`cand_models` is a mutable, pipeline-compatible regression/classification card after
 `cand_train`. It consumes all completed compatible tuning evidence, not a
 score shortlist. A dynamic `navset_bar` contains Overall and method tabs; one
 persistent FigureWidget outside the panels renders a three-axis Scatter3d.
@@ -59,3 +59,7 @@ no selected winner and explanatory text. Bookmark restoration recomputes winners
 using the restored constraint, rather than trusting stale saved winners. The
 existing intrinsic transparency classifications do not certify preprocessing
 interpretability, causal meaning or post-hoc explanation quality.
+
+Classification uses error rate as the third criterion and task-specific score labels.
+Accuracy, balanced accuracy and ROC AUC become 1-score losses; log loss is already
+a loss. The representative export contract is shared by both tasks.

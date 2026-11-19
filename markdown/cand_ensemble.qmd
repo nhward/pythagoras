@@ -1,0 +1,55 @@
+---
+title: "Candidate ensemble"
+---
+
+Place **Candidate ensemble** after **Candidate models**. It uses one weighted
+winning configuration from each eligible method, including that configuration's
+complete preprocessing pipeline. Five eligible methods produce five available
+members. All available members are selected initially.
+
+### Settings
+
+**Member models** selects which method winners participate. **Ensemble style**
+offers equal mean or median predictions for regression, and soft or hard voting
+for classification. Soft voting averages aligned class probabilities and requires
+probabilities from every member. Hard voting uses majority labels, breaking ties
+by the stable class order. Members have equal voting weight. The upstream goal
+weights select the representatives; they are not prediction weights.
+
+**Preferred metric** changes the chart and table without refitting models or
+changing the upstream representatives. Metric choices follow the outcome task.
+Unavailable metrics, such as log loss for hard voting, have no score.
+
+### Evaluation
+
+Members and ensemble are fitted and evaluated on identical resampling splits.
+The valid upstream evaluation plan takes precedence. Without a plan, the card
+uses the same seeded five-fold defaults as Candidate training, stratified for
+classification and reduced for small samples. Grouped, temporal or spatial data
+require an explicit plan. Holdout and prediction observations are excluded.
+
+The front chart sorts from best to worst and highlights the ensemble in orange.
+Losses appear in their natural units. Hover text and the provisional flip-side
+table report fold standard deviation and completed splits. These are
+**post-selection resampling scores**: the member configurations were already
+selected using tuning evidence, so this is not independent test performance.
+
+### Ensemble checkbox
+
+With **Ensemble** unticked, the incoming model passes through. Evaluation is
+available for comparison. Ticking **Ensemble** exports the ensemble training
+definition, its fitted instance for each evaluation split, split memberships and
+scores. Each split-fitted ensemble contains member models trained only on that
+split's training observations. It is not a single model fitted on all observations.
+
+**Final fitting remains downstream.** A final-fitting card can fit either the
+upstream weighted individual winner or this ensemble on the designated final
+training observations. The resampling models must not be mistaken for a final
+fitted model. Changed members, settings or input invalidate pending evaluation;
+export waits for matching results. Upstream training can continue: progress updates
+and unrelated trials do not restart evaluation while the selected winners and
+other fitting inputs remain unchanged. Fitted evaluation models are session runtime
+evidence, not portable bookmark artifacts; restoring the card regenerates them.
+
+Stacking is not offered in this version. It requires an additional inner
+resampling design for learning the meta-model without leakage.

@@ -50,6 +50,7 @@ class proxy_data:
     _pipeline: Pipeline | None = None
     _tuning_spec: dict | None = None
     _tuning_results: dict | None = None
+    _ensemble_results: object | None = None
     _model_candidates: tuple = ()
     _selected_candidate: str | None = None
     _clean_df: pd.DataFrame | None = None
@@ -431,6 +432,41 @@ class proxy_data:
         return replace(self, _tuning_results={'signature': self._tuning_evidence_signature(),
                                              'results': deepcopy(results)})
 
+    @property
+    def ensemble_results(self):
+        """Current fold-fitted ensemble evidence, never a final fitted model."""
+        from ensemble import source_signature
+        result = self._ensemble_results
+        if result is None or result.input_signature != source_signature(self):
+            return None
+        return result
+
+    def with_ensemble(self, evaluation):
+        """Activate a reviewed ensemble definition and retain its split-fitted models."""
+        from dataclasses import replace
+
+        from ensemble import EnsembleEvaluation, evaluation_signature, source_signature
+        if not isinstance(evaluation, EnsembleEvaluation):
+            raise ValueError('Ensemble evaluation is unavailable or stale.')  # noqa: TRY004
+        selected = tuple(key for key, _ in evaluation.trial_ids)
+        try:
+            current = evaluation_signature(self, selected, evaluation.definition.style)
+        except ValueError as exc:
+            raise ValueError('Ensemble evaluation is unavailable or stale.') from exc
+        if evaluation.input_signature != current:
+            raise ValueError('Ensemble evaluation is unavailable or stale.')
+        record = ProcessingRecord(stage='Learning', card='cand_ensemble', operation='Construct ensemble',
+            attempted=True, parameters={'style': evaluation.definition.style,
+                'members': list(evaluation.trial_ids), 'search_fingerprint': evaluation.search_fingerprint},
+            method=evaluation.definition.style, input_shape=self.shape, output_shape=self.shape)
+        # Members contain their COMPLETE pipelines, including target transformations.
+        # A shared outer preprocessing pipeline would transform observations twice.
+        result = replace(self, _pipeline=Pipeline([('cand_methods', clone(evaluation.definition))]),
+            _model_candidates=(), _selected_candidate=None, _tuning_spec=None, _tuning_results=None,
+            _ensemble_results=None,
+            _processing_records=(*[r for r in self.processing_records if r.card != 'cand_ensemble'], record))
+        return replace(result, _ensemble_results=replace(evaluation, input_signature=source_signature(result)))
+
     def with_selected_model(self, trial_id, *, card='model_candidates', operation='Accept reviewed model'):
         """Accept a reviewed, unfitted complete pipeline from current tuning evidence."""
         from dataclasses import replace
@@ -680,6 +716,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -716,6 +753,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -782,6 +820,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=(*self.cleaning_records, record),
@@ -813,6 +852,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -890,6 +930,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -954,6 +995,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -975,6 +1017,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -1001,6 +1044,7 @@ class proxy_data:
             _modelling_context=self.modelling_context,
             _tuning_spec=self._tuning_spec,
             _tuning_results=self._tuning_results,
+            _ensemble_results=self._ensemble_results,
             _model_candidates=self.model_candidates,
             _selected_candidate=self._selected_candidate,
             _cleaning_records=self.cleaning_records,
@@ -1190,6 +1234,8 @@ class proxy_data:
             return False
         if check_pipeline:
             import joblib
+            if self._ensemble_results is not other._ensemble_results:
+                return False
             if joblib.hash(self._tuning_results) != joblib.hash(other._tuning_results):
                 return False
         if self.modelling_context != other.modelling_context:

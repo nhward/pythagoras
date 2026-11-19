@@ -91,8 +91,6 @@ def test_full_evidence_ignores_score_shortlist_and_preserves_full_pipeline_selec
     record = next(r for r in selected.processing_records if r.card == 'cand_models')
     assert record.parameters['trial'] == selection['overall'] - 1
     assert selected.tuning_results is not None
-    results['state']['specification']['task'] = 'classification'
-    assert candidate_frame(results)[0].empty
 
 
 def test_transparency_constraint_uses_terminal_class_and_preserves_evidence():

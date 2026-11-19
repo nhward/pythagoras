@@ -1,0 +1,52 @@
+---
+title: "Candidate ensemble specification"
+---
+
+`cand_ensemble` follows `app/cards/template.py`: mutable and pipeline-compatible,
+callable export, settled model/style options and enablement, background evaluation,
+current-argument export readiness, configuration restoration and code recording.
+
+`ensemble.representatives` reads zero-based weighted winners from current
+`tuning_results.review.representatives`. Read-only or missing evidence is rejected.
+Each member is a complete unfitted evaluated pipeline. Models default to all
+available methods; restored valid exclusions persist. The preferred metric is a
+display setting and does not trigger fitting or affect representative selection.
+
+`evaluate_ensemble` uses `pipeline_search.prepare` for the first selected member
+to reuse plan validation, implicit resampling and weighting exclusions. Each
+member is cloned and fitted once within each split. Member predictions and their
+combination are scored on the same validation rows using task-specific scorers.
+All supported metrics are collected once. Mean/median regression and aligned
+probability/majority classification use equal member weights. Stacking is deferred.
+
+`EnsembleEvaluation` retains the unfitted definition, per-split fitted ensembles,
+split memberships and metric scores. These potentially large runtime objects are
+shared across proxy clones, treated as read-only and regenerated on restoration.
+`proxy_data.ensemble_results` validates source data, roles, modelling context,
+evaluation plan and active pipeline. `with_ensemble` rejects stale evaluations and
+sets the active pipeline to one ensemble terminal step: complete member pipelines
+must not be wrapped in duplicated upstream preprocessing. No full-data fit occurs.
+
+Footer Apply/Ensemble controls downstream export. Disabled export is the unchanged
+incoming proxy; enabled export waits for matching evaluation. No partially fitted
+ensemble is exported. Background cancellation is cooperative between member fits;
+a native fit already running must finish before its thread exits. Runtime fitting
+errors must remain visible, not become successful empty results.
+
+The front horizontal bars show selected members plus ensemble, best first by
+signed scorer, losses displayed naturally. Orange distinguishes ensemble. Flip
+side is a provisional numerical table. Unavailable metrics are missing, not zero.
+Repeated/grouped/temporal plans preserve the upstream memberships; post-selection
+resampling is explicitly distinguished from independent test performance.
+
+Tests cover five representatives, member subsets, median/mean combination,
+training-only scalers, classification voting and weights, upstream plan reuse,
+unfitted downstream definition, current runtime evidence, invalidation,
+cancellation, sorted metrics, checkbox export and browser restoration.
+
+Evaluation identity includes data, roles, modelling context, resampling plan,
+seed, task, selected member trial IDs and complete pipelines, and ensemble style.
+Progress publications, unrelated trials, changes to unselected winners and review
+weights that leave the selected winners unchanged do not cancel or reject an
+in-flight evaluation. Result and export readiness use the same identity; task
+arguments retain the original matching snapshot until fitting inputs change.

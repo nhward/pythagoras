@@ -9,6 +9,7 @@ from shiny.pytest import create_app_fixture
 
 # Each fixture runs the normal card server with its existing deterministic data.
 CASES = [
+    ("cand_ensemble", "evaluate_ensemble"),
     ("data_import", "read_file"),
     ("data_coverage", "_figure"),
     ("data_homogeneous", "_homogeneity_figure"),

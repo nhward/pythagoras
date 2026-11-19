@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!slider) return;
         const summary = document.getElementById(message.summary);
         const display = (data) => {
-            if (summary) summary.textContent = `Score ${data.from}% · Throughput ${data.to - data.from}% · P95 error ${100 - data.to}%`;
+            if (summary) summary.textContent = `Score ${data.from}% · Throughput ${data.to - data.from}% · Prediction error ${100 - data.to}%`;
         };
         const commit = (data) => {
             display(data);

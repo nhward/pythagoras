@@ -1,17 +1,9 @@
 ---
 title: "Candidate models"
-subtitle: "A Pythagoras card"
-author: "Nick Ward"
-format:
-  html:
-    theme: none
-    embed-resources: true
-    toc: false
-    css: ../app/www/pythagoras.css
 ---
 
 Place **Candidate models** after **Pipeline tuning**. This experimental card
-supports continuous regression. It chooses one completed configuration overall,
+supports regression and classification. It chooses one completed configuration overall,
 and one within each candidate method. It does not fit models or construct an
 ensemble. All completed evidence is considered, including configurations outside
 the former score-based shortlist.
@@ -27,7 +19,7 @@ between those pipelines.
 
 Rotate the 3D chart by dragging, zoom with the wheel and inspect points by hovering.
 The axes show the primary tuning score, observed prediction rows per second and
-P95 absolute error. Method colors remain consistent across tabs. The scene uses
+P95 absolute error for regression or error rate for classification. Method colors remain consistent across tabs. The scene uses
 Pythagoras’s standard pale-blue background.
 
 ### What the Pareto frontier means
@@ -136,3 +128,10 @@ selects no winner. The setting is saved in bookmarks and recorded with the
 selection review. It concerns the intrinsic method classification, not SHAP
 availability or a guarantee that every fitted preprocessing/model pipeline is
 understandable.
+
+### Classification and ensembles
+
+For classification, the prediction-error criterion is error rate. Accuracy, balanced
+accuracy and ROC AUC use one minus score as their weighted loss; log loss is used
+directly. The same positive floor applies. Per-method representatives are available
+to **Candidate ensemble**, which evaluates their combination without final fitting.
