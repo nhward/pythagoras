@@ -30,7 +30,7 @@ CASES = [
     ("obs_duplicates", "_duplicates_figure"),
     ("obs_k_clusters", "_figure"),
     ("sys_configuration", "get_loaded_packages"),
-    ("system_log", "_log_frame"),
+    ("sys_log", "_log_frame"),
     ("var_cardinality", "_cardinality_figure"),
     ("var_correlation", "_chord_figure"),
     ("var_dissimilar", "_dissimilarity_matrix"),

@@ -195,3 +195,17 @@ def test_evaluation_identity_tracks_selected_inputs_only(source):
     evidence['pipelines'] = CandidatePipelines(templates, pipelines.choices)
     updated = source.with_tuning_results(evidence)
     assert evaluation_signature(updated, selected, 'mean') != signature
+
+
+def test_snapshot_context_ignores_winner_progress_but_tracks_data_and_resampling_seed(source):
+    from ensemble import evaluation_context_signature
+    context = evaluation_context_signature(source)
+    evidence = source.tuning_results
+    evidence['review']['representatives'].pop(next(iter(evidence['review']['representatives'])))
+    assert evaluation_context_signature(source.with_tuning_results(evidence)) == context
+    evidence['state']['specification']['seed'] += 1
+    assert evaluation_context_signature(source.with_tuning_results(evidence)) != context
+    frame = source.clean_frame.copy()
+    frame.loc[0, 'x'] += 10
+    changed = replace(source, _df=frame, _clean_df=frame).with_tuning_results(source.tuning_results)
+    assert evaluation_context_signature(changed) != context

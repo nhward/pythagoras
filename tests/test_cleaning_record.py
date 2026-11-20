@@ -64,6 +64,7 @@ def test_cleaning_record_rejects_invalid_shapes(shape):
 @pytest.mark.parametrize('record_type', ['cleaning', 'processing'])
 def test_records_are_hashable_and_pickleable_without_losing_readonly_parameters(record_type):
     import pickle
+
     from joblib import hash as job_hash
     from processing_record import ProcessingRecord
     if record_type == 'cleaning':

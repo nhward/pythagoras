@@ -7,7 +7,13 @@ import plotly.graph_objects as go
 import shinywidgets
 from card import Card
 from code_recording import recordable
-from ensemble import evaluate_ensemble, evaluation_signature, representatives
+from ensemble import (
+    evaluate_ensemble,
+    evaluation_context_signature,
+    evaluation_signature,
+    representatives,
+)
+from fit_service import session_fit_service
 from module import Module
 from pipeline_search import METRICS
 from shiny import reactive, render, req, ui
@@ -37,7 +43,7 @@ def instance():
     this.long_name = 'Candidate ensemble'
     this.description = 'Combine weighted method winners and compare their resampling performance.'
     this.export_inputs('Apply')
-    
+
     this.front = lambda: ui.TagList(
         ui.span('Post-selection resampling performance', class_='text-primary text-center d-block'),
         shinywidgets.output_widget(
@@ -46,14 +52,15 @@ def instance():
                  'These post-selection results are not independent test performance.', position='left'
         )
     )
-    
+
     this.back = lambda: ui.TagList(
         ui.span('Evaluation results', class_='text-primary text-center d-block'),
         ui.output_data_frame(id='Table')
     )
-    
+
     this.footer = lambda: ui.TagList(
-        ui.output_ui(id='Busy'), 
+        ui.output_ui(id='Busy'),
+        ui.output_text(id='Resources'),
         ui.output_text(id='Status'),
         ui.input_checkbox_group(
             id='Apply', label=None, choices=['Ensemble'], selected=[], inline=True,
@@ -69,11 +76,18 @@ def instance():
     )
 
     def server(input, output, session):
+        fit_service = session_fit_service(session)
+        if fit_service.runtime is not None:
+            fit_service.enable(this.namespace)
+            session.on_destroy(lambda: fit_service.remove_consumer(this.namespace))
         busy = this.busy()
         chart_widget = WidgetSlot(session)
         chart_instance = reactive.Value(None)
         cancellation = None
         requested = reactive.Value(None)
+        completed = reactive.Value(None)
+        evaluation_context = reactive.Value(None)
+        latest_signature = reactive.Value(None)
         waiting = reactive.Value('')
         choices_identity = None
         restored_models = this.restored_configuration_input('Models', None, warn_if_missing=False)
@@ -106,7 +120,7 @@ def instance():
             req(available is not None)
             results, members = available
             task = results['state']['specification']['task']
-            identity = (task, tuple(members), tuple(value['trial'] for value in members.values()))
+            identity = (task, tuple(members))
             if identity == choices_identity:
                 return
             with reactive.isolate():
@@ -119,7 +133,7 @@ def instance():
             else:
                 selected = [key for key in selected if key in members] + [
                     key for key in members if choices_identity is not None and key not in choices_identity[1]]
-            ui.update_checkbox_group('Models', choices={key: f"{value['label']} · Trial {value['trial'] + 1}"
+            ui.update_checkbox_group('Models', choices={key: value['label']
                 for key, value in members.items()}, selected=selected)
             ui.update_select('Style', choices=STYLES[task], selected=style if style in STYLES[task] else next(iter(STYLES[task])))
             ui.update_select('Metric', choices=METRICS[task], selected=metric if metric in METRICS[task] else next(iter(METRICS[task])))
@@ -145,46 +159,75 @@ def instance():
             stop = threading.Event()
             cancellation = stop
             try:
-                result = evaluate_ensemble(source, *options, cancelled=stop) if Module.IS_SHINYLIVE else await asyncio.to_thread(
-                    evaluate_ensemble, source, *options, cancelled=stop)
+                result = evaluate_ensemble(source, *options, cancelled=stop, fit_service=fit_service) if Module.IS_SHINYLIVE else await asyncio.to_thread(
+                    evaluate_ensemble, source, *options, cancelled=stop, fit_service=fit_service)
                 return signature, result, ''
-            except (ValueError, TypeError, InterruptedError) as exc:
-                return signature, None, str(exc)
+            except asyncio.CancelledError:
+                stop.set()
+                raise
+            except Exception as exc:  # Provider/worker failures belong in the card status.  # noqa: BLE001
+                return signature, None, f'{type(exc).__name__}: {exc}'
 
         @this.reactable()
         def Start():
             source, options = Incoming(), Options()
             try:
                 signature = evaluation_signature(source, *options)
+                context = evaluation_context_signature(source)
             except ValueError as error:
                 if cancellation is not None:
                     cancellation.set()
                 Evaluate.cancel()
                 requested.set(None)
+                completed.set(None)
+                if fit_service.runtime is not None:
+                    fit_service.publish_snapshot(this.namespace, None)
+                latest_signature.set(None)
                 waiting.set(str(error))
                 return
             waiting.set('')
             with reactive.isolate():
+                if latest_signature() != signature:
+                    latest_signature.set(signature)
+                if evaluation_context() != context:
+                    evaluation_context.set(context)
+            finished = completed()  # Completion wakes scheduling of the latest snapshot.
+            with reactive.isolate():
                 previous = requested()
-            if previous is not None and signature is not None and previous[2] == signature:
+                status = Evaluate.status()
+            if previous is not None and previous[2] == signature and status != 'cancelled':
                 return
+            if previous is not None and previous[1] == options and previous[3] == context and status == 'running':
+                # Winner changes are coalesced: let this snapshot finish first.
+                return
+            if finished is not None and (finished[1] != context or finished[2] != options):
+                completed.set(None)
+                if fit_service.runtime is not None:
+                    fit_service.publish_snapshot(this.namespace, None)
             if cancellation is not None:
                 cancellation.set()
             Evaluate.cancel()
-            requested.set((source, options, signature))
+            requested.set((source, options, signature, context))
             Evaluate.invoke(source, options, signature)
+
+        @this.reactable()
+        def Collect():
+            signature, result, error = Evaluate.result()
+            snapshot = requested()
+            req(snapshot is not None)
+            req(snapshot[2] == signature)
+            completed.set((signature, snapshot[3], snapshot[1], result, error))
+            if fit_service.runtime is not None:
+                fit_service.publish_snapshot(this.namespace, result.cache_owner if result else None)
 
         @this.reactable(calc=True)
         def Results():
             if waiting():
                 return None, waiting()
-            try:
-                signature, result, error = Evaluate.result()
-            except SilentOperationInProgressException:
-                req(False)
-            snapshot = requested()
-            req(snapshot is not None, signature == snapshot[2], snapshot[1] == Options())
-            return result, error
+            finished = completed()
+            req(finished is not None)
+            req(finished[1] == evaluation_context(), finished[2] == Options())
+            return finished[3], finished[4]
 
         @output
         @render_widget
@@ -228,6 +271,17 @@ def instance():
 
         @output
         @render.text
+        def Resources():
+            if fit_service.runtime is None or Evaluate.status() != 'running':
+                return ''
+            reactive.invalidate_later(.5)
+            resources = fit_service.runtime.snapshot()
+            if resources['training_searches']:
+                return 'Training has priority; ensemble evaluation uses spare capacity.'
+            return ''
+
+        @output
+        @render.text
         def Status():
             if Available()[1]:
                 return Available()[1]
@@ -238,17 +292,34 @@ def instance():
             winners = Available()[0][1]
             excluded = [c['label'] for c in Incoming().model_candidates if c['id'] not in winners]
             note = ('No eligible weighted winner: ' + ', '.join(excluded) + '. ') if excluded else ''
+            finished = completed()
+            if finished is not None and finished[0] != latest_signature():
+                note += 'Showing an earlier evaluated snapshot; newer winners are being evaluated. '
+            note += f"{result.diagnostics.get('reused_folds', 0)} fold fits reused; {result.diagnostics.get('new_fits', 0)} new. "
+            if result.diagnostics.get('serialization_fallbacks'):
+                note += 'Some providers required local fitting. '
+            if fit_service.runtime is not None:
+                resources = fit_service.runtime.snapshot()
+                if resources['pinned_bytes'] > fit_service.runtime.cache_budget:
+                    note += f"Current fitted models use {resources['pinned_bytes'] / 1024**3:.1f} GiB outside the evictable cache allowance. "
             return note + f'{len(result.members)} members · {len(result.splits)} {origin} splits · ' + (
-                'Ensemble enabled; final fitting is downstream.' if Enabled() else 'Evaluation only; incoming model passed through.')
+                ('Ensemble ready for downstream use; final fitting is downstream.'
+                 if finished[0] == latest_signature() and this.export_readiness.phase() is None
+                 else 'Preparing current ensemble for downstream use…')
+                if Enabled() else 'Evaluation only; incoming model passed through.')
 
         @this.reactable(calc=True)
         def Export():
-            source = Incoming()
             if not Enabled():
-                return source
+                return Incoming()
             result, _ = Results()
-            req(result is not None)
-            return source.with_ensemble(result)
+            snapshot = requested()
+            req(snapshot is not None, result is not None,
+                result.input_signature == latest_signature(), snapshot[2] == result.input_signature)
+            # Irrelevant training publications must not repeatedly invalidate an
+            # already-ready ensemble export. This is the evaluated source;
+            # Start invalidates readiness when its fitting identity changes.
+            return snapshot[0].with_ensemble(result)
 
         @this.export_check
         def export_ready():
@@ -257,9 +328,16 @@ def instance():
                 this.require_settled(Options)
                 snapshot = requested()
                 req(snapshot is not None)
-                source, options, signature = snapshot
-                req(options == Options(), signature == evaluation_signature(Incoming(), *options))
-                Evaluate.require_current(source, options, signature)
+                _source, options, signature, _ = snapshot
+                req(options == Options(), signature == latest_signature())
+                # Collect owns completed snapshots independently of the task.
+                # Comparing the task's whole proxy argument also traverses the
+                # changing upstream search history; only fitting identity is a
+                # prerequisite for exporting this evaluated ensemble.
+                result, error = Results()
+                if error:
+                    raise ValueError(error)
+                req(result is not None, result.input_signature == signature)
 
         def close():
             if cancellation is not None:

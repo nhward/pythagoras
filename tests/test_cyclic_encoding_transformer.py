@@ -2,12 +2,13 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import clone
+from cards import var_encode as card
 from cyclic_pandas import as_cyclic
 from CyclicEncodingTransformer import CyclicEncodingTransformer
-from cards import var_encode as card
 from proxy_data import proxy_data
-from roles import Role,RoleMap
+from roles import Role, RoleMap
+from sklearn.base import clone
+
 pytestmark=pytest.mark.unit
 
 

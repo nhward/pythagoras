@@ -1,7 +1,7 @@
 """Publish gating with fake test/export/upload commands; never contacts a server."""
 import importlib.util
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -17,7 +17,7 @@ def project(tmp_path, monkeypatch):
         (tmp_path / name).mkdir()
     (tmp_path / 'app/main.py').write_text('initial')
     (tmp_path / 'site/index.html').write_text('index')
-    monkeypatch.setattr(m.importlib.metadata, 'distributions', lambda: [])
+    monkeypatch.setattr(m.importlib.metadata, 'distributions', list)
     return tmp_path
 
 

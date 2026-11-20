@@ -28,4 +28,4 @@ The audit covers every production module in `app/cards`. Conditional declaration
 
 `data_import`, `cand_methods`, `cand_parameters`, `var_modify`, and `var_nominal` already export committed state rather than unaccepted preview settings; their contracts are retained. Immutable diagnostic cards retain their pass-through exports. The template's Apply-only example remains appropriate.
 
-`tests/cards/test_conditional_exports.py` exercises missing inactive inputs through real card exports, checks that sessions remain responsive, and verifies that missing active inputs still pause export. Existing card regressions cover commitment, restoration, tabs, and upstream changes.
+`tests/test_conditional_exports.py` exercises missing inactive inputs through real card exports, checks that sessions remain responsive, and verifies that missing active inputs still pause export. Existing card regressions cover commitment, restoration, tabs, and upstream changes.

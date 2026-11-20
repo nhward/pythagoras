@@ -137,6 +137,7 @@ class FakeModuleSession:
 ])
 def test_card_factories_declare_pipeline_compatibility(name, compatible, monkeypatch):
     import importlib
+
     from module import Module
     monkeypatch.setattr(Module, 'Instances', {})
     instance = importlib.import_module(f'cards.{name}').instance()

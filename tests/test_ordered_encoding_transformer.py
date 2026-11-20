@@ -2,12 +2,12 @@
 import numpy as np
 import pandas as pd
 import pytest
+from cards import var_encode as card
+from OrderedEncodingTransformer import OrderedEncodingTransformer, polynomial_contrasts
+from proxy_data import proxy_data
+from roles import Role, RoleMap
 from sklearn.base import clone
 from sklearn.preprocessing import OrdinalEncoder
-from OrderedEncodingTransformer import OrderedEncodingTransformer,polynomial_contrasts
-from cards import var_encode as card
-from proxy_data import proxy_data
-from roles import Role,RoleMap
 
 pytestmark=pytest.mark.unit
 

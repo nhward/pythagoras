@@ -14,6 +14,7 @@ from candidate_selection import (
 from card import Card
 from estimator_catalogue import load_catalogue
 from faicons import icon_svg as icon
+from fit_service import session_fit_service
 from model_review import parameter_differences
 from module import Module
 from proxy_data import proxy_data
@@ -92,6 +93,10 @@ def instance():
 
     def server(input, output, session):
         catalogue = load_catalogue()
+        fit_service = session_fit_service(session)
+        if fit_service.runtime is not None:
+            fit_service.runtime.register_review('review:' + this.namespace)
+            session.on_destroy(lambda: fit_service.runtime.remove_review('review:' + this.namespace))
         review_widget = WidgetSlot(session)
         plot_instance = reactive.Value(None)
         selected_trial = reactive.Value(None)
@@ -199,6 +204,14 @@ def instance():
             with reactive.isolate(): previous = winners()
             if decision != previous:
                 winners.set(decision)
+            results = Results()
+            if fit_service.runtime is not None and results is not None and not results.get('read_only'):
+                trials = results['state']['trials']
+                selected = {value - 1 for value in decision['methods'].values() if value is not None}
+                fit_service.runtime.pin_review('review:' + this.namespace,
+                    results['state']['specification']['fingerprint'],
+                    [joblib.hash(t['params']) for t in trials if t['id'] in selected],
+                    [joblib.hash(t['params']) for t in trials])
 
         @output
         @render.ui

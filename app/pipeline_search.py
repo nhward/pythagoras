@@ -104,6 +104,9 @@ class SearchProblem:
     branches: dict = field(default_factory=dict)
     evidence_directory: str | None = None
     evidence_namespace: str | None = None
+    fit_runtime: object | None = None
+    fit_search_token: str = ""
+    fit_context: str = ""
 
 
 def implicit_splits(source, target, task, seed):
@@ -249,8 +252,9 @@ def prepare(source, *, metric=None, secondary=(), method='random', seed=1729, ex
     if method == 'skopt': packages.add('scikit-optimize')
     versions = {p: importlib.metadata.version(p) for p in sorted(packages)}
     root = Path(__file__).resolve().parent
-    files = {Path(__file__), root / 'pipeline.py', root / 'tuning.py', root / 'model_commit.py',
-             root / 'bundled_parameters.py', root / 'prediction_evidence.py'}
+    shared_files = {Path(__file__), root / 'pipeline.py', root / 'tuning.py', root / 'model_commit.py',
+             root / 'bundled_parameters.py', root / 'prediction_evidence.py', root / 'fit_responses.py'}
+    files = set(shared_files)
     for value in pipeline.get_params(deep=True).values():
         try:
             file = inspect.getsourcefile(value if callable(value) else type(value))
@@ -265,7 +269,9 @@ def prepare(source, *, metric=None, secondary=(), method='random', seed=1729, ex
         specification.update(conditions=conditions, parameter_grids=parameter_grids)
     specification['fingerprint'] = joblib.hash((pipeline, frame, source.role_map.to_primitive(),
         source.modelling_context.to_primitive(), evaluation, splits, compatibility_specification(specification)))
-    return SearchProblem(pipeline, frame, targets[0], splits, specification, evidence_directory=evidence_store.directory())
+    return SearchProblem(pipeline, frame, targets[0], splits, specification, evidence_directory=evidence_store.directory(),
+        fit_context=joblib.hash((frame, targets[0], source.role_map.to_primitive(), source.modelling_context.to_primitive(), int(seed), task, TRAINING_COMPATIBILITY_VERSION,
+            {str(p.resolve().relative_to(root)): implementation[str(p.resolve().relative_to(root))] for p in shared_files})))
 
 
 def fresh(problem):
@@ -432,13 +438,21 @@ def prepare_candidates(source, **options):
     spec['execution']['workers'] = min(c.specification['execution']['workers'] for c in branches.values())
     spec['execution']['estimated_fit_bytes'] = max(c.specification['execution']['estimated_fit_bytes'] for c in branches.values())
     spec['fingerprint'] = joblib.hash(compatibility_specification(spec))
-    return SearchProblem(None, first.frame, first.target, first.splits, spec, branches, evidence_directory=evidence_store.directory())
+    return SearchProblem(None, first.frame, first.target, first.splits, spec, branches, evidence_directory=evidence_store.directory(), fit_context=first.fit_context)
 
 
 def candidate_proposal(problem, state):
-    # Independent method optimizers with deterministic balanced allocation.
-    candidates = sorted(problem.branches, key=lambda key: (
-        sum(t['params'].get(METHOD_PARAMETER) == key for t in state['trials']), list(problem.branches).index(key)))
+    # Balance attempts, including reserved/failed trials. Bayesian optimizers
+    # learn within methods; seeded random tie-breaking avoids a fixed method
+    # order while retaining equal opportunity and checkpoint reproducibility.
+    candidates = list(problem.branches)
+    if problem.specification['method'] in {'tpe', 'skopt'}:
+        rng = np.random.default_rng()
+        rng.bit_generator.state = state['rng']
+        rng.shuffle(candidates)
+        state['rng'] = rng.bit_generator.state
+    candidates.sort(key=lambda key: sum(
+        t['params'].get(METHOD_PARAMETER) == key for t in state['trials']))
     for candidate in candidates:
         local = branch_state(problem, state, candidate)
         proposed = _proposal(problem.branches[candidate], local)
@@ -698,11 +712,15 @@ def validate_diagnostic_summary(summary, task):
 
 def evaluate_fold(problem, params, fold):
     estimator, result = fit_fold(problem, params, fold)
+    from fit_responses import collect_responses, response_estimator
+    from fit_service import fit_key
     _, validation = problem.splits[fold]
     X = problem.frame
+    responses = collect_responses(estimator, X.iloc[validation], problem.specification['task'])
+    scorer_model = response_estimator(responses, problem.specification['task'])
     for metric in [problem.specification['metric'], *problem.specification['secondary']]:
         try:
-            value = float(get_scorer(metric)(estimator, X.iloc[validation].copy(), X[problem.target].iloc[validation].copy()))
+            value = float(get_scorer(metric)(scorer_model, X.iloc[validation].copy(), X[problem.target].iloc[validation].copy()))
             if not math.isfinite(value):
                 raise ValueError('Scorer returned a nonfinite value.')
             result[metric] = value
@@ -714,10 +732,8 @@ def evaluate_fold(problem, params, fold):
     if problem.specification.get('prediction_evidence'):
         evidence = None
         try:
-            batch = X.iloc[validation].copy()
-            started = time.perf_counter()
-            predictions = estimator.predict(batch)
-            duration = time.perf_counter() - started
+            predictions = responses.values['predict']
+            duration = responses.seconds
             observed = X[problem.target].iloc[validation].to_numpy()
             predicted = np.asarray(predictions)
             if observed.shape != predicted.shape or predicted.ndim != 1:
@@ -729,9 +745,9 @@ def evaluate_fold(problem, params, fold):
             else:
                 evidence.update(error_count=int(np.count_nonzero(observed != predicted)), loss_kind='classification_error')
                 losses = None
-                if callable(getattr(estimator, 'predict_proba', None)):
+                if 'predict_proba' in responses.values:
                     try:
-                        probabilities = np.asarray(estimator.predict_proba(batch), dtype=float)
+                        probabilities = np.asarray(responses.values['predict_proba'], dtype=float)
                         classes = np.asarray(estimator.classes_).tolist()
                         if probabilities.shape != (len(validation), len(classes)) or not np.isfinite(probabilities).all() or (probabilities < 0).any() or (probabilities > 1).any() or not np.allclose(probabilities.sum(axis=1), 1):
                             raise ValueError('Invalid classification probabilities.')
@@ -750,6 +766,15 @@ def evaluate_fold(problem, params, fold):
             if isinstance(evidence, dict) and 'key' in evidence:
                 evidence_store.remove([evidence['key']], problem.evidence_directory)
             result['evidence'] = {'error': f'{type(exc).__name__}: {exc}'}
+    runtime = problem.fit_runtime
+    if runtime is not None and runtime.enabled():
+        branch = problem.branches[params[METHOD_PARAMETER]] if problem.branches else problem
+        settings = {k: v for k, v in params.items() if k != METHOD_PARAMETER}
+        pipeline = clone(branch.pipeline).set_params(**settings)
+        train, validation = problem.splits[fold]
+        key = fit_key(branch.fit_context, pipeline, train, validation)
+        search, trial = problem.specification['fingerprint'], joblib.hash(params)
+        runtime.put(key, estimator, responses, 'pending:' + search + ':' + trial, search, trial)
     return result
 
 
@@ -780,7 +805,16 @@ class _FitRunner:
         params, fold = job
         tick = time.monotonic()
         try:
-            value = evaluate_fold(self.problem, params, fold)
+            if self.problem.fit_runtime is None:
+                value = evaluate_fold(self.problem, params, fold)
+            else:
+                runtime = self.problem.fit_runtime
+                branch = self.problem.branches[params[METHOD_PARAMETER]] if self.problem.branches else self.problem
+                estimate = branch.specification['execution']['estimated_fit_bytes']
+                with runtime.lease('train', estimate, search=self.problem.fit_search_token):
+                    value = evaluate_fold(self.problem, params, fold)
+                    runtime.count('train_fits')
+                    runtime.count('prediction_batches')
             return value, '', time.monotonic() - tick, None
         except Exception as exc:  # noqa: BLE001
             from search_feasibility import failure_kind
@@ -939,6 +973,8 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
                     _store_fold(trial, fold, value)
                     if trial['state'] != 'failed' and len(trial['folds']) == spec['folds']:
                         trial['state'] = 'complete'
+                if trial['state'] == 'complete' and problem.fit_runtime is not None:
+                    problem.fit_runtime.retire_unreviewed(spec['fingerprint'], joblib.hash(trial['params']))
                 if trial['state'] == 'complete' and spec.get('prediction_evidence') == 2:
                     retired = evidence_store.summarize_trial(trial, spec, problem.evidence_directory)
                     if getattr(publish, 'incremental', False):
@@ -946,6 +982,8 @@ def run(problem, checkpoint, *, trials=None, seconds=0, publish, pause, cancel=l
                     else:
                         evidence_store.remove(retired, problem.evidence_directory)
                 elif trial['state'] == 'failed':
+                    if problem.fit_runtime is not None:
+                        problem.fit_runtime.release('pending:' + spec['fingerprint'] + ':' + joblib.hash(trial['params']))
                     retired = list(evidence_store.references({'trials': [trial]}))
                     for result in trial['folds']:
                         result['evidence'] = {'error': 'Trial failed; temporary diagnostics discarded.'}
@@ -1043,13 +1081,22 @@ def _worker(problem, state, trials, seconds, updates, pause_event, cancel_event,
         os.setsid()  # Isolate this coordinator and its children for bounded cancellation.
     from threadpoolctl import threadpool_limits
     with threadpool_limits(limits=1):
-        run(problem, state, trials=trials, seconds=seconds, publish=_UpdatePublisher(updates),
-            pause=pause_event.is_set, cancel=cancel_event.is_set, worker_registry=worker_registry)
+        if problem.fit_runtime is not None:
+            problem.fit_runtime.register_search(problem.fit_search_token)
+        try:
+            run(problem, state, trials=trials, seconds=seconds, publish=_UpdatePublisher(updates),
+                pause=pause_event.is_set, cancel=cancel_event.is_set, worker_registry=worker_registry)
+        finally:
+            if problem.fit_runtime is not None:
+                problem.fit_runtime.finish_search(problem.fit_search_token)
 
 
 class SearchWorker:
     """Non-daemon coordinator owns a bounded pool; cancellation cleans its tree."""
-    def __init__(self):
+    def __init__(self, fit_service=None):
+        self.fit_service = fit_service
+        self._fit_search = None
+        self._fit_token = None
         self.process = None
         self.updates = None
         self.pause_event = None
@@ -1076,6 +1123,13 @@ class SearchWorker:
         self._namespace = uuid.uuid4().hex
         problem = copy.copy(problem)
         problem.evidence_namespace = self._namespace
+        if self.fit_service is not None:
+            problem.fit_runtime = self.fit_service.runtime
+            problem.fit_search_token = self._namespace
+            self._fit_search = problem.specification['fingerprint']
+            self._fit_token = self._namespace
+            if problem.fit_runtime is not None:
+                problem.fit_runtime.register_search(self._fit_token)
         self.worker_registry = ctx.Array('d', 128)
         self.process = ctx.Process(target=_worker,
             args=(problem, state, trials, seconds, self.updates, self.pause_event, self.cancel_event, self.worker_registry))
@@ -1168,6 +1222,12 @@ class SearchWorker:
         evidence_store.prune_namespace(self._namespace, keep=evidence_store.references(self._state))
         self._state = None
         self._namespace = None
+        if self.fit_service is not None and self.fit_service.runtime is not None:
+            if self._fit_token:
+                self.fit_service.runtime.finish_search(self._fit_token)
+            if self._fit_search:
+                self.fit_service.runtime.release_search(self._fit_search)
+            self._fit_search = self._fit_token = None
 
 
 def accepted_parameters(problem, checkpoint, trial_id):

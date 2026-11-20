@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import clone
-from list_pandas import as_list
 from BasketEncodingTransformer import BasketEncodingTransformer
 from cards import var_encode as card
+from list_pandas import as_list
 from proxy_data import proxy_data
 from roles import Role, RoleMap
+from sklearn.base import clone
+
 pytestmark=pytest.mark.unit
 
 

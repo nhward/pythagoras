@@ -4,7 +4,7 @@ title: System log
 
 #### 🧭 Purpose
 
-_The System log card exposes recent application and card log records for diagnosis and verification. It can combine Python-side messages with browser messages recorded under the JavaScript logger. The card is diagnostic and does not alter the dataset._
+_The System log card exposes recent application and card log records for diagnosis and review. It can combine Python-side messages with browser messages recorded under the JavaScript logger. The card is diagnostic and does not alter the dataset._
 
 #### 🎯 Goals
 

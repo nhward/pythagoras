@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-ROOT=Path(__file__).resolve().parents[2]/'app'
+ROOT=Path(__file__).resolve().parents[1]/'app'
 os.chdir(ROOT);sys.path.insert(0,str(ROOT))
 import pytest
 from playwright.sync_api import expect
@@ -43,7 +43,7 @@ def case(request,monkeypatch):
     monkeypatch.setenv('PYTHAGORAS_CONDITIONAL_CARD',json.dumps(request.param))
     return request.param
 
-conditional_app=create_app_fixture(app='../scenarios/conditional_exports.py',scope='function')
+conditional_app=create_app_fixture(app='scenarios/conditional_exports.py',scope='function')
 
 @pytest.fixture
 def app(case,conditional_app):

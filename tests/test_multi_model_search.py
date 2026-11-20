@@ -240,3 +240,51 @@ def test_classification_candidates_share_scoring_and_preprocessing_is_fold_local
     assert len(FoldAudit.fitted_rows) == 12
     assert all(len(rows) == 20 for rows, _ in FoldAudit.fitted_rows)
     assert all(child.frame is p.frame and child.splits is p.splits for child in p.branches.values())
+
+
+@pytest.mark.parametrize('method', ['tpe', 'skopt'])
+def test_bayesian_method_allocation_is_balanced_randomized_and_resumable(monkeypatch, method):
+    from collections import Counter
+    from types import SimpleNamespace
+
+    import numpy as np
+    import pipeline_search
+
+    methods = [f'method_{i}' for i in range(5)]
+    problem = SimpleNamespace(specification={'method': method},
+        branches={key: SimpleNamespace(specification={}) for key in methods})
+    # Five independent finite 100-combination optimizers. Isolate allocation
+    # from each optimizer's parameter decisions and expensive CV fitting.
+    def propose(branch, local):
+        count = len(local['trials']) - 1
+        return {'configuration': count} if count < 100 else None
+    monkeypatch.setattr(pipeline_search, '_proposal', propose)
+
+    def initial(seed):
+        return {'rng': np.random.default_rng(seed).bit_generator.state, 'batch': [],
+            'trials': [{'id': i, 'params': {'__method__': key}, 'kind': 'baseline'}
+                       for i, key in enumerate(methods)]}
+
+    def advance(state, attempts):
+        order = []
+        for _ in range(attempts):
+            params = pipeline_search.candidate_proposal(problem, state)
+            if params is None:
+                break
+            order.append(params['__method__'])
+            state['trials'].append({'id': len(state['trials']), 'params': params, 'kind': 'candidate'})
+        return order
+
+    state = initial(1729)
+    order = advance(state, 250)
+    assert Counter(order) == {key: 50 for key in methods}
+    assert all(set(order[i:i + 5]) == set(methods) for i in range(0, 250, 5))
+    assert len({tuple(order[i:i + 5]) for i in range(0, 250, 5)}) > 1
+    assert advance(initial(1729), 250) == order
+    assert advance(initial(1730), 250) != order
+    paused = initial(1729)
+    prefix = advance(paused, 113)
+    resumed = json.loads(json.dumps(paused))
+    assert prefix + advance(resumed, 137) == order
+    assert len(advance(state, 300)) == 250  # Exhaust all 500, without duplicates.
+    assert pipeline_search.candidate_proposal(problem, state) is None

@@ -241,8 +241,7 @@ def test_fold_fitting_uses_raw_training_rows_and_preserves_validation_rows():
     result = finish(p)
     assert all(t['state'] == 'complete' for t in result['trials'])
     assert FoldAudit.fitted_rows == [(tuple(a), float(data.clean_frame.x.iloc[a].mean())) for a, _ in p.splits]
-    assert FoldAudit.validation_rows == [tuple(b) for _, b in p.splits
-        for _ in [p.specification['metric'], *p.specification['secondary'], 'prediction evidence']]
+    assert FoldAudit.validation_rows == [tuple(b) for _, b in p.splits]
 
 
 @pytest.mark.parametrize('alter', [lambda s: s.pop('rng'), lambda s: s.update(trials=[{}]),

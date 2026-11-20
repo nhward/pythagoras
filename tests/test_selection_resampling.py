@@ -2,12 +2,16 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import BaseEstimator, TransformerMixin, clone
 from evaluation_plan import build_plan, level_key
 from proxy_data import proxy_data
 from roles import RoleMap
-from selection_analysis import analyze_selection, export_selection, selection_stability, selection_identity
-from selection_resampling import selection_inner_splits
+from selection_analysis import (
+    analyze_selection,
+    export_selection,
+    selection_identity,
+    selection_stability,
+)
+from sklearn.base import BaseEstimator, TransformerMixin, clone
 
 pytestmark=pytest.mark.unit
 
@@ -26,14 +30,14 @@ def source(n=240, **plan_options):
     if strategy=='temporal':
         roles.set_roles('time',['sequence'])
     data=proxy_data(frame,_roles=roles)
-    plan=build_plan(data,**(dict(strategy='kfold',objective='independent',folds=3,shuffle=False)|plan_options))
+    plan=build_plan(data,**({'strategy': 'kfold','objective': 'independent','folds': 3,'shuffle': False}|plan_options))
     assert plan.ready,plan.errors
     return data.with_evaluation_plan(plan,card='obs_resample')
 
 
 def options(**kwargs):
-    return dict(trees=30,depth=4,iterations=18,alpha=.05,percentile=100,two_step=True,
-        folds=5,repeats=1,cutoff=1.,policy='confirmed',random_state=2025,n_jobs=1,use_weights=True)|kwargs
+    return {'trees': 30,'depth': 4,'iterations': 18,'alpha': .05,'percentile': 100,'two_step': True,
+        'folds': 5,'repeats': 1,'cutoff': 1.,'policy': 'confirmed','random_state': 2025,'n_jobs': 1,'use_weights': True}|kwargs
 
 
 def analyze(data, **kwargs):

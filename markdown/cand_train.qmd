@@ -141,8 +141,11 @@ With several committed candidates, each trial chooses a method and only that met
 Every method receives one starting configuration evaluation using its committed values; the **Maximum candidates** budget is global and excludes all method starting configurations. The
 progress display states how many starting configuration evaluations are required. For non-exhaustive methods, time limits cover the complete search. Matching in-grid starting configurations are counted once.
 
-Random and Exhaustive visit the union of valid branches. TPE and skopt use separate optimizers for each method with deterministic balanced allocation between
-non-exhausted methods. No inactive-method parameter values or fictitious objective scores are supplied. All methods reuse identical CV memberships, fit preparation
+Random and Exhaustive visit the union of valid branches. TPE and skopt use separate optimizers for each method with balanced allocation with seeded random tie-breaking between
+non-exhausted methods. After the starting configurations, methods with the fewest attempts
+are chosen first, with their order randomized when tied. Attempts are balanced per
+method, not proportional to each method's grid size; exhausted methods are skipped.
+The saved seed and RNG state preserve the sequence when resuming. No inactive-method parameter values or fictitious objective scores are supplied. All methods reuse identical CV memberships, fit preparation
 inside each fold, and obey the same parallel-fit limit. Method/recipe IDs remain part of checkpoint identity, and resuming preserves reserved branches and results.
 
 The flip-side table includes a **Method** column, with recipe identity in **Model**. Chart hover text and the best-result statement identify the method.

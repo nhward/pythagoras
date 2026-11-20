@@ -19,7 +19,7 @@ os.chdir(path)
 if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
-app = create_app_fixture(app="../scenarios/system_log.py", scope="function")
+app = create_app_fixture(app="../scenarios/sys_log.py", scope="function")
 
 
 @pytest.fixture(scope="session")
@@ -28,13 +28,13 @@ def browser_context_args():
 
 
 @pytest.fixture
-def system_log():
-    return importlib.import_module("cards.system_log")
+def sys_log():
+    return importlib.import_module("cards.sys_log")
 
 
 @pytest.fixture
-def card(system_log):
-    return system_log.instance()
+def card(sys_log):
+    return sys_log.instance()
 
 
 def get_card(page: Page):
@@ -70,7 +70,7 @@ def set_shiny_input(page: Page, local_id: str, value):
 class TestInstance:
     @pytest.mark.unit
     def test_metadata_and_regions(self, card):
-        assert card.name == "system_log"
+        assert card.name == "sys_log"
         assert card.long_name == "System log"
         assert not card.mutable
         assert card.hasSidebar()
@@ -97,8 +97,8 @@ class TestInstance:
 
 class TestLogFrame:
     @pytest.mark.unit
-    def test_message_column_is_allocated_extra_width(self, system_log):
-        style = system_log.MESSAGE_COLUMN_STYLE
+    def test_message_column_is_allocated_extra_width(self, sys_log):
+        style = sys_log.MESSAGE_COLUMN_STYLE
         assert style["cols"] == "Message"
         assert style["style"]["width"] == "50%"
         assert style["style"]["min-width"] == "30rem"
@@ -137,9 +137,9 @@ class TestLogFrame:
 
     @pytest.mark.unit
     def test_filters_levels_searches_and_orders_newest_first(
-        self, system_log, records
+        self, sys_log, records
     ):
-        result = system_log._log_frame(
+        result = sys_log._log_frame(
             records,
             levels=["INFO", "ERROR"],
             query="tree",
@@ -150,15 +150,15 @@ class TestLogFrame:
 
     @pytest.mark.unit
     def test_limits_after_filtering_and_returns_expected_schema(
-        self, system_log, records
+        self, sys_log, records
     ):
-        result = system_log._log_frame(
+        result = sys_log._log_frame(
             records,
-            levels=system_log.LOG_LEVELS,
+            levels=sys_log.LOG_LEVELS,
             maximum=2,
         )
         assert isinstance(result, pd.DataFrame)
-        assert result.columns.tolist() == system_log.LOG_COLUMNS
+        assert result.columns.tolist() == sys_log.LOG_COLUMNS
         assert result["Logger"].tolist() == ["table", "model"]
         assert result["Source"].tolist() == [
             "data_tabulation.py",
@@ -167,10 +167,10 @@ class TestLogFrame:
         assert result["Time"].str.match(r"\d{4}-\d{2}-\d{2} ").all()
 
     @pytest.mark.unit
-    def test_no_selected_levels_returns_empty_frame(self, system_log, records):
-        result = system_log._log_frame(records, levels=[], maximum=100)
+    def test_no_selected_levels_returns_empty_frame(self, sys_log, records):
+        result = sys_log._log_frame(records, levels=[], maximum=100)
         assert result.empty
-        assert result.columns.tolist() == system_log.LOG_COLUMNS
+        assert result.columns.tolist() == sys_log.LOG_COLUMNS
 
 
 class TestApplicationLogHandler:

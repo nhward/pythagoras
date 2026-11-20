@@ -366,7 +366,7 @@ def test_characteristic_sort_preserves_selected_recipe_and_hides_front(page, app
     # The virtualized DOM contains only a subset of the methods.
     _ = len(_table(_analyze(source(), load_catalogue(), {}), show_all=True))
     expect(page.locator('[id$="-Status"]')).to_have_text(
-        'No estimator committed. Select methods and Commit.')
+        'No estimator committed.')
     selected.click()
     card.hover()
     page.locator('[id$="-FlipButton"]').click()
@@ -468,21 +468,30 @@ def test_commit_selected_model_exports_pipeline_and_status(page, app):
 def test_method_choice_can_change_after_selection_and_commit(page, app):
     page.goto(app.url)
     table = page.locator('[id$="-Table"]')
-    first = table.get_by_text('Hist Gradient Boosting', exact=True)
-    second = table.get_by_text('LGBM', exact=True)
+    exported = page.locator('[id$="-ExportedCandidates"]')
+    first = table.get_by_role('checkbox', name='Select Hist Gradient Boosting', exact=True)
+    second = table.get_by_role('checkbox', name='Select LGBM', exact=True)
     expect(first).to_be_visible(timeout=30000)
     choose_method(page, 'Hist Gradient Boosting')
     page.locator('[id$="-Commit"]').click()
-    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting')
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: Hist Gradient Boosting')
+    expect(exported).to_have_text('Hist Gradient Boosting')
     choose_method(page, 'LGBM')
-    expect(second.locator('..')).to_have_attribute('aria-selected', 'true')
-    expect(page.locator('[id$="-Status"]')).to_contain_text('Selected method: LGBM; press Commit')
+    expect(second).to_be_checked()
+    expect(first).not_to_be_checked()
+    expect(page.locator('[id$="-Status"]')).to_have_text(
+        'Committed method: Hist Gradient Boosting Selected method: LGBM')
+    expect(exported).to_have_text('Hist Gradient Boosting')
     page.locator('[id$="-Commit"]').click()
-    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: LGBM')
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: LGBM')
+    expect(exported).to_have_text('LGBM')
     choose_method(page, 'Hist Gradient Boosting')
-    expect(first.locator('..')).to_have_attribute('aria-selected', 'true')
+    expect(first).to_be_checked()
+    expect(second).not_to_be_checked()
+    expect(exported).to_have_text('LGBM')
     page.locator('[id$="-Commit"]').click()
-    expect(page.locator('[id$="-Status"]')).to_contain_text('Committed method: Hist Gradient Boosting')
+    expect(page.locator('[id$="-Status"]')).to_have_text('Committed method: Hist Gradient Boosting')
+    expect(exported).to_have_text('Hist Gradient Boosting')
 
 
 @pytest.mark.ui
@@ -637,7 +646,7 @@ def test_change_committed_method_after_restoring_same_selected_and_committed(pag
     status=page.locator('[id$="-Status"]')
     expect(status).to_have_text('Committed method: Hist Gradient Boosting',timeout=30000)
     choose_method(page, 'LGBM')
-    expect(status).to_contain_text('Selected method: LGBM; press Commit')
+    expect(status).to_have_text('Committed method: Hist Gradient Boosting Selected method: LGBM')
     page.locator('[id$="-Commit"]').click()
     expect(status).to_have_text('Committed method: LGBM')
     with page.expect_download() as download:

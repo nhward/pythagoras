@@ -4,7 +4,7 @@ title: "Candidate ensemble specification"
 
 `cand_ensemble` follows `app/cards/template.py`: mutable and pipeline-compatible,
 callable export, settled model/style options and enablement, background evaluation,
-current-argument export readiness, configuration restoration and code recording.
+completed-evaluation signature export readiness, configuration restoration and code recording.
 
 `ensemble.representatives` reads zero-based weighted winners from current
 `tuning_results.review.representatives`. Read-only or missing evidence is rejected.
@@ -14,7 +14,7 @@ display setting and does not trigger fitting or affect representative selection.
 
 `evaluate_ensemble` uses `pipeline_search.prepare` for the first selected member
 to reuse plan validation, implicit resampling and weighting exclusions. Each
-member is cloned and fitted once within each split. Member predictions and their
+member is reused from a matching session artifact or cloned and fitted within each split. Member predictions and their
 combination are scored on the same validation rows using task-specific scorers.
 All supported metrics are collected once. Mean/median regression and aligned
 probability/majority classification use equal member weights. Stacking is deferred.
@@ -29,8 +29,8 @@ must not be wrapped in duplicated upstream preprocessing. No full-data fit occur
 
 Footer Apply/Ensemble controls downstream export. Disabled export is the unchanged
 incoming proxy; enabled export waits for matching evaluation. No partially fitted
-ensemble is exported. Background cancellation is cooperative between member fits;
-a native fit already running must finish before its thread exits. Runtime fitting
+ensemble is exported. Background cancellation stops new submissions; a native fit already running
+finishes in its worker, then releases any abandoned snapshot artifacts. Runtime fitting
 errors must remain visible, not become successful empty results.
 
 The front horizontal bars show selected members plus ensemble, best first by
@@ -56,3 +56,66 @@ At least two distinct available representatives must be selected. Invalid or sin
 requests cancel superseded work, clear stale diagnostics and show a waiting message
 without invoking the evaluator. The second upstream member is selected by default
 and starts evaluation automatically. Reducing the selection to one waits again.
+
+Winner changes for the same selected methods/context are coalesced until the active
+snapshot finishes. Collect publishes completed results independently of the active
+task. Completed snapshots stay visible while newer winners evaluate, explicitly
+labelled as older; export requires the latest exact evaluation signature. Data,
+resampling, selected-member and style changes clear incompatible snapshots and
+cancel old work. Cancelled tasks can restart after module resume. Cancellation
+signals the scheduler to stop at its next queue boundary; running native fits
+finish before releasing their leases.
+
+Model controls rebuild only when method identities/task change, not on each new
+winning trial ID: rebinding them would repeatedly reset Options' settling delay.
+
+### Session fit reuse and native scheduling
+
+`session_fit_service` is shared by training, candidate review and ensemble cards.
+Fit identity includes the complete configured preprocessing/model pipeline and its
+implementation, data/index/roles/target/task, seed, exact ordered split memberships,
+core training implementation and installed dependency versions. It excludes the
+scoring preference, search progress, review weights and ensemble aggregation style.
+Training publishes fitted fold pipelines plus held-out responses to private session
+joblib files; SQLite contains only coordination metadata. Candidate review pins the
+current per-method winners and retires losing completed-trial artifacts. Without
+a review consumer, completed-trial artifacts become evictable immediately. Portable
+checkpoints, bookmarks and completed tuning evidence contain no cache references,
+fitted objects or row-level responses.
+
+The ensemble loads available winning fold models, fits only missing keys, and
+scores cached responses using the existing sklearn scorers. Each required response
+method is called once per fitted fold, independently of metric count. Mean, median
+and voting combine held-out responses without additional fitting. Runtime ensembles
+retain the actual split-fitted member pipelines for downstream use. A changed winner
+invalidates only that member's folds; style/metric changes reuse existing fits.
+
+Native search pools and the session ensemble executor use the same CPU/memory
+leases. One CPU is reserved for the UI (minimum one fitting slot). Pending training
+fits take precedence; while a training search is active, ensembles use at most
+`max(1, floor(cpu_count / 5))` slots and only spare capacity. Existing fits finish
+before yielding. Completed or fully paused searches release their reservation;
+ensembles can then use remaining capacity. The shared memory allowance uses the
+same stable quarter-of-system-RAM policy and per-fit estimates as training.
+Search proposal generation and batch boundaries are unchanged.
+
+A 2 GiB LRU allowance bounds evictable fitted artifacts. Current review winners and
+current/evaluating snapshots are pinned separately and may exceed the allowance;
+the footer reports that case. Models loaded by current snapshots are weakly indexed,
+not retained again in a strong global model cache. Data contexts are temporary and
+released after their jobs finish. Unserializable fitted providers fall back to local
+fitting under the same leases and may reuse live models; the footer reports the
+fallback. Cancellation releases abandoned pins after late jobs finish. Session
+shutdown closes workers and removes the private directory; dead-session directories
+are swept on the next native session. Shinylive uses sequential, in-memory reuse of
+selected members and opens no SQLite database or process executor.
+
+
+Enabled export uses the evaluated source snapshot and depends on fitting identity,
+not every incoming progress publication, so an already-ready export remains ready.
+Footer enablement validates the collected evaluation's fitting signature against
+current selected winners, rather than comparing the task's entire upstream proxy
+and changing tuning history. The footer explicitly reports readiness for downstream
+use after guarded publication; evaluation failures propagate as errors instead of
+an indefinitely pending export. Output preparation uses a preparation message,
+reserving "Applying bookmark" for configuration restoration.

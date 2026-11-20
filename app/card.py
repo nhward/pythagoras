@@ -699,7 +699,7 @@ class Card(Module):
                     running = any(task.status() == "running" for task in self.extended_tasks)
                     tracked = any(task.status() == "running"
                                   for tracker in self._busy_trackers for task, _ in tracker._tasks)
-                    self.waiting.set(None if tracked else "Calculating…" if running else "Applying bookmark")
+                    self.waiting.set(None if tracked else "Calculating…" if running else "Preparing output…")
                 else:
                     self.waiting.set(None)
 

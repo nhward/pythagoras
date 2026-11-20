@@ -2,12 +2,12 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import BaseEstimator, clone
-from sklearn.pipeline import Pipeline
-from TargetEncodingTransformer import TargetEncodingTransformer
 from cards import var_encode as card
 from proxy_data import proxy_data
 from roles import Role, RoleMap
+from sklearn.base import BaseEstimator, clone
+from sklearn.pipeline import Pipeline
+from TargetEncodingTransformer import TargetEncodingTransformer
 
 pytestmark = pytest.mark.unit
 

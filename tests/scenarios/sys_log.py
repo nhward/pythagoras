@@ -10,7 +10,7 @@ os.chdir(APP_ROOT)
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-from cards.system_log import instance
+from cards.sys_log import instance
 from module import ApplicationLogHandler, Module
 
 # Isolate this scenario from records produced while pytest imports other cards.

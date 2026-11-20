@@ -246,7 +246,7 @@ Drag-and-drop ordering is handled via:
 ### 🤖 System
 
 * [Configuration](app/www/markdown/sys_configuration.html) What environment has the analysis taken place in?
-* [System log](app/www/markdown/system_log.html) What messages were lodged during the analysis?
+* [System log](app/www/markdown/sys_log.html) What messages were lodged during the analysis?
 * [Data journey](app/www/markdown/data_provenance.html) What is the data pathway?
 
 ***

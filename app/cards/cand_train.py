@@ -11,6 +11,7 @@ import prediction_evidence as evidence_store
 import shinywidgets
 from card import Card
 from faicons import icon_svg as icon
+from fit_service import session_fit_service
 from model_review import archived_evidence, completed_evidence
 from pipeline_search import (
     EXECUTIONS,
@@ -313,7 +314,7 @@ def instance():
                     for t in failures], style='max-height: 20rem; overflow-y: auto; padding-left: 1.5rem;')),
                 id=notification_id, type='error', duration=None, close_button=True)
 
-        worker = SearchWorker()
+        worker = SearchWorker(fit_service=session_fit_service(session))
         
         def cleanup():
             worker.close()

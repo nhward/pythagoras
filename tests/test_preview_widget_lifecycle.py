@@ -1,6 +1,6 @@
 """Preview-card charts keep their models during display and fullscreen changes."""
-from pathlib import Path
 import re
+from pathlib import Path
 
 import pytest
 from playwright.sync_api import expect

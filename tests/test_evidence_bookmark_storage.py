@@ -4,14 +4,14 @@ from pathlib import Path
 import pytest
 from shiny.pytest import create_app_fixture
 
-app = create_app_fixture(app='../scenarios/bookmark_default.py', scope='function')
+app = create_app_fixture(app='scenarios/bookmark_default.py', scope='function')
 
 
 @pytest.mark.ui
 def test_large_configurations_stage_restore_and_switch_without_session_storage_payload(page, app):
     page.goto(app.url)
     page.wait_for_function('window.indexedDB && window.jQuery')
-    script = (Path(__file__).parents[2] / 'app/www/pythagoras.js').read_text()
+    script = (Path(__file__).parents[1] / 'app/www/pythagoras.js').read_text()
     script = script[script.index('    const bookmarkDatabaseName ='):script.rfind('\n});')]
     script = script.replace('window.jQuery(document).one("shiny:idle", publishBookmarkStartup);', '')
     script = script.replace('window.setTimeout(() => window.location.replace(url), 250);', 'window.__reloadUrl = url.href;')

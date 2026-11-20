@@ -7,7 +7,7 @@
       "module": "cand_ensemble",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "77b70bfc9ae282d5ffa82587ad55e61eb0751f4617f0d4f843cf89c2874204e7"
+      "source_hash": "20e66c3570153b8563439513ad2092ed225a76d9bb9d00a439bee6c3b2e64991"
     },
     "cand_methods": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
@@ -23,7 +23,7 @@
       "module": "cand_models",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "df6d51a96f1cec316b57000c1b579af665652c200859f66e013273375aaba213"
+      "source_hash": "442d45e96ff87fa051eb764e4a376ff84198ee41ace107c6a43f39f3cb9bd908"
     },
     "cand_parameters": {
       "description": "Mark candidate parameters as tuning hyper-parameters.",
@@ -39,7 +39,7 @@
       "module": "cand_train",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "d31c91843bcc5e4f164d5831e8d5caa4edd1dae3e5db4bc8737ed0476de84f81"
+      "source_hash": "46ff67e75350a375b31ec2ed52121e7e4859892cc508ae21afb5f2dcc1be0126"
     },
     "data_coverage": {
       "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",
@@ -257,10 +257,10 @@
       "pipeline_compatible": true,
       "source_hash": "f9e68f938ebcdec355f9ae85989164793fcba937ac27f20d0192c40bbb91bce0"
     },
-    "system_log": {
+    "sys_log": {
       "description": "List recent logged messages, warnings and errors.",
       "long_name": "System log",
-      "module": "system_log",
+      "module": "sys_log",
       "mutable": false,
       "pipeline_compatible": true,
       "source_hash": "becf33cb7b90e4bb944badb15e94dbe7e4b314068892b1af892caf1a10d594a9"

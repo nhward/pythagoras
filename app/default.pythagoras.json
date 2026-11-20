@@ -124,7 +124,7 @@
           "module": "sys_configuration"
         },
         {
-          "module": "system_log"
+          "module": "sys_log"
         },
         {
           "module": "data_provenance"

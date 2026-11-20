@@ -68,8 +68,8 @@ def test_real_search_resume_and_failure_scores_stay_truthful(method, monkeypatch
         calls.append(True)
         return original(*args)
     monkeypatch.setattr(search_feasibility, "weighted_proposal", tracked)
-    from test_pipeline_search import source, committed_grid, finish
     from pipeline_search import prepare, validate_checkpoint
+    from test_pipeline_search import committed_grid, finish, source
     data = source()
     grid = {'cand_methods__estimator__alpha': [-1., 1.],
             'cand_methods__estimator__tol': [.001, .002, .003, .004, .005, .006]}

@@ -116,14 +116,16 @@ def pareto_figure(frame, metric, winner, title, colours):
                 marker={'color': colour, 'size': 6 if efficient else 4, 'opacity': 1 if efficient else .65,
                         'line': {'color': '#334155', 'width': 1}},
                 customdata=rows.Trial, meta={'trials': rows.Trial.astype(int).tolist()},
-                hovertemplate='Trial %{customdata}<br>Score %{x:.5g}<br>Rows/s %{y:.5g}<br>' + error_label + ' %{z:.5g}<extra>%{fullData.name}</extra>'))
+                hovertemplate='Method %{fullData.name}<br>Trial %{customdata}<br>Score %{x:.5g}<br>Rows/s %{y:.5g}<br>' + error_label + ' %{z:.5g}<extra></extra>'))
     selected = frame.loc[frame.Trial == winner]
     if not selected.empty and np.isfinite(selected[list(criteria(frame))].to_numpy(dtype=float)).all():
         row = selected.iloc[0]
         figure.add_trace(go.Scatter3d(x=[row[AXES[0]]], y=[row[AXES[1]]], z=[row[criteria(frame)[2]]], mode='markers',
-            name=f'Weighted winner · Trial {winner}', marker={'size': 11, 'symbol': 'diamond', 'color': '#111111',
+            name=f'Weighted best · Trial {winner}', marker={'size': 11, 'symbol': 'diamond', 'color': '#111111',
             'line': {'width': 3, 'color': '#ffffff'}}, meta={'trials': [winner]},
-            hovertemplate=f'Trial {winner} · weighted winner<extra></extra>'))
+            customdata=[winner], text=[str(row.Method)],
+            hovertemplate='Weighted best<br>Method %{text}<br>Trial %{customdata}<br>Score %{x:.5g}<br>Rows/s %{y:.5g}<br>'
+                + error_label + ' %{z:.5g}<extra></extra>'))
     figure.update_layout(title={'text': title, 'font': {'size': 16}}, margin={'l': 0, 'r': 0, 't': 35, 'b': 0},
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='#bbd6f8',
         autosize=True, uirevision='cand-models-camera', scene={'xaxis': {'title': {'text': METRICS[task][metric].split(' · ')[0], 'font': {'size': 11}}, 'tickfont': {'size': 10}, 'nticks': 3},

@@ -2,8 +2,8 @@
 import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
-variable_app=create_app_fixture(app='../scenarios/var_encode_settling.py',scope='function')
-text_app=create_app_fixture(app='../scenarios/var_text_encode_settling.py',scope='function')
+variable_app=create_app_fixture(app='scenarios/var_encode_settling.py',scope='function')
+text_app=create_app_fixture(app='scenarios/var_text_encode_settling.py',scope='function')
 pytestmark=pytest.mark.ui
 @pytest.fixture(scope='session')
 def browser_context_args():return {'viewport':{'width':1800,'height':1400}}

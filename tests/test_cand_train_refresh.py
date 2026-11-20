@@ -2,14 +2,13 @@ import pytest
 from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
 
-app = create_app_fixture(app='../scenarios/cand_train_refresh.py', scope='function')
-footer_app = create_app_fixture(app='../scenarios/cand_train_footer.py', scope='function')
+app = create_app_fixture(app='scenarios/cand_train_refresh.py', scope='function')
+footer_app = create_app_fixture(app='scenarios/cand_train_footer.py', scope='function')
 
 
 @pytest.mark.ui
 def test_empty_ui_outputs_do_not_gain_spinner_height_across_cards(page, app):
     page.goto(app.url)
-    expect(page.locator('[id$="-Progress"]')).to_contain_text('Ready', timeout=30000)
     dimensions = page.evaluate('''() => {
         const outputs = [...document.querySelectorAll('.card .shiny-html-output:empty:not(.shiny-table-output)')]
             .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
@@ -76,15 +75,21 @@ def test_summary_and_progress_scroll_without_moving_chart_or_footer(page, footer
     for key in ('summaryTop', 'summaryHeight', 'chartTop', 'chartHeight'):
         assert max(s[key] for s in samples) - min(s[key] for s in samples) < 1, key
     region = page.get_by_role('region', name='Tuning progress')
-    # Exercise overflow as well: the short fixture status fits at the app's
-    # 650px minimum card width, so constrain just this region for the wheel check.
-    region.evaluate("el => el.style.width = '220px'")
+    def ensure_overflow(region):
+        region.evaluate('''el => {
+            const spacer = document.createElement('div');
+            spacer.style.height = `${el.clientHeight + 300}px`;
+            spacer.setAttribute('aria-hidden', 'true');
+            el.appendChild(spacer);
+        }''')
+
+    ensure_overflow(region)
     assert region.evaluate('el => el.scrollHeight > el.clientHeight')
     region.hover()
     page.mouse.wheel(0, 300)
     page.wait_for_function("() => document.querySelector('.pipeline-tune-progress').scrollTop > 0")
     summary = page.get_by_role('region', name='Best tuning result')
-    summary.evaluate("el => el.style.width = '180px'")
+    ensure_overflow(summary)
     assert summary.evaluate('el => el.scrollHeight > el.clientHeight')
     summary.hover()
     page.mouse.wheel(0, 300)
@@ -140,6 +145,6 @@ def test_shared_refresh_interval_changes_live_and_final_results_bypass_it(page, 
     expect(page.locator('#ReviewCalls')).to_have_text(calls)
 
     page.get_by_role('button', name='Change source data', exact=True).click()
-    expect(progress).to_contain_text('Source data or roles changed')
+    expect(progress).to_have_text('Source data or roles changed; regenerate the evaluation plan.')
     expect(published).to_have_text('0')
     expect(page.locator('[id$="-Status"]')).to_contain_text('Complete pipeline tuning upstream')

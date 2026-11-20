@@ -1,17 +1,20 @@
 """Learned vocabulary isolation, offline methods and sparse pipeline behavior."""
-from pathlib import Path
 import pickle
+
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import clone
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
-from text_pandas import as_text
-from TextEncodingTransformer import TextEncodingTransformer,embedding_identity,characteristics
 from cards import var_text_encode as card
 from proxy_data import proxy_data
-from roles import Role,RoleMap
+from roles import Role, RoleMap
+from sklearn.base import clone
+from sklearn.linear_model import LogisticRegression
+from text_pandas import as_text
+from TextEncodingTransformer import (
+    TextEncodingTransformer,
+    embedding_identity,
+)
+
 pytestmark=pytest.mark.unit
 
 

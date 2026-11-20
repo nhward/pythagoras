@@ -4,10 +4,10 @@ import pytest
 from playwright.sync_api import Page, expect
 from shiny.pytest import create_app_fixture
 
-miss_rules_app = create_app_fixture(app="../scenarios/miss_rules.py", scope="function")
-miss_informative_app = create_app_fixture(app="../scenarios/miss_informative.py", scope="function")
-var_transform_app = create_app_fixture(app="../scenarios/var_transform.py", scope="function")
-obs_outliers_app = create_app_fixture(app="../scenarios/obs_outliers.py", scope="function")
+miss_rules_app = create_app_fixture(app="scenarios/miss_rules.py", scope="function")
+miss_informative_app = create_app_fixture(app="scenarios/miss_informative.py", scope="function")
+var_transform_app = create_app_fixture(app="scenarios/var_transform.py", scope="function")
+obs_outliers_app = create_app_fixture(app="scenarios/obs_outliers.py", scope="function")
 
 
 @pytest.mark.ui

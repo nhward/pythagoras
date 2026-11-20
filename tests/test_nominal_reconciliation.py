@@ -1,4 +1,6 @@
 """Fixed, reviewed mappings replay in cloned training pipelines."""
+import functools
+import operator
 import pickle
 
 import pandas as pd
@@ -89,7 +91,7 @@ def test_targets_excluded_from_restored_mappings_and_stratifiers_replayed(with_p
     assert card.eligible_columns(source) == ['x']
     assert card.eligible_columns(source, True) == ['x', 'stratum']
     state = card.fresh_state(card.source_fingerprint(source))
-    state['batches'] = [sum((batch(c, 'a', 'b') for c in X), [])]
+    state['batches'] = [functools.reduce(operator.iadd, (batch(c, 'a', 'b') for c in X), [])]
     state['manual'] = batch('target', 'a', 'b')
     target_item = state['manual'][0]
     state['ledger'] = [dict(target_item, decision='accept')]

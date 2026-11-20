@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import clone
-from LogicalEncodingTransformer import LogicalEncodingTransformer
 from cards import var_encode as card
+from LogicalEncodingTransformer import LogicalEncodingTransformer
 from proxy_data import proxy_data
 from roles import Role, RoleMap
+from sklearn.base import clone
+
 pytestmark = pytest.mark.unit
 
 
@@ -57,6 +58,7 @@ def test_roles_collisions_retention_and_unfitted_pipeline():
 
 
 from cyclic_pandas import as_cyclic
+
 
 def test_all_five_encodings_compose():
     X=pd.DataFrame({'nominal':pd.Categorical(['a','b']*6),

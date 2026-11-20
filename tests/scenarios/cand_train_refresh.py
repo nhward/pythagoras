@@ -23,7 +23,7 @@ class ReplayWorker:
     """Fitting is real; only its delivery times are controlled for this test."""
     process = None
 
-    def __init__(self):
+    def __init__(self, *, fit_service=None):
         self.started = None
         self.running = False
         self.delivered = -1
