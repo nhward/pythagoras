@@ -47,10 +47,47 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     // End table scroll reset.
 
+    const plotlyPresentation = new WeakMap();
+    async function applyPlotlyPresentation(plot, config = null) {
+        if (!plot?._fullLayout || !window.Plotly || !plot.isConnected) return;
+        let state = plotlyPresentation.get(plot);
+        if (!state) {
+            state = {running: false, pending: false, config: {}};
+            plotlyPresentation.set(plot, state);
+        }
+        if (config) Object.assign(state.config, config);
+        state.pending = true;
+        if (state.running) return;
+        state.running = true;
+        try {
+            while (state.pending && plot.isConnected) {
+                state.pending = false;
+                const full = Boolean(plot.closest('.card.fullscreen-active'));
+                const right = full ? Math.max(35, plot.layout.margin?.r || 0) : 5;
+                const overrides = state.config;
+                state.config = {};
+                if (!Object.keys(overrides).length && plot._context.displayModeBar === full
+                        && plot._context.displaylogo === false && plot.layout.modebar?.orientation === 'v'
+                        && plot.layout.margin?.r === right) continue;
+                await window.Plotly.react(plot, plot.data, {
+                    ...plot.layout,
+                    modebar: {...plot.layout.modebar, orientation: 'v'},
+                    margin: {...plot.layout.margin, r: right}
+                }, {...plot._context, ...overrides, displayModeBar: full, displaylogo: false});
+            }
+        } finally {
+            state.running = false;
+        }
+    }
+
+    function updateCardPlotlyPresentation(card) {
+        card.querySelectorAll('.js-plotly-plot').forEach(plot => applyPlotlyPresentation(plot));
+    }
+
     Shiny.addCustomMessageHandler("update_plotly_config", async (message) => {
         const plot = document.getElementById(message.id)?.querySelector(".js-plotly-plot");
         if (plot && window.Plotly) {
-            await window.Plotly.react(plot, plot.data, plot.layout, {...plot._context, ...message.config});
+            await applyPlotlyPresentation(plot, message.config);
         }
     });
 
@@ -111,7 +148,22 @@ document.addEventListener("DOMContentLoaded", () => {
     function observePlotlyOutputSize(host) {
         if (host.dataset.plotlySizeObserved) return;
         host.dataset.plotlySizeObserved = 'true';
-        let plot = null, frame = null;
+        let plot = null, frame = null, policyFrame = null, observedPlot = null;
+        const enforcePresentation = () => applyPlotlyPresentation(plot);
+        const attachPresentation = () => {
+            policyFrame = null;
+            if (!plot?.isConnected) return;
+            if (!plot._fullLayout || typeof plot.on !== 'function') {
+                policyFrame = requestAnimationFrame(attachPresentation);
+                return;
+            }
+            if (observedPlot !== plot) {
+                observedPlot?.removeListener?.('plotly_afterplot', enforcePresentation);
+                observedPlot = plot;
+                plot.on('plotly_afterplot', enforcePresentation);
+            }
+            enforcePresentation();
+        };
         const resize = () => {
             if (frame !== null) return;
             frame = requestAnimationFrame(() => {
@@ -128,22 +180,34 @@ document.addEventListener("DOMContentLoaded", () => {
             const next = host.querySelector('.js-plotly-plot');
             if (next !== plot) {
                 plot = next;
+                if (policyFrame !== null) cancelAnimationFrame(policyFrame);
+                attachPresentation();
                 mounted.disconnect();
                 mounted.observe(host, {childList: true, subtree: !plot});
                 resize();
             }
         });
         plot = host.querySelector('.js-plotly-plot');
+        attachPresentation();
         mounted.observe(host, {childList: true, subtree: !plot});
         resize();
         jQuery(host).one('shiny:unbound.plotlySize', () => {
             sizes.disconnect();
             mounted.disconnect();
             if (frame !== null) cancelAnimationFrame(frame);
+            if (policyFrame !== null) cancelAnimationFrame(policyFrame);
+            observedPlot?.removeListener?.('plotly_afterplot', enforcePresentation);
             plot = null;
             delete host.dataset.plotlySizeObserved;
         });
     }
+
+    // Covers late outputs inside dynamically inserted tabs and panels as well
+    // as the widgets already present when a card is initialized.
+    jQuery(document).on('shiny:bound.plotlyPresentation', event => {
+        if (event.target.matches?.('.shiny-ipywidget-output')) observePlotlyOutputSize(event.target);
+    });
+    document.querySelectorAll('.shiny-ipywidget-output').forEach(observePlotlyOutputSize);
 
     function initCardSidebar(card) {
         const layout = card.querySelector(".bslib-sidebar-layout");
@@ -599,6 +663,7 @@ document.addEventListener("DOMContentLoaded", () => {
         closeWrapper?.classList.add("hidden");
 
         card.classList.add("fullscreen-active");
+        updateCardPlotlyPresentation(card);
         document.body.classList.add("fullscreen-mode");
         card.setAttribute?.("aria-expanded", "true");
         card.setAttribute("aria-modal", "true");
@@ -624,6 +689,7 @@ document.addEventListener("DOMContentLoaded", () => {
         closeWrapper?.classList?.remove("hidden");
 
         card.classList.remove("fullscreen-active");
+        updateCardPlotlyPresentation(card);
         document.body.classList.remove("fullscreen-mode");
         contractBtn?.setAttribute?.("aria-expanded", "false");
         window.Shiny?.setInputValue?.(`${card.id}_full_screen`, false, { priority: "event" });

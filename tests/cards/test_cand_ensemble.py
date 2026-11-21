@@ -51,7 +51,11 @@ def test_five_default_members_metric_sorting_subset_and_export(page, app):
     page.locator('[id$="-Models"] input[value="method_4"]').uncheck()
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('ensemble=4;fitted=5', timeout=30000)
     page.locator('[id$="-Style"]').select_option('median')
+    # The previous mean result already says "4 members". Wait for the newly
+    # evaluated median export before clicking a footer that may still move.
+    expect(page.locator('[id$="-ExportStyle"]')).to_have_text('median', timeout=30000)
     expect(page.locator('[id$="-Status"]')).to_contain_text('4 members', timeout=30000)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Ensemble model passed through')
     page.locator('[id$="-Apply"] input').uncheck()
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('incoming', timeout=10000)
     assert plot(page).evaluate('el => el === window.initialEnsemblePlot')

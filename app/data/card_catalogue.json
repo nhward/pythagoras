@@ -7,7 +7,7 @@
       "module": "cand_assessment",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "bb55fc0b1728e9e9ee69c09fdb88ab8633a30c12e40905fabb8b03e88bff48de"
+      "source_hash": "085330857ca4261f9147006c833e9ff863b9a3dfc94ba36babde7723bd8b1cbb"
     },
     "cand_ensemble": {
       "description": "Combine weighted method winners and compare their resampling performance.",
@@ -15,7 +15,7 @@
       "module": "cand_ensemble",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "47ff50852d50f2176ff19d14bb1bbc5eacd8a2e9fb4079d0ab077f06e5545935"
+      "source_hash": "e35e8dc0a818df02acce088b64ce0553daef22330d6c2faa167b7feee98087d4"
     },
     "cand_methods": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
@@ -31,7 +31,7 @@
       "module": "cand_models",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "1ba07d388b24329951132a6e60739747ee694ba48e590a8b7a2af3da4a61081d"
+      "source_hash": "6a0a008c1c790ad98586f92bd21b8f215c83cac033b5e497d8cac608af8987d1"
     },
     "cand_parameters": {
       "description": "Mark candidate parameters as tuning hyper-parameters.",

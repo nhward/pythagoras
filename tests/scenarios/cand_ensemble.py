@@ -19,7 +19,7 @@ def application(task='regression', restored=False):
             'Style': 'median', 'Metric': 'r2', 'Apply': ['Ensemble']}})
     this._imports.set(source)
     original_server, original_footer = this.server, this._footer
-    this.footer = lambda: ui.TagList(original_footer(), ui.output_text('ExportProbe'))
+    this.footer = lambda: ui.TagList(original_footer(), ui.output_text('ExportProbe'), ui.output_text('ExportStyle'))
 
     def server(input, output, session):
         exported = original_server(input, output, session)
@@ -28,6 +28,12 @@ def application(task='regression', restored=False):
         def ExportProbe():
             result = exported().ensemble_results
             return f'ensemble={len(result.members)};fitted={len(result.fitted)}' if result else 'incoming'
+
+        @output
+        @render.text
+        def ExportStyle():
+            result = exported().ensemble_results
+            return result.definition.style if result else 'incoming'
         return exported
     this.server = server
     return this.application()

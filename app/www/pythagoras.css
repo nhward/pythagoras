@@ -128,6 +128,15 @@ body.bslib-gap-spacing {
 
 /* ---------- Cards and fullscreen ---------- */
 
+/* Hide toolbars immediately, including before a widget finishes rendering. */
+.js-plotly-plot .modebar {
+    visibility: hidden !important;
+}
+
+.card.fullscreen-active .js-plotly-plot .modebar {
+    visibility: visible !important;
+}
+
 .bslib-card,
 .card {
     position: relative;

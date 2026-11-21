@@ -250,7 +250,7 @@ def instance():
             req(Incoming())
             # Recreate on source changes: moving a card reconnects Shiny's
             # custom element, which can append a second internal grid.
-            return ui.output_data_frame(id = "DataTable2")
+            return ui.output_data_frame(id = "Table2")
 
         @output
         @render.data_frame
