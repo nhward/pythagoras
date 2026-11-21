@@ -123,6 +123,43 @@ def test_browser_sequential_cache(source):
     assert not service.entries
 
 
+def test_assessment_has_capacity_while_background_ensemble_is_busy(tmp_path):
+    service = FitService(cpus=10, directory=tmp_path)
+    runtime = service.runtime
+    service.enable('assessment-card', assessment=True)
+    runtime.register_search('training')
+    entered, release = threading.Event(), threading.Event()
+    errors = []
+
+    def assess():
+        try:
+            with runtime.lease('assessment'):
+                entered.set()
+                release.wait(5)
+        except Exception as exc:  # Capture thread failures in the test thread.
+            errors.append(exc)
+
+    thread = threading.Thread(target=assess)
+    try:
+        assert runtime.ensemble_width() == 1
+        with runtime.lease('ensemble'):
+            thread.start()
+            assert entered.wait(2), 'Assessment queued behind background ensemble work'
+            with runtime.database() as db:
+                assert db.execute('SELECT count(*) FROM leases WHERE state="running"').fetchone()[0] == 2
+        release.set()
+        thread.join(3)
+        assert not thread.is_alive()
+        assert not errors
+        service.remove_consumer('assessment-card')
+        assert runtime.ensemble_width() == 2
+    finally:
+        release.set()
+        if thread.ident is not None:
+            thread.join(5)
+        service.close()
+
+
 def test_training_priority_nonpreemptive_limit_and_expansion(tmp_path):
     service = FitService(cpus=10, directory=tmp_path)
     runtime = service.runtime
@@ -355,3 +392,46 @@ def test_pending_artifacts_need_an_active_review_consumer(source, tmp_path):
         assert not runtime.path(key).exists()
     finally:
         service.close()
+
+
+def test_late_card_cleanup_after_session_cache_removal_is_idempotent(tmp_path):
+    service = FitService(cpus=2, directory=tmp_path)
+    runtime = service.runtime
+    service.enable('ensemble-card')
+    runtime.register_review('review-card')
+    runtime.register_search('training')
+    service.publish_snapshot('ensemble-card', 'snapshot')
+    service.close()
+    for _ in range(2):
+        runtime.remove_review('review-card')
+        service.remove_consumer('ensemble-card')
+        runtime.release('snapshot')
+        runtime.release_search('training')
+        runtime.finish_search('training')
+        runtime.release_context('snapshot')
+        runtime.prune()
+    assert not Path(service.root).exists()
+
+
+def test_late_cleanup_does_not_recreate_database_or_hide_live_corruption(tmp_path):
+    import sqlite3
+
+    service = FitService(cpus=2, directory=tmp_path)
+    database = Path(service.root, 'index.sqlite')
+    try:
+        database.write_bytes(b'not a sqlite database')
+        with pytest.raises(sqlite3.DatabaseError):
+            service.runtime.remove_review('review')
+        database.unlink()
+        service.runtime.remove_review('review')
+        assert not database.exists()
+        with pytest.raises(sqlite3.OperationalError), service.runtime.database():
+            pass
+        assert not database.exists()
+    finally:
+        # Closing a deliberately corrupted/deleted database is not under test.
+        service._closed = True
+        import atexit
+        import shutil
+        atexit.unregister(service.close)
+        shutil.rmtree(service.root)

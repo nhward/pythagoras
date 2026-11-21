@@ -21,7 +21,13 @@ probability/majority classification use equal member weights. Stacking is deferr
 
 `EnsembleEvaluation` retains the unfitted definition, per-split fitted ensembles,
 split memberships and metric scores. These potentially large runtime objects are
-shared across proxy clones, treated as read-only and regenerated on restoration.
+shared across proxy clones, treated as read-only and regenerated when restored
+ensemble export requires fitted models. The card's portable `evaluation` state
+stores only aggregate metric tables, member labels, split count, origin and the
+evaluation input signature. Matching saved scores restore both views without
+fitting; they cannot satisfy the fitted export contract. Changed evaluation
+inputs invalidate the saved display. Completed upstream evidence, including an
+exhausted search, can trigger ensemble evaluation independently of new trials.
 `proxy_data.ensemble_results` validates source data, roles, modelling context,
 evaluation plan and active pipeline. `with_ensemble` rejects stale evaluations and
 sets the active pipeline to one ensemble terminal step: complete member pipelines

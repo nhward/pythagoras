@@ -34,32 +34,48 @@ def instance():
     this.description = 'Choose weightings that yield the desired optimal model(s).'
 
     this.front = lambda: ui.TagList(
-        ui.output_ui('Panels', class_='cand-models-panels'),
-        shinywidgets.output_widget('ReviewPlot', fill=True, guide=this, title='Model trade-offs',
+        ui.output_ui(
+            id='Panels', class_='cand-models-panels'
+        ),
+        shinywidgets.output_widget(
+            id='ReviewPlot', fill=True, guide=this, title='Model trade-offs',
             text='Rotate to inspect score, prediction throughput and P95 absolute error (regression) or error rate (classification). Bright points are nondominated; '
-                 'the diamond is the weighted winner. Tabs change the view, not the exported Overall winner.'),
-        ui.div(ui.output_text('Status'), class_='cand-models-status'),
+                 'the diamond is the weighted winner. Tabs change the view, not the exported Overall winner.'
+        ),
+        ui.div(
+            ui.output_text(id='Status'), 
+            class_='cand-models-status'
+        ),
     )
+    
     this.back = lambda: ui.TagList(
-        ui.output_text('Note'),
-        ui.output_data_frame('Candidates'),
-        ui.tags.details(ui.tags.summary('Selected configuration and parameter differences'),
-                        ui.output_text('Details'),
-                        ui.input_select('CompareWith', label='Compare selected configuration with', choices={}),
-                        ui.output_data_frame('Differences'), id=this.ns('ComparisonDetails'),
-                        class_='model-candidates-differences'),
-        ui.download_button('ResultsCSV', label='Download', width='220px',
-                           icon=icon('file-arrow-down', a11y='deco'),
-                           class_='btn rounded-pill btn-sm d-block mx-auto btn-primary',
-                           style='border: 0px; box-shadow: none;'),
+        ui.output_text(id='Note'),
+        ui.output_data_frame(id='Candidates'),
+        ui.tags.details(
+            ui.tags.summary('Selected configuration and parameter differences'),
+            ui.output_text(id='Details'),
+            ui.input_select(id='CompareWith', label='Compare selected configuration with', choices={}),
+            ui.output_data_frame(
+                id='Differences'), id=this.ns('ComparisonDetails'),
+                class_='model-candidates-differences'
+            ),
+        ui.download_button(
+            id='ResultsCSV', label='Download', width='220px',
+            icon=icon('file-arrow-down', a11y='deco'),
+            class_='btn rounded-pill btn-sm d-block mx-auto btn-primary',
+            style='border: 0px; box-shadow: none;'
+        ),
     )
+    
     this.footer = lambda: ui.TagList(
         ui.div(
-            ui.input_slider('Weights', label=None, min=0, max=100,
-                            value=(100, 100), step=1, width='100%', drag_range=False, post="%",
-                            guide=this, title='Selection preferences', position='top',
-                            text='The three slider segments allocate Score, Throughput and prediction error weights (P95 absolute error for regression; error rate for classification). '
-                                 'Both handles at the right give Score 100%. Selection changes on release.'),
+            ui.input_slider(
+                id='Weights', label=None, min=0, max=100,
+                value=(100, 100), step=1, width='100%', drag_range=False, post="%",
+                guide=this, title='Selection preferences', position='top',
+                text='The three slider segments allocate Score, Throughput and prediction error weights (P95 absolute error for regression; error rate for classification). '
+                     'Both handles at the right give Score 100%. Selection changes on release.'
+            ),
             class_='cand-models-weights', style='width: calc(50% + 3rem);'
         ),
         ui.output_text('WeightSummary')
@@ -68,22 +84,30 @@ def instance():
 
     def settings():
         return ui.TagList(
-            ui.input_checkbox('UsuallyTransparentOnly', label='Require Usually transparent methods', value=False,
+            ui.input_checkbox(
+                id='UsuallyTransparentOnly', label='Require Usually transparent methods', value=False,
                 guide=this, title='Intrinsic transparency', position='left',
                 text='Restrict selection to methods rated Usually transparent in the catalogue. '
                      'Conditional, usually opaque, unreviewed and unavailable classifications are excluded. '
                      'This concerns intrinsic method transparency, not SHAP or a guarantee that every fitted pipeline is understandable. '
-                     'The table, chart and weighted winners use this constraint; training evidence is retained.'),
-            ui.input_numeric('ErrorFloor', label='Minimum error for weighted products', value=1e-12, min=1e-15,
+                     'The table, chart and weighted winners use this constraint; training evidence is retained.'
+            ),
+            ui.input_numeric(
+                id='ErrorFloor', label='Minimum error for weighted products', value=1e-12, min=1e-15,
                 guide=this, title='Minimum error', position='left',
                 text='Positive floor for RMSE, MAE and P95 in target units; dimensionless for 1 − R² and classification losses. '
-                     'Values below this floor are treated equally. Changing units may require changing this floor.'),
-            ui.input_numeric('EquivalenceTolerance', label='Practical-equivalence tolerance (metric units)', value=None, min=0,
+                     'Values below this floor are treated equally. Changing units may require changing this floor.'
+            ),
+            ui.input_numeric(
+                id='EquivalenceTolerance', label='Practical-equivalence tolerance (metric units)', value=None, min=0,
                 guide=this, title='Practical equivalence', position='left',
-                text='Optional application-based tolerance for comparisons against each method’s best score. This does not restrict weighted selection.'),
-            ui.input_numeric('DecisionProbability', label='Comparison decision probability', value=.95, min=.501, max=.999, step=.01,
+                text='Optional application-based tolerance for comparisons against each method’s best score. This does not restrict weighted selection.'
+            ),
+            ui.input_numeric(
+                id='DecisionProbability', label='Comparison decision probability', value=.95, min=.501, max=.999, step=.01,
                 guide=this, title='Comparison probability', position='left',
-                text='Posterior threshold for the comparison table. Requires suitable repeated shuffled CV.'),
+                text='Posterior threshold for the comparison table. Requires suitable repeated shuffled CV.'
+            ),
         )
     this.settings = settings
     this.exclude_configuration_input('CompareWith')
@@ -370,7 +394,8 @@ def instance():
                     figure.update_layout(
                         title_text='', 
                         showlegend=False, 
-                        margin={'l': 0, 'r': 0, 't': 0, 'b': 0}
+                        margin={'l': 0, 'r': 0, 't': 0, 'b': 0},
+                        font={'size': 13}
                     )
             current_camera = widget.layout.scene.camera.to_plotly_json()
             if current_camera:

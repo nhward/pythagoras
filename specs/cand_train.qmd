@@ -169,3 +169,16 @@ validation aligned with any schema change. Compatible resumes adopt current audi
 metadata and retain previous specifications in continuation_history. Legacy
 fingerprints are never silently declared equivalent; bookmark restoration remains
 available and Play offers a warning before attempting an override.
+
+Recorded CatBoost defaults can include explicit `None` values for previously
+unset parameters. `model_commit.configured_pipeline` reconstructs affected
+unfitted native estimators with constructor semantics after applying trial choices;
+CatBoost's constructor omits these unspecified values while its native `set_params`
+retains them. Training, runtime cache identity, review materialization and tuned
+exports use this shared configuration path so subsequent sklearn cloning remains
+valid without changing the recorded trial choices or learned-fit semantics.
+
+Session cache cleanup tolerates late reviewer, snapshot, search and context release
+callbacks after the cache database has been removed. Runtime database access opens
+an existing database only; it never recreates an empty database during shutdown.
+Cleanup does not suppress database errors while the database still exists.

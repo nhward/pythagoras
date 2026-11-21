@@ -4,10 +4,28 @@ from importlib import import_module
 import numpy as np
 import pandas as pd
 from evaluation_plan import level_key
+from sklearn.base import clone
 from sklearn.compose import ColumnTransformer, TransformedTargetRegressor, make_column_selector
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
+
+
+def configured_pipeline(template, parameters):
+    """Apply recorded trial choices and preserve cloneable native defaults.
+
+    CatBoost.set_params retains explicit None values, while its constructor drops
+    them. Reconstruct those unfitted estimators with the same parameters so later
+    sklearn clones and fit-cache identities agree with constructor semantics.
+    """
+    result = clone(template).set_params(**parameters)
+    for path, estimator in result.get_params(deep=True).items():
+        if not any(cls.__module__ == 'catboost.core' for cls in type(estimator).__mro__):
+            continue
+        settings = estimator.get_params(deep=False)
+        if any(value is None for value in settings.values()):
+            result.set_params(**{path: type(estimator)(**settings)})
+    return result
 
 
 def prepare_predictors(frame, *, columns, preparation, selected_schema=False,

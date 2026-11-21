@@ -1,0 +1,62 @@
+---
+title: Candidate assessment specification
+---
+
+`cand_assessment` is an immutable, pipeline-compatible diagnostic card. It returns
+its incoming reactive source without gating downstream export on its task or
+settings. No Apply action, pipeline step or final full-data fit is introduced.
+
+`candidate_assessment.selection` prefers the current `proxy_data.ensemble_results`.
+An active ensemble pipeline with stale runtime evidence waits rather than falling
+back. Otherwise it requires a compatible, nonhistorical completed weighted winner
+in `tuning_results.review.winner_trial`. Missing winners wait. The assessment
+signature includes only the selected pipeline/trial and relevant source context;
+unrelated search publications do not restart collection.
+
+`assess_candidate` uses `prepare` to regenerate individual-model splits and fixed
+settings from the reviewed seed and current evaluation plan. Native session cache
+keys match training keys. Missing individual artifacts are fitted sequentially
+under the session's ensemble-priority leases with cooperative cancellation between
+folds. Fit failures remain visible. Private cache pins are released in a finally
+block; no fitted objects or row-level predictions are added to portable evidence.
+Browser execution uses the existing sequential memory service.
+
+Committed ensembles use their stored split-fitted members, with cached member
+responses where available. Responses are combined using the committed aggregation
+style. Hard voting additionally produces per-class member vote fractions as
+ranking scores, without exposing them as probabilities or changing predictions.
+Probabilities and decision scores are aligned by class; pairwise OVO decision
+columns are not interpreted as per-class scores. Labels-only classifiers use a
+confusion matrix. Validation predictions retain positional source-row and split
+identity, including duplicate dataframe indices and repeated validation appearances.
+
+Regression displays actual versus predicted values on equally scaled square axes,
+a 1:1 reference and empirical P2.5/P97.5 signed-error offset lines. At most 5,000
+prediction events are plotted deterministically; references and statistics use all
+events. Error is predicted minus actual, variance has denominator N. Pooled-event
+RMSE, MAE, R², bias, variance and percentiles are reported overall and by group.
+Constant-target R² is unavailable.
+
+Classification ROC is computed within splits for the selected class versus rest,
+then interpolated and averaged on a fixed false-positive-rate grid. Split AUC means,
+sample SDs and usable counts are reported. Single-outcome or incomplete-score splits
+are excluded explicitly. The confusion matrix uses percentages within actual
+classes, with counts on hover and a group selector. Classification probability-error
+bias, population variance and selected-class Brier score require probability outputs;
+vote shares and decisions do not qualify. Accuracy metrics describe pooled events.
+
+Colour and symbol controls offer Stratifier and Sensitive variables only. Numeric
+variables with more than five values use up to five quantile bins; categorical
+variables retain twelve most common levels plus Other, with Missing separate.
+Different controls produce intersection groups. Display controls and fullscreen do
+not affect fit collection. Dynamic controls preserve valid restored values.
+
+Background results are accepted only for the current signature. Cancellation signals
+superseded tasks; sessions stop their work and release resources. Persistent widget
+updates follow `WidgetSlot` and `update_figure`. The front and table explicitly
+describe post-selection resampling rather than independent test performance.
+
+Tests cover waiting/selection, committed-ensemble precedence and stale detection,
+training-artifact reuse, repeated memberships and positional alignment, grouped
+error moments, vote-share ROC, labels-only fallback, absent classes, references,
+cancellation, restoration, pass-through exports and display-only UI changes.

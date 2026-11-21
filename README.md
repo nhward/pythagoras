@@ -232,6 +232,10 @@ Drag-and-drop ordering is handled via:
 * [Cluster profiling](app/www/markdown/obs_cluster_profile.html) Can we find an explanation for the clusters?
 * [Strata comparisons](app/www/markdown/data_strata.html) How distinct are the clusters?
 
+### 🎯 Candidate assessment
+
+* [Candidate assessment](app/www/markdown/cand_assessment.html) How well does the weighted best candidate or committed ensemble predict held-out observations, overall and across groups?
+
 ### 📆 Temporal information
 * What kind of time series data is this?  (constant interval)
 * Can the missing values be imputed? 

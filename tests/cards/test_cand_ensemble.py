@@ -9,6 +9,11 @@ SCENARIOS = Path(__file__).resolve().parents[1] / 'scenarios'
 app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble.py'), scope='function')
 classification_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_classification.py'), scope='function')
 restored_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_restored.py'), scope='function')
+dynamic_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_dynamic.py'), scope='function')
+training_app = create_app_fixture(app=str(SCENARIOS / 'cand_train_ensemble.py'), scope='function')
+dormant_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_dormant.py'), scope='function')
+saved_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_saved.py'), scope='function')
+exhausted_app = create_app_fixture(app=str(SCENARIOS / 'cand_ensemble_exhausted.py'), scope='function')
 
 
 def settings(page):
@@ -28,12 +33,14 @@ def test_five_default_members_metric_sorting_subset_and_export(page, app):
     page.goto(app.url)
     expect(page.locator('[id$="-Status"]')).to_contain_text('5 members', timeout=60000)
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('incoming')
+    expect(page.locator('[id$="-Status"]')).to_contain_text("Evaluation only; model 'Ridge 1' passed through")
     expect(plot(page)).to_be_visible()
     plot(page).evaluate('el => { window.initialEnsemblePlot = el; }')
     assert plot(page).evaluate('el => el.data[0].x.length') == 6
     assert plot(page).evaluate('el => el.data[0].x.every((x,i,a) => !i || a[i-1] <= x)')
     page.locator('[id$="-Apply"] input').check()
     expect(page.locator('[id$="-ExportProbe"]')).to_have_text('ensemble=5;fitted=5', timeout=30000)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Ensemble model passed through')
     settings(page)
     expect(page.locator('[id$="-Models"] input:checked')).to_have_count(5)
     page.locator('[id$="-Metric"]').select_option('r2')
@@ -58,6 +65,86 @@ def test_five_default_members_metric_sorting_subset_and_export(page, app):
     for name in ('MAE', 'RMSE', 'R²'):
         expect(page.locator('[id$="-Table"]').get_by_role('columnheader', name=name, exact=True)).to_be_visible()
     assert not errors, errors
+
+
+@pytest.mark.ui
+def test_settings_changed_before_enabling_ensemble_complete_export(page, dynamic_app):
+    page.goto(dynamic_app.url)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('5 members', timeout=30000)
+    settings(page)
+    page.locator('[id$="-Models"] input[value="method_4"]').uncheck()
+    page.locator('[id$="-Style"]').select_option('median')
+    expect(page.locator('[id$="-Status"]')).to_contain_text('4 members', timeout=30000)
+    page.locator('[id$="-Apply"] input').check()
+    expect(page.locator('#ExportProbe')).to_have_text('ensemble=4;fitted=5', timeout=10000)
+    expect(page.locator('[id$="-PipelineBusy"]')).to_have_text('')
+
+
+@pytest.mark.ui
+def test_upstream_training_cancel_responds_with_ensemble_enabled(page, training_app):
+    page.goto(training_app.url)
+    progress = page.locator('#cand_train-Progress')
+    expect(progress).to_contain_text('Ready', timeout=30000)
+    page.get_by_role('button', name='Start or resume tuning', exact=True).click()
+    expect(page.locator('#cand_ensemble-Status')).to_contain_text('2 members', timeout=60000)
+    page.locator('#cand_ensemble-Apply input').check()
+    expect(page.locator('#ExportProbe')).to_have_text('ensemble=2', timeout=15000)
+    page.get_by_role('button', name='Cancel current tuning', exact=True).click()
+    expect(progress).to_contain_text('Ready', timeout=15000)
+    page.get_by_role('button', name='Start or resume tuning', exact=True).click()
+    expect(progress).to_contain_text('Running', timeout=15000)
+    page.get_by_role('button', name='Cancel current tuning', exact=True).click()
+    expect(progress).to_contain_text('Ready', timeout=15000)
+    expect(page.locator('#cand_ensemble-Apply input')).to_be_checked()
+
+
+@pytest.mark.ui
+def test_no_reviewed_exports_leave_ensemble_dormant_during_training(page, dormant_app):
+    page.goto(dormant_app.url)
+    status = page.locator('[id$="-Status"]')
+    expect(status).to_contain_text('Choose weighted method winners', timeout=30000)
+    page.wait_for_function("() => Number(document.querySelector('[id$=\"-Activity\"]')?.textContent.match(/updates=(\\d+)/)?.[1]) >= 10")
+    expect(page.locator('[id$="-Activity"]')).to_contain_text('evaluations=0;cancellations=0')
+    status.evaluate('''el => {
+        window.footerChanges = 0;
+        window.footerObserver = new MutationObserver(() => window.footerChanges++);
+        window.footerObserver.observe(el, {childList: true, characterData: true, subtree: true, attributes: true});
+    }''')
+    page.wait_for_function("() => Number(document.querySelector('[id$=\"-Activity\"]').textContent.match(/updates=(\\d+)/)[1]) >= 20")
+    assert page.evaluate('window.footerChanges') == 0
+    expect(page.locator('[id$="-Busy"]')).to_have_text('')
+    page.get_by_role('button', name='Export reviewed models', exact=True).click()
+    expect(status).to_contain_text('2 members', timeout=30000)
+    expect(page.locator('[id$="-Activity"]')).to_contain_text('evaluations=1;')
+
+
+@pytest.mark.ui
+def test_saved_chart_and_table_restore_without_new_evaluation(page, saved_app):
+    page.goto(saved_app.url)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('2 members', timeout=30000)
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.data?.[0]?.x?.length === 3")
+    original = plot(page).evaluate('el => el.data[0].x')
+    page.get_by_role('button', name='Save and restore', exact=True).click()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Saved evaluation scores', timeout=30000)
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.data?.[0]?.x?.length === 3")
+    assert plot(page).evaluate('el => el.data[0].x') == original
+    expect(page.locator('#Evaluations')).to_have_text('evaluations=1')
+    page.locator('.card').first.hover()
+    page.locator('[id$="-FlipButton"]').click(force=True)
+    for name in ('MAE', 'RMSE', 'R²'):
+        expect(page.locator('[id$="-Table"]').get_by_role('columnheader', name=name, exact=True)).to_be_visible()
+    expect(page.locator('#Evaluations')).to_have_text('evaluations=1')
+
+
+@pytest.mark.ui
+def test_exhausted_training_restores_winners_and_triggers_ensemble_without_resume(page, exhausted_app):
+    page.goto(exhausted_app.url)
+    expect(page.locator('#cand_train-Progress')).to_contain_text('Finished', timeout=30000)
+    expect(page.locator('#cand_ensemble-Status')).to_contain_text('2 members', timeout=30000)
+    page.wait_for_function("() => document.querySelector('#cand_ensemble-Chart .js-plotly-plot')?.data?.[0]?.x?.length === 3")
+    page.locator('#cand_ensemble-FlipButton').click(force=True)
+    expect(page.locator('#cand_ensemble-Table')).to_contain_text('Ensemble', timeout=10000)
+    expect(page.locator('#cand_train-Progress')).to_contain_text('Finished')
 
 
 @pytest.mark.ui
@@ -166,13 +253,15 @@ def test_checkbox_completes_guarded_export_during_upstream_progress(page, review
     page.locator('#cand_ensemble-Apply input').check()
     expect(page.locator('#ExportProbe')).to_have_text('ensemble=2', timeout=15000)
     expect(page.locator('#cand_ensemble-PipelineBusy')).to_have_text('', timeout=10000)
-    expect(page.locator('#cand_ensemble-Status')).to_contain_text('Ensemble ready for downstream use')
-    page.wait_for_function("() => Number(document.querySelector('#UpdateProbe').textContent) >= 15")
+    expect(page.locator('#cand_ensemble-Status')).to_contain_text('Ensemble model passed through')
+    # Startup can already exceed 15 publications. Let the readiness probe catch
+    # up with the completed export before measuring subsequent invalidations.
+    exported_at = int(page.locator('#UpdateProbe').inner_text())
+    page.wait_for_function("minimum => Number(document.querySelector('#UpdateProbe').textContent) >= minimum", arg=exported_at + 5)
     pending = page.locator('#ReadinessProbe').inner_text()
     updates = int(page.locator('#UpdateProbe').inner_text())
     page.wait_for_function("minimum => Number(document.querySelector('#UpdateProbe').textContent) >= minimum", arg=updates + 5)
     expect(page.locator('#ReadinessProbe')).to_have_text(pending)
-
     page.locator('#cand_ensemble-Apply input').uncheck()
     expect(page.locator('#ExportProbe')).to_have_text('incoming')
     page.locator('#cand_ensemble-Apply input').check()

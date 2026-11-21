@@ -144,6 +144,10 @@ class EnsembleEvaluation:
     def __deepcopy__(self, memo):
         return self
 
+    @property
+    def split_count(self):
+        return len(self.splits)
+
     def table(self, metric):
         rows = []
         for key, label in (*self.members, ('ensemble', 'Ensemble')):
@@ -176,6 +180,51 @@ class EnsembleEvaluation:
         summary[f'{label} splits'] = table.Splits
         summary['Note'] = ['; '.join(notes[key]) for key in summary.index]
         return summary.reset_index(drop=True)
+
+
+@dataclass(frozen=True)
+class EnsembleDisplay:
+    """Portable aggregate scores; never sufficient for fitted-model export."""
+    task: str
+    members: tuple
+    split_count: int
+    evaluation: dict
+    input_signature: str
+    tables: dict
+
+    def table(self, metric):
+        return pd.DataFrame(self.tables[metric]).replace({None: np.nan}).sort_values(
+            'Rank score', ascending=False, kind='stable', na_position='last')
+
+    def metric_table(self, preferred):
+        return EnsembleEvaluation.metric_table(self, preferred)
+
+
+def portable_ensemble_display(result):
+    """Retain only the aggregate statistics used by the chart and table."""
+    return {'version': 1, 'task': result.task, 'members': [list(member) for member in result.members],
+            'split_count': result.split_count, 'origin': result.evaluation['origin'],
+            'input_signature': result.input_signature,
+            'tables': {metric: result.table(metric).astype(object).where(
+                pd.notna(result.table(metric)), None).to_dict('records') for metric in METRICS[result.task]}}
+
+
+def restore_ensemble_display(saved):
+    if saved is None:
+        return None
+    try:
+        if saved['version'] != 1 or saved['task'] not in METRICS or saved['split_count'] < 1:
+            raise ValueError('Invalid saved ensemble summary.')
+        result = EnsembleDisplay(saved['task'], tuple(tuple(member) for member in saved['members']),
+            int(saved['split_count']), {'origin': saved['origin']}, saved['input_signature'], saved['tables'])
+        keys = {key for key, _ in result.members} | {'ensemble'}
+        for metric in METRICS[result.task]:
+            table = result.table(metric)
+            if set(table.Key) != keys or not {'Model', 'Score', 'SD', 'Splits', 'Note'}.issubset(table.columns):
+                raise ValueError('Invalid saved ensemble summary.')
+        return result
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise ValueError('Invalid saved ensemble summary.') from exc
 
 
 @recordable

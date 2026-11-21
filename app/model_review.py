@@ -6,6 +6,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from model_commit import configured_pipeline
 from pipeline_comparison import comparison_data, paired_posterior
 from pipeline_search import METRICS, displayed, mean_score
 from plotly.colors import qualitative
@@ -23,7 +24,7 @@ class CandidatePipelines(Mapping):
         method, parameters = self.choices[key]
         if self.templates.get(method) is None:
             raise ValueError('This historical pipeline is unavailable in the current runtime.')
-        return clone(self.templates[method]).set_params(**{k: v for k, v in parameters.items() if k != '__method__'})
+        return configured_pipeline(self.templates[method], {k: v for k, v in parameters.items() if k != '__method__'})
 
     def __iter__(self):
         return iter(self.choices)

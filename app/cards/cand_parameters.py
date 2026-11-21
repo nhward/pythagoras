@@ -192,7 +192,7 @@ def instance():
                     title=f'{row["path"]} · {row["owner"]}', **attributes,
                     **{'data-tuning-row-action': 'edit', 'aria-label': f'Edit {row["name"]}'})
                 records.append({'ID':row['path'], 'Tune': toggle, 'Edit': edit,
-                    'Parameter':row['name'], 'Source':source, 'Current value':row['current'],
+                    'Parameter':row['name'], 'Source':source, 'Current value':row['display_current'],
                     'Purpose':PURPOSES[row['purpose']], 'Reason':row['reason'],
                     'Search values':'Fixed configuration' if row['fixed'] else summary})
             frame = pd.DataFrame(records, columns=['ID','Tune','Edit','Parameter','Source','Search values','Current value','Reason','Purpose'])
@@ -241,6 +241,9 @@ def instance():
         def editor_controls(row, draft):
             detail = ui.TagList(
                 ui.div(ui.strong(row['name']), ui.code(row['path']), ui.p(row['owner']), class_='tuning-editor-detail'),
+                ui.p(ui.strong('Method default: '), row['default'], ' ',
+                    ui.a('Default documentation', href=row['metadata'].get('default_reference', row['reference']),
+                         target='_blank', rel='noopener') if row['reference'] else None),
                 ui.div(ui.span(f"{PURPOSES[row['purpose']]}: {row['reason']} "),
                     ui.a('Documentation', href=row['reference'], target='_blank', rel='noopener') if row['reference'] else None,
                     class_='tuning-purpose'))

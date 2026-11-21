@@ -520,6 +520,12 @@ def test_catboost_search_can_tune_previously_unset_parameter():
     assert [t['params'][key] for t in result['trials']] == [None, 2]
     assert all(t['state'] == 'complete' for t in result['trials'])
     validate_checkpoint(p, json.loads(json.dumps(result)))
+    from model_review import completed_evidence
+    reviewed = data.with_tuning_results(completed_evidence(p, result))
+    for trial in result['trials']:
+        accepted = reviewed.with_selected_model(trial['id'])
+        # The baseline's explicit None must survive review and downstream cloning.
+        assert accepted.pipeline_for_training() is not None
 
 
 def test_gp_search_fits_each_trial_fold_once_and_records_scores_only(monkeypatch):

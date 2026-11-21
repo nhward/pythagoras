@@ -1,0 +1,82 @@
+---
+title: Candidate assessment
+---
+
+#### 🧭 Purpose
+
+_Assess how the current selected model predicts held-out observations, overall and across Stratifier or Sensitive groups. Place this diagnostic card after Candidate models and, optionally, Candidate ensemble._
+
+A committed ensemble takes precedence. Otherwise the card assesses the overall weighted best model from Candidate models. Without a current selection, it waits. It does not select a different model or fit a final model on all observations.
+
+#### 🎯 Goals
+
+1. **Primary:** Show the selected model's resampled prediction performance.
+1. **Secondary:** Make differences in performance across relevant groups visible.
+1. **Tertiary:** Distinguish systematic prediction error from error spread without starting a full residual investigation.
+
+#### 🧠 How it works
+
+Only validation predictions from the upstream resampling plan are assessed. Each prediction comes from a complete pipeline fitted on that split's training observations. Cached fits and responses are reused when available; missing individual-model fits are regenerated on the same splits. A committed ensemble supplies its existing split-fitted members.
+
+Repeated resampling can predict the same observation several times. These remain separate validation prediction events, rather than being averaged into a new predictor. The table distinguishes unique observations from prediction events. Apart from ROC summaries, metrics describe the pooled validation events; observations appearing more often contribute more events.
+
+These are **post-selection resampling results**, because the resampling also informed candidate selection. They are not an independent estimate of final test performance. Holdout and prediction-only rows remain excluded by the upstream evaluation plan.
+
+#### 🏞️ Front
+
+For regression, the square chart places actual values horizontally and predictions vertically, with identical axis limits and equal units. The solid 1:1 line represents perfect predictions. The dashed lines are parallel offsets from that line at the 2.5th and 97.5th percentiles of signed error, where error means predicted minus actual. They describe the central 95% of observed validation errors. They are neither confidence intervals nor guaranteed prediction intervals. References use all prediction events; charts with more than 5,000 events display a deterministic subset of points.
+
+For classification, the default chart is ROC when ranking scores are available. The diagonal is the chance reference; faint curves show overall performance for individual splits. Each main curve averages interpolated split curves, with mean split AUC and split standard deviation in its legend. The selected class is compared with all other classes. Splits without both outcomes, or without finite scores, are excluded from that ROC summary and identified in the table.
+
+Hard-voting ensembles use the fraction of members voting for the selected class. This vote share supplies a ranking score; it is not a calibrated probability. Ties remain tied, so a small ensemble produces a coarse ROC curve.
+
+A confusion matrix is available for any classifier and is the fallback when only class labels are available. Rows are actual classes and columns are predicted classes. Cell colors and labels show percentages within each actual class; hover includes counts. A subgroup selector replaces point-color encoding for this chart.
+
+#### 🔄 Flip side
+
+The table shows the overall population, followed by the groups defined by the selected display variables. Two different variables create intersection groups.
+
+| Statistic | Meaning |
+|:--|:--|
+| Observations / Predictions | Unique source rows / validation prediction events |
+| RMSE / MAE / R² | Regression prediction error and explained variation |
+| Mean error (bias) | Average predicted minus actual; positive means overprediction |
+| Error variance | Population variance of signed prediction errors around their mean |
+| Error P2.5 / P97.5 | Empirical central 95% signed-error limits |
+| Accuracy / Balanced accuracy | Classification correctness, overall / averaged across actual classes present |
+| AUC / AUC split SD / ROC splits | Mean discrimination, its split variability, and usable split count |
+| Probability error summaries | Selected-class probability minus its observed 0/1 indicator, when probabilities exist |
+
+Probability-error variance and the selected-class Brier score are unavailable for decision scores, vote shares and class labels. Missing statistics are not zero. Error variance is not a formal decomposition of a learning algorithm's bias and variance.
+
+#### 🛠️ Controls and actions
+
+The footer identifies the assessed model, observation and prediction counts, splits and reused or newly fitted artifacts. There is no Apply action. Display changes do not refit or reselect models.
+
+#### ⚙️ Settings
+
+The card's Tour Guide explains each control. Only Stratifier and Sensitive variables are offered for grouping. Numeric variables with more than five distinct values use up to five quantile bins. Categorical variables retain the twelve most frequent levels and combine the rest as Other. Missing values are a separate group. These display groups do not change training or the upstream resampling plan.
+
+#### 🔎 Interpretation and next steps
+
+For regression, look for proximity to the diagonal, systematic displacement and differences between groups. For classification, ROC describes ranking performance across thresholds; the confusion matrix describes the predictions at the model's current decision rule.
+
+Group differences are descriptive evidence for investigation, not a fairness certification or a causal explanation. Detailed residual plots, distribution checks, influence and dependence analysis belong in future `resid_` cards.
+
+#### ⛔️ Limitations
+
+* Split variability is descriptive and is not a confidence interval.
+* Small or single-outcome subgroups may have unavailable ROC statistics.
+* Repeated predictions are dependent; prediction-event counts are not independent sample sizes.
+* Weighted fitting and scoring follow the current upstream support restrictions; this card does not introduce a weighting adapter.
+* A restored bookmark can require regenerating session fits. Row-level predictions and fitted objects are not written into portable evidence.
+
+#### 📍 Position
+
+Place after Candidate models and any optional Candidate ensemble. A ticked ensemble must supply a current evaluation; an obsolete ensemble is never silently replaced with an individual candidate. Existing upstream evaluation memberships are preserved, including any already defined boundaries.
+
+#### 🔗 Data flow
+
+* **Input:** Current weighted winner or committed ensemble, stable source rows and resampling memberships.
+* **Output:** The unchanged incoming proxy, even while diagnostic work is pending.
+* **Data journey:** No transformation, selection or final-fitting step is added.

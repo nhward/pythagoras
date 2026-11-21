@@ -353,3 +353,47 @@ def test_model_recipe_preparation_is_visible_only_under_everything_and_not_tunab
         assert not visible(recipe, level)
     with pytest.raises(ValueError, match='fixed configuration'):
         compile_spec(rows, {recipe['path']: dict(recipe['definition'], active=True, owner=recipe['owner'])})
+
+
+@pytest.mark.parametrize('classifier', [False, True])
+def test_documented_wrapper_defaults_are_display_only_and_preserve_explicit_choices(classifier, monkeypatch):
+    from copy import deepcopy
+
+    from catboost_model import PreparedCatBoostClassifier, PreparedCatBoostRegressor
+    from tuning import STANDARD_METADATA, fingerprint
+    from xgboost import XGBClassifier, XGBRegressor
+
+    cat = (PreparedCatBoostClassifier if classifier else PreparedCatBoostRegressor)()
+    xgb = (XGBClassifier if classifier else XGBRegressor)()
+    pipeline = Pipeline([('cat', cat), ('xgb', xgb)])
+    before_cat, before_xgb = deepcopy(cat.get_params()), deepcopy(xgb.get_params())
+    rows = {r['path']: r for r in discover(pipeline)}
+    assert rows['cat__iterations']['default'] == '1000'
+    assert rows['cat__iterations']['current'] == 'None'
+    assert rows['cat__iterations']['display_current'] == 'Default: 1000'
+    assert 'Automatic' in rows['cat__learning_rate']['default']
+    assert 'Lossguide' in rows['cat__depth']['default']
+    assert rows['xgb__max_depth']['default'] == '6'
+    assert rows['xgb__max_depth']['display_current'] == 'Default: 6'
+    assert 'gblinear' in rows['xgb__learning_rate']['default']
+    assert 'Automatically estimated' in rows['xgb__base_score']['default']
+    assert cat.get_params() == before_cat
+    assert xgb.get_params() == before_xgb
+    # Metadata wording is presentation, not the identity of a committed grid.
+    original = fingerprint(list(rows.values()))
+    metadata = STANDARD_METADATA[f'catboost.core.CatBoost{"Classifier" if classifier else "Regressor"}']['iterations']
+    monkeypatch.setitem(metadata, 'documented_default', 'A revised description')
+    assert fingerprint(discover(pipeline)) == original
+    pipeline.set_params(cat__iterations=75, cat__l2_leaf_reg=7, xgb__max_depth=3)
+    updated = {r['path']: r for r in discover(pipeline)}
+    assert updated['cat__iterations']['display_current'] == '75'
+    assert updated['xgb__max_depth']['display_current'] == '3'
+    assert updated['cat__reg_lambda']['current'] == 'None'
+    assert updated['cat__reg_lambda']['display_current'] == 'Uses l2_leaf_reg: 7'
+
+
+def test_legitimate_none_and_unreviewed_defaults_remain_literal():
+    rows = {r['path']: r for r in discover(Pipeline([('model', RandomForestRegressor())]))}
+    row = rows['model__max_depth']
+    assert row['current'] == row['display_current'] == row['default'] == 'None'
+    assert search_values(row['definition'])[0] is None

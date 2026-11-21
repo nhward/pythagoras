@@ -168,3 +168,30 @@ def test_fold_encoding_keeps_missing_fixed_predictors_as_errors():
     from model_commit import prepare_predictors
     with pytest.raises(KeyError, match='missing'):
         prepare_predictors(pd.DataFrame({'x': [1]}), columns=['x', 'missing'], preparation='numeric')
+
+
+@pytest.mark.parametrize('name', ['CatBoostRegressor', 'CatBoostClassifier', 'PreparedCatBoostRegressor', 'PreparedCatBoostClassifier'])
+def test_recorded_catboost_none_defaults_remain_cloneable(name):
+    import catboost
+    import catboost_model
+    from model_commit import configured_pipeline
+    from model_review import CandidatePipelines
+    from fit_service import fit_key
+    from sklearn.base import clone
+    from sklearn.pipeline import Pipeline
+
+    factory = getattr(catboost_model if name.startswith('Prepared') else catboost, name)
+    template = Pipeline([('model', factory(depth=4, verbose=False, allow_writing_files=False))])
+    # Search baselines record unset native parameters as None. Explicitly
+    # resetting depth must use the constructor default rather than retain 4.
+    parameters = {'model__iterations': None, 'model__depth': None}
+    mapping = CandidatePipelines({'catboost': template}, {'0': ('catboost', parameters)})
+    materialized = mapping['0']
+    for model in (materialized, clone(materialized), configured_pipeline(template, parameters)):
+        settings = model.named_steps['model'].get_params()
+        assert 'iterations' not in settings
+        assert 'depth' not in settings
+        assert settings['verbose'] is False
+        default = Pipeline([('model', factory(verbose=False, allow_writing_files=False))])
+        assert fit_key('context', model, [0, 1], [2]) == fit_key('context', default, [0, 1], [2])
+    assert template.named_steps['model'].get_params()['depth'] == 4

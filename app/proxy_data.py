@@ -492,7 +492,8 @@ class proxy_data:
         from dataclasses import replace
         if not self.has_pipeline and not self._model_candidates:
             raise ValueError("Commit a model before accepting tuned parameters")
-        pipeline = self.pipeline_for_training(candidate_id).set_params(**parameters)
+        from model_commit import configured_pipeline
+        pipeline = configured_pipeline(self.pipeline_for_training(candidate_id), parameters)
         record = ProcessingRecord(stage="Learning", card="cand_train",
             operation="Accept tuned pipeline parameters", attempted=True,
             parameters={"parameters": parameters, "search_fingerprint": fingerprint,

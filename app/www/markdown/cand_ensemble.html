@@ -656,7 +656,7 @@ padding-left: 12px;
 .bslib-card .card-header {
 padding-right: 40px !important;
 }
-body.fullscreen-mode { overflow: hidden; }
+body.fullscreen-mode { overflow: hidden; } 
 
 .section-empty-state[hidden],
 .delete-empty-section[hidden] {
@@ -728,7 +728,7 @@ animation: pulse-outline 700ms ease-out;
 }
 .card.animate-jello {
 animation: jello 500ms cubic-bezier(.34,1.56,.64,1);
-will-change: transform;
+will-change: transform; 
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -994,7 +994,7 @@ touch-action: pan-y;
 .var-modify-diff {
 flex: 1 1 0;
 min-height: 0;
-overflow-y: auto !important;
+overflow-y: auto !important; 
 overflow-x: hidden;
 scrollbar-gutter: stable;
 }
@@ -1245,7 +1245,7 @@ visibility: hidden;
 <p>The front chart sorts from best to worst and highlights the ensemble in orange. Losses appear in their natural units. Hover text and the provisional flip-side table report fold standard deviation and completed splits for the preferred metric. The table also shows all feasible task metrics side by side: RMSE, MAE and R² for regression, and available classification metrics. These are <strong>post-selection resampling scores</strong>: the member configurations were already selected using tuning evidence, so this is not independent test performance.</p>
 <h3 id="ensemble-checkbox">Ensemble checkbox</h3>
 <p>With <strong>Ensemble</strong> unticked, the incoming model passes through. Evaluation is available for comparison. Ticking <strong>Ensemble</strong> exports the ensemble training definition, its fitted instance for each evaluation split, split memberships and scores. Each split-fitted ensemble contains member models trained only on that split’s training observations. It is not a single model fitted on all observations.</p>
-<p><strong>Final fitting remains downstream.</strong> A final-fitting card can fit either the upstream weighted individual winner or this ensemble on the designated final training observations. The resampling models must not be mistaken for a final fitted model. Changes to selected methods, ensemble style, data or resampling restart evaluation. Upstream winner improvements are queued instead: the current snapshot finishes, then the latest winners are evaluated. While catching up, the chart and table retain the completed snapshot with an explicit footer label. Older snapshots cannot be exported as the current ensemble. Progress updates and unrelated trials do not restart evaluation. Fitted evaluation models are session runtime evidence, not portable bookmark artifacts; restoring the card regenerates them.</p>
+<p><strong>Final fitting remains downstream.</strong> A final-fitting card can fit either the upstream weighted individual winner or this ensemble on the designated final training observations. The resampling models must not be mistaken for a final fitted model. Changes to selected methods, ensemble style, data or resampling restart evaluation. Upstream winner improvements are queued instead: the current snapshot finishes, then the latest winners are evaluated. While catching up, the chart and table retain the completed snapshot with an explicit footer label. Older snapshots cannot be exported as the current ensemble. Progress updates and unrelated trials do not restart evaluation. Fitted evaluation models are session runtime evidence, not portable bookmark artifacts. Bookmarks retain the aggregate scores needed to restore the chart and table without new fits, provided the evaluation inputs still match. Enabling ensemble export regenerates its session-only fitted models; the saved scores remain visible while this happens. Older bookmarks that contain only controls need one evaluation before they can save these views.</p>
 <p>Stacking is not offered in this version. It requires an additional inner resampling design for learning the meta-model without leakage.</p>
 <h3 id="faster-evaluation">Faster evaluation</h3>
 <p>The card reuses the split-fitted models and held-out predictions from Candidate training whenever they are available in this session. If one of five winners changes, only that member’s missing split fits are needed. Changing mean to median, or changing the preferred metric, does not retrain the member models. Combining predictions itself needs no training; resampling is needed to obtain comparable held-out predictions, not to learn an equal mean or median.</p>

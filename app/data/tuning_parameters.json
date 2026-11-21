@@ -1933,7 +1933,9 @@
             300,
             1000
           ]
-        }
+        },
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "depth": {
         "kind": "integer",
@@ -1951,7 +1953,9 @@
             6,
             8
           ]
-        }
+        },
+        "documented_default": "6; 16 with Lossguide",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#depth"
       },
       "learning_rate": {
         "kind": "float",
@@ -1965,7 +1969,9 @@
             0.03,
             0.1
           ]
-        }
+        },
+        "documented_default": "Automatic for eligible RMSE/Logloss/MultiClass configurations; otherwise 0.03",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#learning-rate"
       },
       "l2_leaf_reg": {
         "kind": "float",
@@ -1979,7 +1985,9 @@
             3.0,
             10.0
           ]
-        }
+        },
+        "documented_default": "3.0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#l2-leaf-reg"
       },
       "random_strength": {
         "kind": "float",
@@ -1993,7 +2001,9 @@
             1.0,
             5.0
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#random-strength"
       },
       "bagging_temperature": {
         "kind": "float",
@@ -2007,7 +2017,9 @@
             1.0,
             5.0
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#bagging-temperature"
       },
       "bootstrap_type": {
         "kind": "categorical",
@@ -2029,7 +2041,9 @@
             "MVS",
             "No"
           ]
-        }
+        },
+        "documented_default": "Depends on objective, CPU/GPU, sampling unit and bagging settings",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#bootstrap-type"
       },
       "subsample": {
         "kind": "float",
@@ -2047,7 +2061,9 @@
             0.8,
             1.0
           ]
-        }
+        },
+        "documented_default": "1 below 100 rows; otherwise 0.66 for Bernoulli/Poisson or 0.8 for MVS",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#subsample"
       },
       "rsm": {
         "kind": "float",
@@ -2065,7 +2081,9 @@
             0.8,
             1.0
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#rsm"
       },
       "border_count": {
         "kind": "integer",
@@ -2084,7 +2102,9 @@
             128,
             254
           ]
-        }
+        },
+        "documented_default": "254 on CPU; 128 on GPU (32 for GPU pairwise ranking)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#border-count"
       },
       "grow_policy": {
         "kind": "categorical",
@@ -2103,7 +2123,9 @@
             "Depthwise",
             "Lossguide"
           ]
-        }
+        },
+        "documented_default": "SymmetricTree",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#grow-policy"
       },
       "min_data_in_leaf": {
         "kind": "integer",
@@ -2117,7 +2139,9 @@
             5,
             20
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#min-data-in-leaf"
       },
       "max_leaves": {
         "kind": "integer",
@@ -2131,7 +2155,9 @@
             31,
             63
           ]
-        }
+        },
+        "documented_default": "31",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#max-leaves"
       },
       "thread_count": {
         "kind": "integer",
@@ -2147,7 +2173,9 @@
             4,
             8
           ]
-        }
+        },
+        "documented_default": "-1 (all processor cores)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#thread-count"
       },
       "task_type": {
         "kind": "categorical",
@@ -2178,7 +2206,9 @@
             42,
             1729
           ]
-        }
+        },
+        "documented_default": "0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#random-seed"
       },
       "early_stopping_rounds": {
         "kind": "integer",
@@ -2207,7 +2237,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "0.5",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#model-size-reg"
       },
       "loss_function": {
         "purpose": "operational",
@@ -2215,7 +2247,9 @@
         "reason": "Training objective defines the statistical target and its domain restrictions. Preserve the reviewed task/recipe; do not blindly compare different objectives as a generic grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "'RMSE'",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "RMSE",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#loss-function"
       },
       "feature_border_type": {
         "purpose": "advanced",
@@ -2230,7 +2264,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "GreedyLogSum",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#feature-border-type"
       },
       "per_float_feature_quantization": {
         "purpose": "operational",
@@ -2238,7 +2274,9 @@
         "reason": "Structured feature-processing specification; configure manually before tuning, respecting fold-local learning.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (use global quantization settings)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#per-float-feature-quantization"
       },
       "input_borders": {
         "purpose": "operational",
@@ -2246,7 +2284,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (generate borders from training data)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#input-borders"
       },
       "output_borders": {
         "purpose": "operational",
@@ -2254,7 +2294,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (do not save borders)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#output-borders"
       },
       "fold_permutation_block": {
         "purpose": "operational",
@@ -2269,7 +2311,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#fold-permutation-block"
       },
       "od_pval": {
         "purpose": "operational",
@@ -2307,7 +2351,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Min",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#nan-mode"
       },
       "counter_calc_method": {
         "purpose": "operational",
@@ -2330,7 +2376,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Objective-dependent: usually 1 for regression/multiclass or 10 for binary classification",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#leaf-estimation-iterations"
       },
       "leaf_estimation_method": {
         "purpose": "advanced",
@@ -2344,7 +2392,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Objective-dependent: Gradient for most regression, Exact for MAE/Quantile, Newton for classification",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#leaf-estimation-method"
       },
       "use_best_model": {
         "purpose": "operational",
@@ -2352,7 +2402,9 @@
         "reason": "Internal validation or stopping configuration. Keep fixed: enabling/changing it can alter the recipe implicit-resampling contract or require an evaluation set.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "True with a nonconstant evaluation target in eval_set; otherwise False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#use-best-model"
       },
       "best_model_min_trees": {
         "purpose": "operational",
@@ -2360,7 +2412,9 @@
         "reason": "Internal validation or stopping configuration. Keep fixed: enabling/changing it can alter the recipe implicit-resampling contract or require an evaluation set.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no minimum)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#best-model-min-trees"
       },
       "verbose": {
         "purpose": "operational",
@@ -2368,7 +2422,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#verbose"
       },
       "silent": {
         "purpose": "operational",
@@ -2384,7 +2440,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Verbose",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#logging-level"
       },
       "metric_period": {
         "purpose": "operational",
@@ -2392,7 +2450,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#metric-period"
       },
       "ctr_leaf_count_limit": {
         "purpose": "advanced",
@@ -2406,7 +2466,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "None (no categorical-leaf limit)",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor"
       },
       "store_all_simple_ctr": {
         "purpose": "operational",
@@ -2435,7 +2497,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Depends on CPU/GPU and training mode",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor"
       },
       "has_time": {
         "purpose": "operational",
@@ -2448,7 +2512,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#has-time"
       },
       "allow_const_label": {
         "purpose": "operational",
@@ -2461,7 +2527,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#allow-const-label"
       },
       "target_border": {
         "purpose": "operational",
@@ -2469,7 +2537,9 @@
         "reason": "Target/class schema; changing it can redefine the task. Keep fixed for candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no explicit target threshold)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#target-border"
       },
       "one_hot_max_size": {
         "purpose": "advanced",
@@ -2484,7 +2554,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Usually 2; 10 for ranking; 255 for GPU without required target data; unavailable for CPU pairwise scoring",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#one-hot-max-size"
       },
       "random_score_type": {
         "purpose": "advanced",
@@ -2497,7 +2569,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "NormalWithModelSizeDecrease",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor"
       },
       "name": {
         "purpose": "operational",
@@ -2513,7 +2587,9 @@
         "reason": "Feature schema and role configuration; keep aligned with fold-transformed predictors, not a search dimension.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no excluded features)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#ignored-features"
       },
       "train_dir": {
         "purpose": "operational",
@@ -2521,7 +2597,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "catboost_info",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#train-dir"
       },
       "custom_metric": {
         "purpose": "operational",
@@ -2529,7 +2607,9 @@
         "reason": "Evaluation/selection metric configuration; keep the target criterion fixed across candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no additional metrics)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#custom-metric"
       },
       "eval_metric": {
         "purpose": "operational",
@@ -2537,7 +2617,9 @@
         "reason": "Evaluation/selection metric configuration; keep the target criterion fixed across candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "The training objective",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#eval-metric"
       },
       "save_snapshot": {
         "purpose": "operational",
@@ -2545,7 +2627,9 @@
         "reason": "Persistence/checkpoint side effects; keep fixed outside the model-selection grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (snapshotting disabled)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#save-snapshot"
       },
       "snapshot_file": {
         "purpose": "operational",
@@ -2553,7 +2637,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "experiment.cbsnapshot",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#snapshot-file"
       },
       "snapshot_interval": {
         "purpose": "operational",
@@ -2561,7 +2647,9 @@
         "reason": "Persistence/checkpoint side effects; keep fixed outside the model-selection grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "600",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#snapshot-interval"
       },
       "fold_len_multiplier": {
         "purpose": "advanced",
@@ -2576,7 +2664,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "2",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#fold-len-multiplier"
       },
       "used_ram_limit": {
         "purpose": "operational",
@@ -2584,7 +2674,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no memory limit)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#used-ram-limit"
       },
       "gpu_ram_part": {
         "purpose": "operational",
@@ -2592,7 +2684,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0.95",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#gpu-ram-part"
       },
       "pinned_memory_size": {
         "purpose": "operational",
@@ -2600,7 +2694,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1073741824",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#pinned-memory-size"
       },
       "allow_writing_files": {
         "purpose": "operational",
@@ -2608,7 +2704,9 @@
         "reason": "Persistence/checkpoint side effects; keep fixed outside the model-selection grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "True",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#allow-writing-files"
       },
       "final_ctr_computation_mode": {
         "purpose": "operational",
@@ -2629,7 +2727,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#approx-on-full-history"
       },
       "boosting_type": {
         "purpose": "advanced",
@@ -2643,7 +2743,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Plain on CPU; Plain or Ordered on GPU depending on objective and training size",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#boosting-type"
       },
       "simple_ctr": {
         "purpose": "operational",
@@ -2690,7 +2792,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Depends on objective and explicit CTR descriptions",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor"
       },
       "device_config": {
         "purpose": "operational",
@@ -2721,7 +2825,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Automatic from the gradient distribution at each iteration",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#mvs-reg"
       },
       "sampling_frequency": {
         "purpose": "advanced",
@@ -2735,7 +2841,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "PerTreeLevel",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#sampling-frequency"
       },
       "sampling_unit": {
         "purpose": "advanced",
@@ -2748,7 +2856,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Object",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#sampling-unit"
       },
       "dev_score_calc_obj_block_size": {
         "purpose": "operational",
@@ -2781,7 +2891,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "depth",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "6; 16 with Lossguide",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#depth"
       },
       "n_estimators": {
         "kind": "categorical",
@@ -2790,7 +2902,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "iterations",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "num_boost_round": {
         "kind": "categorical",
@@ -2799,7 +2913,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "iterations",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "num_trees": {
         "kind": "categorical",
@@ -2808,7 +2924,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "iterations",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "colsample_bylevel": {
         "kind": "categorical",
@@ -2817,7 +2935,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "rsm",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#rsm"
       },
       "random_state": {
         "kind": "categorical",
@@ -2826,7 +2946,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "random_seed",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#random-seed"
       },
       "reg_lambda": {
         "kind": "categorical",
@@ -2835,7 +2957,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "l2_leaf_reg",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "3.0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#l2-leaf-reg"
       },
       "objective": {
         "kind": "categorical",
@@ -2853,7 +2977,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "learning_rate",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Automatic for eligible RMSE/Logloss/MultiClass configurations; otherwise 0.03",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#learning-rate"
       },
       "max_bin": {
         "kind": "categorical",
@@ -2862,7 +2988,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "border_count",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "254 on CPU; 128 on GPU (32 for GPU pairwise ranking)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#border-count"
       },
       "gpu_cat_features_storage": {
         "purpose": "operational",
@@ -2903,7 +3031,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "min_data_in_leaf",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#min-data-in-leaf"
       },
       "num_leaves": {
         "kind": "categorical",
@@ -2912,7 +3042,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "alias_of": "max_leaves",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "31",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#max-leaves"
       },
       "score_function": {
         "purpose": "advanced",
@@ -2926,7 +3058,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Cosine",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#score-function"
       },
       "leaf_estimation_backtracking": {
         "purpose": "advanced",
@@ -2940,7 +3074,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "AnyImprovement",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#leaf-estimation-backtracking"
       },
       "ctr_history_unit": {
         "purpose": "operational",
@@ -2956,7 +3092,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no monotonic constraints)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#monotone-constraints"
       },
       "feature_weights": {
         "purpose": "operational",
@@ -2964,7 +3102,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1 for every feature",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#feature-weights"
       },
       "penalties_coefficient": {
         "purpose": "advanced",
@@ -2979,7 +3119,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#penalties-coefficient"
       },
       "first_feature_use_penalties": {
         "purpose": "operational",
@@ -2987,7 +3129,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0 for every feature",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#first-feature-use-penalties"
       },
       "per_object_feature_penalties": {
         "purpose": "operational",
@@ -2995,7 +3139,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0 for every object",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#per-object-feature-penalties"
       },
       "model_shrink_rate": {
         "purpose": "advanced",
@@ -3010,7 +3156,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Depends on shrink mode and monotonic constraints",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#model-shrink-rate"
       },
       "model_shrink_mode": {
         "purpose": "operational",
@@ -3018,7 +3166,9 @@
         "reason": "Shrinkage schedule; requires a compatible positive model_shrink_rate.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Constant",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#model-shrink-mode"
       },
       "langevin": {
         "purpose": "operational",
@@ -3031,7 +3181,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#langevin"
       },
       "diffusion_temperature": {
         "purpose": "operational",
@@ -3039,7 +3191,9 @@
         "reason": "Langevin diffusion scale; meaningful only with langevin=True and depends on training size.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "10000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#diffusion-temperature"
       },
       "posterior_sampling": {
         "purpose": "operational",
@@ -3052,7 +3206,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#posterior-sampling"
       },
       "boost_from_average": {
         "purpose": "operational",
@@ -3066,7 +3222,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "True for RMSE/Quantile/MAE/MAPE; otherwise False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#boost-from-average"
       },
       "text_features": {
         "purpose": "operational",
@@ -3130,7 +3288,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no fixed splits)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#fixed-binary-splits"
       }
     },
     "catboost.core.CatBoostClassifier": {
@@ -3146,7 +3306,9 @@
             300,
             1000
           ]
-        }
+        },
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "depth": {
         "kind": "integer",
@@ -3164,7 +3326,9 @@
             6,
             8
           ]
-        }
+        },
+        "documented_default": "6; 16 with Lossguide",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#depth"
       },
       "learning_rate": {
         "kind": "float",
@@ -3178,7 +3342,9 @@
             0.03,
             0.1
           ]
-        }
+        },
+        "documented_default": "Automatic for eligible RMSE/Logloss/MultiClass configurations; otherwise 0.03",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#learning-rate"
       },
       "l2_leaf_reg": {
         "kind": "float",
@@ -3192,7 +3358,9 @@
             3.0,
             10.0
           ]
-        }
+        },
+        "documented_default": "3.0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#l2-leaf-reg"
       },
       "random_strength": {
         "kind": "float",
@@ -3206,7 +3374,9 @@
             1.0,
             5.0
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#random-strength"
       },
       "bagging_temperature": {
         "kind": "float",
@@ -3220,7 +3390,9 @@
             1.0,
             5.0
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#bagging-temperature"
       },
       "bootstrap_type": {
         "kind": "categorical",
@@ -3242,7 +3414,9 @@
             "MVS",
             "No"
           ]
-        }
+        },
+        "documented_default": "Depends on objective, CPU/GPU, sampling unit and bagging settings",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#bootstrap-type"
       },
       "subsample": {
         "kind": "float",
@@ -3260,7 +3434,9 @@
             0.8,
             1.0
           ]
-        }
+        },
+        "documented_default": "1 below 100 rows; otherwise 0.66 for Bernoulli/Poisson or 0.8 for MVS",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#subsample"
       },
       "rsm": {
         "kind": "float",
@@ -3278,7 +3454,9 @@
             0.8,
             1.0
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#rsm"
       },
       "border_count": {
         "kind": "integer",
@@ -3297,7 +3475,9 @@
             128,
             254
           ]
-        }
+        },
+        "documented_default": "254 on CPU; 128 on GPU (32 for GPU pairwise ranking)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#border-count"
       },
       "grow_policy": {
         "kind": "categorical",
@@ -3316,7 +3496,9 @@
             "Depthwise",
             "Lossguide"
           ]
-        }
+        },
+        "documented_default": "SymmetricTree",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#grow-policy"
       },
       "min_data_in_leaf": {
         "kind": "integer",
@@ -3330,7 +3512,9 @@
             5,
             20
           ]
-        }
+        },
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#min-data-in-leaf"
       },
       "max_leaves": {
         "kind": "integer",
@@ -3344,7 +3528,9 @@
             31,
             63
           ]
-        }
+        },
+        "documented_default": "31",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#max-leaves"
       },
       "thread_count": {
         "kind": "integer",
@@ -3360,7 +3546,9 @@
             4,
             8
           ]
-        }
+        },
+        "documented_default": "-1 (all processor cores)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#thread-count"
       },
       "task_type": {
         "kind": "categorical",
@@ -3391,7 +3579,9 @@
             42,
             1729
           ]
-        }
+        },
+        "documented_default": "0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#random-seed"
       },
       "early_stopping_rounds": {
         "kind": "integer",
@@ -3420,7 +3610,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "0.5",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#model-size-reg"
       },
       "loss_function": {
         "purpose": "operational",
@@ -3428,7 +3620,9 @@
         "reason": "Training objective defines the statistical target and its domain restrictions. Preserve the reviewed task/recipe; do not blindly compare different objectives as a generic grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Logloss for binary targets; MultiClass for multiclass targets, unless target_border selects Logloss",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#loss-function"
       },
       "feature_border_type": {
         "purpose": "advanced",
@@ -3443,7 +3637,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "GreedyLogSum",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#feature-border-type"
       },
       "per_float_feature_quantization": {
         "purpose": "operational",
@@ -3451,7 +3647,9 @@
         "reason": "Structured feature-processing specification; configure manually before tuning, respecting fold-local learning.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (use global quantization settings)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#per-float-feature-quantization"
       },
       "input_borders": {
         "purpose": "operational",
@@ -3459,7 +3657,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (generate borders from training data)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#input-borders"
       },
       "output_borders": {
         "purpose": "operational",
@@ -3467,7 +3667,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (do not save borders)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#output-borders"
       },
       "fold_permutation_block": {
         "purpose": "operational",
@@ -3482,7 +3684,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#fold-permutation-block"
       },
       "od_pval": {
         "purpose": "operational",
@@ -3520,7 +3724,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Min",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#nan-mode"
       },
       "counter_calc_method": {
         "purpose": "operational",
@@ -3543,7 +3749,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Objective-dependent: usually 1 for regression/multiclass or 10 for binary classification",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#leaf-estimation-iterations"
       },
       "leaf_estimation_method": {
         "purpose": "advanced",
@@ -3557,7 +3765,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Objective-dependent: Gradient for most regression, Exact for MAE/Quantile, Newton for classification",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#leaf-estimation-method"
       },
       "use_best_model": {
         "purpose": "operational",
@@ -3565,7 +3775,9 @@
         "reason": "Internal validation or stopping configuration. Keep fixed: enabling/changing it can alter the recipe implicit-resampling contract or require an evaluation set.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "True with a nonconstant evaluation target in eval_set; otherwise False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#use-best-model"
       },
       "best_model_min_trees": {
         "purpose": "operational",
@@ -3573,7 +3785,9 @@
         "reason": "Internal validation or stopping configuration. Keep fixed: enabling/changing it can alter the recipe implicit-resampling contract or require an evaluation set.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no minimum)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#best-model-min-trees"
       },
       "verbose": {
         "purpose": "operational",
@@ -3581,7 +3795,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#verbose"
       },
       "silent": {
         "purpose": "operational",
@@ -3597,7 +3813,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Verbose",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#logging-level"
       },
       "metric_period": {
         "purpose": "operational",
@@ -3605,7 +3823,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#metric-period"
       },
       "ctr_leaf_count_limit": {
         "purpose": "advanced",
@@ -3619,7 +3839,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "None (no categorical-leaf limit)",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier"
       },
       "store_all_simple_ctr": {
         "purpose": "operational",
@@ -3648,7 +3870,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Depends on CPU/GPU and training mode",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier"
       },
       "has_time": {
         "purpose": "operational",
@@ -3661,7 +3885,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#has-time"
       },
       "allow_const_label": {
         "purpose": "operational",
@@ -3674,7 +3900,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#allow-const-label"
       },
       "target_border": {
         "purpose": "operational",
@@ -3682,7 +3910,9 @@
         "reason": "Target/class schema; changing it can redefine the task. Keep fixed for candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no explicit target threshold)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#target-border"
       },
       "classes_count": {
         "purpose": "operational",
@@ -3698,7 +3928,9 @@
         "reason": "Explicit class-prior/weight vector or mapping. Requires labels and domain decisions; scalar grids cannot represent it.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (all class weights are 1)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#class-weights"
       },
       "auto_class_weights": {
         "purpose": "advanced",
@@ -3713,7 +3945,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "None (all class weights are 1)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#auto-class-weights"
       },
       "class_names": {
         "purpose": "operational",
@@ -3721,7 +3955,9 @@
         "reason": "Target/class schema; changing it can redefine the task. Keep fixed for candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (infer class labels from the target)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#class-names"
       },
       "one_hot_max_size": {
         "purpose": "advanced",
@@ -3736,7 +3972,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Usually 2; 10 for ranking; 255 for GPU without required target data; unavailable for CPU pairwise scoring",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#one-hot-max-size"
       },
       "random_score_type": {
         "purpose": "advanced",
@@ -3749,7 +3987,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "NormalWithModelSizeDecrease",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier"
       },
       "name": {
         "purpose": "operational",
@@ -3765,7 +4005,9 @@
         "reason": "Feature schema and role configuration; keep aligned with fold-transformed predictors, not a search dimension.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no excluded features)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#ignored-features"
       },
       "train_dir": {
         "purpose": "operational",
@@ -3773,7 +4015,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "catboost_info",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#train-dir"
       },
       "custom_loss": {
         "purpose": "operational",
@@ -3789,7 +4033,9 @@
         "reason": "Evaluation/selection metric configuration; keep the target criterion fixed across candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no additional metrics)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#custom-metric"
       },
       "eval_metric": {
         "purpose": "operational",
@@ -3797,7 +4043,9 @@
         "reason": "Evaluation/selection metric configuration; keep the target criterion fixed across candidate comparisons.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "The training objective",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#eval-metric"
       },
       "save_snapshot": {
         "purpose": "operational",
@@ -3805,7 +4053,9 @@
         "reason": "Persistence/checkpoint side effects; keep fixed outside the model-selection grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (snapshotting disabled)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#save-snapshot"
       },
       "snapshot_file": {
         "purpose": "operational",
@@ -3813,7 +4063,9 @@
         "reason": "File/path configuration; does not describe model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "experiment.cbsnapshot",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#snapshot-file"
       },
       "snapshot_interval": {
         "purpose": "operational",
@@ -3821,7 +4073,9 @@
         "reason": "Persistence/checkpoint side effects; keep fixed outside the model-selection grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "600",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#snapshot-interval"
       },
       "fold_len_multiplier": {
         "purpose": "advanced",
@@ -3836,7 +4090,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "2",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#fold-len-multiplier"
       },
       "used_ram_limit": {
         "purpose": "operational",
@@ -3844,7 +4100,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no memory limit)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#used-ram-limit"
       },
       "gpu_ram_part": {
         "purpose": "operational",
@@ -3852,7 +4110,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0.95",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#gpu-ram-part"
       },
       "pinned_memory_size": {
         "purpose": "operational",
@@ -3860,7 +4120,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1073741824",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/performance#pinned-memory-size"
       },
       "allow_writing_files": {
         "purpose": "operational",
@@ -3868,7 +4130,9 @@
         "reason": "Persistence/checkpoint side effects; keep fixed outside the model-selection grid.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "True",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/output#allow-writing-files"
       },
       "final_ctr_computation_mode": {
         "purpose": "operational",
@@ -3889,7 +4153,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#approx-on-full-history"
       },
       "boosting_type": {
         "purpose": "advanced",
@@ -3903,7 +4169,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Plain on CPU; Plain or Ordered on GPU depending on objective and training size",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#boosting-type"
       },
       "simple_ctr": {
         "purpose": "operational",
@@ -3950,7 +4218,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Depends on objective and explicit CTR descriptions",
+        "default_reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier"
       },
       "device_config": {
         "purpose": "operational",
@@ -3981,7 +4251,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Automatic from the gradient distribution at each iteration",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#mvs-reg"
       },
       "sampling_unit": {
         "purpose": "advanced",
@@ -3994,7 +4266,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Object",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#sampling-unit"
       },
       "sampling_frequency": {
         "purpose": "advanced",
@@ -4008,7 +4282,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "PerTreeLevel",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#sampling-frequency"
       },
       "dev_score_calc_obj_block_size": {
         "purpose": "operational",
@@ -4041,7 +4317,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "depth",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "6; 16 with Lossguide",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#depth"
       },
       "n_estimators": {
         "kind": "categorical",
@@ -4050,7 +4328,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "iterations",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "num_boost_round": {
         "kind": "categorical",
@@ -4059,7 +4339,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "iterations",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "num_trees": {
         "kind": "categorical",
@@ -4068,7 +4350,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "iterations",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#iterations"
       },
       "colsample_bylevel": {
         "kind": "categorical",
@@ -4077,7 +4361,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "rsm",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#rsm"
       },
       "random_state": {
         "kind": "categorical",
@@ -4086,7 +4372,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "random_seed",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#random-seed"
       },
       "reg_lambda": {
         "kind": "categorical",
@@ -4095,7 +4383,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "l2_leaf_reg",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "3.0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#l2-leaf-reg"
       },
       "objective": {
         "kind": "categorical",
@@ -4113,7 +4403,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "learning_rate",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Automatic for eligible RMSE/Logloss/MultiClass configurations; otherwise 0.03",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#learning-rate"
       },
       "max_bin": {
         "kind": "categorical",
@@ -4122,7 +4414,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "border_count",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "254 on CPU; 128 on GPU (32 for GPU pairwise ranking)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/quantization#border-count"
       },
       "scale_pos_weight": {
         "purpose": "advanced",
@@ -4137,7 +4431,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1.0",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#scale-pos-weight"
       },
       "gpu_cat_features_storage": {
         "purpose": "operational",
@@ -4178,7 +4474,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "min_data_in_leaf",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#min-data-in-leaf"
       },
       "num_leaves": {
         "kind": "categorical",
@@ -4187,7 +4485,9 @@
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "alias_of": "max_leaves",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "31",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#max-leaves"
       },
       "score_function": {
         "purpose": "advanced",
@@ -4201,7 +4501,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Cosine",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#score-function"
       },
       "leaf_estimation_backtracking": {
         "purpose": "advanced",
@@ -4215,7 +4517,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "AnyImprovement",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#leaf-estimation-backtracking"
       },
       "ctr_history_unit": {
         "purpose": "operational",
@@ -4231,7 +4535,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no monotonic constraints)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#monotone-constraints"
       },
       "feature_weights": {
         "purpose": "operational",
@@ -4239,7 +4545,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1 for every feature",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#feature-weights"
       },
       "penalties_coefficient": {
         "purpose": "advanced",
@@ -4254,7 +4562,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#penalties-coefficient"
       },
       "first_feature_use_penalties": {
         "purpose": "operational",
@@ -4262,7 +4572,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0 for every feature",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#first-feature-use-penalties"
       },
       "per_object_feature_penalties": {
         "purpose": "operational",
@@ -4270,7 +4582,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0 for every object",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#per-object-feature-penalties"
       },
       "model_shrink_rate": {
         "purpose": "advanced",
@@ -4285,7 +4599,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "Depends on shrink mode and monotonic constraints",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#model-shrink-rate"
       },
       "model_shrink_mode": {
         "purpose": "operational",
@@ -4293,7 +4609,9 @@
         "reason": "Shrinkage schedule; requires a compatible positive model_shrink_rate.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Constant",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#model-shrink-mode"
       },
       "langevin": {
         "purpose": "operational",
@@ -4306,7 +4624,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#langevin"
       },
       "diffusion_temperature": {
         "purpose": "operational",
@@ -4314,7 +4634,9 @@
         "reason": "Langevin diffusion scale; meaningful only with langevin=True and depends on training size.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "10000",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#diffusion-temperature"
       },
       "posterior_sampling": {
         "purpose": "operational",
@@ -4327,7 +4649,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#posterior-sampling"
       },
       "boost_from_average": {
         "purpose": "operational",
@@ -4341,7 +4665,9 @@
         },
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "True for RMSE/Quantile/MAE/MAPE; otherwise False",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#boost-from-average"
       },
       "text_features": {
         "purpose": "operational",
@@ -4413,7 +4739,9 @@
         "reason": "Domain constraints or per-feature vectors. Configure explicitly for the predictor schema; scalar JSON grids cannot represent these safely.",
         "reference": "https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "None (no fixed splits)",
+        "default_reference": "https://catboost.ai/docs/en/references/training-parameters/common#fixed-binary-splits"
       }
     },
     "sklearn.gaussian_process._gpr.GaussianProcessRegressor": {
@@ -5392,7 +5720,9 @@
         "reason": "Initial response intercept/prior; scalar suggestions depend on objective and target scale. Keep automatic estimation unless domain knowledge requires otherwise.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Automatically estimated from the training target for supported objectives",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "booster": {
         "purpose": "advanced",
@@ -5406,7 +5736,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "gbtree",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "callbacks": {
         "purpose": "operational",
@@ -5429,7 +5761,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "colsample_bynode": {
         "purpose": "advanced",
@@ -5444,7 +5778,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "colsample_bytree": {
         "purpose": "advanced",
@@ -5459,7 +5795,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "device": {
         "purpose": "operational",
@@ -5467,7 +5805,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "cpu",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "early_stopping_rounds": {
         "purpose": "operational",
@@ -5497,7 +5837,9 @@
         "reason": "Evaluation/selection metric configuration; keep the target criterion fixed across candidate comparisons.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Chosen for the objective",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "feature_types": {
         "purpose": "operational",
@@ -5528,7 +5870,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "grow_policy": {
         "purpose": "advanced",
@@ -5542,7 +5886,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "depthwise",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "importance_type": {
         "purpose": "operational",
@@ -5573,7 +5919,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "0.3 for tree boosters; 0.5 for gblinear",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_bin": {
         "purpose": "advanced",
@@ -5589,7 +5937,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "256",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_cat_threshold": {
         "purpose": "advanced",
@@ -5603,7 +5953,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "64",
+        "default_reference": "https://github.com/dmlc/xgboost/blob/v3.2.0/src/tree/param.h"
       },
       "max_cat_to_onehot": {
         "purpose": "advanced",
@@ -5618,7 +5970,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "4",
+        "default_reference": "https://github.com/dmlc/xgboost/blob/v3.2.0/src/tree/param.h"
       },
       "max_delta_step": {
         "purpose": "advanced",
@@ -5633,7 +5987,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_depth": {
         "purpose": "recommended",
@@ -5648,7 +6004,9 @@
             6,
             10
           ]
-        }
+        },
+        "documented_default": "6",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_leaves": {
         "purpose": "recommended",
@@ -5663,7 +6021,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "0 (no leaf-count limit)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "min_child_weight": {
         "purpose": "advanced",
@@ -5678,7 +6038,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "missing": {
         "purpose": "operational",
@@ -5702,7 +6064,9 @@
         "reason": "Multiclass/multioutput strategy; support depends on task and estimator. Keep the reviewed output contract fixed.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "one_output_per_tree",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "n_estimators": {
         "purpose": "recommended",
@@ -5717,7 +6081,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "100",
+        "default_reference": "https://github.com/dmlc/xgboost/blob/v3.2.0/python-package/xgboost/sklearn.py"
       },
       "n_jobs": {
         "purpose": "operational",
@@ -5732,7 +6098,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "All available threads unless constrained by the environment",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "num_parallel_tree": {
         "purpose": "operational",
@@ -5745,7 +6113,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "random_state": {
         "purpose": "operational",
@@ -5760,7 +6130,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "reg_alpha": {
         "purpose": "recommended",
@@ -5776,7 +6148,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "reg_lambda": {
         "purpose": "recommended",
@@ -5792,7 +6166,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "1 for tree boosters; 0 for gblinear",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "sampling_method": {
         "purpose": "advanced",
@@ -5805,7 +6181,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "uniform",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "scale_pos_weight": {
         "purpose": "advanced",
@@ -5820,7 +6198,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "subsample": {
         "purpose": "advanced",
@@ -5835,7 +6215,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "tree_method": {
         "purpose": "advanced",
@@ -5850,7 +6232,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "auto (uses hist)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "validate_parameters": {
         "purpose": "operational",
@@ -5871,7 +6255,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBRegressor",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "rate_drop": {
         "purpose": "advanced",
@@ -5885,7 +6271,9 @@
             0.1,
             0.3
           ]
-        }
+        },
+        "documented_default": "0.0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "skip_drop": {
         "purpose": "advanced",
@@ -5898,7 +6286,9 @@
             0.0,
             0.5
           ]
-        }
+        },
+        "documented_default": "0.0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "one_drop": {
         "purpose": "advanced",
@@ -5911,7 +6301,9 @@
             false,
             true
           ]
-        }
+        },
+        "documented_default": "False",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "sample_type": {
         "purpose": "advanced",
@@ -5924,7 +6316,9 @@
             "uniform",
             "weighted"
           ]
-        }
+        },
+        "documented_default": "uniform",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "normalize_type": {
         "purpose": "advanced",
@@ -5937,7 +6331,9 @@
             "tree",
             "forest"
           ]
-        }
+        },
+        "documented_default": "tree",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "tweedie_variance_power": {
         "purpose": "advanced",
@@ -5951,7 +6347,9 @@
             1.5,
             1.9
           ]
-        }
+        },
+        "documented_default": "1.5",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "huber_slope": {
         "purpose": "advanced",
@@ -5965,7 +6363,9 @@
             1.0,
             10.0
           ]
-        }
+        },
+        "documented_default": "1.0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "quantile_alpha": {
         "purpose": "advanced",
@@ -5979,7 +6379,9 @@
             0.5,
             0.9
           ]
-        }
+        },
+        "documented_default": "Not set (supply quantile levels for reg:quantileerror)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html#parameter-for-using-quantile-loss-reg-quantileerror"
       },
       "max_cached_hist_node": {
         "purpose": "operational",
@@ -5991,14 +6393,18 @@
           "values": [
             65536
           ]
-        }
+        },
+        "documented_default": "65536",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "updater": {
         "purpose": "operational",
         "kind": "categorical",
         "reason": "Booster update pipeline; configure with booster, tree method and device rather than independently searching incompatible update algorithms.",
         "importance": 0,
-        "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
+        "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html",
+        "documented_default": "Automatic for tree boosters; shotgun for gblinear",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "process_type": {
         "purpose": "operational",
@@ -6010,7 +6416,9 @@
           "values": [
             "default"
           ]
-        }
+        },
+        "documented_default": "default",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "refresh_leaf": {
         "purpose": "operational",
@@ -6022,7 +6430,9 @@
           "values": [
             true
           ]
-        }
+        },
+        "documented_default": "True",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "feature_selector": {
         "purpose": "advanced",
@@ -6036,7 +6446,9 @@
             "shuffle",
             "greedy"
           ]
-        }
+        },
+        "documented_default": "cyclic",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "top_k": {
         "purpose": "advanced",
@@ -6050,7 +6462,9 @@
             5,
             10
           ]
-        }
+        },
+        "documented_default": "0 (all features)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "disable_default_eval_metric": {
         "purpose": "operational",
@@ -6062,7 +6476,9 @@
           "values": [
             false
           ]
-        }
+        },
+        "documented_default": "False",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "seed_per_iteration": {
         "purpose": "operational",
@@ -6074,7 +6490,9 @@
           "values": [
             false
           ]
-        }
+        },
+        "documented_default": "False",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       }
     },
     "lightgbm.sklearn.LGBMRegressor": {
@@ -11891,7 +12309,9 @@
         "reason": "Initial response intercept/prior; scalar suggestions depend on objective and target scale. Keep automatic estimation unless domain knowledge requires otherwise.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Automatically estimated from the training target for supported objectives",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "booster": {
         "purpose": "advanced",
@@ -11905,7 +12325,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "gbtree",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "callbacks": {
         "purpose": "operational",
@@ -11928,7 +12350,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "colsample_bynode": {
         "purpose": "advanced",
@@ -11943,7 +12367,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "colsample_bytree": {
         "purpose": "advanced",
@@ -11958,7 +12384,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "device": {
         "purpose": "operational",
@@ -11966,7 +12394,9 @@
         "reason": "Hardware or memory placement; fix for reproducible execution rather than searching hardware as model capacity.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "cpu",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "early_stopping_rounds": {
         "purpose": "operational",
@@ -11996,7 +12426,9 @@
         "reason": "Evaluation/selection metric configuration; keep the target criterion fixed across candidate comparisons.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "Chosen for the objective",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "feature_types": {
         "purpose": "operational",
@@ -12027,7 +12459,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "grow_policy": {
         "purpose": "advanced",
@@ -12041,7 +12475,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "depthwise",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "importance_type": {
         "purpose": "operational",
@@ -12072,7 +12508,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "0.3 for tree boosters; 0.5 for gblinear",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_bin": {
         "purpose": "advanced",
@@ -12088,7 +12526,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "256",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_cat_threshold": {
         "purpose": "advanced",
@@ -12102,7 +12542,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "64",
+        "default_reference": "https://github.com/dmlc/xgboost/blob/v3.2.0/src/tree/param.h"
       },
       "max_cat_to_onehot": {
         "purpose": "advanced",
@@ -12117,7 +12559,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "4",
+        "default_reference": "https://github.com/dmlc/xgboost/blob/v3.2.0/src/tree/param.h"
       },
       "max_delta_step": {
         "purpose": "advanced",
@@ -12132,7 +12576,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_depth": {
         "purpose": "recommended",
@@ -12147,7 +12593,9 @@
             6,
             10
           ]
-        }
+        },
+        "documented_default": "6",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "max_leaves": {
         "purpose": "recommended",
@@ -12162,7 +12610,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "0 (no leaf-count limit)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "min_child_weight": {
         "purpose": "advanced",
@@ -12177,7 +12627,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "missing": {
         "purpose": "operational",
@@ -12201,7 +12653,9 @@
         "reason": "Multiclass/multioutput strategy; support depends on task and estimator. Keep the reviewed output contract fixed.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "one_output_per_tree",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "n_estimators": {
         "purpose": "recommended",
@@ -12216,7 +12670,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "100",
+        "default_reference": "https://github.com/dmlc/xgboost/blob/v3.2.0/python-package/xgboost/sklearn.py"
       },
       "n_jobs": {
         "purpose": "operational",
@@ -12231,7 +12687,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "All available threads unless constrained by the environment",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "num_parallel_tree": {
         "purpose": "operational",
@@ -12244,7 +12702,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "random_state": {
         "purpose": "operational",
@@ -12259,7 +12719,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "reg_alpha": {
         "purpose": "recommended",
@@ -12275,7 +12737,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "reg_lambda": {
         "purpose": "recommended",
@@ -12291,7 +12755,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 100
+        "importance": 100,
+        "documented_default": "1 for tree boosters; 0 for gblinear",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "sampling_method": {
         "purpose": "advanced",
@@ -12304,7 +12770,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "uniform",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "scale_pos_weight": {
         "purpose": "advanced",
@@ -12319,7 +12787,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "subsample": {
         "purpose": "advanced",
@@ -12334,7 +12804,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "tree_method": {
         "purpose": "advanced",
@@ -12349,7 +12821,9 @@
         },
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 50
+        "importance": 50,
+        "documented_default": "auto (uses hist)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "validate_parameters": {
         "purpose": "operational",
@@ -12370,7 +12844,9 @@
         "reason": "Logging/output frequency; does not define the modeled relationship.",
         "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/python/python_api.html#xgboost.XGBClassifier",
         "default_repr": "None",
-        "importance": 0
+        "importance": 0,
+        "documented_default": "1",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "rate_drop": {
         "purpose": "advanced",
@@ -12384,7 +12860,9 @@
             0.1,
             0.3
           ]
-        }
+        },
+        "documented_default": "0.0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "skip_drop": {
         "purpose": "advanced",
@@ -12397,7 +12875,9 @@
             0.0,
             0.5
           ]
-        }
+        },
+        "documented_default": "0.0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "one_drop": {
         "purpose": "advanced",
@@ -12410,7 +12890,9 @@
             false,
             true
           ]
-        }
+        },
+        "documented_default": "False",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "sample_type": {
         "purpose": "advanced",
@@ -12423,7 +12905,9 @@
             "uniform",
             "weighted"
           ]
-        }
+        },
+        "documented_default": "uniform",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "normalize_type": {
         "purpose": "advanced",
@@ -12436,7 +12920,9 @@
             "tree",
             "forest"
           ]
-        }
+        },
+        "documented_default": "tree",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "tweedie_variance_power": {
         "purpose": "advanced",
@@ -12450,7 +12936,9 @@
             1.5,
             1.9
           ]
-        }
+        },
+        "documented_default": "1.5",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "huber_slope": {
         "purpose": "advanced",
@@ -12464,7 +12952,9 @@
             1.0,
             10.0
           ]
-        }
+        },
+        "documented_default": "1.0",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "quantile_alpha": {
         "purpose": "advanced",
@@ -12478,7 +12968,9 @@
             0.5,
             0.9
           ]
-        }
+        },
+        "documented_default": "Not set (supply quantile levels for reg:quantileerror)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html#parameter-for-using-quantile-loss-reg-quantileerror"
       },
       "max_cached_hist_node": {
         "purpose": "operational",
@@ -12490,14 +12982,18 @@
           "values": [
             65536
           ]
-        }
+        },
+        "documented_default": "65536",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "updater": {
         "purpose": "operational",
         "kind": "categorical",
         "reason": "Booster update pipeline; configure with booster, tree method and device rather than independently searching incompatible update algorithms.",
         "importance": 0,
-        "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
+        "reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html",
+        "documented_default": "Automatic for tree boosters; shotgun for gblinear",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "process_type": {
         "purpose": "operational",
@@ -12509,7 +13005,9 @@
           "values": [
             "default"
           ]
-        }
+        },
+        "documented_default": "default",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "refresh_leaf": {
         "purpose": "operational",
@@ -12521,7 +13019,9 @@
           "values": [
             true
           ]
-        }
+        },
+        "documented_default": "True",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "feature_selector": {
         "purpose": "advanced",
@@ -12535,7 +13035,9 @@
             "shuffle",
             "greedy"
           ]
-        }
+        },
+        "documented_default": "cyclic",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "top_k": {
         "purpose": "advanced",
@@ -12549,7 +13051,9 @@
             5,
             10
           ]
-        }
+        },
+        "documented_default": "0 (all features)",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "disable_default_eval_metric": {
         "purpose": "operational",
@@ -12561,7 +13065,9 @@
           "values": [
             false
           ]
-        }
+        },
+        "documented_default": "False",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       },
       "seed_per_iteration": {
         "purpose": "operational",
@@ -12573,7 +13079,9 @@
           "values": [
             false
           ]
-        }
+        },
+        "documented_default": "False",
+        "default_reference": "https://xgboost.readthedocs.io/en/release_3.2.0/parameter.html"
       }
     },
     "lightgbm.sklearn.LGBMClassifier": {

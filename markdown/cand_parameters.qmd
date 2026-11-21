@@ -23,7 +23,7 @@ Already-enabled parameters remain visible when narrowing the purpose filter. Sea
 
 Reviewed metadata is stored in `app/data/tuning_parameters.json` by estimator class, with purpose, reason and documentation reference. For example, `FunctionTransformer.accept_sparse` is operational; `Ridge.max_iter` is an advanced convergence setting, while histogram boosting's `max_iter` is a recommended model-capacity parameter. Transformer-published tuning metadata remains supported. Old saved **Show everything** settings migrate to the corresponding radio view. Saved operational tuning choices are disabled and old commitments are revalidated before export; review and recommit when prompted.
 
-**Current value** is the actual pipeline setting. `None` is a real value, not a missing definition. Search values describe the candidates to evaluate; editing them does not change the current pipeline setting.
+**Current value** is the actual pipeline setting. For reviewed CatBoost and XGBoost parameters whose wrapper reports `None`, the cell shows **Default:** followed by the documented method default. Conditional defaults describe their dependence on the objective, booster, processing unit or training data rather than assigning an arbitrary constant. The parameter editor also shows **Method default** and links to its source. These descriptions do not set parameters or change the current model. Where `None` is itself the documented choice, such as an unlimited tree depth, it remains a real value. Search values describe the candidates to evaluate; editing them does not change the current pipeline setting.
 
 #### Defining values
 

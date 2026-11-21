@@ -8,16 +8,20 @@ import shinywidgets
 from card import Card
 from code_recording import recordable
 from ensemble import (
+    EnsembleDisplay,
+    EnsembleEvaluation,
     evaluate_ensemble,
     evaluation_context_signature,
     evaluation_signature,
+    portable_ensemble_display,
     representatives,
+    restore_ensemble_display,
 )
 from fit_service import session_fit_service
 from module import Module
 from pipeline_search import METRICS
 from shiny import reactive, render, req, ui
-from shiny.types import SilentException, SilentOperationInProgressException
+from shiny.types import SilentException
 from shinywidgets import render_widget
 from widget_lifecycle import WidgetSlot, update_figure
 
@@ -42,10 +46,14 @@ def instance():
     this = Card(file=__file__, mutable=True, pipeline_compatible=True)
     this.long_name = 'Candidate ensemble'
     this.description = 'Combine weighted method winners and compare their resampling performance.'
-    this.export_inputs('Apply')
+    # These controls also drive evaluation while export is disabled. Acknowledge
+    # their initial/browser-updated values before later user edits, otherwise
+    # enabling export can wait forever for an obsolete default or bookmark.
+    this.export_inputs('Apply', 'Models', 'Style')
+    this.register_configuration_state_field('evaluation')
 
     this.front = lambda: ui.TagList(
-        ui.span('Post-selection resampling performance', class_='text-primary text-center d-block'),
+        ui.span('Performance of best methods', class_='text-primary text-center d-block'),
         shinywidgets.output_widget(
             id='Chart', fill=True, guide=this, title='Ensemble performance',
             text='Members and ensemble use identical splits. Orange marks the ensemble; bars run best to worst. '
@@ -60,13 +68,13 @@ def instance():
 
     this.footer = lambda: ui.TagList(
         ui.output_ui(id='Busy'),
-        ui.output_text(id='Resources'),
-        ui.output_text(id='Status'),
         ui.input_checkbox_group(
             id='Apply', label=None, choices=['Ensemble'], selected=[], inline=True,
             guide=this, title='Use ensemble', text='Export the ensemble definition and split-fitted evaluation models. '
                 'Final fitting remains a downstream task.', position='top'
-        )
+        ),
+        ui.output_text(id='Resources'),
+        ui.output_text(id='Status')
     )
 
     this.settings = lambda: ui.TagList(
@@ -93,15 +101,23 @@ def instance():
         restored_models = this.restored_configuration_input('Models', None, warn_if_missing=False)
         restored_style = this.restored_configuration_input('Style', None, warn_if_missing=False)
         restored_metric = this.restored_configuration_input('Metric', None, warn_if_missing=False)
-        this.export_inputs('Models', when=lambda: 'Ensemble' in (input.Apply() or []))
-        this.export_inputs('Style', when=lambda: 'Ensemble' in (input.Apply() or []))
+        try:
+            restored_display = restore_ensemble_display(this.consume_restored_configuration_field('evaluation', None))
+        except ValueError as exc:
+            this.log.warning(str(exc))
+            restored_display = None
+        saved_display = reactive.Value(restored_display)
+        this.register_configuration_state_provider('evaluation', lambda: (
+            portable_ensemble_display(saved_display()) if saved_display() is not None else None))
 
         @this.reactable(calc=True)
         @this.record_context
         def Incoming():
             try:
                 source = this.input_data()
-            except SilentOperationInProgressException:
+            except SilentException:
+                # A temporarily unpublished upstream snapshot is not a new
+                # selection: retain any evaluation already in progress.
                 req(False)
             req(source is not None)
             return source
@@ -170,18 +186,24 @@ def instance():
 
         @this.reactable()
         def Start():
-            source, options = Incoming(), Options()
+            available, error = Available()
             try:
+                if available is None:
+                    raise ValueError(error)
+                source, options = Incoming(), Options()
                 signature = evaluation_signature(source, *options)
                 context = evaluation_context_signature(source)
             except ValueError as error:
-                if cancellation is not None:
-                    cancellation.set()
-                Evaluate.cancel()
-                requested.set(None)
-                completed.set(None)
-                if fit_service.runtime is not None:
-                    fit_service.publish_snapshot(this.namespace, None)
+                with reactive.isolate():
+                    had_snapshot = requested() is not None
+                if had_snapshot:
+                    if cancellation is not None:
+                        cancellation.set()
+                    Evaluate.cancel()
+                    requested.set(None)
+                    completed.set(None)
+                    if fit_service.runtime is not None:
+                        fit_service.publish_snapshot(this.namespace, None)
                 latest_signature.set(None)
                 waiting.set(str(error))
                 return
@@ -192,6 +214,15 @@ def instance():
                 if evaluation_context() != context:
                     evaluation_context.set(context)
             finished = completed()  # Completion wakes scheduling of the latest snapshot.
+            with reactive.isolate():
+                saved = saved_display()
+            if finished is None and saved is not None and saved.input_signature == signature:
+                completed.set((signature, context, options, saved, ''))
+                return
+            if (finished is not None and finished[0] == signature
+                    and isinstance(finished[3], EnsembleDisplay) and not Enabled()):
+                # Saved scores restore the views without recreating runtime fits.
+                return
             with reactive.isolate():
                 previous = requested()
                 status = Evaluate.status()
@@ -217,6 +248,8 @@ def instance():
             req(snapshot is not None)
             req(snapshot[2] == signature)
             completed.set((signature, snapshot[3], snapshot[1], result, error))
+            if result is not None:
+                saved_display.set(restore_ensemble_display(portable_ensemble_display(result)))
             if fit_service.runtime is not None:
                 fit_service.publish_snapshot(this.namespace, result.cache_owner if result else None)
 
@@ -283,38 +316,45 @@ def instance():
         @output
         @render.text
         def Status():
-            if Available()[1]:
-                return Available()[1]
             result, error = Results()
             if error:
                 return error
             origin = result.evaluation['origin']
-            winners = Available()[0][1]
+            evidence, winners = Available()[0]
+            winner_trial = evidence.get('review', {}).get('winner_trial')
+            model_name = next((trial.get('method', trial['model_id'])
+                for trial in evidence['state']['trials'] if trial['id'] == winner_trial), 'selected model')
             excluded = [c['label'] for c in Incoming().model_candidates if c['id'] not in winners]
             note = ('No eligible weighted winner: ' + ', '.join(excluded) + '. ') if excluded else ''
             finished = completed()
             if finished is not None and finished[0] != latest_signature():
                 note += 'Showing an earlier evaluated snapshot; newer winners are being evaluated. '
-            note += f"{result.diagnostics.get('reused_folds', 0)} fold fits reused; {result.diagnostics.get('new_fits', 0)} new. "
-            if result.diagnostics.get('serialization_fallbacks'):
+            diagnostics = result.diagnostics if isinstance(result, EnsembleEvaluation) else {}
+            if isinstance(result, EnsembleDisplay):
+                note += 'Saved evaluation scores. '
+            else:
+                note += f"{diagnostics.get('reused_folds', 0)} fold fits reused; {diagnostics.get('new_fits', 0)} new. "
+            if diagnostics.get('serialization_fallbacks'):
                 note += 'Some providers required local fitting. '
             if fit_service.runtime is not None:
                 resources = fit_service.runtime.snapshot()
                 if resources['pinned_bytes'] > fit_service.runtime.cache_budget:
                     note += f"Current fitted models use {resources['pinned_bytes'] / 1024**3:.1f} GiB outside the evictable cache allowance. "
-            return note + f'{len(result.members)} members · {len(result.splits)} {origin} splits · ' + (
-                ('Ensemble ready for downstream use; final fitting is downstream.'
+            return note + f'{len(result.members)} members · {result.split_count} {origin} splits · ' + (
+                ('Ensemble model passed through'
                  if finished[0] == latest_signature() and this.export_readiness.phase() is None
                  else 'Preparing current ensemble for downstream use…')
-                if Enabled() else 'Evaluation only; incoming model passed through.')
+                if Enabled() else f"Evaluation only; model '{model_name}' passed through")
 
         @this.reactable(calc=True)
         def Export():
             if not Enabled():
-                return Incoming()
+                source = Incoming()
+                req(source is not None)
+                return source
             result, _ = Results()
             snapshot = requested()
-            req(snapshot is not None, result is not None,
+            req(snapshot is not None, isinstance(result, EnsembleEvaluation),
                 result.input_signature == latest_signature(), snapshot[2] == result.input_signature)
             # Irrelevant training publications must not repeatedly invalidate an
             # already-ready ensemble export. This is the evaluated source;
@@ -337,7 +377,7 @@ def instance():
                 result, error = Results()
                 if error:
                     raise ValueError(error)
-                req(result is not None, result.input_signature == signature)
+                req(isinstance(result, EnsembleEvaluation), result.input_signature == signature)
 
         def close():
             if cancellation is not None:

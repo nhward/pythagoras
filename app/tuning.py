@@ -31,6 +31,9 @@ for _parameters in STANDARD_METADATA.values():
     for _metadata in _parameters.values():
         if _metadata.get('purpose') not in PURPOSES or not _metadata.get('reason') or not _metadata.get('reference'):
             raise ValueError('Reviewed tuning metadata requires purpose, reason and reference')
+        if 'documented_default' in _metadata and (not isinstance(_metadata['documented_default'], str)
+                or not _metadata['documented_default'] or not _metadata.get('default_reference')):
+            raise ValueError('Documented defaults require a description and source reference')
 
 
 def visible(row, level, *, active=False):
@@ -110,6 +113,14 @@ def discover(pipeline):
             default = parameter.default if parameter else inspect.Parameter.empty
         except (ValueError, TypeError):
             default = inspect.Parameter.empty
+        documented_default = metadata.get('documented_default')
+        default_text = documented_default if documented_default is not None else (
+            'No constructor default' if default is inspect.Parameter.empty else text_value(default))
+        display_current = f'Default: {documented_default}' if value is None and documented_default is not None else text_value(value)
+        alias = metadata.get('alias_of')
+        canonical = params.get(f'{owner_path}__{alias}') if alias else None
+        if value is None and canonical is not None:
+            display_current = f'Uses {alias}: {text_value(canonical)}'
         purpose = metadata.get('purpose', 'recommended' if published else 'unreviewed')
         fixed = name in FIXED or callable(value) or metadata.get('fixed', False) or purpose == 'operational'
         if fixed: purpose = 'operational'
@@ -137,7 +148,8 @@ def discover(pipeline):
         rows.append({'path': path, 'name': metadata.get('label', metadata_name.replace('_', ' ').capitalize()).replace('Neighbours', 'Neighbors'),
                      'source': owner_path.replace('__', ' › '), 'owner': identity,
                      'current': text_value(value),
-                     'default': 'No constructor default' if default is inspect.Parameter.empty else text_value(default),
+                     'display_current': display_current,
+                     'default': default_text,
                      'fixed': bool(fixed), 'metadata': metadata, 'definition': definition,
                      'purpose': purpose, 'reason': reason, 'reference': metadata.get('reference', ''),
                      'condition': condition,

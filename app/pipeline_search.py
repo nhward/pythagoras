@@ -23,8 +23,9 @@ from pathlib import Path
 import joblib
 import numpy as np
 import prediction_evidence as evidence_store
+from model_commit import configured_pipeline
 from roles import Role
-from sklearn.base import clone, is_classifier, is_regressor
+from sklearn.base import is_classifier, is_regressor
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.metrics import get_scorer
 from sklearn.model_selection import (
@@ -640,7 +641,7 @@ def fit_fold(problem, params, fold):
     if problem.branches:
         candidate = params[METHOD_PARAMETER]
         return fit_fold(problem.branches[candidate], {k: v for k, v in params.items() if k != METHOD_PARAMETER}, fold)
-    estimator = clone(problem.pipeline).set_params(**params)
+    estimator = configured_pipeline(problem.pipeline, params)
     X = problem.frame
     estimator.fit(X.iloc[train].copy(), X[problem.target].iloc[train].copy())
     result = {'metric_errors': {}}
@@ -770,7 +771,7 @@ def evaluate_fold(problem, params, fold):
     if runtime is not None and runtime.enabled():
         branch = problem.branches[params[METHOD_PARAMETER]] if problem.branches else problem
         settings = {k: v for k, v in params.items() if k != METHOD_PARAMETER}
-        pipeline = clone(branch.pipeline).set_params(**settings)
+        pipeline = configured_pipeline(branch.pipeline, settings)
         train, validation = problem.splits[fold]
         key = fit_key(branch.fit_context, pipeline, train, validation)
         search, trial = problem.specification['fingerprint'], joblib.hash(params)

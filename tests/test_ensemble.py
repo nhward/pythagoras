@@ -1,11 +1,20 @@
 """Split-fitted evaluation, complete pipeline composition and downstream contracts."""
+import json
 import threading
 from dataclasses import replace
 
 import numpy as np
+import pandas as pd
 import pytest
 from candidate_selection import candidate_frame, decisions
-from ensemble import ClassificationEnsemble, evaluate_ensemble, representatives
+from ensemble import (
+    ClassificationEnsemble,
+    evaluate_ensemble,
+    portable_ensemble_display,
+    representatives,
+    restore_ensemble_display,
+)
+from pipeline_search import METRICS
 from ensemble_scenario import example_source
 from evaluation_plan import build_plan
 from sklearn.base import clone
@@ -15,6 +24,23 @@ from sklearn.exceptions import NotFittedError
 @pytest.fixture(scope='module')
 def source():
     return example_source(count=5)
+
+
+def test_portable_display_preserves_all_metrics_without_fitted_or_row_data(source):
+    result = evaluate_ensemble(source, tuple(representatives(source)[1]), 'mean')
+    saved = json.loads(json.dumps(portable_ensemble_display(result), allow_nan=False))
+    assert set(saved) == {'version', 'task', 'members', 'split_count', 'origin', 'input_signature', 'tables'}
+    restored = restore_ensemble_display(saved)
+    assert restored.input_signature == result.input_signature
+    for metric in METRICS[result.task]:
+        pd.testing.assert_frame_equal(restored.table(metric).reset_index(drop=True),
+                                     result.table(metric).reset_index(drop=True), check_dtype=False)
+        pd.testing.assert_frame_equal(restored.metric_table(metric), result.metric_table(metric), check_dtype=False)
+    with pytest.raises(ValueError, match='unavailable or stale'):
+        source.with_ensemble(restored)
+    saved['tables'] = {}
+    with pytest.raises(ValueError, match='Invalid saved'):
+        restore_ensemble_display(saved)
 
 
 def test_five_winners_fitted_per_split_and_unfitted_training_definition(source):

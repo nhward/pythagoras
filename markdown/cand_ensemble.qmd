@@ -55,7 +55,11 @@ snapshot finishes, then the latest winners are evaluated. While catching up, the
 chart and table retain the completed snapshot with an explicit footer label.
 Older snapshots cannot be exported as the current ensemble. Progress updates and
 unrelated trials do not restart evaluation. Fitted evaluation models are session runtime
-evidence, not portable bookmark artifacts; restoring the card regenerates them.
+evidence, not portable bookmark artifacts. Bookmarks retain the aggregate scores
+needed to restore the chart and table without new fits, provided the evaluation
+inputs still match. Enabling ensemble export regenerates its session-only fitted
+models; the saved scores remain visible while this happens. Older bookmarks that
+contain only controls need one evaluation before they can save these views.
 
 Stacking is not offered in this version. It requires an additional inner
 resampling design for learning the meta-model without leakage.

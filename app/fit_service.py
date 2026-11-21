@@ -12,6 +12,7 @@ import inspect
 import json
 import os
 import shutil
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -20,7 +21,7 @@ import uuid
 import weakref
 from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import lru_cache, wraps
 from importlib import metadata
 from pathlib import Path
 
@@ -81,6 +82,22 @@ def _process():
     return os.getpid(), psutil.Process().create_time()
 
 
+def _closed_cleanup(method):
+    """Late card/task cleanup is a no-op after the session cache is removed."""
+    @wraps(method)
+    def cleanup(self, *args, **kwargs):
+        path = Path(self.root, 'index.sqlite')
+        if not path.exists():
+            return None
+        try:
+            return method(self, *args, **kwargs)
+        except sqlite3.OperationalError:
+            if path.exists():
+                raise  # Do not hide database faults in a live session.
+            return None
+    return cleanup
+
+
 @dataclass(frozen=True)
 class FitRuntime:
     root: str
@@ -91,8 +108,8 @@ class FitRuntime:
 
     @contextmanager
     def database(self):
-        import sqlite3
-        connection = sqlite3.connect(str(Path(self.root) / 'index.sqlite'), timeout=30)
+        # Never recreate an empty database if a late callback follows deletion.
+        connection = sqlite3.connect(Path(self.root, 'index.sqlite').as_uri() + '?mode=rw', uri=True, timeout=30)
         try:
             connection.execute('PRAGMA busy_timeout=30000')
             connection.execute('BEGIN IMMEDIATE')
@@ -128,6 +145,7 @@ class FitRuntime:
         with self.database() as db:
             db.execute('INSERT OR REPLACE INTO searches VALUES (?,?,?)', (token, pid, created))
 
+    @_closed_cleanup
     def finish_search(self, token):
         with self.database() as db:
             db.execute('DELETE FROM searches WHERE token=?', (token,))
@@ -137,7 +155,16 @@ class FitRuntime:
         with self.database() as db:
             self._reap(db)
             training = db.execute('SELECT count(*) FROM searches').fetchone()[0]
-            return min(self.capacity, self.training_ensemble_limit) if training else self.capacity
+            limit = min(self.capacity, self.training_ensemble_limit) if training else self.capacity
+            return self._background_limit(db, limit)
+
+    def _background_limit(self, db, limit):
+        # Assessment of the passed-through model must not queue behind a slow
+        # speculative ensemble member. Keep one non-training slot available
+        # while an assessment card is present, within the same resource budget.
+        if limit > 1 and db.execute('SELECT 1 FROM assessments LIMIT 1').fetchone():
+            return limit - 1
+        return limit
 
     @contextmanager
     def lease(self, kind, estimate=0, cancelled=None, search=''):
@@ -160,8 +187,10 @@ class FitRuntime:
                     waiting_train = db.execute('SELECT count(*) FROM leases WHERE kind="train" AND state="waiting"').fetchone()[0]
                     limit = min(self.capacity, self.training_ensemble_limit) if training else self.capacity
                     allowed = len(rows) < self.capacity and (not rows or sum(r[1] for r in rows) + estimate <= self.memory_budget)
+                    if kind in {'ensemble', 'assessment'}:
+                        allowed = allowed and not waiting_train and sum(r[0] in {'ensemble', 'assessment'} for r in rows) < limit
                     if kind == 'ensemble':
-                        allowed = allowed and not waiting_train and sum(r[0] == 'ensemble' for r in rows) < limit
+                        allowed = allowed and sum(r[0] == 'ensemble' for r in rows) < self._background_limit(db, limit)
                     if allowed:
                         db.execute('UPDATE leases SET state="running" WHERE token=?', (token,))
                         break
@@ -260,6 +289,7 @@ class FitRuntime:
         with self.database() as db:
             db.execute('INSERT OR IGNORE INTO reviewers VALUES (?)', (owner,))
 
+    @_closed_cleanup
     def remove_review(self, owner):
         with self.database() as db:
             db.execute('DELETE FROM reviewers WHERE owner=?', (owner,))
@@ -297,16 +327,19 @@ class FitRuntime:
                 db.execute('DELETE FROM artifacts WHERE key=?', (key,))
                 db.execute('DELETE FROM tags WHERE key=?', (key,))
 
+    @_closed_cleanup
     def release(self, owner):
         with self.database() as db:
             db.execute('DELETE FROM pins WHERE owner=?', (owner,))
         self.prune()
 
+    @_closed_cleanup
     def release_search(self, search):
         with self.database() as db:
             db.execute('DELETE FROM pins WHERE owner LIKE ?', ('pending:' + search + ':%',))
         self.prune()
 
+    @_closed_cleanup
     def prune(self):
         with self.database() as db:
             rows = db.execute('SELECT a.key,a.bytes FROM artifacts a WHERE NOT EXISTS (SELECT 1 FROM pins p WHERE p.key=a.key) ORDER BY accessed DESC').fetchall()
@@ -329,6 +362,7 @@ class FitRuntime:
             db.execute('INSERT OR IGNORE INTO contexts VALUES (?,?)', (owner, str(path)))
         return str(path)
 
+    @_closed_cleanup
     def release_context(self, owner):
         with self.database() as db:
             paths = [r[0] for r in db.execute('SELECT path FROM contexts WHERE owner=?', (owner,))]
@@ -396,6 +430,7 @@ class FitService:
         self._consumers = set()
         self.local_only = set()
         self._closed = False
+        sqlite3.connect(str(Path(self.root, 'index.sqlite'))).close()
         with self.runtime.database() as db:
             for statement in (
                 'CREATE TABLE settings(name TEXT PRIMARY KEY,value INTEGER)',
@@ -404,6 +439,7 @@ class FitService:
                 'CREATE TABLE tags(search TEXT,trial TEXT,key TEXT,PRIMARY KEY(search,trial,key))',
                 'CREATE TABLE searches(token TEXT PRIMARY KEY,pid INTEGER,created REAL)',
                 'CREATE TABLE reviewers(owner TEXT PRIMARY KEY)',
+                'CREATE TABLE assessments(owner TEXT PRIMARY KEY)',
                 'CREATE TABLE leases(token TEXT PRIMARY KEY,pid INTEGER,created REAL,kind TEXT,state TEXT,bytes INTEGER,search TEXT)',
                 'CREATE TABLE contexts(owner TEXT,path TEXT,PRIMARY KEY(owner,path))',
                 'CREATE TABLE counters(name TEXT PRIMARY KEY,value REAL)'):
@@ -413,13 +449,20 @@ class FitService:
         Path(self.root, 'owner.json').write_text(json.dumps(_process()))
         atexit.register(self.close)
 
-    def enable(self, consumer='default'):
+    def enable(self, consumer='default', *, assessment=False):
         self._consumers.add(consumer)
+        if assessment:
+            with self.runtime.database() as db:
+                db.execute('INSERT OR IGNORE INTO assessments VALUES (?)', (consumer,))
         self.runtime.enable()
 
     def remove_consumer(self, consumer):
         self._consumers.discard(consumer)
         owner = self._snapshots.pop(consumer, None)
+        if self._closed:
+            return
+        with self.runtime.database() as db:
+            db.execute('DELETE FROM assessments WHERE owner=?', (consumer,))
         if owner:
             self.runtime.release(owner)
         if not self._consumers:

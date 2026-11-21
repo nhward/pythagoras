@@ -428,3 +428,20 @@ def test_restored_checked_parameters_are_promoted_and_scrolled_to_top(page, chec
     expect(table.locator('tbody tr').nth(0).get_by_role('checkbox')).to_be_checked()
     expect(table.locator('tbody tr').nth(1).get_by_role('checkbox')).to_be_checked()
     assert table.locator('.shiny-data-grid').evaluate('el => el.scrollTop') == 0
+
+
+defaults_app = create_app_fixture(app='../scenarios/cand_parameters_defaults.py', scope='function')
+
+
+@pytest.mark.ui
+def test_native_defaults_show_documented_values_without_setting_model_parameters(page, defaults_app):
+    page.goto(defaults_app.url)
+    row = page.locator('button.tuning-row-edit[data-tuning-path$="__iterations"]').locator('xpath=ancestor::tr')
+    expect(row).to_contain_text('Default: 1000', timeout=30000)
+    expect(page.locator('[id$="-DefaultsProbe"]')).to_have_text('iterations=None;depth=None')
+    row.get_by_role('button', name='Edit').click()
+    modal = page.locator('#shiny-modal')
+    expect(modal).to_contain_text('Method default: 1000')
+    expect(modal.get_by_role('link', name='Default documentation', exact=True)).to_have_attribute('href',
+        'https://catboost.ai/docs/en/references/training-parameters/common#iterations')
+    expect(page.locator('[id$="-DefaultsProbe"]')).to_have_text('iterations=None;depth=None')
