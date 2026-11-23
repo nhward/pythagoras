@@ -344,7 +344,7 @@ def instance():
         @render.ui
         @this.record_context
         def DataTable():
-            req(incomingproxy_data() is not None)
+            req(incomingproxy_data())
             # Recreate on source changes: moving a card reconnects Shiny's
             # custom element, which can append a second internal grid.
             return ui.output_data_frame(id = "DataTable2")

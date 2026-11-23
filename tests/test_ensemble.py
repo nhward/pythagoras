@@ -29,8 +29,9 @@ def source():
 def test_portable_display_preserves_all_metrics_without_fitted_or_row_data(source):
     result = evaluate_ensemble(source, tuple(representatives(source)[1]), 'mean')
     saved = json.loads(json.dumps(portable_ensemble_display(result), allow_nan=False))
-    assert set(saved) == {'version', 'task', 'members', 'split_count', 'origin', 'input_signature', 'tables'}
+    assert set(saved) == {'version', 'task', 'members', 'split_count', 'origin', 'input_signature', 'tables', 'residuals'}
     restored = restore_ensemble_display(saved)
+    assert restored.residuals.samples is None and restored.residuals.rows is None and restored.residuals.folds is None
     assert restored.input_signature == result.input_signature
     for metric in METRICS[result.task]:
         pd.testing.assert_frame_equal(restored.table(metric).reset_index(drop=True),

@@ -30,7 +30,7 @@ def test_pareto_tabs_weights_export_inspection_and_widget_reuse(page, app):
     assert abs(plot.bounding_box()['width'] - host.bounding_box()['width']) < 5
     assert abs(plot.bounding_box()['height'] - host.bounding_box()['height']) < 5
     assert plot.locator('canvas').count() > 0
-    assert page.locator('.back').evaluate("el => getComputedStyle(el).visibility") == 'hidden'
+    assert page.locator('.back').evaluate("el => getComputedStyle(el).visibility") == 'visible'
     default_selection = state.inner_text()
     # Exercise actual pointer dragging from overlapping 100/100 handles.
     track = page.locator('.cand-models-weights .irs-line').bounding_box()

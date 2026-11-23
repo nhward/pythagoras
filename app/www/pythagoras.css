@@ -49,7 +49,6 @@
 .flip-container:has(.pipeline-tune-table).flipped > .flippable > .front,
 .flip-container:has(.pipeline-tune-table):not(.flipped) > .flippable > .back {
     pointer-events: none;
-    visibility: hidden;
 }
 
 .pipeline-tune-table > .shiny-data-frame-output {
@@ -1363,7 +1362,6 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 .flip-container:has(.cand-models-panels).flipped > .flippable > .front,
 .flip-container:has(.cand-models-panels):not(.flipped) > .flippable > .back {
     pointer-events: none;
-    visibility: hidden;
 }
 
 .cand-models-status { flex: 0 0 2.6em; height: 2.6em; min-height: 2.6em !important; line-height: 1.3; overflow: auto; font-size: .85rem; }
@@ -1377,3 +1375,16 @@ body.fullscreen-mode { overflow: hidden; } /* prevent background scroll */
 #shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
 
 .method-row-check { float: none; margin: 0; cursor: pointer; }
+
+/* The combined ensemble diagnostic fills the card without navigation chrome. */
+.ensemble-chart > .html-fill-item { flex-grow: 1 !important; }
+.ensemble-chart .shiny-ipywidget-output {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.flip-container:has(.ensemble-chart).flipped > .flippable > .front,
+.flip-container:has(.ensemble-chart):not(.flipped) > .flippable > .back {
+    pointer-events: none;
+}

@@ -10,6 +10,11 @@ import joblib
 import numpy as np
 import pandas as pd
 from code_recording import recordable
+from ensemble_diagnostics import (
+    build_residual_diagnostics,
+    residual_block,
+    restore_residual_diagnostics,
+)
 from fit_responses import collect_responses, combine_responses, score_responses
 from fit_service import fit_key
 from pipeline_search import METRICS, displayed, prepare
@@ -140,6 +145,7 @@ class EnsembleEvaluation:
     cache_owner: str | None = None
     cache_keys: tuple = ()
     diagnostics: dict = field(default_factory=dict)
+    residuals: object = None
 
     def __deepcopy__(self, memo):
         return self
@@ -191,6 +197,7 @@ class EnsembleDisplay:
     evaluation: dict
     input_signature: str
     tables: dict
+    residuals: object = None
 
     def table(self, metric):
         return pd.DataFrame(self.tables[metric]).replace({None: np.nan}).sort_values(
@@ -202,9 +209,9 @@ class EnsembleDisplay:
 
 def portable_ensemble_display(result):
     """Retain only the aggregate statistics used by the chart and table."""
-    return {'version': 1, 'task': result.task, 'members': [list(member) for member in result.members],
+    return {'version': 2, 'task': result.task, 'members': [list(member) for member in result.members],
             'split_count': result.split_count, 'origin': result.evaluation['origin'],
-            'input_signature': result.input_signature,
+            'input_signature': result.input_signature, 'residuals': result.residuals.summary if result.residuals is not None else None,
             'tables': {metric: result.table(metric).astype(object).where(
                 pd.notna(result.table(metric)), None).to_dict('records') for metric in METRICS[result.task]}}
 
@@ -213,10 +220,11 @@ def restore_ensemble_display(saved):
     if saved is None:
         return None
     try:
-        if saved['version'] != 1 or saved['task'] not in METRICS or saved['split_count'] < 1:
+        if saved['version'] not in (1, 2) or saved['task'] not in METRICS or saved['split_count'] < 1:
             raise ValueError('Invalid saved ensemble summary.')
         result = EnsembleDisplay(saved['task'], tuple(tuple(member) for member in saved['members']),
-            int(saved['split_count']), {'origin': saved['origin']}, saved['input_signature'], saved['tables'])
+            int(saved['split_count']), {'origin': saved['origin']}, saved['input_signature'], saved['tables'],
+            restore_residual_diagnostics(saved.get('residuals'), [key for key, _ in saved['members']] + ['ensemble']))
         keys = {key for key, _ in result.members} | {'ensemble'}
         for metric in METRICS[result.task]:
             table = result.table(metric)
@@ -342,7 +350,9 @@ def evaluate_ensemble(source, selected, style, cancelled=None, *, fit_service=No
                     if cached is None:
                         raise ValueError('A newly fitted ensemble artifact could not be loaded.')
                     resolved[job[0], job[1]] = cached
-        fitted, scores = [], []
+        fitted, scores, residual_blocks = [], [], []
+        residual_classes = (np.unique(frame[target].iloc[sorted({int(i) for _, validation in splits for i in validation})])
+                            if task == 'classification' else ())
         for fold, (_, validation) in enumerate(splits):
             models = [(key, resolved[fold, key][0]) for key, _ in members]
             responses = [(key, resolved[fold, key][1]) for key, _ in members]
@@ -352,6 +362,7 @@ def evaluate_ensemble(source, selected, style, cancelled=None, *, fit_service=No
             if task == 'classification':
                 ensemble.classes_ = classes
             combined = combine_responses([r for _, r in responses], style, task, classes)
+            residual_blocks.append(residual_block(validation, frame[target].iloc[validation], responses, combined, task, residual_classes))
             for key, response in (*responses, ('ensemble', combined)):
                 values, errors = score_responses(response, frame.iloc[validation], frame[target].iloc[validation], task, metrics)
                 scores.append({'model': key, 'fold': fold, 'errors': errors, **values})
@@ -373,7 +384,9 @@ def evaluate_ensemble(source, selected, style, cancelled=None, *, fit_service=No
             tuple((key, winners[key]['label']) for key in selected), task, problem.specification['evaluation'],
             evaluation_signature(source, selected, style), results['state']['specification']['fingerprint'],
             tuple((key, winners[key]['trial']) for key in selected), results['review'],
-            owner if runtime else None, keys, diagnostics)
+            owner if runtime else None, keys, diagnostics,
+            build_residual_diagnostics(tuple((key, winners[key]['label']) for key in selected),
+                                       residual_blocks, task, residual_classes))
     except BaseException:
         for future in futures:
             future.cancel()

@@ -133,6 +133,13 @@ transform: rotateY(180deg);
 row-gap: 0 !important;
 }
 
+
+.js-plotly-plot .modebar {
+visibility: hidden !important;
+}
+.card.fullscreen-active .js-plotly-plot .modebar {
+visibility: visible !important;
+}
 .bslib-card,
 .card {
 position: relative;
@@ -1222,6 +1229,19 @@ visibility: hidden;
 .tuning-editor-detail code { display: block; overflow-wrap: anywhere; }
 #shiny-modal [id$="-ModalError"] { color: var(--bs-danger); margin-top: .5rem; }
 .method-row-check { float: none; margin: 0; cursor: pointer; }
+
+.ensemble-chart > .html-fill-item { flex-grow: 1 !important; }
+.ensemble-chart .shiny-ipywidget-output {
+width: 100% !important;
+height: 100% !important;
+flex: 1 1 auto;
+min-height: 0;
+}
+.flip-container:has(.ensemble-chart).flipped > .flippable > .front,
+.flip-container:has(.ensemble-chart):not(.flipped) > .flippable > .back {
+visibility: hidden;
+pointer-events: none;
+}
 </style>
 </head>
 
@@ -1242,10 +1262,16 @@ visibility: hidden;
 <p><strong>Preferred metric</strong> changes the chart and the table sort order without refitting models or changing the upstream representatives. Metric choices follow the outcome task. Unavailable metrics, such as log loss for hard voting, have no score.</p>
 <h3 id="evaluation">Evaluation</h3>
 <p>Members and ensemble are fitted and evaluated on identical resampling splits. The valid upstream evaluation plan takes precedence. Without a plan, the card uses the same seeded five-fold defaults as Candidate training, stratified for classification and reduced for small samples. Grouped, temporal or spatial data require an explicit plan. Holdout and prediction observations are excluded.</p>
-<p>The front chart sorts from best to worst and highlights the ensemble in orange. Losses appear in their natural units. Hover text and the provisional flip-side table report fold standard deviation and completed splits for the preferred metric. The table also shows all feasible task metrics side by side: RMSE, MAE and R² for regression, and available classification metrics. These are <strong>post-selection resampling scores</strong>: the member configurations were already selected using tuning evidence, so this is not independent test performance.</p>
+<p>The front shows one combined diagnostic matrix with performance bars immediately beside it. There is no navigation bar. Both use the models ticked under <strong>Member models</strong>, plus their ensemble, in the same best-to-worst order. Unticked models do not participate.</p>
+<p>The matrix’s lower triangle and diagonal show residual-correlation colours and coefficients. Its upper triangle shows every unique residual pair once. The correlation scale is fixed at −1 to +1, with its colour legend visible only in fullscreen. Grey cells indicate missing or constant residuals, not zero correlation. Hover shows full model names, coverage counts and correlations; diagonal hover also shows bias and SD. Diagonal histograms are no longer displayed.</p>
+<p>Regression residuals are predicted minus actual in the outcome’s original units. Every scatter uses the same deterministic event sample. Correlations, coverage, bias and SD use all valid held-out events. Residual axes share symmetric limits from the largest absolute residual actually plotted, with 5% padding, zero-reference lines and a dotted 1:1 line. Unplotted extremes do not expand the scatter range; the target’s range is not used. Restored configurations show saved residual densities in the upper triangle without refitting.</p>
+<p>The combined chart fills the available card width and height; pair cells can be rectangular. No pairs are omitted when many models are ticked. Changing the preferred metric reorders the matrix and bars without another evaluation or fit. Old saved panel selections are ignored when restoring the combined view.</p>
+<p>For classification, <strong>Residual diagnostic</strong> selects the class-specific probability error: predicted class probability minus the observed class indicator. Probability columns are aligned by class label. Models without probabilities, including a hard-voting ensemble, remain in the display with unavailable residual diagnostics; class labels are never treated as numeric regression residuals.</p>
+<p>Residuals are matched by validation row and split. Repeated cross-validation can produce several predictions per observation; both counts are shown, without significance tests that assume those predictions are independent.</p>
+<p>The performance bars sort from best to worst and highlight the ensemble in orange. Losses appear in their natural units. Hover text and the provisional flip-side table report fold standard deviation and completed splits for the preferred metric. The table also shows all feasible task metrics side by side: RMSE, MAE and R² for regression, and available classification metrics. These are <strong>post-selection resampling scores</strong>: the member configurations were already selected using tuning evidence, so this is not independent test performance.</p>
 <h3 id="ensemble-checkbox">Ensemble checkbox</h3>
 <p>With <strong>Ensemble</strong> unticked, the incoming model passes through. Evaluation is available for comparison. Ticking <strong>Ensemble</strong> exports the ensemble training definition, its fitted instance for each evaluation split, split memberships and scores. Each split-fitted ensemble contains member models trained only on that split’s training observations. It is not a single model fitted on all observations.</p>
-<p><strong>Final fitting remains downstream.</strong> A final-fitting card can fit either the upstream weighted individual winner or this ensemble on the designated final training observations. The resampling models must not be mistaken for a final fitted model. Changes to selected methods, ensemble style, data or resampling restart evaluation. Upstream winner improvements are queued instead: the current snapshot finishes, then the latest winners are evaluated. While catching up, the chart and table retain the completed snapshot with an explicit footer label. Older snapshots cannot be exported as the current ensemble. Progress updates and unrelated trials do not restart evaluation. Fitted evaluation models are session runtime evidence, not portable bookmark artifacts. Bookmarks retain the aggregate scores needed to restore the chart and table without new fits, provided the evaluation inputs still match. Enabling ensemble export regenerates its session-only fitted models; the saved scores remain visible while this happens. Older bookmarks that contain only controls need one evaluation before they can save these views.</p>
+<p><strong>Final fitting remains downstream.</strong> A final-fitting card can fit either the upstream weighted individual winner or this ensemble on the designated final training observations. The resampling models must not be mistaken for a final fitted model. Changes to selected methods, ensemble style, data or resampling restart evaluation. Upstream winner improvements are queued instead: the current snapshot finishes, then the latest winners are evaluated. While catching up, the chart and table retain the completed snapshot with an explicit footer label. Older snapshots cannot be exported as the current ensemble. Progress updates and unrelated trials do not restart evaluation. Fitted evaluation models are session runtime evidence, not portable bookmark artifacts. Bookmarks retain the aggregate scores needed to restore the chart and table without new fits, provided the evaluation inputs still match. Enabling ensemble export regenerates its session-only fitted models; the saved scores remain visible while this happens. Older bookmarks that contain only controls need one evaluation before they can save these views. Bookmarks also retain aggregate correlations, coverage counts, residual histograms and two-dimensional pair-bin counts. Restored pairs use a labelled density view without refitting; individual residual points and row identifiers stay session-only. Bookmarks saved before residual diagnostics were added still restore their scores, and the card automatically evaluates the selected members to obtain missing diagnostics, reusing available session fits and responses. This also works with <strong>Ensemble</strong> unticked and without resuming training. Saving the configuration afterward retains the new diagnostic summaries for future reloads.</p>
 <p>Stacking is not offered in this version. It requires an additional inner resampling design for learning the meta-model without leakage.</p>
 <h3 id="faster-evaluation">Faster evaluation</h3>
 <p>The card reuses the split-fitted models and held-out predictions from Candidate training whenever they are available in this session. If one of five winners changes, only that member’s missing split fits are needed. Changing mean to median, or changing the preferred metric, does not retrain the member models. Combining predictions itself needs no training; resampling is needed to obtain comparable held-out predictions, not to learn an equal mean or median.</p>

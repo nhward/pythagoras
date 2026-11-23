@@ -30,6 +30,11 @@ def server(input, output, session):
     exported = ensemble.call_server(input, output, session, upstream=reactive.Value(reviewed))
     review.resume()
     ensemble.resume()
+
+    async def initialise():
+        for card in (review, ensemble):
+            await session.send_custom_message('init_card', {'id': card.ns('Card')})
+    session.on_flushed(initialise, once=True)
     updates = reactive.Value(0)
 
     @reactive.effect

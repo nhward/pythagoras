@@ -15,7 +15,7 @@
       "module": "cand_ensemble",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "e35e8dc0a818df02acce088b64ce0553daef22330d6c2faa167b7feee98087d4"
+      "source_hash": "17cd32c429a6115aea1652b1266155a25f4fae364b8dbe458a53aa53fb2f6a7f"
     },
     "cand_methods": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",
@@ -111,7 +111,7 @@
       "module": "data_tabulation",
       "mutable": false,
       "pipeline_compatible": true,
-      "source_hash": "72f2290dcae3c711261c26585e8637c91e207ba3376632ca32fa011d35de3bd9"
+      "source_hash": "903b8141895bdffc42cb839d150f39b2c8cfbee618de74e7d148ff2ecc447751"
     },
     "miss_impute": {
       "description": "Statistically impute missing predictor values and evaluate these imputations.",

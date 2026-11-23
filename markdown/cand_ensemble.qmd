@@ -30,7 +30,42 @@ uses the same seeded five-fold defaults as Candidate training, stratified for
 classification and reduced for small samples. Grouped, temporal or spatial data
 require an explicit plan. Holdout and prediction observations are excluded.
 
-The front chart sorts from best to worst and highlights the ensemble in orange.
+The front shows one combined diagnostic matrix with performance bars immediately
+beside it. There is no navigation bar. Both use the models ticked under **Member
+models**, plus their ensemble, in the same best-to-worst order. Unticked models
+do not participate.
+
+The matrix's lower triangle and diagonal show residual-correlation colours and
+coefficients. Its upper triangle shows every unique residual pair once. The
+correlation scale is fixed at −1 to +1, with its colour legend visible only in
+fullscreen. Grey cells indicate missing or constant residuals, not zero correlation.
+Hover shows full model names, coverage counts and correlations; diagonal hover
+also shows bias and SD. Diagonal histograms are no longer displayed.
+
+Regression residuals are predicted minus actual in the outcome's original units.
+Every scatter uses the same deterministic event sample. Correlations, coverage,
+bias and SD use all valid held-out events. Residual axes share symmetric limits
+from the largest absolute residual actually plotted, with 5% padding, zero-reference
+lines and a dotted 1:1 line. Unplotted extremes do not expand the scatter range;
+the target's range is not used. Restored configurations show saved residual
+densities in the upper triangle without refitting.
+
+The combined chart fills the available card width and height; pair cells can be
+rectangular. No pairs are omitted when many models are ticked. Changing the
+preferred metric reorders the matrix and bars without another evaluation or fit.
+Old saved panel selections are ignored when restoring the combined view.
+
+For classification, **Residual diagnostic** selects the class-specific probability
+error: predicted class probability minus the observed class indicator. Probability
+columns are aligned by class label. Models without probabilities, including a
+hard-voting ensemble, remain in the display with unavailable residual diagnostics;
+class labels are never treated as numeric regression residuals.
+
+Residuals are matched by validation row and split. Repeated cross-validation can
+produce several predictions per observation; both counts are shown, without
+significance tests that assume those predictions are independent.
+
+The performance bars sort from best to worst and highlight the ensemble in orange.
 Losses appear in their natural units. Hover text and the provisional flip-side
 table report fold standard deviation and completed splits for the preferred metric.
 The table also shows all feasible task metrics side by side: RMSE, MAE and R²
@@ -60,6 +95,14 @@ needed to restore the chart and table without new fits, provided the evaluation
 inputs still match. Enabling ensemble export regenerates its session-only fitted
 models; the saved scores remain visible while this happens. Older bookmarks that
 contain only controls need one evaluation before they can save these views.
+Bookmarks also retain aggregate correlations, coverage counts, residual histograms
+and two-dimensional pair-bin counts. Restored pairs use a labelled density view
+without refitting; individual residual points and row identifiers stay session-only.
+Bookmarks saved before residual diagnostics were added still restore their scores,
+and the card automatically evaluates the selected members to obtain missing
+diagnostics, reusing available session fits and responses. This also works with
+**Ensemble** unticked and without resuming training. Saving the configuration
+afterward retains the new diagnostic summaries for future reloads.
 
 Stacking is not offered in this version. It requires an additional inner
 resampling design for learning the meta-model without leakage.

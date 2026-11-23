@@ -17,6 +17,7 @@ from ensemble import (
     representatives,
     restore_ensemble_display,
 )
+from ensemble_diagnostics import performance_figure
 from fit_service import session_fit_service
 from module import Module
 from pipeline_search import METRICS
@@ -30,16 +31,8 @@ STYLES = {'regression': {'mean': 'Equal mean', 'median': 'Median'},
 
 
 @recordable
-def _figure(result, metric, full_screen=False):
-    table = result.table(metric)
-    figure = go.Figure(go.Bar(x=table.Score, y=table.Model, orientation='h',
-        marker_color=['#e69f00' if key == 'ensemble' else '#337ab7' for key in table.Key],
-        customdata=table[['SD', 'Splits']],
-        hovertemplate='%{y}<br>Score %{x:.5g}<br>Fold SD %{customdata[0]:.5g}<br>%{customdata[1]} splits<extra></extra>'))
-    figure.update_layout(xaxis_title=METRICS[result.task][metric], yaxis={'autorange': 'reversed'},
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='#bbd6f8', showlegend=False,
-        margin={'l': 15, 'r': 15, 't': 10, 'b': 35}, font={'size': 13 if full_screen else 10})
-    return figure
+def _figure(result, metric, full_screen=False, class_index=0, pair_axes=None):
+    return performance_figure(result, metric, full_screen, class_index, pair_axes)
 
 
 def instance():
@@ -51,19 +44,20 @@ def instance():
     # enabling export can wait forever for an obsolete default or bookmark.
     this.export_inputs('Apply', 'Models', 'Style')
     this.register_configuration_state_field('evaluation')
+    this.exclude_configuration_input('View')
 
-    this.front = lambda: ui.TagList(
-        ui.span('Performance of best methods', class_='text-primary text-center d-block'),
+    this.front = lambda: ui.div(
         shinywidgets.output_widget(
-            id='Chart', fill=True, guide=this, title='Ensemble performance',
-            text='Members and ensemble use identical splits. Orange marks the ensemble; bars run best to worst. '
-                 'These post-selection results are not independent test performance.', position='left'
-        )
+            id='Chart', fill=True, guide=this, title='Ensemble resampling statistics',
+            text='Lower triangle: residual correlations. Upper triangle: matched held-out residual pairs. '
+                 'Bars show resampled performance. These post-selection results are not independent test performance.',
+            position='left'),
+        class_='ensemble-chart html-fill-container html-fill-item'
     )
 
     this.back = lambda: ui.TagList(
         ui.span('Evaluation results', class_='text-primary text-center d-block'),
-        ui.output_data_frame(id='Table')
+        ui.output_ui(id='Table')
     )
 
     this.footer = lambda: ui.TagList(
@@ -73,14 +67,15 @@ def instance():
             guide=this, title='Use ensemble', text='Export the ensemble definition and split-fitted evaluation models. '
                 'Final fitting remains a downstream task.', position='top'
         ),
-        ui.output_text(id='Resources'),
+        # ui.output_text(id='Resources'),  #TODO: Needed or not
         ui.output_text(id='Status')
     )
 
     this.settings = lambda: ui.TagList(
         ui.input_checkbox_group(id='Models', label='Member models', choices={}),
         ui.input_select(id='Style', label='Ensemble style', choices=STYLES['regression'], selected='mean'),
-        ui.input_select(id='Metric', label='Preferred metric', choices=METRICS['regression'])
+        ui.input_select(id='Metric', label='Preferred metric', choices=METRICS['regression']),
+        ui.input_select(id='ResidualView', label='Residual diagnostic', choices={'0': 'Regression residuals'})
     )
 
     def server(input, output, session):
@@ -91,6 +86,9 @@ def instance():
         busy = this.busy()
         chart_widget = WidgetSlot(session)
         chart_instance = reactive.Value(None)
+        pair_axes = {}  # Stable numeric subplot identities across membership/ranking changes.
+        residual_choices_identity = None
+        restored_residual_view = this.restored_configuration_input('ResidualView', '0', warn_if_missing=False)
         cancellation = None
         requested = reactive.Value(None)
         completed = reactive.Value(None)
@@ -220,8 +218,11 @@ def instance():
                 completed.set((signature, context, options, saved, ''))
                 return
             if (finished is not None and finished[0] == signature
-                    and isinstance(finished[3], EnsembleDisplay) and not Enabled()):
-                # Saved scores restore the views without recreating runtime fits.
+                    and isinstance(finished[3], EnsembleDisplay)
+                    and finished[3].residuals is not None and not Enabled()):
+                # Complete saved diagnostics restore without runtime fits. Older
+                # score-only evaluations stay visible while their missing
+                # diagnostics are acquired, even with ensemble export disabled.
                 return
             with reactive.isolate():
                 previous = requested()
@@ -272,35 +273,84 @@ def instance():
             return widget
 
         @this.reactable()
+        def ResidualChoices():
+            nonlocal residual_choices_identity
+            result, _ = Results()
+            req(result is not None)
+            classes = tuple(result.residuals.summary['classes']) if result.residuals is not None else ()
+            if classes == residual_choices_identity:
+                return
+            choices = {str(i): f'Class {label} probability error' for i, label in enumerate(classes)} if classes else {'0': 'Regression residuals' if result.task == 'regression' else 'Probability residuals unavailable'}
+            with reactive.isolate():
+                value = input.ResidualView() if residual_choices_identity is not None else restored_residual_view
+            ui.update_select('ResidualView', choices=choices, selected=value if value in choices else next(iter(choices)))
+            residual_choices_identity = classes
+
+        @this.reactable(calc=True)
+        def ResidualIndex():
+            value = str(input.ResidualView() or '0')
+            return int(value) if value.isdecimal() else 0
+
+        @this.reactable()
         @this.record_context
         async def UpdateChart():
+            req(this.isFront())
             widget = chart_instance()
             req(widget is not None)
             full = bool(this.isFullScreen())
             try:
                 result, error = Results()
                 metric = input.Metric()
-                figure = _figure(result, metric, full) if result and metric in METRICS[result.task] else Card.empty_figure(error or 'Choose a metric.')
+                figure = _figure(result, metric, full, ResidualIndex(), pair_axes) if result and metric in METRICS[result.task] else Card.empty_figure(error or 'Choose a metric.')
             except SilentException:
-                figure = Card.empty_figure(Available()[1] or 'Waiting for ensemble evaluation.')
+                # Keep the last rendered snapshot while a valid replacement is
+                # evaluating. Replacing its multi-axis layout with a placeholder
+                # mid-update leaves Plotly's subplot domains inconsistent.
+                for trace in widget.data:
+                    if trace.meta and trace.meta.get('role') == 'correlation':
+                        trace.showscale = full
+                return
+            # Keep unreferenced numeric axes when the selected matrix shrinks.
+            # Removing them before the widget's trace update makes Plotly try
+            # to draw old pair traces against axes that no longer exist.
+            next_layout = figure.layout.to_plotly_json()
+            figure.update_layout({key: value for key, value in widget.layout.to_plotly_json().items()
+                                  if key.startswith(('xaxis', 'yaxis')) and key not in next_layout})
+            # A restored density becomes a scatter after runtime evaluation.
+            # Plotly trace types cannot be changed through an in-place restyle.
+            wanted_types = {trace.legendgroup or trace.name: trace.type for trace in figure.data}
+            kept = tuple(trace for trace in widget.data
+                         if trace.type == wanted_types.get(trace.legendgroup or trace.name, trace.type))
+            if len(kept) != len(widget.data):
+                widget.data = kept
             config = {'displayModeBar': full, 'displaylogo': False, 'responsive': True}
-            if update_figure(widget, figure, config):
+            if update_figure(widget, figure, config, preserve_traces=True):
                 await session.send_custom_message('update_plotly_config', {'id': this.ns('Chart'), 'config': config})
 
         @output
-        @render.data_frame
+        @render.ui
         def Table():
+            req(Incoming())
+            # Recreate on source changes: moving a card reconnects Shiny's
+            # custom element, which can append a second internal grid.
+            return ui.output_data_frame(id = "Table2")
+
+        @output
+        @render.data_frame
+        def Table2():
             result, error = Results()
             metric = input.Metric()
             if result:
                 req(metric in METRICS[result.task])
             table = result.metric_table(metric) if result else pd.DataFrame({'Note': [error]})
-            return render.DataTable(table, width='100%', height=None)
+            return render.DataTable(table.round(3), width='100%', height=None)
 
         @output
         @render.ui
         def Busy():
-            return busy.ui()
+            # This task owns a captured input snapshot and keeps running through
+            # transient upstream/bookmark waits. Its spinner must do the same.
+            return busy.ui(suppress_when_waiting=False)
 
         @output
         @render.text

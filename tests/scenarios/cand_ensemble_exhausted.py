@@ -36,6 +36,11 @@ def server(input, output, session):
     for card in (train, review, ensemble):
         card.resume()
 
+    async def initialise():
+        for card in (train, review, ensemble):
+            await session.send_custom_message('init_card', {'id': card.ns('Card')})
+    session.on_flushed(initialise, once=True)
+
     @output
     @render.ui
     def Workflow():

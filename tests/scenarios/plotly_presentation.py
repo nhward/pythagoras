@@ -17,7 +17,8 @@ card.footer = lambda: ui.TagList(ui.input_action_button('Update', label='Update 
 
 def figure(right):
     result = go.Figure(go.Scatter(x=[1, 2], y=[3, 4]))
-    result.update_layout(modebar={'orientation': 'h'}, margin={'l': 10, 'r': right, 't': 10, 'b': 20})
+    result.update_layout(modebar={'orientation': 'h'}, margin={'l': 10, 'r': right, 't': 10, 'b': 20},
+                         font={'size': 27, 'family': 'Arial', 'color': '#334155'})
     return result
 
 

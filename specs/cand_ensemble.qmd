@@ -23,9 +23,10 @@ probability/majority classification use equal member weights. Stacking is deferr
 split memberships and metric scores. These potentially large runtime objects are
 shared across proxy clones, treated as read-only and regenerated when restored
 ensemble export requires fitted models. The card's portable `evaluation` state
-stores only aggregate metric tables, member labels, split count, origin and the
-evaluation input signature. Matching saved scores restore both views without
-fitting; they cannot satisfy the fitted export contract. Changed evaluation
+stores aggregate metric tables, member labels, split count, origin and the
+evaluation input signature, plus versioned aggregate residual diagnostics. Matching
+saved evaluations with residual diagnostics restore both views without fitting;
+they cannot satisfy the fitted export contract. Changed evaluation
 inputs invalidate the saved display. Completed upstream evidence, including an
 exhausted search, can trigger ensemble evaluation independently of new trials.
 `proxy_data.ensemble_results` validates source data, roles, modelling context,
@@ -38,6 +39,52 @@ incoming proxy; enabled export waits for matching evaluation. No partially fitte
 ensemble is exported. Background cancellation stops new submissions; a native fit already running
 finishes in its worker, then releases any abandoned snapshot artifacts. Runtime fitting
 errors must remain visible, not become successful empty results.
+
+The front contains one `Chart`, without a navset or navbar. `performance_figure`
+combines a lower-triangle correlation heatmap (including the diagonal), upper-
+triangle residual pairs and horizontal performance bars. The matrix occupies 78%
+of the allocated subplot width, with a 0.015 gap before the bars. Shared categorical
+y axes align matrix rows with performance bars in the preferred metric's ranking.
+Only manually ticked `Models` plus the current ensemble appear. Correlation
+coefficients are printed in the lower cells; diagonal hover includes bias and SD.
+Missing or constant correlations are grey and unavailable. Histograms are no
+longer displayed, although saved histogram aggregates remain readable.
+
+Upper-triangle pairs use independent numeric axes whose domains match the model
+row/column cells. X is the column model's residual and Y is the row model's
+residual. Restored densities transpose stored bins when required by model ordering.
+The shared residual range is 1.05 times the largest finite absolute plotted sample
+value; density restoration uses the stored full-event bin range. Autoranging is
+disabled on residual axes. No square-cell constraint or fixed chart dimensions
+are imposed. The guided wrapper must grow with card/fullscreen/window changes.
+The standard blue plot background and transparent paper background are used;
+the correlation colour legend is fullscreen-only.
+
+The obsolete `View` configuration input is excluded and ignored on restoration.
+`ResidualView` remains a display-only class selector, outside fit identity. Removing
+the second widget introduces no additional fitting or prediction calls.
+
+`ensemble_diagnostics.residual_block` consumes the already collected responses in
+their exact validation-row order within each split, without another prediction or
+fit. Regression uses predicted minus observed; classification uses aligned
+class-specific probability minus observed indicator. Missing probabilities are
+unavailable, including hard voting, rather than numeric class-label residuals.
+Finite pair masks determine coverage; constant or insufficient residuals have
+undefined correlations. Repeated observations retain their split identity and are
+not counted as independent unique observations. One deterministic bounded sample
+is shared across all pairs; coefficients, biases, SDs and density counts use all
+finite held-out events. No new ensemble method, membership selection or weights
+are learned by these diagnostics.
+
+`EnsembleEvaluation.residuals` retains the sampled points and row/split identifiers
+only in session runtime. Version-2 portable display state stores correlation,
+coverage, diagonal histograms and sparse 32×32 pair-bin counts; it stores no raw
+residuals, targets, predictions or row identifiers. `EnsembleDisplay` restores a
+labelled density matrix without fitting. Version-1 score bookmarks remain readable.
+Any restored display lacking residual diagnostics automatically schedules one
+evaluation, independently of the export checkbox or further training trials;
+saved scores remain visible while it reuses cached fits/responses where available.
+The refreshed diagnostics are retained in subsequent configuration saves.
 
 The front horizontal bars show selected members plus ensemble, best first by
 signed scorer, losses displayed naturally. Orange distinguishes ensemble. Flip
@@ -71,6 +118,10 @@ resampling, selected-member and style changes clear incompatible snapshots and
 cancel old work. Cancelled tasks can restart after module resume. Cancellation
 signals the scheduler to stop at its next queue boundary; running native fits
 finish before releasing their leases.
+
+The task busy indicator remains visible throughout a running snapshot evaluation,
+including transient upstream or bookmark readiness waits. Such waits do not hide
+and redisplay the same evaluation's spinner or invoke another evaluation.
 
 Model controls rebuild only when method identities/task change, not on each new
 winning trial ID: rebinding them would repeatedly reset Options' settling delay.

@@ -940,6 +940,25 @@ def test_busy_tracker_rejects_wrong_decorator_order():
 
 
 @pytest.mark.unit
+def test_snapshot_task_busy_indicator_survives_transient_upstream_waits():
+    module = DummyModule('snapshot-busy')
+    tracker = module.busy()
+    task = FakeExtendedTask()
+    tracker.track('Evaluating snapshot')(task)
+    module.resume()
+    task.current_status = 'running'
+    with reactive.isolate():
+        for index in range(30):
+            module.waiting.set('Awaiting upstream data' if index % 2 else None)
+            assert 'Evaluating snapshot' in str(tracker.ui(suppress_when_waiting=False))
+        task.current_status = 'success'
+        assert tracker.ui(suppress_when_waiting=False) is None
+        task.current_status = 'running'
+        module.suspend()
+        assert tracker.ui(suppress_when_waiting=False) is None
+
+
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_settle_waits_since_last_change_and_retains_published_value():
     import asyncio

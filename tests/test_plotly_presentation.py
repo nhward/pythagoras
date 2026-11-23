@@ -18,6 +18,8 @@ def check_presentation(page, full, count):
         return plots.length === count && plots.every(p =>
             p._context?.displayModeBar === full && p._context?.displaylogo === false &&
             p._fullLayout?.modebar?.orientation === 'v' &&
+            p.layout.font?.size === (full ? 13 : 10) &&
+            p._fullLayout.font.size === (full ? 13 : 10) &&
             (full ? p.layout.margin.r >= 35 : p.layout.margin.r === 5));
     }''', arg={'full': full, 'count': count})
     if full:
@@ -29,20 +31,27 @@ def check_presentation(page, full, count):
             expect(bar).not_to_be_visible()
 
 
-def test_plotly_presentation_for_all_widget_lifecycles(page, app):
+@pytest.mark.parametrize('add_in_fullscreen', [False, True])
+def test_plotly_presentation_for_all_widget_lifecycles(page, app, add_in_fullscreen):
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(app.url)
     check_presentation(page, False, 2)
-    page.get_by_role('button', name='Add chart', exact=True).click()
-    check_presentation(page, False, 3)
+    if not add_in_fullscreen:
+        page.get_by_role('button', name='Add chart', exact=True).click()
+        check_presentation(page, False, 3)
     page.locator('.card').first.hover()
     page.locator('[id$="-ExpandButton"]').click(force=True)
+    if add_in_fullscreen:
+        check_presentation(page, True, 2)
+        page.get_by_role('button', name='Add chart', exact=True).click()
     check_presentation(page, True, 3)
     page.get_by_role('button', name='Update charts', exact=True).click()
     check_presentation(page, True, 3)
     page.locator('[id$="-ContractButton"]').click(force=True)
     check_presentation(page, False, 3)
+    assert page.locator('.js-plotly-plot').first.evaluate('el => el.layout.font.family') == 'Arial'
+    assert page.locator('.js-plotly-plot').first.evaluate('el => el.layout.font.color') == '#334155'
     assert not errors, errors
 
 

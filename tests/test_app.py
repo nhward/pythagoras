@@ -1488,6 +1488,49 @@ class TestApplicationBrowser:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("version", [1, 2])
+def test_restore_migrates_legacy_system_log_without_changing_saved_state(app_module, sample_config, version):
+    saved = json.loads(json.dumps(sample_config))
+    saved["version"] = version
+    state = {"inputs": {"Search": "previous run", "Maximum": 25}}
+    saved["layout"][0]["cards"].append({"module": "system_log", "state": state})
+    restored = app_module.restore_configuration(sample_config, saved)
+    assert restored["layout"][0]["cards"][-1] == {"module": "sys_log", "state": state}
+    assert saved["layout"][0]["cards"][-1]["module"] == "system_log"
+    app_module.validate_configuration(restored)
+
+
+@pytest.mark.unit
+def test_default_configuration_migrates_legacy_system_log(app_module, sample_config, monkeypatch, tmp_path):
+    candidate = json.loads(json.dumps(sample_config))
+    candidate["layout"][0]["cards"].append({"module": "system_log"})
+    path = tmp_path / "default.pythagoras.json"
+    path.write_text(json.dumps(candidate))
+    monkeypatch.setattr(app_module, "CONFIG_PATH", path)
+    restored = app_module.load_default_configuration()
+    assert restored["layout"][0]["cards"][-1]["module"] == "sys_log"
+    assert json.loads(path.read_text())["layout"][0]["cards"][-1]["module"] == "system_log"
+
+
+@pytest.mark.ui
+def test_legacy_system_log_bookmark_loads_renamed_card(page, workflow_restore_app):
+    BOOKMARK_RESTORE_DIR.mkdir(parents=True, exist_ok=True)
+    candidate = json.loads(CONFIG_FILE.read_text())
+    candidate["settings"].update(show_start=False, restore_last_active_section=False)
+    candidate["layout"] = [{"section": "System", "cards": [{"module": "system_log"}]}]
+    bookmark = BOOKMARK_RESTORE_DIR / "legacy-log--20260921T090000+1200.pythagoras.json"
+    bookmark.write_text(json.dumps(candidate))
+    try:
+        page.goto(workflow_restore_app.url)
+        wait_for_shiny_ready(page)
+        expect(page.locator('#sys_log-Card')).to_be_visible(timeout=20000)
+        expect(page.locator('#sys_log-LogTable')).to_contain_text('system_log', timeout=10000)
+        expect(page.locator('.shiny-output-error')).to_have_count(0)
+    finally:
+        bookmark.unlink(missing_ok=True)
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("restore_last", [True, False, None])
 @pytest.mark.parametrize("active", ["Missing values", "Deleted", None])
 def test_restore_section_policy(app_module, sample_config, restore_last, active):

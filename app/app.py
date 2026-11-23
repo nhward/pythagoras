@@ -355,6 +355,15 @@ def validate_configuration(candidate: Mapping[str, object]) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     validate(instance=decoded, schema=schema)
 
+#TODO Temporary
+def _migrate_card_names(candidate: dict[str, object]) -> None:
+    """Upgrade renamed card identities in an owned configuration copy."""
+    for group in candidate.get("layout", []):
+        for card in group.get("cards", []):
+            if card.get("module") == "system_log":
+                card["module"] = "sys_log"
+                log.warning("Renamed configuration card system_log to sys_log")
+
 
 def load_default_configuration() -> dict[str, object]:
     """Read and validate the default configuration afresh."""
@@ -362,6 +371,7 @@ def load_default_configuration() -> dict[str, object]:
     if not isinstance(candidate, dict):
         raise TypeError("The default configuration must be an object")
     validate_configuration(candidate)
+    _migrate_card_names(candidate) #TODO Temporary
     return candidate
 
 
@@ -388,6 +398,7 @@ def restore_configuration(
 ) -> dict[str, object]:
     """Migrate a validated bookmark and fill newly introduced defaults."""
     candidate = deepcopy(dict(saved))
+    _migrate_card_names(candidate)
     defaults = base.get("settings", {})
     settings = candidate.setdefault("settings", {})
     if not isinstance(settings, dict) or not isinstance(defaults, Mapping):

@@ -174,10 +174,10 @@ class BusyTracker:
 
         return decorator
 
-    def ui(self):
-        """Return a spinner and the messages for tasks currently running."""
+    def ui(self, *, suppress_when_waiting=True):
+        """Show running tasks; snapshot tasks may outlive upstream waits."""
         if self.owner is not None and (
-            not self.owner._active() or self.owner.waiting.message()
+            not self.owner._active() or (suppress_when_waiting and self.owner.waiting.message())
         ):
             return None
         messages = [

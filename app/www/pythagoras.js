@@ -63,14 +63,16 @@ document.addEventListener("DOMContentLoaded", () => {
             while (state.pending && plot.isConnected) {
                 state.pending = false;
                 const full = Boolean(plot.closest('.card.fullscreen-active'));
+                const fontSize = full ? 13 : 10;
                 const right = full ? Math.max(35, plot.layout.margin?.r || 0) : 5;
                 const overrides = state.config;
                 state.config = {};
                 if (!Object.keys(overrides).length && plot._context.displayModeBar === full
                         && plot._context.displaylogo === false && plot.layout.modebar?.orientation === 'v'
-                        && plot.layout.margin?.r === right) continue;
+                        && plot.layout.margin?.r === right && plot.layout.font?.size === fontSize) continue;
                 await window.Plotly.react(plot, plot.data, {
                     ...plot.layout,
+                    font: {...plot.layout.font, size: fontSize},
                     modebar: {...plot.layout.modebar, orientation: 'v'},
                     margin: {...plot.layout.margin, r: right}
                 }, {...plot._context, ...overrides, displayModeBar: full, displaylogo: false});
