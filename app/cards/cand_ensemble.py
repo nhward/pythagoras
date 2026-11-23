@@ -86,6 +86,7 @@ def instance():
         busy = this.busy()
         chart_widget = WidgetSlot(session)
         chart_instance = reactive.Value(None)
+        chart_seed = reactive.Value(None)
         pair_axes = {}  # Stable numeric subplot identities across membership/ranking changes.
         residual_choices_identity = None
         restored_residual_view = this.restored_configuration_input('ResidualView', '0', warn_if_missing=False)
@@ -267,8 +268,9 @@ def instance():
         @render_widget
         @this.record_context
         def Chart():
-            widget = chart_widget.replace(go.FigureWidget(Card.empty_figure('Waiting for ensemble evaluation.')))
-            widget._config = {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
+            seed = chart_seed()
+            widget = chart_widget.replace(go.FigureWidget(seed[0] if seed else Card.empty_figure('Waiting for ensemble evaluation.')))
+            widget._config = seed[1] if seed else {'displayModeBar': False, 'displaylogo': False, 'responsive': True}
             chart_instance.set(widget)
             return widget
 
@@ -310,6 +312,13 @@ def instance():
                     if trace.meta and trace.meta.get('role') == 'correlation':
                         trace.showscale = full
                 return
+            config = {'displayModeBar': full, 'displaylogo': False, 'responsive': True}
+            if not figure.data and widget.data:
+                # An empty chart discards numeric subplots in Plotly.js. Reset
+                # the widget model too, so a later result starts with fresh axes
+                # instead of sending domain patches for discarded subplots.
+                chart_seed.set((figure, config))
+                return
             # Keep unreferenced numeric axes when the selected matrix shrinks.
             # Removing them before the widget's trace update makes Plotly try
             # to draw old pair traces against axes that no longer exist.
@@ -323,7 +332,6 @@ def instance():
                          if trace.type == wanted_types.get(trace.legendgroup or trace.name, trace.type))
             if len(kept) != len(widget.data):
                 widget.data = kept
-            config = {'displayModeBar': full, 'displaylogo': False, 'responsive': True}
             if update_figure(widget, figure, config, preserve_traces=True):
                 await session.send_custom_message('update_plotly_config', {'id': this.ns('Chart'), 'config': config})
 

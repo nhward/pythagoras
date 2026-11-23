@@ -15,7 +15,7 @@
       "module": "cand_ensemble",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "17cd32c429a6115aea1652b1266155a25f4fae364b8dbe458a53aa53fb2f6a7f"
+      "source_hash": "cbcd5d12e75770938459dbaa5473cfb0bd112234b462289c614ea61afe5c1640"
     },
     "cand_methods": {
       "description": "Identify modeling methods compatible with the current outcome, predictors and observation structure.",

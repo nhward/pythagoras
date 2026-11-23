@@ -43,7 +43,7 @@ def expect_chart_to_fill_panel(page, output):
             return d && d[1] > 100 && Math.abs(d[1]-d[3]) < 4
                 && Math.abs(d[0]-d[2]) < 4 && Math.abs(d[4]-d[2]) < 4
                 && Math.abs(d[5]-d[3]) < 4 && Math.abs(d[6]) < 4; }''', arg=output)
-    except Exception:
+    except Exception:  # noqa: BLE001
         ancestors = page.locator(f'[id$="-{output}"]').evaluate('''el => {
             const chain = [];
             for (let node = el; node && chain.length < 6; node = node.parentElement) {
@@ -53,6 +53,32 @@ def expect_chart_to_fill_panel(page, output):
             return chain;
         }''')
         pytest.fail(f'{output} pane/host/plot dimensions: {page.evaluate(measure, output)}; ancestors: {ancestors}')
+
+
+@pytest.mark.ui
+def test_combined_axes_recover_after_selection_becomes_too_small(page, app):
+    errors = []
+    page.on('pageerror', lambda error: errors.append(str(error)))
+    page.on('console', lambda message: errors.append(message.text) if message.type == 'error' else None)
+    page.goto(app.url)
+    expect(page.locator('[id$="-Status"]')).to_contain_text('5 members', timeout=30000)
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.layout?.meta?.pair_count === 15")
+    settings(page)
+    for key in range(1, 5):
+        page.locator(f'[id$="-Models"] input[value="method_{key}"]').uncheck()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('Waiting for at least two', timeout=10000)
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.data?.length === 0")
+    page.locator('[id$="-Models"] input[value="method_1"]').check()
+    expect(page.locator('[id$="-Status"]')).to_contain_text('2 members', timeout=30000)
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.layout?.meta?.pair_count === 3")
+    for key in range(2, 5):
+        page.locator(f'[id$="-Models"] input[value="method_{key}"]').check()
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.layout?.meta?.pair_count === 15")
+    page.locator('[id$="-Models"] input[value="method_4"]').uncheck()
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.layout?.meta?.pair_count === 10")
+    page.locator('[id$="-Models"] input[value="method_4"]').check()
+    page.wait_for_function("() => document.querySelector('[id$=\"-Chart\"] .js-plotly-plot')?.layout?.meta?.pair_count === 15")
+    assert not errors, errors
 
 
 @pytest.mark.ui
