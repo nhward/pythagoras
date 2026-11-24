@@ -346,7 +346,7 @@ def test_characteristics_compare_recipes_without_pooling_capabilities():
 
 
 @pytest.mark.ui
-def test_characteristic_sort_preserves_selected_recipe_and_hides_front(page, app):
+def test_characteristic_sort_preserves_selected_recipe_and_keeps_faces_painted(page, app):
     page.goto(app.url)
     table = page.locator('[id$="-Table"]')
     expect(table).to_contain_text('Meets requirements', timeout=30000)
@@ -374,7 +374,8 @@ def test_characteristic_sort_preserves_selected_recipe_and_hides_front(page, app
     expect(details).to_contain_text('sklearn.neighbors.KNeighborsRegressor')
     expect(details).to_contain_text('Model characteristics')
     expect(details).to_contain_text('Lazy')
-    expect(card.locator('.flippable > .front')).to_have_css('visibility', 'hidden')
+    expect(card.locator('.flippable > .front')).to_have_css('visibility', 'visible')
+    expect(card.locator('.flippable > .front')).to_have_css('pointer-events', 'none')
     page.locator('[id$="-FlipButton"]').click()
     expect(card.locator('.flippable > .front')).to_have_css('visibility', 'visible')
     # Flipping can change the number of virtualized rows; compare the leading

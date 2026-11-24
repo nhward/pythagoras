@@ -2,6 +2,7 @@
 import os
 import sys
 from pathlib import Path
+
 APP_ROOT=Path(__file__).resolve().parents[2]/'app'
 os.chdir(APP_ROOT)
 sys.path.insert(0,str(APP_ROOT))
@@ -90,6 +91,7 @@ def test_settings_recompute_and_empty_recommendation_blocks_export(page,app):
 @pytest.mark.unit
 def test_checkbox_bookmarks_migrate_to_scalar_radio_without_saved_masks():
     from copy import deepcopy
+
     from cards.var_select import recommendation_configuration
     state={'inputs':{'Recommendation':['Boruta'],'Trees':40},
            'selection':{'method':'Boruta','identity':'old'},'unrelated':{'keep':True}}
@@ -126,6 +128,8 @@ def test_evidence_lists_protected_target_as_pass_through(page, restored_app):
     page.goto(restored_app.url)
     expect(by_id(page, 'ExportProbe')).to_contain_text('pipeline=var_select', timeout=60000)
     by_id(page, 'FlipButton').click(force=True)
+    expect(page.locator('.front')).to_have_css('visibility', 'visible')
+    expect(page.locator('.front')).to_have_css('pointer-events', 'none')
     evidence = by_id(page, 'Evidence')
     expect(evidence.locator('.shiny-data-grid')).to_be_visible()
     page.wait_for_function('''id => {

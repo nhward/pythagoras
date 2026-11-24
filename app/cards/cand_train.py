@@ -88,7 +88,7 @@ def history_axis_ranges(state, previous_y=None):
     trials = sorted((t for t in state['trials'] if t['state'] == 'complete'), key=lambda t: t['id'])
     maximum = max((t['id'] + 1 for t in trials), default=1)
     planned = spec.get('combinations', 0) + max(1, len(spec.get('branches', {})))
-    x_range = [.5, max(maximum, planned) + .5]
+    x_range = [1, max(maximum, planned) + .5]
     values = [displayed(mean_score(t, spec['metric']), spec['metric']) for t in trials]
     if not values:
         return x_range, previous_y

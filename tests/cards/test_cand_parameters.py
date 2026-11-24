@@ -177,6 +177,8 @@ def test_technical_specification_scrolls_independently(page, app):
     tune(page, 'Observation missingness proportion').check()
     page.locator('.card').first.hover()
     page.locator('[id$="-FlipButton"]').click()
+    expect(page.locator('.front')).to_have_css('visibility', 'visible')
+    expect(page.locator('.front')).to_have_css('pointer-events', 'none')
     page.get_by_text('Technical search specification', exact=True).click()
     specification = page.locator('.tuning-specification-scroll')
     expect(specification).to_be_visible()

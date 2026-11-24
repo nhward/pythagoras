@@ -47,7 +47,7 @@
       "module": "cand_train",
       "mutable": true,
       "pipeline_compatible": true,
-      "source_hash": "46ff67e75350a375b31ec2ed52121e7e4859892cc508ae21afb5f2dcc1be0126"
+      "source_hash": "397a8f1a04b62258768e76e259e17b5fa3f9e5e1eac93d0a215bfde343ff9011"
     },
     "data_coverage": {
       "description": "Find under- and over-represented intersections of strata, treatments and sensitive groups.",

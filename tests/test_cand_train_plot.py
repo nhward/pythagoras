@@ -18,7 +18,7 @@ def test_history_axes_hold_planned_combinations_and_only_expand_for_outside_valu
     state['specification']['combinations'] = 400
     state['trials'] = [t for t in state['trials'] if t['id'] == 0]
     x, y = history_axis_ranges(state)
-    assert x == [.5, 401.5]  # 400 candidates plus the starting configuration.
+    assert x == [1, 401.5]  # 400 candidates plus the starting configuration.
     assert y == [0., 8.]
     state['trials'].append(dict(state['trials'][0], id=1, folds=[{'neg_root_mean_squared_error': -3.}]))
     assert history_axis_ranges(state, y) == (x, y)
