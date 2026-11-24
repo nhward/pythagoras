@@ -191,8 +191,38 @@ def test_upset_figure_has_informative_empty_state(card_module, frame, message):
 
 class TestWebKitUI:
     @pytest.mark.ui
+    def test_card_ready_while_unrelated_image_is_still_loading(
+        self, page: Page, app: ShinyAppProc
+    ):
+        pending_routes = []
+
+        def document_with_pending_image(route):
+            response = route.fetch()
+            before, closing_body, after = response.text().rpartition("</body>")
+            assert closing_body
+            body = (before + '<img id="pending-test-image" src="pending-test-image.png" '
+                    'width="1" height="1" alt="">' + closing_body + after)
+            route.fulfill(response=response, body=body)
+
+        page.route(app.url, document_with_pending_image)
+        # Hold a nonessential image open: the page's load event cannot finish,
+        # but DOM readiness and the Shiny outputs must still be testable.
+        page.route("**/pending-test-image.png", lambda route: pending_routes.append(route))
+        try:
+            page.goto(app.url, wait_until="domcontentloaded")
+            expect(by_id(page, "Check")).to_contain_text("Showing 4", timeout=15_000)
+            expect(by_id(page, "Upset").locator(".plotly")).to_be_attached(
+                timeout=15_000
+            )
+            assert page.evaluate("document.readyState") == "interactive"
+            assert page.locator("#pending-test-image").evaluate("el => !el.complete")
+        finally:
+            for route in pending_routes:
+                route.abort()
+
+    @pytest.mark.ui
     def test_chart_status_and_settings_render(self, page: Page, app: ShinyAppProc):
-        page.goto(app.url)
+        page.goto(app.url, wait_until="domcontentloaded")
 
         expect(by_id(page, "Upset").locator(".plotly")).to_be_attached(
             timeout=15_000
@@ -207,7 +237,7 @@ class TestWebKitUI:
 
     @pytest.mark.ui
     def test_flip_displays_intersection_table(self, page: Page, app: ShinyAppProc):
-        page.goto(app.url)
+        page.goto(app.url, wait_until="domcontentloaded")
         expect(by_id(page, "Check")).to_contain_text("Showing 4", timeout=15_000)
 
         by_id(page, "FlipButton").click(force=True)
@@ -224,7 +254,7 @@ class TestWebKitUI:
     def test_minimum_count_filters_intersections(
         self, page: Page, app: ShinyAppProc
     ):
-        page.goto(app.url)
+        page.goto(app.url, wait_until="domcontentloaded")
         expect(by_id(page, "Check")).to_contain_text("Showing 4", timeout=15_000)
 
         set_shiny_input(page, "MinCount", 2)
@@ -237,7 +267,7 @@ class TestWebKitUI:
     def test_fullscreen_keeps_upset_chart_available(
         self, page: Page, app: ShinyAppProc
     ):
-        page.goto(app.url)
+        page.goto(app.url, wait_until="domcontentloaded")
         expect(by_id(page, "Upset").locator(".plotly")).to_be_attached(
             timeout=15_000
         )
